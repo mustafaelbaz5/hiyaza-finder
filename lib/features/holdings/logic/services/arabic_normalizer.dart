@@ -34,4 +34,14 @@ class ArabicNormalizer {
   static String normalizeForMatching(final String input) {
     return normalize(input).replaceAll(' ', '').replaceAll('ة', 'ه');
   }
+
+  /// Normalization for the `startsWith`/word-boundary search algorithm —
+  /// same Arabic-letter/diacritic/whitespace cleanup as [normalize], plus
+  /// lowercasing (for any Latin characters, e.g. mixed-script names or
+  /// national IDs) and ة→ه unification. Unlike [normalizeForMatching], this
+  /// keeps single spaces between words so callers can split on them for
+  /// word-boundary matching.
+  static String normalizeForSearch(final String input) {
+    return normalize(input).toLowerCase().replaceAll('ة', 'ه');
+  }
 }

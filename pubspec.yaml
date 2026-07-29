@@ -61,7 +61,6 @@ dependencies:
   # --- Excel / Search ---
   file_picker: ^8.1.4
   spreadsheet_decoder: ^2.3.0
-  fuzzywuzzy: any
 
   # --- Voice Search (Android only) ---
   speech_to_text: any

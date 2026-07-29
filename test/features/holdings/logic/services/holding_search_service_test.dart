@@ -38,12 +38,31 @@ void main() {
   });
 
   group('text queries', () {
-    test('fuzzy matches holder name above threshold', () {
+    test('matches when the full name starts with the query', () {
       final results = service.search(parcels, 'محمد احمد');
       expect(results.map((final r) => r.holdingId), contains('001117'));
     });
 
-    test('low-similarity name is excluded', () {
+    test('matches when an inner word starts with the query', () {
+      final results = service.search(parcels, 'احمد');
+      expect(results.map((final r) => r.holdingId), contains('001117'));
+    });
+
+    test('normalizes hamza variants and ة/ه before matching', () {
+      final results = service.search(parcels, 'محمد أحمد'); // hamza kept
+      expect(results.map((final r) => r.holdingId), contains('001117'));
+    });
+
+    test('a query that only appears mid-word does not match', () {
+      // 'مد' is inside "محمد" but not a word-start or full-name-start.
+      final results = service.search(parcels, 'مد');
+      expect(
+        results.any((final r) => r.holdingId == '001117'),
+        isFalse,
+      );
+    });
+
+    test('non-matching name is excluded', () {
       final results = service.search(parcels, 'زينب فتحي عبدالله');
       expect(
         results.any((final r) => r.holdingId == '001117'),

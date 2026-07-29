@@ -1,5 +1,5 @@
 import '../../data/models/parcel.dart';
-import 'name_matcher.dart';
+import 'arabic_normalizer.dart';
 
 class SearchResult {
   const SearchResult({
@@ -15,14 +15,23 @@ class SearchResult {
   final int score;
 }
 
-/// Mirrors `search_holdings_use_case.py`: numeric queries rank by holding-ID
-/// prefix/contains match, text queries rank by fuzzy holder-name match,
-/// results are grouped by holding ID (best score kept) and capped at 10.
+/// Numeric queries rank by holding-ID prefix/contains match. Text queries
+/// match by `startsWith` against the normalized holder name — either the
+/// whole name starts with the query, or any individual word in the name
+/// does (so typing "م" matches "علي محمود" as well as "محمد علي") — no
+/// fuzzy/typo-tolerant scoring, so results are exact-prefix only. Results
+/// are grouped by holding ID (best score kept) and capped at 10.
 class HoldingSearchService {
   const HoldingSearchService();
 
   static final RegExp _digitsOnly = RegExp(r'^\d+$');
-  static const int _fuzzyThreshold = 75;
+
+  /// Score for a query matching from the very start of the full name.
+  static const int _fullNameStartScore = 100;
+
+  /// Score for a query matching the start of an inner word only.
+  static const int _wordStartScore = 80;
+
   static const int _maxResults = 10;
 
   List<SearchResult> search(
@@ -65,16 +74,36 @@ class HoldingSearchService {
     final List<Parcel> parcels,
     final String query,
   ) {
+    final String normalizedQuery = ArabicNormalizer.normalizeForSearch(query);
+    if (normalizedQuery.isEmpty) return const <_ScoredParcel>[];
+
     final List<_ScoredParcel> results = <_ScoredParcel>[];
     for (final Parcel parcel in parcels) {
       final String? holderName = parcel.holderName;
       if (holderName == null || holderName.isEmpty) continue;
-      final int score = NameMatcher.score(query, holderName);
-      if (score >= _fuzzyThreshold) {
-        results.add(_ScoredParcel(parcel, score));
-      }
+
+      final int? score = _matchScore(normalizedQuery, holderName);
+      if (score != null) results.add(_ScoredParcel(parcel, score));
     }
     return results;
+  }
+
+  /// `null` when [holderName] doesn't match [normalizedQuery] at all.
+  int? _matchScore(final String normalizedQuery, final String holderName) {
+    final String normalizedName = ArabicNormalizer.normalizeForSearch(
+      holderName,
+    );
+
+    if (normalizedName.startsWith(normalizedQuery)) {
+      return _fullNameStartScore;
+    }
+
+    final bool matchesAWord = normalizedName
+        .split(' ')
+        .any((final String word) => word.startsWith(normalizedQuery));
+    if (matchesAWord) return _wordStartScore;
+
+    return null;
   }
 
   List<SearchResult> _groupAndRank(
