@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/picker_row.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/section_card.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -172,7 +174,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SectionCard(
+                    SectionCard(
                       title: 'اسم الجمعية',
                       subtitle: 'يُطبَّق على كل بيانات الملف دفعة واحدة',
                       child: Row(
@@ -201,7 +203,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                       ),
                     ),
                     verticalSpacing(16),
-                    _SectionCard(
+                    SectionCard(
                       title: 'الأحواض',
                       subtitle: 'عدد الحيازات في كل حوض',
                       child: basins.isEmpty
@@ -258,26 +260,26 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                             ),
                     ),
                     verticalSpacing(16),
-                    _SectionCard(
+                    SectionCard(
                       title: 'تعديل جماعي لحقل',
                       subtitle:
                           'يطبَّق على كل حيازات الحوض المختار (أو كل الملف)',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _PickerRow(
+                          PickerRow(
                             label: 'النطاق',
                             value: _bulkBasin ?? 'كل الأحواض',
                             onTap: _pickBulkBasin,
                           ),
                           verticalSpacing(8),
-                          _PickerRow(
+                          PickerRow(
                             label: 'الحقل',
                             value: _bulkField.label,
                             onTap: _pickBulkField,
                           ),
                           verticalSpacing(8),
-                          _PickerRow(
+                          PickerRow(
                             label: 'القيمة',
                             value: _valueLabel(_bulkValue),
                             onTap: _pickBulkValue,
@@ -296,109 +298,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Container(
-      padding: EdgeInsets.all(rw(14)),
-      decoration: BoxDecoration(
-        color: colors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: AppTextStyles.font16Bold.copyWith(color: colors.textPrimary),
-            textAlign: TextAlign.right,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: AppTextStyles.font12Regular.copyWith(
-              color: colors.textSecondary,
-            ),
-            textAlign: TextAlign.right,
-          ),
-          verticalSpacing(12),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
-class _PickerRow extends StatelessWidget {
-  const _PickerRow({
-    required this.label,
-    required this.value,
-    required this.onTap,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.primary200,
-            ),
-            horizontalSpacing(6),
-            Expanded(
-              child: Text(
-                value,
-                style: AppTextStyles.font14SemiBold.copyWith(
-                  color: colors.textPrimary,
-                ),
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            horizontalSpacing(8),
-            Text(
-              label,
-              style: AppTextStyles.font12Regular.copyWith(
-                color: colors.textSecondary,
               ),
             ),
           ],

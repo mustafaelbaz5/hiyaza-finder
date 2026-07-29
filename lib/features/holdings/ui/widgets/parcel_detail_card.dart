@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
 import 'copy_all_button.dart';
 
 import '../../../../core/themes/app_colors.dart';

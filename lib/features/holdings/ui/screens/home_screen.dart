@@ -5,17 +5,18 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/empty_body.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/error_body.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/file_info_card.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/home_top_bar.dart';
 
-import '../../../../core/config/app_config.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/service/voice_search_service.dart';
 import '../../../../core/settings/ui/settings_sheet.dart';
 import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../logic/cubit/home_cubit.dart';
@@ -147,7 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (final BuildContext context, final HomeState state) {
             return Column(
               children: <Widget>[
-                _HomeTopBar(
+                HomeTopBar(
                   onSettings: () => showSettingsSheet(context),
                   onHistory: _openHistory,
                 ),
@@ -158,10 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       key: ValueKey<HomeStatus>(state.status),
                       child: switch (state.status) {
                         HomeStatus.loading => const _LoadingBody(),
-                        HomeStatus.noFile => _EmptyBody(
+                        HomeStatus.noFile => EmptyBody(
                             onPickFile: cubit.pickFile,
                           ),
-                        HomeStatus.error => _ErrorBody(
+                        HomeStatus.error => ErrorBody(
                             state: state,
                             onPickFile: cubit.pickFile,
                           ),
@@ -191,99 +192,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _HomeTopBar extends StatelessWidget {
-  const _HomeTopBar({required this.onSettings, required this.onHistory});
-
-  final VoidCallback onSettings;
-  final VoidCallback onHistory;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: rw(12), vertical: rh(8)),
-      child: Row(
-        children: <Widget>[
-          _TopBarIconButton(
-            icon: Icons.settings_rounded,
-            tooltip: 'settings.title'.tr(),
-            onTap: onSettings,
-          ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.landscape_rounded,
-                      color: AppColors.primary200,
-                      size: 22,
-                    ),
-                    horizontalSpacing(6),
-                    Text(
-                      'holdings.home.brand'.tr(),
-                      style: AppTextStyles.font20Bold.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'v${AppConfig.appVersion}',
-                  style: AppTextStyles.font12Regular.copyWith(
-                    color: colors.textHint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _TopBarIconButton(
-            icon: Icons.history_rounded,
-            tooltip: 'holdings.home.history'.tr(),
-            onTap: onHistory,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopBarIconButton extends StatelessWidget {
-  const _TopBarIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: colors.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: colors.iconPrimary, size: 22),
-        ),
-      ),
-    );
-  }
-}
-
 class _LoadingBody extends StatelessWidget {
   const _LoadingBody();
 
@@ -292,126 +200,6 @@ class _LoadingBody extends StatelessWidget {
     return const Center(
       child: CircularProgressIndicator(color: AppColors.primary200),
     ).animate().fadeIn(duration: 200.ms);
-  }
-}
-
-class _EmptyBody extends StatelessWidget {
-  const _EmptyBody({required this.onPickFile});
-
-  final VoidCallback onPickFile;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: rw(32)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.all(rw(28)),
-              decoration: BoxDecoration(
-                color: AppColors.primary50.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.folder_open_rounded,
-                size: rf(64),
-                color: AppColors.primary200,
-              ),
-            ).animate().fadeIn(duration: 350.ms).scale(
-                  begin: const Offset(0.8, 0.8),
-                  end: const Offset(1, 1),
-                  curve: Curves.easeOutBack,
-                  duration: 400.ms,
-                ),
-            verticalSpacing(24),
-            Text(
-              'holdings.empty.title'.tr(),
-              style: AppTextStyles.font20Bold.copyWith(
-                color: colors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            verticalSpacing(8),
-            Text(
-              'holdings.empty.desc'.tr(),
-              style: AppTextStyles.font16Regular.copyWith(
-                color: colors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            verticalSpacing(32),
-            CustomTextButton(
-              text: 'holdings.empty.pick_file'.tr(),
-              onPressed: onPickFile,
-              prefixIcon: const Icon(
-                Icons.upload_file_rounded,
-                color: AppColors.white,
-              ),
-              isFullWidth: false,
-              size: CustomButtonSize.large,
-            ),
-          ],
-        ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05, end: 0),
-      ),
-    );
-  }
-}
-
-class _ErrorBody extends StatelessWidget {
-  const _ErrorBody({required this.state, required this.onPickFile});
-
-  final HomeState state;
-  final VoidCallback onPickFile;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    final bool isColumnsError = state.missingColumns.isNotEmpty;
-    final String message = isColumnsError
-        ? 'holdings.error.invalid_file'.tr(
-            namedArgs: {'columns': state.missingColumns.join('، ')},
-          )
-        : (state.errorMessage ?? 'holdings.error.generic'.tr());
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: rw(32)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              padding: EdgeInsets.all(rw(24)),
-              decoration: BoxDecoration(
-                color: AppColors.red200.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.error_outline_rounded,
-                size: rf(56),
-                color: AppColors.red200,
-              ),
-            ).animate().shake(duration: 400.ms, hz: 4),
-            verticalSpacing(20),
-            Text(
-              message,
-              style: AppTextStyles.font16SemiBold.copyWith(
-                color: colors.textPrimary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            verticalSpacing(28),
-            CustomTextButton(
-              text: 'holdings.error.pick_another'.tr(),
-              onPressed: onPickFile,
-              isFullWidth: false,
-            ),
-          ],
-        ).animate().fadeIn(duration: 300.ms),
-      ),
-    );
   }
 }
 
@@ -494,7 +282,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   verticalSpacing(8),
-                  _FileInfoCard(
+                  FileInfoCard(
                     holdingCount: widget.state.holdingCount,
                     selectedBasin: widget.state.selectedBasin,
                     hasBasins: widget.state.availableBasins.isNotEmpty,
@@ -532,163 +320,6 @@ class _LoadedBodyState extends State<_LoadedBody> {
           ],
         ).animate().fadeIn(duration: 250.ms);
       },
-    );
-  }
-}
-
-class _FileInfoCard extends StatelessWidget {
-  const _FileInfoCard({
-    required this.holdingCount,
-    required this.selectedBasin,
-    required this.hasBasins,
-    required this.onChangeFile,
-    required this.onOpenBasinFilter,
-    required this.onOpenFileStatus,
-  });
-
-  final int holdingCount;
-  final String? selectedBasin;
-  final bool hasBasins;
-  final VoidCallback onChangeFile;
-  final VoidCallback onOpenBasinFilter;
-  final VoidCallback onOpenFileStatus;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Container(
-      padding: EdgeInsets.all(rw(16)),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary50.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.dataset_rounded,
-                  color: AppColors.primary200,
-                ),
-              ),
-              horizontalSpacing(12),
-              Expanded(
-                child: Text(
-                  'holdings.home.holdings_loaded'.tr(
-                    namedArgs: {'count': holdingCount.toString()},
-                  ),
-                  style: AppTextStyles.font18Bold.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
-          ),
-          if (hasBasins) ...<Widget>[
-            verticalSpacing(12),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _InlineAction(
-                    icon: Icons.filter_alt_rounded,
-                    label: selectedBasin == null
-                        ? 'holdings.basin.all'.tr()
-                        : 'holdings.basin.focus_label'.tr(
-                            namedArgs: {'basin': selectedBasin!},
-                          ),
-                    onTap: onOpenBasinFilter,
-                    highlighted: selectedBasin != null,
-                  ),
-                ),
-                horizontalSpacing(10),
-                Expanded(
-                  child: _InlineAction(
-                    icon: Icons.swap_horiz_rounded,
-                    label: 'holdings.home.change_file'.tr(),
-                    onTap: onChangeFile,
-                  ),
-                ),
-              ],
-            ),
-          ] else ...<Widget>[
-            verticalSpacing(12),
-            _InlineAction(
-              icon: Icons.swap_horiz_rounded,
-              label: 'holdings.home.change_file'.tr(),
-              onTap: onChangeFile,
-            ),
-          ],
-          verticalSpacing(10),
-          _InlineAction(
-            icon: Icons.dashboard_customize_rounded,
-            label: 'حالة الملف وتعديل جماعي',
-            onTap: onOpenFileStatus,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InlineAction extends StatelessWidget {
-  const _InlineAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.highlighted = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool highlighted;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: highlighted
-              ? AppColors.primary50.withValues(alpha: 0.3)
-              : colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: highlighted ? AppColors.primary200 : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Icon(icon, size: 18, color: AppColors.primary200),
-            horizontalSpacing(6),
-            Flexible(
-              child: Text(
-                label,
-                style: AppTextStyles.font12Bold.copyWith(
-                  color: colors.textPrimary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
