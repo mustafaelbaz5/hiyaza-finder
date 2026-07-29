@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/copy_all_button.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -91,10 +92,7 @@ class ParcelDetailCard extends StatelessWidget {
             west: parcel.borderWest,
           ),
           verticalSpacing(8),
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: _CopyAllButton(onTap: () => _copyAll(context)),
-          ),
+          CopyAllButton(onTap: () => _copyAll(context)),
           verticalSpacing(8),
           _ResponsiveFieldsWrap(
             children: [
@@ -329,51 +327,6 @@ class ParcelDetailCard extends StatelessWidget {
   }
 }
 
-/// A compact, self-sized pill — deliberately NOT a full-width [CustomTextButton]
-/// (which, under the card's `CrossAxisAlignment.stretch` column, stretched
-/// edge-to-edge regardless of `isFullWidth: false`). Wrapped in `Align` by
-/// the caller so it only takes as much width as its content needs.
-class _CopyAllButton extends StatelessWidget {
-  const _CopyAllButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(final BuildContext context) {
-    final TextStyle textStyle =
-        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
-            .merge(AppTextStyles.font12Bold)
-            .copyWith(color: AppColors.primary200);
-
-    return Material(
-      color: AppColors.primary50.withValues(alpha: 0.3),
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primary200, width: 1.2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.copy_all_rounded,
-                size: 16,
-                color: AppColors.primary200,
-              ),
-              const SizedBox(width: 6),
-              Text('holdings.detail.copy_all'.tr(), style: textStyle),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Lays [children] out as a wrap that adapts to the available width: one
 /// column on phones, two on tablets, three on laptop/desktop — keeps a
