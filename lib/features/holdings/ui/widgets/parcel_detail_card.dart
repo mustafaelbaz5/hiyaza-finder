@@ -111,52 +111,11 @@ class ParcelDetailCard extends StatelessWidget {
                       parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
               ),
-              FieldRow(
-                label: 'اسم الحائز',
-                value: parcel.holderName,
-                onEdit: () => _editText(
-                  context,
-                  title: 'اسم الحائز',
-                  initialValue: parcel.holderName ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(holderName: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'الرقم القومي',
-                value: parcel.nationalId,
-                onEdit: () => _editText(
-                  context,
-                  title: 'الرقم القومي',
-                  initialValue: parcel.nationalId ?? '',
-                  keyboardType: TextInputType.number,
-                  apply: (final String v) =>
-                      parcel.copyWith(nationalId: v.isEmpty ? null : v),
-                ),
-              ),
+              FieldRow(label: 'اسم الحائز', value: parcel.holderName),
+              FieldRow(label: 'الرقم القومي', value: parcel.nationalId),
               FieldRow(label: 'اسم الجمعية', value: parcel.associationName),
-              FieldRow(
-                label: 'اسم الحوض',
-                value: parcel.basinName,
-                onEdit: () => _editText(
-                  context,
-                  title: 'اسم الحوض',
-                  initialValue: parcel.basinName ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(basinName: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'رقم الأرض',
-                value: parcel.landNumber,
-                onEdit: () => _editText(
-                  context,
-                  title: 'رقم الأرض',
-                  initialValue: parcel.landNumber ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(landNumber: v.isEmpty ? null : v),
-                ),
-              ),
+              FieldRow(label: 'اسم الحوض', value: parcel.basinName),
+              FieldRow(label: 'رقم الأرض', value: parcel.landNumber),
               FieldRow(
                 label: 'المساحة',
                 value: _areaFraction(parcel),
@@ -515,29 +474,10 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
                         ),
                       ),
                     ),
-                    FieldRow(
-                      label: 'المديرية',
-                      value: widget.parcel.directorate,
-                      onEdit: () => _editText(
-                        context,
-                        title: 'المديرية',
-                        initialValue: widget.parcel.directorate ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          directorate: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
+                    FieldRow(label: 'المديرية', value: widget.parcel.directorate),
                     FieldRow(
                       label: 'الإدارة',
                       value: widget.parcel.administration,
-                      onEdit: () => _editText(
-                        context,
-                        title: 'الإدارة',
-                        initialValue: widget.parcel.administration ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          administration: v.isEmpty ? null : v,
-                        ),
-                      ),
                     ),
                   ],
                 )
