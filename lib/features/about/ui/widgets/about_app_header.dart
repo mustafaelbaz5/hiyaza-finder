@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:hiyaza_finder/core/utils/app_assets.dart';
+import '../../../../core/utils/app_assets.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/themes/app_colors.dart';

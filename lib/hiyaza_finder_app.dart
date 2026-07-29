@@ -69,29 +69,29 @@ class HiyazaFinderApp extends StatelessWidget {
           child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
             builder:
                 (final BuildContext context, final AppSettingsState settings) {
-                  return MaterialApp(
-                    localizationsDelegates: context.localizationDelegates,
-                    supportedLocales: context.supportedLocales,
-                    locale: settings.locale, // driven by cubit
-                    debugShowCheckedModeBanner: false,
-                    scrollBehavior: const _AppScrollBehavior(),
-                    initialRoute: Routes.home,
-                    onGenerateRoute: AppRouter.generateRoute,
-                    title: AppConfig.appName,
-                    // font family injected into both themes
-                    theme: getLightTheme().copyWith(
-                      textTheme: getLightTheme().textTheme.apply(
+              return MaterialApp(
+                localizationsDelegates: context.localizationDelegates,
+                supportedLocales: context.supportedLocales,
+                locale: settings.locale, // driven by cubit
+                debugShowCheckedModeBanner: false,
+                scrollBehavior: const _AppScrollBehavior(),
+                initialRoute: Routes.home,
+                onGenerateRoute: AppRouter.generateRoute,
+                title: AppConfig.appName,
+                // font family injected into both themes
+                theme: getLightTheme().copyWith(
+                  textTheme: getLightTheme().textTheme.apply(
                         fontFamily: settings.fontFamily,
                       ),
-                    ),
-                    darkTheme: getDarkTheme().copyWith(
-                      textTheme: getDarkTheme().textTheme.apply(
+                ),
+                darkTheme: getDarkTheme().copyWith(
+                  textTheme: getDarkTheme().textTheme.apply(
                         fontFamily: settings.fontFamily,
                       ),
-                    ),
-                    themeMode: settings.themeMode,
-                  );
-                },
+                ),
+                themeMode: settings.themeMode,
+              );
+            },
           ),
         );
       },
@@ -124,9 +124,9 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Set<PointerDeviceKind> get dragDevices => <PointerDeviceKind>{
-    PointerDeviceKind.touch,
-    PointerDeviceKind.mouse,
-    PointerDeviceKind.trackpad,
-    PointerDeviceKind.stylus,
-  };
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
 }

@@ -14,11 +14,11 @@ class CachedFileEntry {
   final int holdingCount;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-    'fileName': fileName,
-    'filePath': filePath,
-    'cachedAt': cachedAt.toIso8601String(),
-    'holdingCount': holdingCount,
-  };
+        'fileName': fileName,
+        'filePath': filePath,
+        'cachedAt': cachedAt.toIso8601String(),
+        'holdingCount': holdingCount,
+      };
 
   factory CachedFileEntry.fromJson(final Map<String, dynamic> json) =>
       CachedFileEntry(

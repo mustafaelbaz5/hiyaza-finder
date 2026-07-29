@@ -37,9 +37,7 @@ class HomeCubit extends Cubit<HomeState> {
       // User dismissed the picker — return to whatever state we were in.
       emit(
         state.copyWith(
-          status: state.parcels.isEmpty
-              ? HomeStatus.noFile
-              : HomeStatus.loaded,
+          status: state.parcels.isEmpty ? HomeStatus.noFile : HomeStatus.loaded,
         ),
       );
     } on HoldingsParseException catch (e) {

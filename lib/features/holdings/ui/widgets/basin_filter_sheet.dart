@@ -118,13 +118,11 @@ class _BasinFilterSheet extends StatelessWidget {
                   ),
                   for (final (int i, String basin) in basins.indexed)
                     _BasinTile(
-                          label: basin,
-                          count: holdingCounts[basin],
-                          isSelected: selected == basin,
-                          onTap: () => Navigator.pop(context, basin),
-                        )
-                        .animate(delay: (i * 25).ms)
-                        .fadeIn(duration: 180.ms),
+                      label: basin,
+                      count: holdingCounts[basin],
+                      isSelected: selected == basin,
+                      onTap: () => Navigator.pop(context, basin),
+                    ).animate(delay: (i * 25).ms).fadeIn(duration: 180.ms),
                 ],
               ),
             ),

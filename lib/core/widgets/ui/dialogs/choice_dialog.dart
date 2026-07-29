@@ -69,7 +69,8 @@ class _ChoiceDialog<T> extends StatelessWidget {
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(horizontal: rw(32), vertical: rh(24)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
       backgroundColor: colors.surface,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: rh(440)),
@@ -96,8 +97,8 @@ class _ChoiceDialog<T> extends StatelessWidget {
                         label: clearLabel!,
                         isSelected: selected == null,
                         icon: Icons.remove_circle_outline_rounded,
-                        onTap: () =>
-                            Navigator.pop(context, ChoiceDialogResult<T>.clear()),
+                        onTap: () => Navigator.pop(
+                            context, ChoiceDialogResult<T>.clear()),
                       ),
                     for (final ChoiceOption<T> option in options)
                       _ChoiceTile(

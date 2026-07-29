@@ -121,9 +121,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       itemBuilder: (final BuildContext context, final int i) {
                         final CachedFileEntry entry = entries[i];
                         return _HistoryTile(
-                              entry: entry,
-                              onTap: () => _openEntry(entry),
-                            )
+                          entry: entry,
+                          onTap: () => _openEntry(entry),
+                        )
                             .animate()
                             .fadeIn(
                               duration: 220.ms,

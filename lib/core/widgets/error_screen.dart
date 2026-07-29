@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
+import '../themes/app_text_styles.dart';
+import '../utils/extensions/context_ext.dart';
 
 import '../themes/app_colors.dart';
 import '../utils/spacing.dart';

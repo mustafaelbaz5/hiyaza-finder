@@ -7,12 +7,12 @@ enum BulkEditableField { cropType, notes, creditType, usageType, isInheritance }
 
 extension BulkEditableFieldX on BulkEditableField {
   String get label => switch (this) {
-    BulkEditableField.cropType => 'نوع الزرع',
-    BulkEditableField.notes => 'ملاحظات',
-    BulkEditableField.creditType => 'نوع الائتمان',
-    BulkEditableField.usageType => 'نوع الاستخدام',
-    BulkEditableField.isInheritance => 'وراثة',
-  };
+        BulkEditableField.cropType => 'نوع الزرع',
+        BulkEditableField.notes => 'ملاحظات',
+        BulkEditableField.creditType => 'نوع الائتمان',
+        BulkEditableField.usageType => 'نوع الاستخدام',
+        BulkEditableField.isInheritance => 'وراثة',
+      };
 
   /// `true` for the one boolean field (وراثة) — picked via two named
   /// options instead of the free dropdown list [textOptions] provides.
@@ -20,12 +20,12 @@ extension BulkEditableFieldX on BulkEditableField {
 
   /// Selectable values for text-valued fields (ignored when [isBoolean]).
   List<String> get textOptions => switch (this) {
-    BulkEditableField.cropType => Parcel.cropTypeOptions,
-    BulkEditableField.notes => Parcel.notesOptions,
-    BulkEditableField.creditType => Parcel.creditTypeOptions,
-    BulkEditableField.usageType => Parcel.usageTypeOptions,
-    BulkEditableField.isInheritance => const <String>[],
-  };
+        BulkEditableField.cropType => Parcel.cropTypeOptions,
+        BulkEditableField.notes => Parcel.notesOptions,
+        BulkEditableField.creditType => Parcel.creditTypeOptions,
+        BulkEditableField.usageType => Parcel.usageTypeOptions,
+        BulkEditableField.isInheritance => const <String>[],
+      };
 
   /// Whether the picker offers a "—" (clear/unset) option.
   bool get allowClear =>

@@ -3,9 +3,9 @@ import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/logic/services/holding_search_service.dart';
 
 Parcel _parcel(final String holdingId, final String holderName) => Parcel(
-  holdingId: holdingId,
-  holderName: holderName,
-);
+      holdingId: holdingId,
+      holderName: holderName,
+    );
 
 void main() {
   const HoldingSearchService service = HoldingSearchService();

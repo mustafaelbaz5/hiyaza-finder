@@ -132,21 +132,20 @@ class HoldingSearchService {
       }
     }
 
-    final List<SearchResult> results =
-        bestByHolding.values
-            .map(
-              (final _ScoredParcel entry) => SearchResult(
-                holdingId: entry.parcel.holdingId,
-                holderName: entry.parcel.holderName,
-                parcelCount: parcelCountsByHolding[entry.parcel.holdingId] ?? 1,
-                score: entry.score,
-              ),
-            )
-            .toList()
-          ..sort(
-            (final SearchResult a, final SearchResult b) =>
-                b.score.compareTo(a.score),
-          );
+    final List<SearchResult> results = bestByHolding.values
+        .map(
+          (final _ScoredParcel entry) => SearchResult(
+            holdingId: entry.parcel.holdingId,
+            holderName: entry.parcel.holderName,
+            parcelCount: parcelCountsByHolding[entry.parcel.holdingId] ?? 1,
+            score: entry.score,
+          ),
+        )
+        .toList()
+      ..sort(
+        (final SearchResult a, final SearchResult b) =>
+            b.score.compareTo(a.score),
+      );
 
     return results.take(_maxResults).toList();
   }

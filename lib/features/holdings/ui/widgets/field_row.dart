@@ -77,7 +77,8 @@ class FieldRow extends StatelessWidget {
             ),
           ),
           if (onEdit != null)
-            _TileIconButton(icon: Icons.edit_rounded, onTap: onEdit!, tooltip: 'تعديل'),
+            _TileIconButton(
+                icon: Icons.edit_rounded, onTap: onEdit!, tooltip: 'تعديل'),
           _TileIconButton(
             icon: Icons.copy_rounded,
             onTap: () => _copy(context, displayValue),

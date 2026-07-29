@@ -99,14 +99,12 @@ class _CustomTextFormState extends State<CustomTextForm> {
 
     final textDirection = widget.isRTL ? TextDirection.rtl : TextDirection.ltr;
 
-    final TextStyle effectiveInputStyle =
-        widget.inputTextStyle ??
+    final TextStyle effectiveInputStyle = widget.inputTextStyle ??
         AppTextStyles.font16Regular.copyWith(
           color: widget.enabled ? colors.textPrimary : colors.textDisabled,
         );
 
-    final TextStyle effectiveHintStyle =
-        widget.hintStyle ??
+    final TextStyle effectiveHintStyle = widget.hintStyle ??
         AppTextStyles.font16Regular.copyWith(color: colors.textHint);
 
     final Color defaultBorder = widget.borderColor ?? colors.border;
@@ -140,8 +138,7 @@ class _CustomTextFormState extends State<CustomTextForm> {
         hintStyle: effectiveHintStyle,
         hintTextDirection: textDirection,
         counterText: '',
-        contentPadding:
-            widget.contentPadding ??
+        contentPadding: widget.contentPadding ??
             const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
 
         // ─── Prefix / Suffix ───────────────────────────────────────

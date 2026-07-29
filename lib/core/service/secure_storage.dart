@@ -8,7 +8,8 @@ class SecureStorage {
   Future<void> write({
     required final String key,
     required final String value,
-  }) => _storage.write(key: key, value: value);
+  }) =>
+      _storage.write(key: key, value: value);
 
   Future<String?> read({required final String key}) => _storage.read(key: key);
 

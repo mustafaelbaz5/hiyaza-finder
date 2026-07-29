@@ -46,9 +46,8 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String holdingId = _parcels.isNotEmpty
-        ? _parcels.first.holdingId
-        : '';
+    final String holdingId =
+        _parcels.isNotEmpty ? _parcels.first.holdingId : '';
 
     return Scaffold(
       backgroundColor: colors.background,

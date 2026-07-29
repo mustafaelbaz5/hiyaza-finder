@@ -99,10 +99,10 @@ class CustomTextButton extends StatelessWidget {
 
   // ─── Resolved sizes ───────────────────────────────────────────────────
   double get _height => switch (size) {
-    CustomButtonSize.small => 40,
-    CustomButtonSize.medium => 52,
-    CustomButtonSize.large => 56,
-  };
+        CustomButtonSize.small => 40,
+        CustomButtonSize.medium => 52,
+        CustomButtonSize.large => 56,
+      };
 
   double get _iconSize => size == CustomButtonSize.small ? 18 : 20;
 
@@ -155,8 +155,8 @@ class CustomTextButton extends StatelessWidget {
     final Color fg = _resolveForeground(context);
     final BorderSide border = _resolveBorder(fg);
     final double radius = borderRadius ?? 12;
-    final TextStyle effectiveTextStyle = (textStyle ?? _defaultTextStyle(context))
-        .copyWith(color: fg);
+    final TextStyle effectiveTextStyle =
+        (textStyle ?? _defaultTextStyle(context)).copyWith(color: fg);
 
     final Widget child = isLoading
         ? SizedBox(
@@ -202,28 +202,26 @@ class CustomTextButton extends StatelessWidget {
       width: isFullWidth ? double.infinity : null,
       child: ElevatedButton(
         onPressed: _isEnabled ? onPressed : null,
-        style:
-            ElevatedButton.styleFrom(
-              backgroundColor: bg,
-              foregroundColor: fg,
-              disabledBackgroundColor: AppColors.grey100,
-              disabledForegroundColor: AppColors.grey400,
-              elevation: 0,
-              shadowColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              padding:
-                  contentPadding ??
-                  EdgeInsets.symmetric(
-                    horizontal: size == CustomButtonSize.small ? 16 : 24,
-                    vertical: 12,
-                  ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(radius),
-                side: border,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: fg,
+          disabledBackgroundColor: AppColors.grey100,
+          disabledForegroundColor: AppColors.grey400,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          padding: contentPadding ??
+              EdgeInsets.symmetric(
+                horizontal: size == CustomButtonSize.small ? 16 : 24,
+                vertical: 12,
               ),
-            ).copyWith(
-              overlayColor: WidgetStateProperty.all(fg.withValues(alpha: 0.08)),
-            ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+            side: border,
+          ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.all(fg.withValues(alpha: 0.08)),
+        ),
         child: child,
       ),
     );

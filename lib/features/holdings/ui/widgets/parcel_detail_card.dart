@@ -2,7 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/copy_all_button.dart';
+import 'copy_all_button.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -255,12 +255,12 @@ class ParcelDetailCard extends StatelessWidget {
     final String holderSlot = p.isInheritance
         ? '(ورثة) ${holderName.isEmpty ? FieldRow.emptyPlaceholder : holderName}'
         : slot(p.holderName);
-    final String nationalIdSlot = (p.nationalId == null || p.nationalId!.trim().isEmpty)
-        ? '11111111111111'
-        : p.nationalId!.trim();
-    final String creditSentence = p.creditType == 'أوقاف'
-        ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية'
-        : '';
+    final String nationalIdSlot =
+        (p.nationalId == null || p.nationalId!.trim().isEmpty)
+            ? '11111111111111'
+            : p.nationalId!.trim();
+    final String creditSentence =
+        p.creditType == 'أوقاف' ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية' : '';
 
     final List<(String, String)> fields = <(String, String)>[
       ('رقم الحيازة', p.holdingId),
@@ -282,10 +282,11 @@ class ParcelDetailCard extends StatelessWidget {
       ('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence),
     ];
 
-    return fields.map((final (String, String) f) => '${f.$1}: ${f.$2},').join('\n');
+    return fields
+        .map((final (String, String) f) => '${f.$1}: ${f.$2},')
+        .join('\n');
   }
 }
-
 
 /// Lays [children] out as a wrap that adapts to the available width: one
 /// column on phones, two on tablets, three on laptop/desktop — keeps a
@@ -303,9 +304,8 @@ class _ResponsiveFieldsWrap extends StatelessWidget {
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final double width = constraints.maxWidth;
         final int columns = width >= 900 ? 3 : (width >= 520 ? 2 : 1);
-        final double itemWidth = columns == 1
-            ? width
-            : (width - _spacing * (columns - 1)) / columns;
+        final double itemWidth =
+            columns == 1 ? width : (width - _spacing * (columns - 1)) / columns;
 
         return Wrap(
           spacing: _spacing,
@@ -430,7 +430,8 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
                   children: [
                     FieldRow(
                       label: 'وراثة',
-                      value: widget.parcel.isInheritance ? 'وراثة' : 'ليست وراثة',
+                      value:
+                          widget.parcel.isInheritance ? 'وراثة' : 'ليست وراثة',
                       onEdit: () => _editSwitch(context),
                     ),
                     FieldRow(
@@ -474,7 +475,8 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
                         ),
                       ),
                     ),
-                    FieldRow(label: 'المديرية', value: widget.parcel.directorate),
+                    FieldRow(
+                        label: 'المديرية', value: widget.parcel.directorate),
                     FieldRow(
                       label: 'الإدارة',
                       value: widget.parcel.administration,

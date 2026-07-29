@@ -30,8 +30,8 @@ class HoldingsRepository {
   HoldingsRepository({
     final HoldingSearchService searchService = const HoldingSearchService(),
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
-  }) : _searchService = searchService,
-       _editsStore = editsStore;
+  })  : _searchService = searchService,
+        _editsStore = editsStore;
 
   static const String _activeFilePathKey = 'holdings_active_file_path';
   static const String _historyKey = 'holdings_file_history';
@@ -111,7 +111,8 @@ class HoldingsRepository {
         fileName: fileName,
         filePath: cachedPath,
         cachedAt: DateTime.now(),
-        holdingCount: parsed.map((final Parcel p) => p.holdingId).toSet().length,
+        holdingCount:
+            parsed.map((final Parcel p) => p.holdingId).toSet().length,
       ),
     );
     await _setActivePath(cachedPath);
@@ -173,8 +174,7 @@ class HoldingsRepository {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? override = prefs.getString(_associationNameKey(filePath));
     _associationNameConfirmed = override != null;
-    final String associationName =
-        override ?? deriveAssociationName(fileName);
+    final String associationName = override ?? deriveAssociationName(fileName);
 
     final List<Parcel> withIds = <Parcel>[
       for (var i = 0; i < parsed.length; i++)
@@ -390,8 +390,7 @@ class HoldingsRepository {
       final Parcel updated = switch (field) {
         BulkEditableField.cropType => p.copyWith(cropType: value as String?),
         BulkEditableField.notes => p.copyWith(notes: value as String?),
-        BulkEditableField.creditType =>
-          p.copyWith(creditType: value as String),
+        BulkEditableField.creditType => p.copyWith(creditType: value as String),
         BulkEditableField.usageType => p.copyWith(usageType: value as String),
         BulkEditableField.isInheritance =>
           p.copyWith(isInheritance: value as bool),

@@ -83,15 +83,15 @@ class HomeState extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    status,
-    parcels,
-    query,
-    results,
-    errorMessage,
-    missingColumns,
-    availableBasins,
-    selectedBasin,
-    needsAssociationConfirm,
-    associationNameDraft,
-  ];
+        status,
+        parcels,
+        query,
+        results,
+        errorMessage,
+        missingColumns,
+        availableBasins,
+        selectedBasin,
+        needsAssociationConfirm,
+        associationNameDraft,
+      ];
 }

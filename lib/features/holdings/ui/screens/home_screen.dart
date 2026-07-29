@@ -40,8 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
   // unreliable to expose on Windows.
   final VoiceSearchService? _voiceService =
       defaultTargetPlatform == TargetPlatform.android
-      ? getIt<VoiceSearchService>()
-      : null;
+          ? getIt<VoiceSearchService>()
+          : null;
   bool _isListening = false;
 
   @override
@@ -69,9 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final String localeId = context.locale.languageCode == 'ar'
-        ? 'ar-EG'
-        : 'en-US';
+    final String localeId =
+        context.locale.languageCode == 'ar' ? 'ar-EG' : 'en-US';
     final bool started = await voice.startListening(
       localeId: localeId,
       onResult: (final String text) {
@@ -160,25 +159,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: switch (state.status) {
                         HomeStatus.loading => const _LoadingBody(),
                         HomeStatus.noFile => _EmptyBody(
-                          onPickFile: cubit.pickFile,
-                        ),
+                            onPickFile: cubit.pickFile,
+                          ),
                         HomeStatus.error => _ErrorBody(
-                          state: state,
-                          onPickFile: cubit.pickFile,
-                        ),
+                            state: state,
+                            onPickFile: cubit.pickFile,
+                          ),
                         HomeStatus.loaded => _LoadedBody(
-                          state: state,
-                          controller: _controller,
-                          cubit: cubit,
-                          onQueryChanged: (final String q) =>
-                              _onQueryChanged(q, cubit),
-                          onOpenBasinFilter: () => _openBasinFilter(cubit),
-                          onOpenFileStatus: () => _openFileStatus(cubit),
-                          onToggleVoice: _voiceService == null
-                              ? null
-                              : () => _toggleVoiceSearch(cubit),
-                          isListening: _isListening,
-                        ),
+                            state: state,
+                            controller: _controller,
+                            cubit: cubit,
+                            onQueryChanged: (final String q) =>
+                                _onQueryChanged(q, cubit),
+                            onOpenBasinFilter: () => _openBasinFilter(cubit),
+                            onOpenFileStatus: () => _openFileStatus(cubit),
+                            onToggleVoice: _voiceService == null
+                                ? null
+                                : () => _toggleVoiceSearch(cubit),
+                            isListening: _isListening,
+                          ),
                       },
                     ),
                   ),
@@ -311,20 +310,17 @@ class _EmptyBody extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Container(
-                  padding: EdgeInsets.all(rw(28)),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary50.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.folder_open_rounded,
-                    size: rf(64),
-                    color: AppColors.primary200,
-                  ),
-                )
-                .animate()
-                .fadeIn(duration: 350.ms)
-                .scale(
+              padding: EdgeInsets.all(rw(28)),
+              decoration: BoxDecoration(
+                color: AppColors.primary50.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.folder_open_rounded,
+                size: rf(64),
+                color: AppColors.primary200,
+              ),
+            ).animate().fadeIn(duration: 350.ms).scale(
                   begin: const Offset(0.8, 0.8),
                   end: const Offset(1, 1),
                   curve: Curves.easeOutBack,

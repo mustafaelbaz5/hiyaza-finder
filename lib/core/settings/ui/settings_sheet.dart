@@ -77,59 +77,59 @@ class _SettingsSheet extends StatelessWidget {
               BlocBuilder<AppSettingsCubit, AppSettingsState>(
                 builder:
                     (final BuildContext context, final AppSettingsState state) {
-                      final AppSettingsCubit cubit = context
-                          .read<AppSettingsCubit>();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _SectionLabel('settings.appearance'.tr()),
-                          verticalSpacing(10),
-                          _SegmentedSelector<ThemeMode>(
-                            value: state.themeMode,
-                            segments: <_Segment<ThemeMode>>[
-                              _Segment(
-                                value: ThemeMode.light,
-                                icon: Icons.light_mode_rounded,
-                                label: 'settings.theme_light'.tr(),
-                              ),
-                              _Segment(
-                                value: ThemeMode.dark,
-                                icon: Icons.dark_mode_rounded,
-                                label: 'settings.theme_dark'.tr(),
-                              ),
-                              _Segment(
-                                value: ThemeMode.system,
-                                icon: Icons.brightness_auto_rounded,
-                                label: 'settings.theme_system'.tr(),
-                              ),
-                            ],
-                            onChanged: cubit.updateTheme,
+                  final AppSettingsCubit cubit =
+                      context.read<AppSettingsCubit>();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _SectionLabel('settings.appearance'.tr()),
+                      verticalSpacing(10),
+                      _SegmentedSelector<ThemeMode>(
+                        value: state.themeMode,
+                        segments: <_Segment<ThemeMode>>[
+                          _Segment(
+                            value: ThemeMode.light,
+                            icon: Icons.light_mode_rounded,
+                            label: 'settings.theme_light'.tr(),
                           ),
-                          verticalSpacing(24),
-                          _SectionLabel('settings.language'.tr()),
-                          verticalSpacing(10),
-                          _SegmentedSelector<String>(
-                            value: state.locale.languageCode,
-                            segments: <_Segment<String>>[
-                              _Segment(
-                                value: 'ar',
-                                icon: Icons.translate_rounded,
-                                label: 'settings.lang_ar'.tr(),
-                              ),
-                              _Segment(
-                                value: 'en',
-                                icon: Icons.language_rounded,
-                                label: 'settings.lang_en'.tr(),
-                              ),
-                            ],
-                            onChanged: (final String code) => cubit.updateLocale(
-                              context,
-                              Locale(code),
-                            ),
+                          _Segment(
+                            value: ThemeMode.dark,
+                            icon: Icons.dark_mode_rounded,
+                            label: 'settings.theme_dark'.tr(),
+                          ),
+                          _Segment(
+                            value: ThemeMode.system,
+                            icon: Icons.brightness_auto_rounded,
+                            label: 'settings.theme_system'.tr(),
                           ),
                         ],
-                      );
-                    },
+                        onChanged: cubit.updateTheme,
+                      ),
+                      verticalSpacing(24),
+                      _SectionLabel('settings.language'.tr()),
+                      verticalSpacing(10),
+                      _SegmentedSelector<String>(
+                        value: state.locale.languageCode,
+                        segments: <_Segment<String>>[
+                          _Segment(
+                            value: 'ar',
+                            icon: Icons.translate_rounded,
+                            label: 'settings.lang_ar'.tr(),
+                          ),
+                          _Segment(
+                            value: 'en',
+                            icon: Icons.language_rounded,
+                            label: 'settings.lang_en'.tr(),
+                          ),
+                        ],
+                        onChanged: (final String code) => cubit.updateLocale(
+                          context,
+                          Locale(code),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               verticalSpacing(24),
               _SectionLabel('settings.more'.tr()),

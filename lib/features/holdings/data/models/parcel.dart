@@ -170,24 +170,24 @@ class Parcel {
   /// when adding a new editable field, instead of hand-listing fields in
   /// multiple places.
   Map<String, dynamic> toEditableJson() => <String, dynamic>{
-    'directorate': directorate,
-    'administration': administration,
-    'basinName': basinName,
-    'basinCode': basinCode,
-    'holderName': holderName,
-    'nationalId': nationalId,
-    'landNumber': landNumber,
-    'feddan': feddan,
-    'qirat': qirat,
-    'sahm': sahm,
-    'totalSqm': totalSqm,
-    'ownerName': ownerName,
-    'cropType': cropType,
-    'notes': notes,
-    'creditType': creditType,
-    'isInheritance': isInheritance,
-    'usageType': usageType,
-  };
+        'directorate': directorate,
+        'administration': administration,
+        'basinName': basinName,
+        'basinCode': basinCode,
+        'holderName': holderName,
+        'nationalId': nationalId,
+        'landNumber': landNumber,
+        'feddan': feddan,
+        'qirat': qirat,
+        'sahm': sahm,
+        'totalSqm': totalSqm,
+        'ownerName': ownerName,
+        'cropType': cropType,
+        'notes': notes,
+        'creditType': creditType,
+        'isInheritance': isInheritance,
+        'usageType': usageType,
+      };
 
   /// Rebuilds a parcel from [original] — which supplies the never-editable
   /// fields (id, holdingId, pageNumber, borders, associationName) — overlaid

@@ -57,35 +57,32 @@ class _CenterCell extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-          decoration: BoxDecoration(
-            color: AppColors.primary200,
-            borderRadius: BorderRadius.circular(10),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary200,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.crop_square_rounded,
+            color: AppColors.white,
+            size: 15,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.crop_square_rounded,
-                color: AppColors.white,
-                size: 15,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '#$holdingId',
-                style: AppTextStyles.font12Bold.copyWith(
-                  color: AppColors.white,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            '#$holdingId',
+            style: AppTextStyles.font12Bold.copyWith(
+              color: AppColors.white,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        )
-        .animate()
-        .fadeIn(duration: 300.ms)
-        .scale(
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms).scale(
           begin: const Offset(0.85, 0.85),
           end: const Offset(1, 1),
           curve: Curves.easeOutBack,
@@ -103,9 +100,8 @@ class _BorderCell extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String displayText = (text == null || text!.trim().isEmpty)
-        ? '—'
-        : text!;
+    final String displayText =
+        (text == null || text!.trim().isEmpty) ? '—' : text!;
 
     return Container(
       width: double.infinity,
