@@ -101,10 +101,16 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       basins: state.availableBasins,
       selected: state.selectedBasin,
+      holdingCounts: getIt<HoldingsRepository>().basinHoldingCounts,
     );
     if (selected != state.selectedBasin) {
       cubit.selectBasin(selected);
     }
+  }
+
+  Future<void> _openFileStatus(final HomeCubit cubit) async {
+    await context.pushNamed(Routes.fileStatus);
+    if (mounted) cubit.refreshData();
   }
 
   /// Runs once right after a file finishes loading: confirms اسم الجمعية
@@ -167,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onQueryChanged: (final String q) =>
                               _onQueryChanged(q, cubit),
                           onOpenBasinFilter: () => _openBasinFilter(cubit),
+                          onOpenFileStatus: () => _openFileStatus(cubit),
                           onToggleVoice: _voiceService == null
                               ? null
                               : () => _toggleVoiceSearch(cubit),
@@ -422,6 +429,7 @@ class _LoadedBody extends StatefulWidget {
     required this.cubit,
     required this.onQueryChanged,
     required this.onOpenBasinFilter,
+    required this.onOpenFileStatus,
     required this.onToggleVoice,
     required this.isListening,
   });
@@ -431,6 +439,7 @@ class _LoadedBody extends StatefulWidget {
   final HomeCubit cubit;
   final void Function(String query) onQueryChanged;
   final VoidCallback onOpenBasinFilter;
+  final VoidCallback onOpenFileStatus;
   final VoidCallback? onToggleVoice;
   final bool isListening;
 
@@ -495,6 +504,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
                     hasBasins: widget.state.availableBasins.isNotEmpty,
                     onChangeFile: widget.cubit.changeFile,
                     onOpenBasinFilter: widget.onOpenBasinFilter,
+                    onOpenFileStatus: widget.onOpenFileStatus,
                   ),
                   verticalSpacing(16),
                   CustomTextForm(
@@ -537,6 +547,7 @@ class _FileInfoCard extends StatelessWidget {
     required this.hasBasins,
     required this.onChangeFile,
     required this.onOpenBasinFilter,
+    required this.onOpenFileStatus,
   });
 
   final int holdingCount;
@@ -544,6 +555,7 @@ class _FileInfoCard extends StatelessWidget {
   final bool hasBasins;
   final VoidCallback onChangeFile;
   final VoidCallback onOpenBasinFilter;
+  final VoidCallback onOpenFileStatus;
 
   @override
   Widget build(final BuildContext context) {
@@ -620,6 +632,12 @@ class _FileInfoCard extends StatelessWidget {
               onTap: onChangeFile,
             ),
           ],
+          verticalSpacing(10),
+          _InlineAction(
+            icon: Icons.dashboard_customize_rounded,
+            label: 'حالة الملف وتعديل جماعي',
+            onTap: onOpenFileStatus,
+          ),
         ],
       ),
     );

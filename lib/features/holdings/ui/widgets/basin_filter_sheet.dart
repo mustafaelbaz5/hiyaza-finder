@@ -14,28 +14,38 @@ const Object _allBasin = Object();
 
 /// Shows a bottom sheet letting the user narrow search to one اسم الحوض
 /// value, defaulting to "All". Returns the chosen basin (`null` = All), or
-/// nothing if dismissed without a choice.
+/// nothing if dismissed without a choice. [holdingCounts] (holdingId count
+/// per basin) is shown beside each basin so the user can see its size.
 Future<String?> showBasinFilterSheet(
   final BuildContext context, {
   required final List<String> basins,
   required final String? selected,
+  final Map<String, int> holdingCounts = const <String, int>{},
 }) async {
   final Object? result = await showModalBottomSheet<Object?>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (final BuildContext context) =>
-        _BasinFilterSheet(basins: basins, selected: selected),
+    builder: (final BuildContext context) => _BasinFilterSheet(
+      basins: basins,
+      selected: selected,
+      holdingCounts: holdingCounts,
+    ),
   );
   if (result == null) return selected; // dismissed — keep current focus
   return identical(result, _allBasin) ? null : result as String;
 }
 
 class _BasinFilterSheet extends StatelessWidget {
-  const _BasinFilterSheet({required this.basins, required this.selected});
+  const _BasinFilterSheet({
+    required this.basins,
+    required this.selected,
+    required this.holdingCounts,
+  });
 
   final List<String> basins;
   final String? selected;
+  final Map<String, int> holdingCounts;
 
   @override
   Widget build(final BuildContext context) {
@@ -99,12 +109,17 @@ class _BasinFilterSheet extends StatelessWidget {
                 children: [
                   _BasinTile(
                     label: 'holdings.basin.all'.tr(),
+                    count: holdingCounts.values.fold<int>(
+                      0,
+                      (final int a, final int b) => a + b,
+                    ),
                     isSelected: selected == null,
                     onTap: () => Navigator.pop(context, _allBasin),
                   ),
                   for (final (int i, String basin) in basins.indexed)
                     _BasinTile(
                           label: basin,
+                          count: holdingCounts[basin],
                           isSelected: selected == basin,
                           onTap: () => Navigator.pop(context, basin),
                         )
@@ -125,11 +140,15 @@ class _BasinTile extends StatelessWidget {
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.count,
   });
 
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// Holding count shown as a trailing badge, or omitted when unknown.
+  final int? count;
 
   @override
   Widget build(final BuildContext context) {
@@ -169,6 +188,29 @@ class _BasinTile extends StatelessWidget {
                 textAlign: TextAlign.right,
               ),
             ),
+            if (count != null) ...[
+              horizontalSpacing(8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary200.withValues(alpha: 0.15)
+                      : colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: AppTextStyles.font12Bold.copyWith(
+                    color: isSelected
+                        ? AppColors.primary200
+                        : colors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

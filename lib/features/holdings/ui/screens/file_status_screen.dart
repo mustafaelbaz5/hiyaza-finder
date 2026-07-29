@@ -1,0 +1,409 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../data/models/bulk_editable_field.dart';
+import '../../data/repository/holdings_repository.dart';
+
+/// Overview of the loaded file — holding counts per حوض — plus two bulk
+/// edit tools: setting اسم الجمعية for the whole file at once (same action
+/// as the load-time confirm sheet), and applying one of the app-added
+/// fields (نوع الزرع، ملاحظات، …) to every parcel in one حوض (or the whole
+/// file) at once.
+class FileStatusScreen extends StatefulWidget {
+  const FileStatusScreen({super.key});
+
+  @override
+  State<FileStatusScreen> createState() => _FileStatusScreenState();
+}
+
+class _FileStatusScreenState extends State<FileStatusScreen> {
+  final HoldingsRepository _repository = getIt<HoldingsRepository>();
+
+  String? _bulkBasin; // null = whole file
+  BulkEditableField _bulkField = BulkEditableField.cropType;
+  Object? _bulkValue;
+
+  Future<void> _editAssociationName() async {
+    final String? name = await showTextInputDialog(
+      context,
+      title: 'اسم الجمعية',
+      initialValue: _repository.activeAssociationName ?? '',
+    );
+    if (name == null || name.trim().isEmpty) return;
+    await _repository.confirmAssociationName(name);
+    if (mounted) {
+      setState(() {});
+      context.showSuccessSnackBar('تم تطبيق اسم الجمعية على كل البيانات');
+    }
+  }
+
+  Future<void> _pickBulkBasin() async {
+    final List<String> basins = _repository.availableBasins;
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+      context,
+      title: 'اختر الحوض',
+      options: [
+        for (final String b in basins) ChoiceOption<String>(value: b, label: b),
+      ],
+      selected: _bulkBasin,
+      clearLabel: 'كل الأحواض',
+    );
+    if (result == null) return;
+    setState(() {
+      _bulkBasin = result.isClear ? null : result.value;
+    });
+  }
+
+  Future<void> _pickBulkField() async {
+    final ChoiceDialogResult<BulkEditableField>? result =
+        await showChoiceDialog<BulkEditableField>(
+      context,
+      title: 'اختر الحقل',
+      options: [
+        for (final BulkEditableField f in BulkEditableField.values)
+          ChoiceOption<BulkEditableField>(value: f, label: f.label),
+      ],
+      selected: _bulkField,
+    );
+    if (result == null || result.isClear) return;
+    setState(() {
+      _bulkField = result.value!;
+      _bulkValue = null;
+    });
+  }
+
+  Future<void> _pickBulkValue() async {
+    if (_bulkField.isBoolean) {
+      final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
+        context,
+        title: _bulkField.label,
+        options: const [
+          ChoiceOption<bool>(value: true, label: 'وراثة'),
+          ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
+        ],
+        selected: _bulkValue as bool?,
+      );
+      if (result == null || result.isClear) return;
+      setState(() => _bulkValue = result.value);
+      return;
+    }
+
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+      context,
+      title: _bulkField.label,
+      options: [
+        for (final String o in _bulkField.textOptions)
+          ChoiceOption<String>(value: o, label: o),
+      ],
+      selected: _bulkValue as String?,
+      clearLabel: _bulkField.allowClear ? '—' : null,
+    );
+    if (result == null) return;
+    setState(() => _bulkValue = result.isClear ? null : result.value);
+  }
+
+  Future<void> _applyBulkEdit() async {
+    final int changed = await _repository.bulkApplyField(
+      field: _bulkField,
+      value: _bulkValue,
+      basin: _bulkBasin,
+    );
+    if (!mounted) return;
+    setState(() {});
+    context.showSuccessSnackBar('تم تحديث $changed سجل');
+  }
+
+  String _valueLabel(final Object? value) {
+    if (value == null) return '—';
+    if (value is bool) return value ? 'وراثة' : 'ليست وراثة';
+    return value as String;
+  }
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    final Map<String, int> counts = _repository.basinHoldingCounts;
+    final List<String> basins = _repository.availableBasins;
+
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: rw(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  verticalSpacing(16),
+                  Row(
+                    children: [
+                      const AppBackButton(),
+                      horizontalSpacing(12),
+                      Expanded(
+                        child: Text(
+                          'حالة الملف',
+                          style: AppTextStyles.font20Bold.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                  verticalSpacing(16),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
+                  bottom: rh(24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SectionCard(
+                      title: 'اسم الجمعية',
+                      subtitle: 'يُطبَّق على كل بيانات الملف دفعة واحدة',
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _repository.activeAssociationName?.isNotEmpty ==
+                                      true
+                                  ? _repository.activeAssociationName!
+                                  : '—',
+                              style: AppTextStyles.font16SemiBold.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                          horizontalSpacing(8),
+                          IconButton(
+                            onPressed: _editAssociationName,
+                            icon: const Icon(
+                              Icons.edit_rounded,
+                              color: AppColors.primary200,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    verticalSpacing(16),
+                    _SectionCard(
+                      title: 'الأحواض',
+                      subtitle: 'عدد الحيازات في كل حوض',
+                      child: basins.isEmpty
+                          ? Text(
+                              'لا توجد أحواض في هذا الملف',
+                              style: AppTextStyles.font14Regular.copyWith(
+                                color: colors.textHint,
+                              ),
+                              textAlign: TextAlign.right,
+                            )
+                          : Column(
+                              children: [
+                                for (final String basin in basins)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary50
+                                                .withValues(alpha: 0.3),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            '${counts[basin] ?? 0}',
+                                            style: AppTextStyles.font12Bold
+                                                .copyWith(
+                                              color: AppColors.primary200,
+                                            ),
+                                          ),
+                                        ),
+                                        horizontalSpacing(8),
+                                        Expanded(
+                                          child: Text(
+                                            basin,
+                                            style: AppTextStyles.font14SemiBold
+                                                .copyWith(
+                                              color: colors.textPrimary,
+                                            ),
+                                            textAlign: TextAlign.right,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                    ),
+                    verticalSpacing(16),
+                    _SectionCard(
+                      title: 'تعديل جماعي لحقل',
+                      subtitle:
+                          'يطبَّق على كل حيازات الحوض المختار (أو كل الملف)',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _PickerRow(
+                            label: 'النطاق',
+                            value: _bulkBasin ?? 'كل الأحواض',
+                            onTap: _pickBulkBasin,
+                          ),
+                          verticalSpacing(8),
+                          _PickerRow(
+                            label: 'الحقل',
+                            value: _bulkField.label,
+                            onTap: _pickBulkField,
+                          ),
+                          verticalSpacing(8),
+                          _PickerRow(
+                            label: 'القيمة',
+                            value: _valueLabel(_bulkValue),
+                            onTap: _pickBulkValue,
+                          ),
+                          verticalSpacing(16),
+                          CustomTextButton(
+                            text: 'تطبيق',
+                            onPressed: _applyBulkEdit,
+                            prefixIcon: const Icon(
+                              Icons.done_all_rounded,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+
+    return Container(
+      padding: EdgeInsets.all(rw(14)),
+      decoration: BoxDecoration(
+        color: colors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.font16Bold.copyWith(color: colors.textPrimary),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: AppTextStyles.font12Regular.copyWith(
+              color: colors.textSecondary,
+            ),
+            textAlign: TextAlign.right,
+          ),
+          verticalSpacing(12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PickerRow extends StatelessWidget {
+  const _PickerRow({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.primary200,
+            ),
+            horizontalSpacing(6),
+            Expanded(
+              child: Text(
+                value,
+                style: AppTextStyles.font14SemiBold.copyWith(
+                  color: colors.textPrimary,
+                ),
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            horizontalSpacing(8),
+            Text(
+              label,
+              style: AppTextStyles.font12Regular.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

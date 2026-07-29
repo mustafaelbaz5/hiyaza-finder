@@ -108,6 +108,23 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
+  /// Re-derives state from the repository's current data — used after
+  /// returning from a screen that mutated parcels directly on the
+  /// repository (e.g. the bulk-edit/file-status screen), since that
+  /// mutates the same underlying list in place without going through the
+  /// cubit, so Bloc's equality check wouldn't otherwise notice the change.
+  void refreshData() {
+    emit(
+      state.copyWith(
+        parcels: _repository.parcels,
+        availableBasins: _repository.availableBasins,
+        results: state.query.trim().isEmpty
+            ? state.results
+            : _repository.search(state.query, basin: state.selectedBasin),
+      ),
+    );
+  }
+
   void search(final String query) {
     final List<SearchResult> results = query.trim().isEmpty
         ? const <SearchResult>[]

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../logic/services/holding_search_service.dart';
 import '../excel/holdings_excel_parser.dart';
+import '../models/bulk_editable_field.dart';
 import '../models/cached_file_entry.dart';
 import '../models/parcel.dart';
 import 'parcel_edits_store.dart';
@@ -344,9 +345,6 @@ class HoldingsRepository {
     return _searchService.search(scope, query);
   }
 
-  /// Distinct holder names whose (loosely-normalized) text contains [query]
-  /// — cheap substring filtering, safe to call on every keystroke without
-  /// debouncing, for a live "narrows as you type" suggestions dropdown.
   /// Distinct اسم الحوض values in the active dataset, sorted.
   List<String> get availableBasins {
     final Set<String> basins = <String>{};
@@ -358,8 +356,55 @@ class HoldingsRepository {
     return sorted;
   }
 
+  /// Distinct-holding count per اسم الحوض — how many holdings sit in each
+  /// basin, shown beside the basin filter/status views.
+  Map<String, int> get basinHoldingCounts {
+    final Map<String, Set<String>> holdingsByBasin = <String, Set<String>>{};
+    for (final Parcel p in _parcels) {
+      final String? name = p.basinName?.trim();
+      if (name == null || name.isEmpty) continue;
+      holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.holdingId);
+    }
+    return <String, int>{
+      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
+        e.key: e.value.length,
+    };
+  }
+
   List<Parcel> parcelsForHolding(final String holdingId) =>
       _parcels.where((final Parcel p) => p.holdingId == holdingId).toList();
+
+  /// Applies [value] to every parcel's [field], optionally scoped to
+  /// [basin] (only parcels whose اسم الحوض matches). Returns how many
+  /// parcels were changed, for user feedback.
+  Future<int> bulkApplyField({
+    required final BulkEditableField field,
+    required final Object? value,
+    final String? basin,
+  }) async {
+    int changed = 0;
+    for (var i = 0; i < _parcels.length; i++) {
+      final Parcel p = _parcels[i];
+      if (basin != null && p.basinName != basin) continue;
+
+      final Parcel updated = switch (field) {
+        BulkEditableField.cropType => p.copyWith(cropType: value as String?),
+        BulkEditableField.notes => p.copyWith(notes: value as String?),
+        BulkEditableField.creditType =>
+          p.copyWith(creditType: value as String),
+        BulkEditableField.usageType => p.copyWith(usageType: value as String),
+        BulkEditableField.isInheritance =>
+          p.copyWith(isInheritance: value as bool),
+      };
+      _parcels[i] = updated;
+      _edits[updated.id] = updated.toEditableJson();
+      changed++;
+    }
+    if (changed > 0 && _activeFilePath != null) {
+      await _editsStore.save(_activeFilePath!, _edits);
+    }
+    return changed;
+  }
 }
 
 class HoldingsFilePickCancelled implements Exception {
