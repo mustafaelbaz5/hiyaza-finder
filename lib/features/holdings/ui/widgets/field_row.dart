@@ -21,7 +21,7 @@ class FieldRow extends StatelessWidget {
 
   /// Placeholder shown (and copied) when the underlying value is empty —
   /// the copy action stays active either way.
-  static const String emptyPlaceholder = '-1';
+  static const String emptyPlaceholder = '-';
 
   @override
   Widget build(final BuildContext context) {

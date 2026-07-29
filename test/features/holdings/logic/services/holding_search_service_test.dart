@@ -53,9 +53,27 @@ void main() {
       expect(results.map((final r) => r.holdingId), contains('001117'));
     });
 
-    test('a query that only appears mid-word does not match', () {
-      // 'مد' is inside "محمد" but not a word-start or full-name-start.
+    test('a query that only appears mid-word matches as tier 2 (contains)', () {
+      // 'مد' is inside "محمد" but not at a word-start or full-name-start —
+      // still returned (fixes ".contains()" dropping relevant results
+      // entirely), just ranked below any tier-1 (starts-with) match.
       final results = service.search(parcels, 'مد');
+      final match = results.firstWhere((final r) => r.holdingId == '001117');
+      expect(match.score, 40);
+    });
+
+    test('tier 1 (starts with) ranks above tier 2 (contains)', () {
+      final mixed = [
+        _parcel('t1', 'مديحة علي'), // starts with 'مد' -> tier 1
+        _parcel('t2', 'أحمد سعيد'), // 'مد' only mid-word ("أحمد") -> tier 2
+      ];
+      final results = service.search(mixed, 'مد');
+      expect(results.map((final r) => r.holdingId).toList(), ['t1', 't2']);
+      expect(results[0].score, greaterThan(results[1].score));
+    });
+
+    test('a completely absent query does not match', () {
+      final results = service.search(parcels, 'زفت');
       expect(
         results.any((final r) => r.holdingId == '001117'),
         isFalse,

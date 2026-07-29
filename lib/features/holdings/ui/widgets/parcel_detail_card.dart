@@ -8,6 +8,8 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/models/parcel.dart';
 import '../../logic/services/area_calculator.dart';
 import 'border_compass.dart';
@@ -232,7 +234,7 @@ class ParcelDetailCard extends StatelessWidget {
     required final Parcel Function(String value) apply,
     final TextInputType? keyboardType,
   }) async {
-    final String? value = await showTextFieldEditDialog(
+    final String? value = await showTextInputDialog(
       context,
       title: title,
       initialValue: initialValue,
@@ -250,25 +252,32 @@ class ParcelDetailCard extends StatelessWidget {
     required final Parcel Function(String? value) apply,
     final bool allowClear = true,
   }) async {
-    final String? value = await showDropdownFieldEditDialog(
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
       title: title,
-      initialValue: initialValue,
-      options: options,
-      allowClear: allowClear,
+      options: [
+        for (final String option in options)
+          ChoiceOption<String>(value: option, label: option),
+      ],
+      selected: initialValue,
+      clearLabel: allowClear ? '—' : null,
     );
-    if (value == null) return;
-    onFieldChanged(apply(value.isEmpty ? null : value));
+    if (result == null) return;
+    onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
   Future<void> _editSwitch(final BuildContext context) async {
-    final bool? value = await showSwitchFieldEditDialog(
+    final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
       context,
       title: 'وراثة',
-      initialValue: parcel.isInheritance,
+      options: const [
+        ChoiceOption<bool>(value: true, label: 'وراثة'),
+        ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
+      ],
+      selected: parcel.isInheritance,
     );
-    if (value == null) return;
-    onFieldChanged(parcel.copyWith(isInheritance: value));
+    if (result == null || result.isClear) return;
+    onFieldChanged(parcel.copyWith(isInheritance: result.value!));
   }
 
   Future<void> _editArea(final BuildContext context) async {
@@ -321,14 +330,16 @@ class ParcelDetailCard extends StatelessWidget {
   /// so the pasted text both reads clearly on its own and lines up
   /// row-for-row when pasted into an external spreadsheet template.
   String _formatForClipboard(final Parcel p) {
-    String slot(final String? v) => (v == null || v.trim().isEmpty) ? '' : v.trim();
+    String slot(final String? v) =>
+        (v == null || v.trim().isEmpty) ? FieldRow.emptyPlaceholder : v.trim();
 
+    final String holderName = p.holderName?.trim() ?? '';
     final String holderSlot = p.isInheritance
-        ? '(ورثة) ${slot(p.holderName)}'
+        ? '(ورثة) ${holderName.isEmpty ? FieldRow.emptyPlaceholder : holderName}'
         : slot(p.holderName);
-    final String nationalIdSlot = slot(p.nationalId).isEmpty
+    final String nationalIdSlot = (p.nationalId == null || p.nationalId!.trim().isEmpty)
         ? '11111111111111'
-        : slot(p.nationalId);
+        : p.nationalId!.trim();
     final String creditSentence = p.creditType == 'أوقاف'
         ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية'
         : '';
@@ -341,10 +352,13 @@ class ParcelDetailCard extends StatelessWidget {
       ('اسم الجمعية', slot(p.associationName)),
       ('اسم الحوض', slot(p.basinName)),
       ('رقم الأرض', slot(p.landNumber)),
-      ('فدان', _formatNumber(p.feddan) ?? ''),
-      ('قيراط', _formatNumber(p.qirat) ?? ''),
-      ('سهم', _formatNumber(p.sahm) ?? ''),
-      ('المساحة بالمتر', _formatNumber(p.totalSqm) ?? ''),
+      ('فدان', _formatNumber(p.feddan) ?? FieldRow.emptyPlaceholder),
+      ('قيراط', _formatNumber(p.qirat) ?? FieldRow.emptyPlaceholder),
+      ('سهم', _formatNumber(p.sahm) ?? FieldRow.emptyPlaceholder),
+      (
+        'المساحة بالمتر',
+        _formatNumber(p.totalSqm) ?? FieldRow.emptyPlaceholder,
+      ),
       ('نوع الزرع', slot(p.cropType)),
       ('ملاحظات', slot(p.notes)),
       ('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence),
@@ -410,7 +424,7 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
     required final String initialValue,
     required final Parcel Function(String value) apply,
   }) async {
-    final String? value = await showTextFieldEditDialog(
+    final String? value = await showTextInputDialog(
       context,
       title: title,
       initialValue: initialValue,
@@ -427,15 +441,18 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
     required final Parcel Function(String? value) apply,
     final bool allowClear = true,
   }) async {
-    final String? value = await showDropdownFieldEditDialog(
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
       title: title,
-      initialValue: initialValue,
-      options: options,
-      allowClear: allowClear,
+      options: [
+        for (final String option in options)
+          ChoiceOption<String>(value: option, label: option),
+      ],
+      selected: initialValue,
+      clearLabel: allowClear ? '—' : null,
     );
-    if (value == null) return;
-    widget.onFieldChanged(apply(value.isEmpty ? null : value));
+    if (result == null) return;
+    widget.onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
   @override

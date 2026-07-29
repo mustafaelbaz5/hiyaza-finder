@@ -16,21 +16,32 @@ class SearchResult {
 }
 
 /// Numeric queries rank by holding-ID prefix/contains match. Text queries
-/// match by `startsWith` against the normalized holder name — either the
-/// whole name starts with the query, or any individual word in the name
-/// does (so typing "م" matches "علي محمود" as well as "محمد علي") — no
-/// fuzzy/typo-tolerant scoring, so results are exact-prefix only. Results
-/// are grouped by holding ID (best score kept) and capped at 10.
+/// rank holder names in two tiers against the normalized name:
+///
+/// - Tier 1 ("starts with", high priority): the full name starts with the
+///   query, or — a more precise variant of the same rule — an individual
+///   word inside the name starts with it (so typing "م" ranks "علي محمود"
+///   here too, not just "محمد علي").
+/// - Tier 2 ("contains", low priority): the query appears anywhere else in
+///   the name (e.g. mid-word). These still show up, just below every Tier 1
+///   result, instead of a bare `.contains()` mixing them in at random.
+///
+/// No fuzzy/typo-tolerant scoring — matches are exact substring checks on
+/// normalized text. Results are grouped by holding ID (best score kept)
+/// and capped at 10.
 class HoldingSearchService {
   const HoldingSearchService();
 
   static final RegExp _digitsOnly = RegExp(r'^\d+$');
 
-  /// Score for a query matching from the very start of the full name.
+  /// Tier 1 — query matches from the very start of the full name.
   static const int _fullNameStartScore = 100;
 
-  /// Score for a query matching the start of an inner word only.
+  /// Tier 1 — query matches the start of an inner word only.
   static const int _wordStartScore = 80;
+
+  /// Tier 2 — query appears somewhere in the name, but not at a word start.
+  static const int _containsScore = 40;
 
   static const int _maxResults = 10;
 
@@ -102,6 +113,8 @@ class HoldingSearchService {
         .split(' ')
         .any((final String word) => word.startsWith(normalizedQuery));
     if (matchesAWord) return _wordStartScore;
+
+    if (normalizedName.contains(normalizedQuery)) return _containsScore;
 
     return null;
   }
