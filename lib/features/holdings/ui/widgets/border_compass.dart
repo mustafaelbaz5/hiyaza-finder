@@ -21,6 +21,7 @@ class BorderCompass extends StatelessWidget {
     required this.west,
     required this.resolveBorder,
     required this.onNavigate,
+    required this.onUnresolved,
   });
 
   final String holdingId;
@@ -34,11 +35,15 @@ class BorderCompass extends StatelessWidget {
   final String? Function(String borderText) resolveBorder;
   final void Function(String holdingId) onNavigate;
 
+  /// Called when a border has non-empty text but no confident match was
+  /// found — the cell is still tappable, but there's nowhere to navigate.
+  final void Function(String borderText) onUnresolved;
+
   @override
   Widget build(final BuildContext context) {
     return Column(
       children: [
-        _BorderCell(label: 'شمال (البحري)', text: north, resolved: _resolve(north)),
+        _BorderCell(label: 'شمال (البحري)', text: north, resolved: _resolve(north), onTapUnresolved: onUnresolved),
         const SizedBox(height: 8),
         Row(
           textDirection: TextDirection.ltr,
@@ -48,6 +53,7 @@ class BorderCompass extends StatelessWidget {
                 label: 'غرب (الغربي)',
                 text: west,
                 resolved: _resolve(west),
+                onTapUnresolved: onUnresolved,
               ),
             ),
             const SizedBox(width: 8),
@@ -60,12 +66,13 @@ class BorderCompass extends StatelessWidget {
                 label: 'شرق (الشرقي)',
                 text: east,
                 resolved: _resolve(east),
+                onTapUnresolved: onUnresolved,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        _BorderCell(label: 'جنوب (القبلي)', text: south, resolved: _resolve(south)),
+        _BorderCell(label: 'جنوب (القبلي)', text: south, resolved: _resolve(south), onTapUnresolved: onUnresolved),
       ],
     );
   }
@@ -128,13 +135,18 @@ class _BorderCell extends StatelessWidget {
     required this.label,
     required this.text,
     required this.resolved,
+    required this.onTapUnresolved,
   });
 
   final String label;
   final String? text;
   final ({String holdingId, VoidCallback onTap})? resolved;
+  final void Function(String borderText) onTapUnresolved;
 
   bool get _isNavigable => resolved != null;
+
+  bool get _hasUnresolvedText =>
+      resolved == null && text != null && text!.trim().isNotEmpty;
 
   @override
   Widget build(final BuildContext context) {
@@ -144,7 +156,8 @@ class _BorderCell extends StatelessWidget {
         : text!;
 
     return InkWell(
-      onTap: resolved?.onTap,
+      onTap: resolved?.onTap ??
+          (_hasUnresolvedText ? () => onTapUnresolved(text!) : null),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         width: double.infinity,

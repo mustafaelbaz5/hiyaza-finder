@@ -1,7 +1,5 @@
-import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzy;
-
 import '../../data/models/parcel.dart';
-import 'arabic_normalizer.dart';
+import 'name_matcher.dart';
 
 class SearchResult {
   const SearchResult({
@@ -24,7 +22,7 @@ class HoldingSearchService {
   const HoldingSearchService();
 
   static final RegExp _digitsOnly = RegExp(r'^\d+$');
-  static const int _fuzzyThreshold = 70;
+  static const int _fuzzyThreshold = 75;
   static const int _maxResults = 10;
 
   List<SearchResult> search(
@@ -67,13 +65,11 @@ class HoldingSearchService {
     final List<Parcel> parcels,
     final String query,
   ) {
-    final String normalizedQuery = ArabicNormalizer.normalize(query);
     final List<_ScoredParcel> results = <_ScoredParcel>[];
     for (final Parcel parcel in parcels) {
       final String? holderName = parcel.holderName;
       if (holderName == null || holderName.isEmpty) continue;
-      final String normalizedName = ArabicNormalizer.normalize(holderName);
-      final int score = fuzzy.weightedRatio(normalizedQuery, normalizedName);
+      final int score = NameMatcher.score(query, holderName);
       if (score >= _fuzzyThreshold) {
         results.add(_ScoredParcel(parcel, score));
       }

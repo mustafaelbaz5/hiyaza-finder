@@ -25,6 +25,7 @@ class ParcelEditScreen extends StatefulWidget {
 }
 
 class _ParcelEditScreenState extends State<ParcelEditScreen> {
+  late final TextEditingController _ownerName;
   late final TextEditingController _holderName;
   late final TextEditingController _nationalId;
   late final TextEditingController _basinName;
@@ -37,11 +38,17 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
   late final TextEditingController _sahm;
 
   double? _computedTotal;
+  String? _cropType;
+  String? _notes;
+  late String _creditType;
+  late String _usageType;
+  late bool _isInheritance;
 
   @override
   void initState() {
     super.initState();
     final Parcel p = widget.parcel;
+    _ownerName = TextEditingController(text: p.ownerName ?? '');
     _holderName = TextEditingController(text: p.holderName ?? '');
     _nationalId = TextEditingController(text: p.nationalId ?? '');
     _basinName = TextEditingController(text: p.basinName ?? '');
@@ -53,11 +60,17 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
     _qirat = TextEditingController(text: _numToText(p.qirat));
     _sahm = TextEditingController(text: _numToText(p.sahm));
     _computedTotal = p.totalSqm;
+    _cropType = p.cropType;
+    _notes = p.notes;
+    _creditType = p.creditType;
+    _usageType = p.usageType;
+    _isInheritance = p.isInheritance;
   }
 
   @override
   void dispose() {
     for (final TextEditingController c in <TextEditingController>[
+      _ownerName,
       _holderName,
       _nationalId,
       _basinName,
@@ -94,6 +107,8 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
       borderSouth: original.borderSouth,
       borderWest: original.borderWest,
       borderNorth: original.borderNorth,
+      associationName: original.associationName,
+      ownerName: _text(_ownerName),
       holderName: _text(_holderName),
       nationalId: _text(_nationalId),
       basinName: _text(_basinName),
@@ -109,6 +124,11 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
         qirat: _parseNum(_qirat.text),
         sahm: _parseNum(_sahm.text),
       ),
+      cropType: _cropType,
+      notes: _notes,
+      creditType: _creditType,
+      isInheritance: _isInheritance,
+      usageType: _usageType,
     );
     Navigator.pop(context, edited);
   }
@@ -150,6 +170,7 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
                   children: <Widget>[
                     verticalSpacing(8),
                     _SectionLabel('holdings.edit.section_holder'.tr()),
+                    _LabeledField(label: 'اسم المالك', controller: _ownerName),
                     _LabeledField(
                       label: 'اسم الحائز',
                       controller: _holderName,
@@ -158,6 +179,12 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
                       label: 'الرقم القومي',
                       controller: _nationalId,
                       keyboardType: TextInputType.number,
+                    ),
+                    _LabeledSwitch(
+                      label: 'وراثة',
+                      value: _isInheritance,
+                      onChanged: (final bool v) =>
+                          setState(() => _isInheritance = v),
                     ),
                     verticalSpacing(8),
                     _SectionLabel('holdings.edit.section_location'.tr()),
@@ -209,6 +236,40 @@ class _ParcelEditScreenState extends State<ParcelEditScreen> {
                     ),
                     verticalSpacing(4),
                     _TotalAreaPreview(total: _computedTotal),
+                    verticalSpacing(8),
+                    _SectionLabel('holdings.edit.section_extra'.tr()),
+                    _LabeledDropdown(
+                      label: 'نوع الزرع',
+                      value: _cropType,
+                      options: Parcel.cropTypeOptions,
+                      onChanged: (final String? v) =>
+                          setState(() => _cropType = v),
+                    ),
+                    _LabeledDropdown(
+                      label: 'ملاحظات',
+                      value: _notes,
+                      options: Parcel.notesOptions,
+                      onChanged: (final String? v) =>
+                          setState(() => _notes = v),
+                    ),
+                    _LabeledDropdown(
+                      label: 'نوع الائتمان',
+                      value: _creditType,
+                      options: Parcel.creditTypeOptions,
+                      allowClear: false,
+                      onChanged: (final String? v) => setState(
+                        () => _creditType = v ?? Parcel.defaultCreditType,
+                      ),
+                    ),
+                    _LabeledDropdown(
+                      label: 'نوع الاستخدام',
+                      value: _usageType,
+                      options: Parcel.usageTypeOptions,
+                      allowClear: false,
+                      onChanged: (final String? v) => setState(
+                        () => _usageType = v ?? Parcel.defaultUsageType,
+                      ),
+                    ),
                     verticalSpacing(24),
                     CustomTextButton(
                       text: 'holdings.edit.save'.tr(),
@@ -329,6 +390,122 @@ class _LabeledField extends StatelessWidget {
                   ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LabeledDropdown extends StatelessWidget {
+  const _LabeledDropdown({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    this.allowClear = true,
+  });
+
+  final String label;
+  final String? value;
+  final List<String> options;
+  final ValueChanged<String?> onChanged;
+  final bool allowClear;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: AppTextStyles.font14Regular.copyWith(
+              color: colors.textSecondary,
+            ),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.border),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButtonFormField<String>(
+                initialValue: value,
+                isExpanded: true,
+                alignment: AlignmentDirectional.centerEnd,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                items: <DropdownMenuItem<String>>[
+                  if (allowClear)
+                    const DropdownMenuItem<String>(
+                      child: Text('—', textAlign: TextAlign.right),
+                    ),
+                  for (final String option in options)
+                    DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(option, textAlign: TextAlign.right),
+                    ),
+                ],
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LabeledSwitch extends StatelessWidget {
+  const _LabeledSwitch({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            children: <Widget>[
+              Switch(value: value, onChanged: onChanged),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyles.font14Regular.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

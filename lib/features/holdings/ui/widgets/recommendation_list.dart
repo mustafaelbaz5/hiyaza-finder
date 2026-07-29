@@ -36,15 +36,17 @@ class RecommendationList extends StatelessWidget {
       );
     }
 
-    return Column(
-      children: [
-        for (final (int i, SearchResult result) in results.indexed)
-          RecommendationTile(
-            result: result,
-            onTap: () => onSelect(result),
-            animationDelay: Duration(milliseconds: i * 40),
-          ),
-      ],
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 4, bottom: 24),
+      itemCount: results.length,
+      itemBuilder: (final BuildContext context, final int i) {
+        final SearchResult result = results[i];
+        return RecommendationTile(
+          result: result,
+          onTap: () => onSelect(result),
+          animationDelay: Duration(milliseconds: i * 40),
+        );
+      },
     );
   }
 }

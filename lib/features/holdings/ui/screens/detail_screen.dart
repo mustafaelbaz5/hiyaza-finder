@@ -51,11 +51,26 @@ class _DetailScreenState extends State<DetailScreen> {
     if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
   }
 
+  Future<void> _updateField(final Parcel updated) async {
+    await _repository.updateParcel(updated);
+    final int idx = _parcels.indexWhere(
+      (final Parcel p) => p.id == updated.id,
+    );
+    if (idx >= 0) {
+      setState(() => _parcels[idx] = updated);
+    }
+    if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
+  }
+
   void _navigateToHolding(final String holdingId) {
     final List<Parcel> neighborParcels = _repository.parcelsForHolding(
       holdingId,
     );
     context.pushNamed(Routes.holdingDetail, arguments: neighborParcels);
+  }
+
+  void _onUnresolvedBorder(final String borderText) {
+    context.showErrorSnackBar('holdings.detail.border_unresolved'.tr());
   }
 
   @override
@@ -68,56 +83,74 @@ class _DetailScreenState extends State<DetailScreen> {
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: rw(16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              verticalSpacing(16),
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: rw(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const AppBackButton(),
-                  horizontalSpacing(12),
-                  Expanded(
-                    child: Text(
-                      'holdings.detail.title'.tr(namedArgs: {'id': holdingId}),
-                      style: AppTextStyles.font20Bold.copyWith(
-                        color: colors.textPrimary,
+                  verticalSpacing(16),
+                  Row(
+                    children: <Widget>[
+                      const AppBackButton(),
+                      horizontalSpacing(12),
+                      Expanded(
+                        child: Text(
+                          'holdings.detail.title'.tr(
+                            namedArgs: {'id': holdingId},
+                          ),
+                          style: AppTextStyles.font20Bold.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
                       ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ],
-              ),
-              verticalSpacing(20),
-              if (_parcels.isEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: rh(32)),
-                  child: Center(
-                    child: Text(
-                      'holdings.detail.empty'.tr(),
-                      style: AppTextStyles.font16Regular.copyWith(
-                        color: colors.textHint,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                for (final (int i, Parcel parcel) in _parcels.indexed) ...<Widget>[
-                  ParcelDetailCard(
-                    parcel: parcel,
-                    isEdited: _repository.isParcelEdited(parcel.id),
-                    resolveBorder: (final String text) => _repository
-                        .resolveBorder(text, basinName: parcel.basinName),
-                    onNavigate: _navigateToHolding,
-                    onEdit: () => _editParcel(parcel),
-                    animationDelay: Duration(milliseconds: i * 80),
+                    ],
                   ),
                   verticalSpacing(16),
                 ],
-              verticalSpacing(16),
-            ],
-          ),
+              ),
+            ),
+            Expanded(
+              child: _parcels.isEmpty
+                  ? Center(
+                      child: Text(
+                        'holdings.detail.empty'.tr(),
+                        style: AppTextStyles.font16Regular.copyWith(
+                          color: colors.textHint,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: rw(16),
+                      ).copyWith(bottom: rh(16)),
+                      itemCount: _parcels.length,
+                      itemBuilder: (final BuildContext context, final int i) {
+                        final Parcel parcel = _parcels[i];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: rh(16)),
+                          child: ParcelDetailCard(
+                            parcel: parcel,
+                            isEdited: _repository.isParcelEdited(parcel.id),
+                            resolveBorder: (final String text) => _repository
+                                .resolveBorder(
+                                  text,
+                                  basinName: parcel.basinName,
+                                ),
+                            onNavigate: _navigateToHolding,
+                            onUnresolvedBorder: _onUnresolvedBorder,
+                            onFieldChanged: _updateField,
+                            onEdit: () => _editParcel(parcel),
+                            animationDelay: Duration(milliseconds: i * 80),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

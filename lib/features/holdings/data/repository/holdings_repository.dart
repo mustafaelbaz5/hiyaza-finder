@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../logic/services/arabic_normalizer.dart';
 import '../../logic/services/border_navigator_service.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../excel/holdings_excel_parser.dart';
@@ -41,6 +42,9 @@ class HoldingsRepository {
   static const String _cacheDirName = 'holdings_cache';
   static const int _maxHistoryEntries = 15;
 
+  static String _associationNameKey(final String filePath) =>
+      'association_name::$filePath';
+
   final HoldingSearchService _searchService;
   final BorderNavigatorService _borderNavigatorService;
   final ParcelEditsStore _editsStore;
@@ -50,6 +54,34 @@ class HoldingsRepository {
   /// Path of the file whose edits are currently loaded — the key under
   /// which corrections are persisted.
   String? _activeFilePath;
+
+  /// Whether the active file's اسم الجمعية has already been confirmed by
+  /// the user (either just now, or on a previous load of the same file).
+  bool _associationNameConfirmed = false;
+
+  bool get associationNameNeedsConfirmation => !_associationNameConfirmed;
+
+  String? get activeAssociationName =>
+      _parcels.isNotEmpty ? _parcels.first.associationName : null;
+
+  /// Derives a default اسم الجمعية from a workbook file name, e.g.
+  /// `"شنشا_كامل.xlsx"` → `"شنشا"`, `"منشاه_الاخوه_كامل.xlsx"` →
+  /// `"منشاه الاخوه"`. Strips the extension and a trailing "كامل" segment.
+  static String deriveAssociationName(final String fileName) {
+    String name = fileName;
+    final int dot = name.lastIndexOf('.');
+    if (dot > 0) name = name.substring(0, dot);
+
+    final List<String> parts = name
+        .split('_')
+        .map((final String s) => s.trim())
+        .where((final String s) => s.isNotEmpty)
+        .toList();
+    if (parts.isNotEmpty && parts.last == 'كامل') {
+      parts.removeLast();
+    }
+    return parts.join(' ').trim();
+  }
 
   /// Original (unedited) parcels by id, so edits can be reset.
   Map<String, Parcel> _originalById = <String, Parcel>{};
@@ -89,7 +121,7 @@ class HoldingsRepository {
     );
     await _setActivePath(cachedPath);
 
-    return _finalizeLoad(parsed, cachedPath);
+    return _finalizeLoad(parsed, cachedPath, fileName);
   }
 
   /// Loads the previously active file, if any. Returns `null` when nothing
@@ -119,19 +151,39 @@ class HoldingsRepository {
 
     final Uint8List bytes = await file.readAsBytes();
     final List<Parcel> parsed = await compute(_parseHoldingsBytes, bytes);
-    return _finalizeLoad(parsed, path);
+    final String fileName = await _fileNameForPath(path);
+    return _finalizeLoad(parsed, path, fileName);
   }
 
-  /// Assigns stable ids, remembers the originals, and overlays any saved
+  /// Looks up the original picked file name for a cached [path] from the
+  /// file history, falling back to the cache file's own basename.
+  Future<String> _fileNameForPath(final String path) async {
+    final List<CachedFileEntry> history = await getHistory();
+    for (final CachedFileEntry entry in history) {
+      if (entry.filePath == path) return entry.fileName;
+    }
+    return path.split(Platform.pathSeparator).last;
+  }
+
+  /// Assigns stable ids, resolves اسم الجمعية (a saved override, or derived
+  /// from [fileName]), remembers the originals, and overlays any saved
   /// edits for [filePath] before exposing the dataset.
   Future<List<Parcel>> _finalizeLoad(
     final List<Parcel> parsed,
     final String filePath,
+    final String fileName,
   ) async {
     _activeFilePath = filePath;
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? override = prefs.getString(_associationNameKey(filePath));
+    _associationNameConfirmed = override != null;
+    final String associationName =
+        override ?? deriveAssociationName(fileName);
+
     final List<Parcel> withIds = <Parcel>[
       for (var i = 0; i < parsed.length; i++)
-        parsed[i].copyWith(id: i.toString()),
+        parsed[i].copyWith(id: i.toString(), associationName: associationName),
     ];
     _originalById = <String, Parcel>{
       for (final Parcel p in withIds) p.id: p,
@@ -141,45 +193,34 @@ class HoldingsRepository {
     return _parcels;
   }
 
+  /// Confirms (or corrects) the active file's اسم الجمعية, persists it so
+  /// this file won't need re-confirming next time it's loaded, and stamps
+  /// it onto every currently-loaded parcel.
+  Future<void> confirmAssociationName(final String name) async {
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    if (_activeFilePath != null) {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_associationNameKey(_activeFilePath!), trimmed);
+    }
+    _associationNameConfirmed = true;
+    _parcels = <Parcel>[
+      for (final Parcel p in _parcels) p.copyWith(associationName: trimmed),
+    ];
+    _originalById = <String, Parcel>{
+      for (final MapEntry<String, Parcel> e in _originalById.entries)
+        e.key: e.value.copyWith(associationName: trimmed),
+    };
+  }
+
   Parcel _applyEdit(final Parcel p) {
     final Map<String, dynamic>? e = _edits[p.id];
     if (e == null) return p;
-    double? d(final String key) => (e[key] as num?)?.toDouble();
-    return Parcel(
-      id: p.id,
-      holdingId: p.holdingId,
-      pageNumber: p.pageNumber,
-      borderEast: p.borderEast,
-      borderSouth: p.borderSouth,
-      borderWest: p.borderWest,
-      borderNorth: p.borderNorth,
-      directorate: e['directorate'] as String?,
-      administration: e['administration'] as String?,
-      basinName: e['basinName'] as String?,
-      basinCode: e['basinCode'] as String?,
-      holderName: e['holderName'] as String?,
-      nationalId: e['nationalId'] as String?,
-      landNumber: e['landNumber'] as String?,
-      feddan: d('feddan'),
-      qirat: d('qirat'),
-      sahm: d('sahm'),
-      totalSqm: d('totalSqm'),
-    );
+    return Parcel.fromEditableJson(p, e);
   }
 
-  Map<String, dynamic> _snapshot(final Parcel p) => <String, dynamic>{
-    'directorate': p.directorate,
-    'administration': p.administration,
-    'basinName': p.basinName,
-    'basinCode': p.basinCode,
-    'holderName': p.holderName,
-    'nationalId': p.nationalId,
-    'landNumber': p.landNumber,
-    'feddan': p.feddan,
-    'qirat': p.qirat,
-    'sahm': p.sahm,
-    'totalSqm': p.totalSqm,
-  };
+  Map<String, dynamic> _snapshot(final Parcel p) => p.toEditableJson();
 
   /// Persists an edited parcel and reflects it in the in-memory dataset so
   /// search, detail, and border navigation immediately use the new values.
@@ -307,6 +348,39 @@ class HoldingsRepository {
         ? _parcels
         : _parcels.where((final Parcel p) => p.basinName == basin).toList();
     return _searchService.search(scope, query);
+  }
+
+  /// Distinct holder names whose (loosely-normalized) text contains [query]
+  /// — cheap substring filtering, safe to call on every keystroke without
+  /// debouncing, for a live "narrows as you type" suggestions dropdown.
+  List<String> suggestNames(
+    final String query, {
+    final String? basin,
+    final int limit = 8,
+  }) {
+    final String normalizedQuery = ArabicNormalizer.normalizeForMatching(
+      query,
+    );
+    if (normalizedQuery.isEmpty) return const <String>[];
+
+    final List<Parcel> scope = basin == null
+        ? _parcels
+        : _parcels.where((final Parcel p) => p.basinName == basin).toList();
+
+    final List<String> matches = <String>[];
+    final Set<String> seen = <String>{};
+    for (final Parcel p in scope) {
+      final String? name = p.holderName?.trim();
+      if (name == null || name.isEmpty || seen.contains(name)) continue;
+      if (ArabicNormalizer.normalizeForMatching(
+        name,
+      ).contains(normalizedQuery)) {
+        seen.add(name);
+        matches.add(name);
+        if (matches.length >= limit) break;
+      }
+    }
+    return matches;
   }
 
   /// Distinct اسم الحوض values in the active dataset, sorted.

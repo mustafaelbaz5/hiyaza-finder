@@ -21,8 +21,10 @@ import '../../data/repository/holdings_repository.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
+import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/recommendation_list.dart';
+import '../widgets/search_suggestions_overlay.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -106,6 +108,23 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Runs once right after a file finishes loading: confirms اسم الجمعية
+  /// first (if needed), then opens the basin filter (if there's more than
+  /// one basin) — sequential, never both sheets at once.
+  Future<void> _onFileLoaded(final HomeCubit cubit) async {
+    if (cubit.state.needsAssociationConfirm) {
+      final String confirmed = await showAssociationNameSheet(
+        context,
+        derivedName: cubit.state.associationNameDraft ?? '',
+      );
+      if (mounted) await cubit.confirmAssociationName(confirmed);
+    }
+    if (!mounted) return;
+    if (cubit.state.availableBasins.length > 1) {
+      await _openBasinFilter(cubit);
+    }
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -117,10 +136,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BlocConsumer<HomeCubit, HomeState>(
           listenWhen: (final HomeState previous, final HomeState current) =>
               current.status == HomeStatus.loaded &&
-              previous.status != HomeStatus.loaded &&
-              current.availableBasins.length > 1,
+              previous.status != HomeStatus.loaded,
           listener: (final BuildContext context, final HomeState state) {
-            _openBasinFilter(cubit);
+            _onFileLoaded(cubit);
           },
           builder: (final BuildContext context, final HomeState state) {
             return Column(
@@ -395,7 +413,10 @@ class _ErrorBody extends StatelessWidget {
   }
 }
 
-class _LoadedBody extends StatelessWidget {
+/// Search bar (and the file-info card above it) stay pinned at the top —
+/// only the results list below scrolls — so the user never has to scroll
+/// up just to search again.
+class _LoadedBody extends StatefulWidget {
   const _LoadedBody({
     required this.state,
     required this.controller,
@@ -415,25 +436,121 @@ class _LoadedBody extends StatelessWidget {
   final bool isListening;
 
   @override
+  State<_LoadedBody> createState() => _LoadedBodyState();
+}
+
+class _LoadedBodyState extends State<_LoadedBody> {
+  final LayerLink _searchLink = LayerLink();
+  final FocusNode _focusNode = FocusNode();
+  final GlobalKey _fieldKey = GlobalKey();
+  OverlayEntry? _overlayEntry;
+  List<String> _suggestions = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_updateSuggestions);
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) _removeOverlay();
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_updateSuggestions);
+    _removeOverlay();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _updateSuggestions() {
+    final String text = widget.controller.text;
+    if (text.trim().isEmpty) {
+      _suggestions = const <String>[];
+      _removeOverlay();
+      return;
+    }
+    final HoldingsRepository repository = getIt<HoldingsRepository>();
+    _suggestions = repository.suggestNames(
+      text,
+      basin: widget.state.selectedBasin,
+    );
+    if (_suggestions.isEmpty) {
+      _removeOverlay();
+    } else {
+      _showOverlay();
+    }
+  }
+
+  void _selectSuggestion(final String name) {
+    widget.controller
+      ..text = name
+      ..selection = TextSelection.collapsed(offset: name.length);
+    _removeOverlay();
+    widget.cubit.search(name);
+    _focusNode.unfocus();
+  }
+
+  void _showOverlay() {
+    _overlayEntry?.remove();
+    final double width =
+        (_fieldKey.currentContext?.findRenderObject() as RenderBox?)
+            ?.size
+            .width ??
+        MediaQuery.of(context).size.width;
+    _overlayEntry = OverlayEntry(
+      builder: (final BuildContext context) => Positioned(
+        width: width,
+        child: CompositedTransformFollower(
+          link: _searchLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 62),
+          child: SearchSuggestionsOverlay(
+            suggestions: _suggestions,
+            onSelect: _selectSuggestion,
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _openDetail(final BuildContext context, final SearchResult result) {
+    final HoldingsRepository repository = getIt<HoldingsRepository>();
+    context.pushNamed(
+      Routes.holdingDetail,
+      arguments: repository.parcelsForHolding(result.holdingId),
+    );
+  }
+
+  @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
 
     final List<Widget> suffixButtons = <Widget>[
-      if (onToggleVoice != null)
+      if (widget.onToggleVoice != null)
         IconButton(
           icon: Icon(
-            isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-            color: isListening ? AppColors.primary200 : colors.iconSecondary,
+            widget.isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+            color: widget.isListening
+                ? AppColors.primary200
+                : colors.iconSecondary,
           ),
           tooltip: 'holdings.search.voice'.tr(),
-          onPressed: onToggleVoice,
+          onPressed: widget.onToggleVoice,
         ),
-      if (controller.text.isNotEmpty)
+      if (widget.controller.text.isNotEmpty)
         IconButton(
           icon: Icon(Icons.close_rounded, color: colors.iconSecondary),
           onPressed: () {
-            controller.clear();
-            onQueryChanged('');
+            widget.controller.clear();
+            widget.onQueryChanged('');
+            _removeOverlay();
           },
         ),
     ];
@@ -446,51 +563,58 @@ class _LoadedBody extends StatelessWidget {
         final bool isTablet = constraints.maxWidth >= 600;
         final double horizontalPadding = isTablet ? rw(64) : rw(16);
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              verticalSpacing(8),
-              _FileInfoCard(
-                holdingCount: state.holdingCount,
-                selectedBasin: state.selectedBasin,
-                hasBasins: state.availableBasins.isNotEmpty,
-                onChangeFile: cubit.changeFile,
-                onOpenBasinFilter: onOpenBasinFilter,
+        return Column(
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  verticalSpacing(8),
+                  _FileInfoCard(
+                    holdingCount: widget.state.holdingCount,
+                    selectedBasin: widget.state.selectedBasin,
+                    hasBasins: widget.state.availableBasins.isNotEmpty,
+                    onChangeFile: widget.cubit.changeFile,
+                    onOpenBasinFilter: widget.onOpenBasinFilter,
+                  ),
+                  verticalSpacing(16),
+                  CompositedTransformTarget(
+                    link: _searchLink,
+                    child: Container(
+                      key: _fieldKey,
+                      child: CustomTextForm(
+                        hintText: 'holdings.search.hint'.tr(),
+                        controller: widget.controller,
+                        isRTL: true,
+                        focusNode: _focusNode,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colors.iconSecondary,
+                        ),
+                        suffixIcon: suffixIcon,
+                        onChanged: widget.onQueryChanged,
+                      ),
+                    ),
+                  ),
+                  verticalSpacing(8),
+                ],
               ),
-              verticalSpacing(16),
-              CustomTextForm(
-                hintText: 'holdings.search.hint'.tr(),
-                controller: controller,
-                isRTL: true,
-                prefixIcon: Icon(
-                  Icons.search_rounded,
-                  color: colors.iconSecondary,
+            ),
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: RecommendationList(
+                  query: widget.state.query,
+                  results: widget.state.results,
+                  onSelect: (final SearchResult result) =>
+                      _openDetail(context, result),
                 ),
-                suffixIcon: suffixIcon,
-                onChanged: onQueryChanged,
               ),
-              verticalSpacing(16),
-              RecommendationList(
-                query: state.query,
-                results: state.results,
-                onSelect: (final SearchResult result) =>
-                    _openDetail(context, result),
-              ),
-              verticalSpacing(24),
-            ],
-          ).animate().fadeIn(duration: 250.ms),
-        );
+            ),
+          ],
+        ).animate().fadeIn(duration: 250.ms);
       },
-    );
-  }
-
-  void _openDetail(final BuildContext context, final SearchResult result) {
-    final HoldingsRepository repository = getIt<HoldingsRepository>();
-    context.pushNamed(
-      Routes.holdingDetail,
-      arguments: repository.parcelsForHolding(result.holdingId),
     );
   }
 }

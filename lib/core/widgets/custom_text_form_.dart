@@ -17,6 +17,7 @@ class CustomTextForm extends StatefulWidget {
     super.key,
     required this.hintText,
     this.controller,
+    this.focusNode,
     this.validator,
     this.onChanged,
     this.onTap,
@@ -43,6 +44,7 @@ class CustomTextForm extends StatefulWidget {
 
   final String hintText;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final VoidCallback? onTap;
@@ -114,6 +116,7 @@ class _CustomTextFormState extends State<CustomTextForm> {
 
     return TextFormField(
       controller: widget.controller,
+      focusNode: widget.focusNode,
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       obscureText: _obscureText,

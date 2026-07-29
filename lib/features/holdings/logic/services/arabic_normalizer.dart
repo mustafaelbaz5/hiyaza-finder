@@ -26,4 +26,12 @@ class ArabicNormalizer {
 
     return result;
   }
+
+  /// A looser variant of [normalize] used ONLY for matching/search — never
+  /// for anything user-visible — so hand-entered inconsistencies like a
+  /// missing/extra space ("احمد علي" vs "احمدعلي") or ة/ه confusion don't
+  /// stop two writings of the same name from matching.
+  static String normalizeForMatching(final String input) {
+    return normalize(input).replaceAll(' ', '').replaceAll('ة', 'ه');
+  }
 }

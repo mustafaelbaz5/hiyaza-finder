@@ -20,6 +20,8 @@ class HomeState extends Equatable {
     this.missingColumns = const <String>[],
     this.availableBasins = const <String>[],
     this.selectedBasin,
+    this.needsAssociationConfirm = false,
+    this.associationNameDraft,
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -37,6 +39,14 @@ class HomeState extends Equatable {
   /// The basin currently focused for search, or `null` for "all basins".
   final String? selectedBasin;
 
+  /// Whether the just-loaded file's اسم الجمعية hasn't been confirmed yet
+  /// and the UI should prompt for it.
+  final bool needsAssociationConfirm;
+
+  /// The derived (or previously confirmed) اسم الجمعية to pre-fill the
+  /// confirmation sheet with.
+  final String? associationNameDraft;
+
   int get holdingCount =>
       parcels.map((final Parcel p) => p.holdingId).toSet().length;
 
@@ -49,6 +59,8 @@ class HomeState extends Equatable {
     final List<String>? missingColumns,
     final List<String>? availableBasins,
     final Object? selectedBasin = _unset,
+    final bool? needsAssociationConfirm,
+    final Object? associationNameDraft = _unset,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -61,6 +73,11 @@ class HomeState extends Equatable {
       selectedBasin: identical(selectedBasin, _unset)
           ? this.selectedBasin
           : selectedBasin as String?,
+      needsAssociationConfirm:
+          needsAssociationConfirm ?? this.needsAssociationConfirm,
+      associationNameDraft: identical(associationNameDraft, _unset)
+          ? this.associationNameDraft
+          : associationNameDraft as String?,
     );
   }
 
@@ -74,5 +91,7 @@ class HomeState extends Equatable {
     missingColumns,
     availableBasins,
     selectedBasin,
+    needsAssociationConfirm,
+    associationNameDraft,
   ];
 }

@@ -1,7 +1,5 @@
-import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzy;
-
 import '../../data/models/parcel.dart';
-import 'arabic_normalizer.dart';
+import 'name_matcher.dart';
 
 /// Mirrors `_serialize_border`: resolves a border's free-text holder name to
 /// the best-matching parcel's holding ID via the same fuzzy match used for
@@ -9,7 +7,7 @@ import 'arabic_normalizer.dart';
 class BorderNavigatorService {
   const BorderNavigatorService();
 
-  static const int _fuzzyThreshold = 70;
+  static const int _fuzzyThreshold = 75;
 
   /// Resolves a border's free-text holder name to a neighboring holding ID.
   ///
@@ -39,15 +37,12 @@ class BorderNavigatorService {
   }
 
   String? _bestMatch(final String trimmedQuery, final List<Parcel> parcels) {
-    final String normalizedQuery = ArabicNormalizer.normalize(trimmedQuery);
-
     String? bestHoldingId;
     int bestScore = -1;
     for (final Parcel parcel in parcels) {
       final String? holderName = parcel.holderName;
       if (holderName == null || holderName.isEmpty) continue;
-      final String normalizedName = ArabicNormalizer.normalize(holderName);
-      final int score = fuzzy.weightedRatio(normalizedQuery, normalizedName);
+      final int score = NameMatcher.score(trimmedQuery, holderName);
       if (score > bestScore) {
         bestScore = score;
         bestHoldingId = parcel.holdingId;

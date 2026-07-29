@@ -80,7 +80,16 @@
       "voice": "Voice search",
       "mic_permission_denied": "Microphone access is required for voice search"
     },
+    "association": {
+      "title": "Association name",
+      "subtitle": "Derived from the file name — edit it if it isn't right",
+      "hint": "Association name",
+      "confirm": "Confirm"
+    },
     "detail": {
+      "border_unresolved": "No recorded data for this person",
+      "see_more": "See more",
+      "see_less": "See less",
       "title": "Holding #{id}",
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
@@ -98,6 +107,7 @@
       "section_holder": "Holder data",
       "section_location": "Location",
       "section_area": "Area",
+      "section_extra": "Additional details",
       "total_preview": "Total ≈ {value} m²",
       "save": "Save changes",
       "saved": "Changes saved"

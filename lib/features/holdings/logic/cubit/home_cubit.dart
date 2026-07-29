@@ -90,6 +90,21 @@ class HomeCubit extends Cubit<HomeState> {
       results: const <SearchResult>[],
       availableBasins: _repository.availableBasins,
       selectedBasin: null,
+      needsAssociationConfirm: _repository.associationNameNeedsConfirmation,
+      associationNameDraft: _repository.activeAssociationName,
+    );
+  }
+
+  /// Confirms (or corrects) the loaded file's اسم الجمعية, stamping it onto
+  /// every parcel and persisting it so this file won't need re-confirming.
+  Future<void> confirmAssociationName(final String name) async {
+    await _repository.confirmAssociationName(name);
+    emit(
+      state.copyWith(
+        parcels: _repository.parcels,
+        needsAssociationConfirm: false,
+        associationNameDraft: _repository.activeAssociationName,
+      ),
     );
   }
 

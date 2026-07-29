@@ -14,11 +14,16 @@ class FieldRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.showDivider = true,
+    this.onEdit,
   });
 
   final String label;
   final String? value;
   final bool showDivider;
+
+  /// Shown as a pencil icon beside the copy icon when non-null — lets the
+  /// caller open an inline editor scoped to just this field.
+  final VoidCallback? onEdit;
 
   /// Placeholder shown (and copied) when the underlying value is empty —
   /// the copy action stays active either way.
@@ -59,6 +64,16 @@ class FieldRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              if (onEdit != null)
+                IconButton(
+                  onPressed: onEdit,
+                  icon: const Icon(
+                    Icons.edit_rounded,
+                    size: 20,
+                    color: AppColors.primary200,
+                  ),
+                  tooltip: 'تعديل',
+                ),
               IconButton(
                 onPressed: () => _copy(context, displayValue),
                 icon: const Icon(
