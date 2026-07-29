@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../logic/services/arabic_normalizer.dart';
-import '../../logic/services/border_navigator_service.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../excel/holdings_excel_parser.dart';
 import '../models/cached_file_entry.dart';
@@ -30,11 +29,8 @@ List<Parcel> _parseHoldingsBytes(final Uint8List bytes) =>
 class HoldingsRepository {
   HoldingsRepository({
     final HoldingSearchService searchService = const HoldingSearchService(),
-    final BorderNavigatorService borderNavigatorService =
-        const BorderNavigatorService(),
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
   }) : _searchService = searchService,
-       _borderNavigatorService = borderNavigatorService,
        _editsStore = editsStore;
 
   static const String _activeFilePathKey = 'holdings_active_file_path';
@@ -46,7 +42,6 @@ class HoldingsRepository {
       'association_name::$filePath';
 
   final HoldingSearchService _searchService;
-  final BorderNavigatorService _borderNavigatorService;
   final ParcelEditsStore _editsStore;
 
   List<Parcel> _parcels = <Parcel>[];
@@ -396,16 +391,6 @@ class HoldingsRepository {
 
   List<Parcel> parcelsForHolding(final String holdingId) =>
       _parcels.where((final Parcel p) => p.holdingId == holdingId).toList();
-
-  /// Resolves a border's free-text name to a navigable holding ID, or
-  /// `null` if no confident match exists. [basinName] scopes the match to
-  /// parcels in the same basin as the parcel whose border is being resolved.
-  String? resolveBorder(final String borderText, {final String? basinName}) =>
-      _borderNavigatorService.resolve(
-        borderText,
-        _parcels,
-        basinName: basinName,
-      );
 }
 
 class HoldingsFilePickCancelled implements Exception {

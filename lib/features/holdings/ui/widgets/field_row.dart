@@ -6,23 +6,17 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
-/// Label + value row with a copy-to-clipboard icon. Values are large and
-/// bold per the sunlight-readability requirement (base ≥18sp, bold values).
+/// A compact label+value tile with copy (and optional inline-edit) icons.
+/// Sized to sit in a responsive wrap/grid rather than a single full-width
+/// list, so a card with many fields stays short.
 class FieldRow extends StatelessWidget {
-  const FieldRow({
-    super.key,
-    required this.label,
-    required this.value,
-    this.showDivider = true,
-    this.onEdit,
-  });
+  const FieldRow({super.key, required this.label, required this.value, this.onEdit});
 
   final String label;
   final String? value;
-  final bool showDivider;
 
-  /// Shown as a pencil icon beside the copy icon when non-null — lets the
-  /// caller open an inline editor scoped to just this field.
+  /// Shown as a small pencil icon beside the copy icon when non-null — lets
+  /// the caller open an inline editor scoped to just this field.
   final VoidCallback? onEdit;
 
   /// Placeholder shown (and copied) when the underlying value is empty —
@@ -35,59 +29,51 @@ class FieldRow extends StatelessWidget {
     final String displayValue =
         (value == null || value!.trim().isEmpty) ? emptyPlaceholder : value!;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: AppTextStyles.font14Regular.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      displayValue,
-                      style: AppTextStyles.font18Bold.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (onEdit != null)
-                IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(
-                    Icons.edit_rounded,
-                    size: 20,
-                    color: AppColors.primary200,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.font12Regular.copyWith(
+                    color: colors.textSecondary,
                   ),
-                  tooltip: 'تعديل',
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              IconButton(
-                onPressed: () => _copy(context, displayValue),
-                icon: const Icon(
-                  Icons.copy_rounded,
-                  size: 22,
-                  color: AppColors.primary200,
+                const SizedBox(height: 2),
+                Text(
+                  displayValue,
+                  style: AppTextStyles.font14SemiBold.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                tooltip: 'نسخ',
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        if (showDivider) Divider(height: 1, thickness: 1, color: colors.divider),
-      ],
+          if (onEdit != null)
+            _TileIconButton(icon: Icons.edit_rounded, onTap: onEdit!, tooltip: 'تعديل'),
+          _TileIconButton(
+            icon: Icons.copy_rounded,
+            onTap: () => _copy(context, displayValue),
+            tooltip: 'نسخ',
+          ),
+        ],
+      ),
     );
   }
 
@@ -97,5 +83,32 @@ class FieldRow extends StatelessWidget {
       HapticFeedback.lightImpact();
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
     }
+  }
+}
+
+class _TileIconButton extends StatelessWidget {
+  const _TileIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(final BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, size: 17, color: AppColors.primary200),
+        ),
+      ),
+    );
   }
 }

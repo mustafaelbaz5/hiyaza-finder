@@ -87,7 +87,6 @@
       "confirm": "Confirm"
     },
     "detail": {
-      "border_unresolved": "No recorded data for this person",
       "see_more": "See more",
       "see_less": "See less",
       "title": "Holding #{id}",

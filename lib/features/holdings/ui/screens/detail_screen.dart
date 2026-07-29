@@ -2,7 +2,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -10,7 +9,6 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../data/models/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../widgets/parcel_detail_card.dart';
-import 'parcel_edit_screen.dart';
 
 /// Full record for one holding. If the holding has multiple parcels they
 /// are all stacked in one scrollable view, each with its own compass and
@@ -34,23 +32,6 @@ class _DetailScreenState extends State<DetailScreen> {
     _parcels = List<Parcel>.of(widget.parcels);
   }
 
-  Future<void> _editParcel(final Parcel parcel) async {
-    final Parcel? edited = await Navigator.push<Parcel>(
-      context,
-      MaterialPageRoute<Parcel>(
-        builder: (final _) => ParcelEditScreen(parcel: parcel),
-      ),
-    );
-    if (edited == null) return;
-
-    await _repository.updateParcel(edited);
-    final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
-    if (idx >= 0) {
-      setState(() => _parcels[idx] = edited);
-    }
-    if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
-  }
-
   Future<void> _updateField(final Parcel updated) async {
     await _repository.updateParcel(updated);
     final int idx = _parcels.indexWhere(
@@ -60,17 +41,6 @@ class _DetailScreenState extends State<DetailScreen> {
       setState(() => _parcels[idx] = updated);
     }
     if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
-  }
-
-  void _navigateToHolding(final String holdingId) {
-    final List<Parcel> neighborParcels = _repository.parcelsForHolding(
-      holdingId,
-    );
-    context.pushNamed(Routes.holdingDetail, arguments: neighborParcels);
-  }
-
-  void _onUnresolvedBorder(final String borderText) {
-    context.showErrorSnackBar('holdings.detail.border_unresolved'.tr());
   }
 
   @override
@@ -135,15 +105,7 @@ class _DetailScreenState extends State<DetailScreen> {
                           child: ParcelDetailCard(
                             parcel: parcel,
                             isEdited: _repository.isParcelEdited(parcel.id),
-                            resolveBorder: (final String text) => _repository
-                                .resolveBorder(
-                                  text,
-                                  basinName: parcel.basinName,
-                                ),
-                            onNavigate: _navigateToHolding,
-                            onUnresolvedBorder: _onUnresolvedBorder,
                             onFieldChanged: _updateField,
-                            onEdit: () => _editParcel(parcel),
                             animationDelay: Duration(milliseconds: i * 80),
                           ),
                         );

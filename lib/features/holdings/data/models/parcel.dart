@@ -162,7 +162,7 @@ class Parcel {
     );
   }
 
-  /// The fields a user can correct via [ParcelEditScreen], serialized for
+  /// The fields a user can correct via the detail card's inline field
   /// [ParcelEditsStore]. This is the single source of truth for what gets
   /// persisted per-parcel — extend this together with [fromEditableJson]
   /// when adding a new editable field, instead of hand-listing fields in
