@@ -102,11 +102,11 @@ class ParcelDetailCard extends StatelessWidget {
               ),
               FieldRow(
                 label: 'اسم المالك',
-                value: parcel.ownerName,
+                value: _effectiveOwnerName(parcel),
                 onEdit: () => _editText(
                   context,
                   title: 'اسم المالك',
-                  initialValue: parcel.ownerName ?? '',
+                  initialValue: _effectiveOwnerName(parcel) ?? '',
                   apply: (final String v) =>
                       parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
@@ -220,6 +220,16 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
+  /// اسم المالك defaults to اسم الحائز when not explicitly set — most
+  /// owners and holders are the same person, so this saves re-typing the
+  /// name while still letting it be overridden per parcel.
+  String? _effectiveOwnerName(final Parcel p) {
+    final String? owner = p.ownerName?.trim();
+    if (owner != null && owner.isNotEmpty) return owner;
+    final String? holder = p.holderName?.trim();
+    return (holder != null && holder.isNotEmpty) ? holder : null;
+  }
+
   /// `null`/empty values are formatted with [FieldRow.emptyPlaceholder] so
   /// the on-screen display and the copy-all text stay consistent.
   String? _formatNumber(final double? value) {
@@ -255,6 +265,10 @@ class ParcelDetailCard extends StatelessWidget {
     final String holderSlot = p.isInheritance
         ? '(ورثة) ${holderName.isEmpty ? FieldRow.emptyPlaceholder : holderName}'
         : slot(p.holderName);
+    final String ownerName = _effectiveOwnerName(p) ?? '';
+    final String ownerSlot = p.isInheritance
+        ? '(ورثة) ${ownerName.isEmpty ? FieldRow.emptyPlaceholder : ownerName}'
+        : slot(ownerName.isEmpty ? null : ownerName);
     final String nationalIdSlot =
         (p.nationalId == null || p.nationalId!.trim().isEmpty)
             ? '11111111111111'
@@ -264,7 +278,7 @@ class ParcelDetailCard extends StatelessWidget {
 
     final List<(String, String)> fields = <(String, String)>[
       ('رقم الحيازة', p.holdingId),
-      ('اسم المالك', slot(p.ownerName)),
+      ('اسم المالك', ownerSlot),
       ('اسم الحائز', holderSlot),
       ('الرقم القومي', nationalIdSlot),
       ('اسم الجمعية', slot(p.associationName)),
@@ -374,20 +388,6 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
     widget.onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
-  Future<void> _editSwitch(final BuildContext context) async {
-    final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
-      context,
-      title: 'وراثة',
-      options: const [
-        ChoiceOption<bool>(value: true, label: 'وراثة'),
-        ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
-      ],
-      selected: widget.parcel.isInheritance,
-    );
-    if (result == null || result.isClear) return;
-    widget.onFieldChanged(widget.parcel.copyWith(isInheritance: result.value!));
-  }
-
   @override
   Widget build(final BuildContext context) {
     return Column(
@@ -428,11 +428,14 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
           child: _expanded
               ? _ResponsiveFieldsWrap(
                   children: [
-                    FieldRow(
+                    ToggleFieldRow(
                       label: 'وراثة',
-                      value:
-                          widget.parcel.isInheritance ? 'وراثة' : 'ليست وراثة',
-                      onEdit: () => _editSwitch(context),
+                      value: widget.parcel.isInheritance,
+                      activeLabel: 'وراثة',
+                      inactiveLabel: 'ليست وراثة',
+                      onChanged: (final bool v) => widget.onFieldChanged(
+                        widget.parcel.copyWith(isInheritance: v),
+                      ),
                     ),
                     FieldRow(
                       label: 'نوع الائتمان',
