@@ -106,6 +106,13 @@ build-aab-prod:
 build-ios-prod:
 	flutter build ipa --flavor production --target lib/main_prod.dart
 
+## Build Windows debug executable
+build-windows-dev:
+	flutter build windows --debug --target lib/main_dev.dart
+
+## Build Windows release executable
+build-windows-prod:
+	flutter build windows --release --target lib/main_prod.dart
 
 # ─── Distribution ────────────────────────────────────────────────────────────
 
