@@ -7,7 +7,6 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/models/parcel.dart';
@@ -91,16 +90,10 @@ class ParcelDetailCard extends StatelessWidget {
             east: parcel.borderEast,
             west: parcel.borderWest,
           ),
-          verticalSpacing(10),
-          CustomTextButton.outlined(
-            text: 'holdings.detail.copy_all'.tr(),
-            size: CustomButtonSize.small,
-            isFullWidth: false,
-            prefixIcon: const Icon(
-              Icons.copy_all_rounded,
-              color: AppColors.primary200,
-            ),
-            onPressed: () => _copyAll(context),
+          verticalSpacing(8),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: _CopyAllButton(onTap: () => _copyAll(context)),
           ),
           verticalSpacing(8),
           _ResponsiveFieldsWrap(
@@ -197,24 +190,6 @@ class ParcelDetailCard extends StatelessWidget {
                   apply: (final String? v) => parcel.copyWith(notes: v),
                 ),
               ),
-              FieldRow(
-                label: 'نوع الائتمان',
-                value: parcel.creditType,
-                onEdit: () => _editDropdown(
-                  context,
-                  title: 'نوع الائتمان',
-                  initialValue: parcel.creditType,
-                  options: Parcel.creditTypeOptions,
-                  allowClear: false,
-                  apply: (final String? v) =>
-                      parcel.copyWith(creditType: v ?? Parcel.defaultCreditType),
-                ),
-              ),
-              FieldRow(
-                label: 'وراثة',
-                value: parcel.isInheritance ? 'وراثة' : 'ليست وراثة',
-                onEdit: () => _editSwitch(context),
-              ),
             ],
           ),
           verticalSpacing(6),
@@ -264,20 +239,6 @@ class ParcelDetailCard extends StatelessWidget {
     );
     if (result == null) return;
     onFieldChanged(apply(result.isClear ? null : result.value));
-  }
-
-  Future<void> _editSwitch(final BuildContext context) async {
-    final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
-      context,
-      title: 'وراثة',
-      options: const [
-        ChoiceOption<bool>(value: true, label: 'وراثة'),
-        ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
-      ],
-      selected: parcel.isInheritance,
-    );
-    if (result == null || result.isClear) return;
-    onFieldChanged(parcel.copyWith(isInheritance: result.value!));
   }
 
   Future<void> _editArea(final BuildContext context) async {
@@ -368,6 +329,52 @@ class ParcelDetailCard extends StatelessWidget {
   }
 }
 
+/// A compact, self-sized pill — deliberately NOT a full-width [CustomTextButton]
+/// (which, under the card's `CrossAxisAlignment.stretch` column, stretched
+/// edge-to-edge regardless of `isFullWidth: false`). Wrapped in `Align` by
+/// the caller so it only takes as much width as its content needs.
+class _CopyAllButton extends StatelessWidget {
+  const _CopyAllButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(final BuildContext context) {
+    final TextStyle textStyle =
+        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+            .merge(AppTextStyles.font12Bold)
+            .copyWith(color: AppColors.primary200);
+
+    return Material(
+      color: AppColors.primary50.withValues(alpha: 0.3),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.primary200, width: 1.2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.copy_all_rounded,
+                size: 16,
+                color: AppColors.primary200,
+              ),
+              const SizedBox(width: 6),
+              Text('holdings.detail.copy_all'.tr(), style: textStyle),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Lays [children] out as a wrap that adapts to the available width: one
 /// column on phones, two on tablets, three on laptop/desktop — keeps a
 /// card with many fields short instead of one long scrolling list.
@@ -455,6 +462,20 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
     widget.onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
+  Future<void> _editSwitch(final BuildContext context) async {
+    final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
+      context,
+      title: 'وراثة',
+      options: const [
+        ChoiceOption<bool>(value: true, label: 'وراثة'),
+        ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
+      ],
+      selected: widget.parcel.isInheritance,
+    );
+    if (result == null || result.isClear) return;
+    widget.onFieldChanged(widget.parcel.copyWith(isInheritance: result.value!));
+  }
+
   @override
   Widget build(final BuildContext context) {
     return Column(
@@ -496,6 +517,52 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
               ? _ResponsiveFieldsWrap(
                   children: [
                     FieldRow(
+                      label: 'وراثة',
+                      value: widget.parcel.isInheritance ? 'وراثة' : 'ليست وراثة',
+                      onEdit: () => _editSwitch(context),
+                    ),
+                    FieldRow(
+                      label: 'نوع الائتمان',
+                      value: widget.parcel.creditType,
+                      onEdit: () => _editDropdown(
+                        context,
+                        title: 'نوع الائتمان',
+                        initialValue: widget.parcel.creditType,
+                        options: Parcel.creditTypeOptions,
+                        allowClear: false,
+                        apply: (final String? v) => widget.parcel.copyWith(
+                          creditType: v ?? Parcel.defaultCreditType,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
+                      label: 'نوع الاستخدام',
+                      value: widget.parcel.usageType,
+                      onEdit: () => _editDropdown(
+                        context,
+                        title: 'نوع الاستخدام',
+                        initialValue: widget.parcel.usageType,
+                        options: Parcel.usageTypeOptions,
+                        allowClear: false,
+                        apply: (final String? v) => widget.parcel.copyWith(
+                          usageType: v ?? Parcel.defaultUsageType,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
+                      label: 'كود الحوض',
+                      value: widget.parcel.basinCode,
+                      placeholder: '-1',
+                      onEdit: () => _editText(
+                        context,
+                        title: 'كود الحوض',
+                        initialValue: widget.parcel.basinCode ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          basinCode: v.isEmpty ? null : v,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
                       label: 'المديرية',
                       value: widget.parcel.directorate,
                       onEdit: () => _editText(
@@ -516,32 +583,6 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
                         initialValue: widget.parcel.administration ?? '',
                         apply: (final String v) => widget.parcel.copyWith(
                           administration: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
-                      label: 'كود الحوض',
-                      value: widget.parcel.basinCode,
-                      onEdit: () => _editText(
-                        context,
-                        title: 'كود الحوض',
-                        initialValue: widget.parcel.basinCode ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          basinCode: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
-                      label: 'نوع الاستخدام',
-                      value: widget.parcel.usageType,
-                      onEdit: () => _editDropdown(
-                        context,
-                        title: 'نوع الاستخدام',
-                        initialValue: widget.parcel.usageType,
-                        options: Parcel.usageTypeOptions,
-                        allowClear: false,
-                        apply: (final String? v) => widget.parcel.copyWith(
-                          usageType: v ?? Parcel.defaultUsageType,
                         ),
                       ),
                     ),

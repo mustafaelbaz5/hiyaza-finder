@@ -10,7 +10,13 @@ import '../../../../core/utils/extensions/context_ext.dart';
 /// Sized to sit in a responsive wrap/grid rather than a single full-width
 /// list, so a card with many fields stays short.
 class FieldRow extends StatelessWidget {
-  const FieldRow({super.key, required this.label, required this.value, this.onEdit});
+  const FieldRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.onEdit,
+    this.placeholder,
+  });
 
   final String label;
   final String? value;
@@ -19,6 +25,10 @@ class FieldRow extends StatelessWidget {
   /// the caller open an inline editor scoped to just this field.
   final VoidCallback? onEdit;
 
+  /// Overrides [emptyPlaceholder] for this one field (e.g. كود الحوض shows
+  /// "-1" specifically, while every other empty field shows "-").
+  final String? placeholder;
+
   /// Placeholder shown (and copied) when the underlying value is empty —
   /// the copy action stays active either way.
   static const String emptyPlaceholder = '-';
@@ -26,8 +36,9 @@ class FieldRow extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String displayValue =
-        (value == null || value!.trim().isEmpty) ? emptyPlaceholder : value!;
+    final String displayValue = (value == null || value!.trim().isEmpty)
+        ? (placeholder ?? emptyPlaceholder)
+        : value!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

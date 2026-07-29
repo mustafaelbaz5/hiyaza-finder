@@ -31,18 +31,18 @@ class BorderCompass extends StatelessWidget {
     return Column(
       children: [
         _BorderCell(label: 'شمال (البحري)', text: north),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         Row(
           textDirection: TextDirection.ltr,
           children: [
             Expanded(child: _BorderCell(label: 'غرب (الغربي)', text: west)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 5),
             Expanded(child: _CenterCell(holdingId: holdingId)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 5),
             Expanded(child: _BorderCell(label: 'شرق (الشرقي)', text: east)),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 5),
         _BorderCell(label: 'جنوب (القبلي)', text: south),
       ],
     );
@@ -57,10 +57,10 @@ class _CenterCell extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     return Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(
             color: AppColors.primary200,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -68,12 +68,12 @@ class _CenterCell extends StatelessWidget {
               const Icon(
                 Icons.crop_square_rounded,
                 color: AppColors.white,
-                size: 20,
+                size: 15,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 '#$holdingId',
-                style: AppTextStyles.font14Bold.copyWith(
+                style: AppTextStyles.font12Bold.copyWith(
                   color: AppColors.white,
                 ),
                 textAlign: TextAlign.center,
@@ -109,7 +109,7 @@ class _BorderCell extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(10),
@@ -122,14 +122,18 @@ class _BorderCell extends StatelessWidget {
             label,
             style: AppTextStyles.font12Regular.copyWith(
               color: colors.textHint,
+              fontSize: 10,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             displayText,
             style: AppTextStyles.font14SemiBold.copyWith(
               color: colors.textPrimary,
+              fontSize: 12,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,

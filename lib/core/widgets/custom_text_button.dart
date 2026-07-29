@@ -106,9 +106,19 @@ class CustomTextButton extends StatelessWidget {
 
   double get _iconSize => size == CustomButtonSize.small ? 18 : 20;
 
-  TextStyle get _defaultTextStyle => size == CustomButtonSize.small
-      ? AppTextStyles.font14Bold
-      : AppTextStyles.font16Bold;
+  /// `AppTextStyles.fontXBold` never sets `fontFamily`, so it can't pick up
+  /// the user's chosen font (applied at runtime via
+  /// `ThemeData.textTheme.apply(fontFamily: ...)` in `HiyazaFinderApp`) —
+  /// that `.apply` only touches `Theme.textTheme`, not raw `TextStyle`
+  /// literals used directly as button text. Merging onto the ambient
+  /// `textTheme` here pulls in the live font family while keeping this
+  /// button's own size/weight.
+  TextStyle _defaultTextStyle(final BuildContext context) {
+    final TextStyle base = size == CustomButtonSize.small
+        ? AppTextStyles.font14Bold
+        : AppTextStyles.font16Bold;
+    return Theme.of(context).textTheme.bodyMedium?.merge(base) ?? base;
+  }
 
   // ─── Resolved colors by style ─────────────────────────────────────────
   Color _resolveBackground(final BuildContext context) {
@@ -145,7 +155,7 @@ class CustomTextButton extends StatelessWidget {
     final Color fg = _resolveForeground(context);
     final BorderSide border = _resolveBorder(fg);
     final double radius = borderRadius ?? 12;
-    final TextStyle effectiveTextStyle = (textStyle ?? _defaultTextStyle)
+    final TextStyle effectiveTextStyle = (textStyle ?? _defaultTextStyle(context))
         .copyWith(color: fg);
 
     final Widget child = isLoading
