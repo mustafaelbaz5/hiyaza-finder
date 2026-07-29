@@ -21,8 +21,8 @@ class AppConfig {
     'APP_NAME',
     defaultValue: 'HiyazaFinder Dev',
   );
-  static const String appVersion = '1.0.2';
-  static const String buildNumber = '3';
+  static const String appVersion = '1.0.4';
+  static const String buildNumber = '4';
 
   // Developer Info
   static const String developerName = 'Mustafa Elbaz';
@@ -33,8 +33,5 @@ class AppConfig {
       'https://www.linkedin.com/in/mustafa-elbaz-725a6631a';
   static const String developerEmail = 'm9stafa05@gmail.com';
 
-  // API
-  static String get baseUrl => isProduction
-      ? 'https://api.production.com'
-      : 'https://api.development.com';
+
 }
