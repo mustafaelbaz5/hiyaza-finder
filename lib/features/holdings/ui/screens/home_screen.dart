@@ -24,7 +24,6 @@ import '../../logic/services/holding_search_service.dart';
 import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/recommendation_list.dart';
-import '../widgets/search_suggestions_overlay.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -440,86 +439,6 @@ class _LoadedBody extends StatefulWidget {
 }
 
 class _LoadedBodyState extends State<_LoadedBody> {
-  final LayerLink _searchLink = LayerLink();
-  final FocusNode _focusNode = FocusNode();
-  final GlobalKey _fieldKey = GlobalKey();
-  OverlayEntry? _overlayEntry;
-  List<String> _suggestions = <String>[];
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_updateSuggestions);
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus) _removeOverlay();
-    });
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_updateSuggestions);
-    _removeOverlay();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _updateSuggestions() {
-    final String text = widget.controller.text;
-    if (text.trim().isEmpty) {
-      _suggestions = const <String>[];
-      _removeOverlay();
-      return;
-    }
-    final HoldingsRepository repository = getIt<HoldingsRepository>();
-    _suggestions = repository.suggestNames(
-      text,
-      basin: widget.state.selectedBasin,
-    );
-    if (_suggestions.isEmpty) {
-      _removeOverlay();
-    } else {
-      _showOverlay();
-    }
-  }
-
-  void _selectSuggestion(final String name) {
-    widget.controller
-      ..text = name
-      ..selection = TextSelection.collapsed(offset: name.length);
-    _removeOverlay();
-    widget.cubit.search(name);
-    _focusNode.unfocus();
-  }
-
-  void _showOverlay() {
-    _overlayEntry?.remove();
-    final double width =
-        (_fieldKey.currentContext?.findRenderObject() as RenderBox?)
-            ?.size
-            .width ??
-        MediaQuery.of(context).size.width;
-    _overlayEntry = OverlayEntry(
-      builder: (final BuildContext context) => Positioned(
-        width: width,
-        child: CompositedTransformFollower(
-          link: _searchLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0, 62),
-          child: SearchSuggestionsOverlay(
-            suggestions: _suggestions,
-            onSelect: _selectSuggestion,
-          ),
-        ),
-      ),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-  }
-
   void _openDetail(final BuildContext context, final SearchResult result) {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
     context.pushNamed(
@@ -550,7 +469,6 @@ class _LoadedBodyState extends State<_LoadedBody> {
           onPressed: () {
             widget.controller.clear();
             widget.onQueryChanged('');
-            _removeOverlay();
           },
         ),
     ];
@@ -579,23 +497,16 @@ class _LoadedBodyState extends State<_LoadedBody> {
                     onOpenBasinFilter: widget.onOpenBasinFilter,
                   ),
                   verticalSpacing(16),
-                  CompositedTransformTarget(
-                    link: _searchLink,
-                    child: Container(
-                      key: _fieldKey,
-                      child: CustomTextForm(
-                        hintText: 'holdings.search.hint'.tr(),
-                        controller: widget.controller,
-                        isRTL: true,
-                        focusNode: _focusNode,
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colors.iconSecondary,
-                        ),
-                        suffixIcon: suffixIcon,
-                        onChanged: widget.onQueryChanged,
-                      ),
+                  CustomTextForm(
+                    hintText: 'holdings.search.hint'.tr(),
+                    controller: widget.controller,
+                    isRTL: true,
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      color: colors.iconSecondary,
                     ),
+                    suffixIcon: suffixIcon,
+                    onChanged: widget.onQueryChanged,
                   ),
                   verticalSpacing(8),
                 ],

@@ -27,20 +27,11 @@ class ArabicNormalizer {
     return result;
   }
 
-  /// A looser variant of [normalize] used ONLY for matching/search — never
-  /// for anything user-visible — so hand-entered inconsistencies like a
-  /// missing/extra space ("احمد علي" vs "احمدعلي") or ة/ه confusion don't
-  /// stop two writings of the same name from matching.
-  static String normalizeForMatching(final String input) {
-    return normalize(input).replaceAll(' ', '').replaceAll('ة', 'ه');
-  }
-
   /// Normalization for the `startsWith`/word-boundary search algorithm —
   /// same Arabic-letter/diacritic/whitespace cleanup as [normalize], plus
   /// lowercasing (for any Latin characters, e.g. mixed-script names or
-  /// national IDs) and ة→ه unification. Unlike [normalizeForMatching], this
-  /// keeps single spaces between words so callers can split on them for
-  /// word-boundary matching.
+  /// national IDs) and ة→ه unification. Keeps single spaces between words
+  /// so callers can split on them for word-boundary matching.
   static String normalizeForSearch(final String input) {
     return normalize(input).toLowerCase().replaceAll('ة', 'ه');
   }

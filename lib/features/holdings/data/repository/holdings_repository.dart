@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../logic/services/arabic_normalizer.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../excel/holdings_excel_parser.dart';
 import '../models/cached_file_entry.dart';
@@ -348,36 +347,6 @@ class HoldingsRepository {
   /// Distinct holder names whose (loosely-normalized) text contains [query]
   /// — cheap substring filtering, safe to call on every keystroke without
   /// debouncing, for a live "narrows as you type" suggestions dropdown.
-  List<String> suggestNames(
-    final String query, {
-    final String? basin,
-    final int limit = 8,
-  }) {
-    final String normalizedQuery = ArabicNormalizer.normalizeForMatching(
-      query,
-    );
-    if (normalizedQuery.isEmpty) return const <String>[];
-
-    final List<Parcel> scope = basin == null
-        ? _parcels
-        : _parcels.where((final Parcel p) => p.basinName == basin).toList();
-
-    final List<String> matches = <String>[];
-    final Set<String> seen = <String>{};
-    for (final Parcel p in scope) {
-      final String? name = p.holderName?.trim();
-      if (name == null || name.isEmpty || seen.contains(name)) continue;
-      if (ArabicNormalizer.normalizeForMatching(
-        name,
-      ).contains(normalizedQuery)) {
-        seen.add(name);
-        matches.add(name);
-        if (matches.length >= limit) break;
-      }
-    }
-    return matches;
-  }
-
   /// Distinct اسم الحوض values in the active dataset, sorted.
   List<String> get availableBasins {
     final Set<String> basins = <String>{};
