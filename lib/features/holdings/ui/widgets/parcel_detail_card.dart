@@ -15,6 +15,7 @@ import '../../data/models/parcel.dart';
 import '../../logic/services/area_calculator.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
+import 'crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 
@@ -130,13 +131,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'نوع الزرع',
                 value: parcel.cropType,
-                onEdit: () => _editDropdown(
-                  context,
-                  title: 'نوع الزرع',
-                  initialValue: parcel.cropType,
-                  options: Parcel.cropTypeOptions,
-                  apply: (final String? v) => parcel.copyWith(cropType: v),
-                ),
+                onEdit: () => _editCropType(context),
               ),
               FieldRow(
                 label: 'ملاحظات',
@@ -198,6 +193,17 @@ class ParcelDetailCard extends StatelessWidget {
     );
     if (result == null) return;
     onFieldChanged(apply(result.isClear ? null : result.value));
+  }
+
+  Future<void> _editCropType(final BuildContext context) async {
+    final ChoiceDialogResult<String>? result = await pickCropType(
+      context,
+      selected: parcel.cropType,
+    );
+    if (result == null) return;
+    onFieldChanged(
+      parcel.copyWith(cropType: result.isClear ? null : result.value),
+    );
   }
 
   Future<void> _editArea(final BuildContext context) async {
