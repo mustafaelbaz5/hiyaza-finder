@@ -27,6 +27,7 @@ class Parcel {
     this.notes,
     this.creditType = defaultCreditType,
     this.isInheritance = false,
+    this.isDelegate = false,
     this.usageType = defaultUsageType,
   });
 
@@ -59,6 +60,7 @@ class Parcel {
   final String? notes; // ملاحظات
   final String creditType; // نوع الائتمان: ملك / أوقاف
   final bool isInheritance; // وراثة
+  final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
 
   static const String defaultCreditType = 'ملك';
@@ -130,6 +132,7 @@ class Parcel {
     final Object? notes = _unset,
     final Object? creditType = _unset,
     final Object? isInheritance = _unset,
+    final Object? isDelegate = _unset,
     final Object? usageType = _unset,
   }) {
     T resolve<T>(final Object? value, final T fallback) =>
@@ -160,6 +163,7 @@ class Parcel {
       notes: resolve(notes, this.notes),
       creditType: resolve(creditType, this.creditType),
       isInheritance: resolve(isInheritance, this.isInheritance),
+      isDelegate: resolve(isDelegate, this.isDelegate),
       usageType: resolve(usageType, this.usageType),
     );
   }
@@ -186,6 +190,7 @@ class Parcel {
         'notes': notes,
         'creditType': creditType,
         'isInheritance': isInheritance,
+        'isDelegate': isDelegate,
         'usageType': usageType,
       };
 
@@ -222,6 +227,7 @@ class Parcel {
       notes: json['notes'] as String?,
       creditType: json['creditType'] as String? ?? defaultCreditType,
       isInheritance: json['isInheritance'] as bool? ?? false,
+      isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,
     );
   }

@@ -262,13 +262,22 @@ class ParcelDetailCard extends StatelessWidget {
     String slot(final String? v) =>
         (v == null || v.trim().isEmpty) ? FieldRow.emptyPlaceholder : v.trim();
 
+    // مفوض overrides وراثة: at most one of "(ورثة)"/"(مفوض عنه)" prefixes
+    // اسم الحائز/اسم المالك, never both.
+    String prefixName(final String name) {
+      final String display = name.isEmpty ? FieldRow.emptyPlaceholder : name;
+      if (p.isDelegate) return '(مفوض عنه) $display';
+      if (p.isInheritance) return '(ورثة) $display';
+      return display;
+    }
+
     final String holderName = p.holderName?.trim() ?? '';
-    final String holderSlot = p.isInheritance
-        ? '(ورثة) ${holderName.isEmpty ? FieldRow.emptyPlaceholder : holderName}'
+    final String holderSlot = (p.isInheritance || p.isDelegate)
+        ? prefixName(holderName)
         : slot(p.holderName);
     final String ownerName = _effectiveOwnerName(p) ?? '';
-    final String ownerSlot = p.isInheritance
-        ? '(ورثة) ${ownerName.isEmpty ? FieldRow.emptyPlaceholder : ownerName}'
+    final String ownerSlot = (p.isInheritance || p.isDelegate)
+        ? prefixName(ownerName)
         : slot(ownerName.isEmpty ? null : ownerName);
     final String nationalIdSlot =
         (p.nationalId == null || p.nationalId!.trim().isEmpty)
@@ -277,29 +286,33 @@ class ParcelDetailCard extends StatelessWidget {
     final String creditSentence =
         p.creditType == 'أوقاف' ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية' : '';
 
-    final List<(String, String)> fields = <(String, String)>[
-      ('رقم الحيازة', p.holdingId),
-      ('اسم المالك', ownerSlot),
-      ('اسم الحائز', holderSlot),
-      ('الرقم القومي', nationalIdSlot),
-      ('اسم الجمعية', slot(p.associationName)),
-      ('اسم الحوض', slot(p.basinName)),
-      ('رقم الأرض', slot(p.landNumber)),
-      ('فدان', _formatNumber(p.feddan) ?? FieldRow.emptyPlaceholder),
-      ('قيراط', _formatNumber(p.qirat) ?? FieldRow.emptyPlaceholder),
-      ('سهم', _formatNumber(p.sahm) ?? FieldRow.emptyPlaceholder),
-      (
+    // Grouping فدان/قيراط/سهم and نوع الزرع/نوع الائتمان on shared lines
+    // (instead of one field per line) trims the message's height while
+    // keeping every field's own "label: value," so it still pastes cleanly
+    // into a spreadsheet.
+    String field(final String label, final String value) => '$label: $value,';
+
+    final List<String> lines = <String>[
+      field('رقم الحيازة', p.holdingId),
+      field('اسم المالك', ownerSlot),
+      field('اسم الحائز', holderSlot),
+      field('الرقم القومي', nationalIdSlot),
+      field('اسم الجمعية', slot(p.associationName)),
+      field('اسم الحوض', slot(p.basinName)),
+      field('رقم الأرض', slot(p.landNumber)),
+      '${field('فدان', _formatNumber(p.feddan) ?? FieldRow.emptyPlaceholder)}     '
+          '${field('قيراط', _formatNumber(p.qirat) ?? FieldRow.emptyPlaceholder)}   '
+          '${field('سهم', _formatNumber(p.sahm) ?? FieldRow.emptyPlaceholder)}',
+      field(
         'المساحة بالمتر',
         _formatNumber(p.totalSqm) ?? FieldRow.emptyPlaceholder,
       ),
-      ('نوع الزرع', slot(p.cropType)),
-      ('ملاحظات', slot(p.notes)),
-      ('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence),
+      '${field('نوع الزرع', slot(p.cropType))}   '
+          '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
+      field('ملاحظات', slot(p.notes)),
     ];
 
-    return fields
-        .map((final (String, String) f) => '${f.$1}: ${f.$2},')
-        .join('\n');
+    return lines.join('\n');
   }
 }
 
@@ -436,6 +449,15 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
                       inactiveLabel: 'ليست وراثة',
                       onChanged: (final bool v) => widget.onFieldChanged(
                         widget.parcel.copyWith(isInheritance: v),
+                      ),
+                    ),
+                    ToggleFieldRow(
+                      label: 'مفوض',
+                      value: widget.parcel.isDelegate,
+                      activeLabel: 'مفوض',
+                      inactiveLabel: 'غير مفوض',
+                      onChanged: (final bool v) => widget.onFieldChanged(
+                        widget.parcel.copyWith(isDelegate: v),
                       ),
                     ),
                     FieldRow(
