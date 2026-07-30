@@ -2,8 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
-import 'copy_all_button.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -14,6 +14,7 @@ import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/models/parcel.dart';
 import '../../logic/services/area_calculator.dart';
 import 'border_compass.dart';
+import 'copy_all_button.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 
@@ -95,7 +96,7 @@ class ParcelDetailCard extends StatelessWidget {
           verticalSpacing(8),
           CopyAllButton(onTap: () => _copyAll(context)),
           verticalSpacing(8),
-          _ResponsiveFieldsWrap(
+          ResponsiveFieldsWrap(
             children: [
               FieldRow(
                 label: 'holdings.detail.holding_id'.tr(),
@@ -262,23 +263,26 @@ class ParcelDetailCard extends StatelessWidget {
     String slot(final String? v) =>
         (v == null || v.trim().isEmpty) ? FieldRow.emptyPlaceholder : v.trim();
 
-    // مفوض overrides وراثة: at most one of "(ورثة)"/"(مفوض عنه)" prefixes
-    // اسم الحائز/اسم المالك, never both.
-    String prefixName(final String name) {
+    // اسم المالك only ever gets "(ورثة)" (مفوض doesn't touch it). اسم الحائز
+    // gets "(مفوض عنه)" whenever مفوض is on — overriding "(ورثة)" there
+    // specifically — otherwise "(ورثة)" if وراثة alone is on.
+    String withPrefix(final String? prefixLabel, final String name) {
       final String display = name.isEmpty ? FieldRow.emptyPlaceholder : name;
-      if (p.isDelegate) return '(مفوض عنه) $display';
-      if (p.isInheritance) return '(ورثة) $display';
-      return display;
+      return prefixLabel == null ? display : '$prefixLabel $display';
     }
 
     final String holderName = p.holderName?.trim() ?? '';
-    final String holderSlot = (p.isInheritance || p.isDelegate)
-        ? prefixName(holderName)
-        : slot(p.holderName);
+    final String? holderPrefix =
+        p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
+    final String holderSlot = holderPrefix == null
+        ? slot(p.holderName)
+        : withPrefix(holderPrefix, holderName);
+
     final String ownerName = _effectiveOwnerName(p) ?? '';
-    final String ownerSlot = (p.isInheritance || p.isDelegate)
-        ? prefixName(ownerName)
-        : slot(ownerName.isEmpty ? null : ownerName);
+    final String? ownerPrefix = p.isInheritance ? '(ورثة)' : null;
+    final String ownerSlot = ownerPrefix == null
+        ? slot(ownerName.isEmpty ? null : ownerName)
+        : withPrefix(ownerPrefix, ownerName);
     final String nationalIdSlot =
         (p.nationalId == null || p.nationalId!.trim().isEmpty)
             ? '11111111111111'
@@ -313,38 +317,6 @@ class ParcelDetailCard extends StatelessWidget {
     ];
 
     return lines.join('\n');
-  }
-}
-
-/// Lays [children] out as a wrap that adapts to the available width: one
-/// column on phones, two on tablets, three on laptop/desktop — keeps a
-/// card with many fields short instead of one long scrolling list.
-class _ResponsiveFieldsWrap extends StatelessWidget {
-  const _ResponsiveFieldsWrap({required this.children});
-
-  final List<Widget> children;
-
-  static const double _spacing = 8;
-
-  @override
-  Widget build(final BuildContext context) {
-    return LayoutBuilder(
-      builder: (final BuildContext context, final BoxConstraints constraints) {
-        final double width = constraints.maxWidth;
-        final int columns = width >= 900 ? 3 : (width >= 520 ? 2 : 1);
-        final double itemWidth =
-            columns == 1 ? width : (width - _spacing * (columns - 1)) / columns;
-
-        return Wrap(
-          spacing: _spacing,
-          runSpacing: _spacing,
-          children: [
-            for (final Widget child in children)
-              SizedBox(width: itemWidth, child: child),
-          ],
-        );
-      },
-    );
   }
 }
 
@@ -440,7 +412,7 @@ class _SeeMoreSectionState extends State<_SeeMoreSection> {
         AnimatedSize(
           duration: const Duration(milliseconds: 200),
           child: _expanded
-              ? _ResponsiveFieldsWrap(
+              ? ResponsiveFieldsWrap(
                   children: [
                     ToggleFieldRow(
                       label: 'وراثة',
