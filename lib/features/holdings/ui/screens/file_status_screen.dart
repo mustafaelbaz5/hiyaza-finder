@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/crop_type_picker.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/picker_row.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/section_card.dart';
 
@@ -95,6 +96,16 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       );
       if (result == null || result.isClear) return;
       setState(() => _bulkValue = result.value);
+      return;
+    }
+
+    if (_bulkField == BulkEditableField.cropType) {
+      final ChoiceDialogResult<String>? result = await pickCropType(
+        context,
+        selected: _bulkValue as String?,
+      );
+      if (result == null) return;
+      setState(() => _bulkValue = result.isClear ? null : result.value);
       return;
     }
 
