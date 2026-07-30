@@ -1,5 +1,5 @@
 #define MyAppName "Hiyaza"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "Mustafa Elbaz"
 #define MyAppExeName "hiyaza_finder.exe"
 
@@ -13,7 +13,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 
 OutputDir=installer
-OutputBaseFilename=Hiyaza_Setup
+OutputBaseFilename=Hiyaza_Setup_{#MyAppVersion}
 
 Compression=lzma
 SolidCompression=yes
