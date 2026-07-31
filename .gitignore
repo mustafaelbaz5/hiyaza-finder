@@ -46,3 +46,7 @@ app.*.map.json
 
 terminalcontext.txt
 FLUTTER_APP_PLAN.md
+*.env
+
+# Sample data files (contain real PII — never commit)
+الدير_ائتمان_مجمع.xlsx
