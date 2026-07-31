@@ -466,7 +466,12 @@ create trigger added_holdings_bump after insert or update on added_holdings
 ```
 
 > **Note on `holdings_bump`:** it is `for each statement`, deliberately — a 1,202-row import must
-> bump the version once, not 1,202 times.
+> bump the version once, not 1,202 times. **Correction applied in the actual migration files**
+> (`supabase/migrations/`): a statement-level trigger has no `NEW`/`OLD` record to read, so
+> `bump_city_version()` as written above only works for the two `for each row` triggers.
+> `holdings_bump` uses a separate `bump_city_version_statement()` function that reads affected
+> `city_id`s from `REFERENCING OLD TABLE/NEW TABLE` transition tables instead — see the migration
+> files for the corrected version.
 
 ### 6.1 Row Level Security
 
