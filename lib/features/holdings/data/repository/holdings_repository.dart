@@ -202,6 +202,28 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     return _parcels;
   }
 
+  /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
+  /// dataset, keyed by [cityId] for local edit persistence — the same
+  /// [ParcelEditsStore] mechanism [loadFromPickedFile] uses to key its
+  /// edits, just keyed by city id instead of a file path. Local edits made
+  /// after this call reapply on the next load from cache, same as today.
+  /// اسم الجمعية never needs confirming here — the server already supplies
+  /// the real value per parcel.
+  Future<List<Parcel>> loadParcelsForCity(
+    final String cityId,
+    final List<Parcel> parcels,
+  ) async {
+    final String key = 'city::$cityId';
+    _activeFilePath = key;
+    _associationNameConfirmed = true;
+    _originalById = <String, Parcel>{
+      for (final Parcel p in parcels) p.id: p,
+    };
+    _edits = await _editsStore.load(key);
+    _parcels = parcels.map(_applyEdit).toList();
+    return _parcels;
+  }
+
   /// Confirms (or corrects) the active file's اسم الجمعية, persists it so
   /// this file won't need re-confirming next time it's loaded, and stamps
   /// it onto every currently-loaded parcel.

@@ -231,4 +231,69 @@ class Parcel {
       usageType: json['usageType'] as String? ?? defaultUsageType,
     );
   }
+
+  /// Full round-trip serialization (every field, including the
+  /// never-editable ones) — used by the local city-snapshot cache, unlike
+  /// [toEditableJson]/[fromEditableJson] which only cover the
+  /// user-correctable subset for the local edit overlay.
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'holdingId': holdingId,
+        'pageNumber': pageNumber,
+        'directorate': directorate,
+        'administration': administration,
+        'basinName': basinName,
+        'basinCode': basinCode,
+        'holderName': holderName,
+        'nationalId': nationalId,
+        'borderEast': borderEast,
+        'borderSouth': borderSouth,
+        'borderWest': borderWest,
+        'borderNorth': borderNorth,
+        'landNumber': landNumber,
+        'feddan': feddan,
+        'qirat': qirat,
+        'sahm': sahm,
+        'totalSqm': totalSqm,
+        'ownerName': ownerName,
+        'associationName': associationName,
+        'cropType': cropType,
+        'notes': notes,
+        'creditType': creditType,
+        'isInheritance': isInheritance,
+        'isDelegate': isDelegate,
+        'usageType': usageType,
+      };
+
+  factory Parcel.fromJson(final Map<String, dynamic> json) {
+    double? d(final String key) => (json[key] as num?)?.toDouble();
+    return Parcel(
+      id: json['id'] as String? ?? '',
+      holdingId: json['holdingId'] as String,
+      pageNumber: json['pageNumber'] as String?,
+      directorate: json['directorate'] as String?,
+      administration: json['administration'] as String?,
+      basinName: json['basinName'] as String?,
+      basinCode: json['basinCode'] as String?,
+      holderName: json['holderName'] as String?,
+      nationalId: json['nationalId'] as String?,
+      borderEast: json['borderEast'] as String?,
+      borderSouth: json['borderSouth'] as String?,
+      borderWest: json['borderWest'] as String?,
+      borderNorth: json['borderNorth'] as String?,
+      landNumber: json['landNumber'] as String?,
+      feddan: d('feddan'),
+      qirat: d('qirat'),
+      sahm: d('sahm'),
+      totalSqm: d('totalSqm'),
+      ownerName: json['ownerName'] as String?,
+      associationName: json['associationName'] as String?,
+      cropType: json['cropType'] as String?,
+      notes: json['notes'] as String?,
+      creditType: json['creditType'] as String? ?? defaultCreditType,
+      isInheritance: json['isInheritance'] as bool? ?? false,
+      isDelegate: json['isDelegate'] as bool? ?? false,
+      usageType: json['usageType'] as String? ?? defaultUsageType,
+    );
+  }
 }
