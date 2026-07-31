@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/ui/about_screen.dart';
 import 'package:hiyaza_finder/features/auth/presentation/screens/login_screen.dart';
+import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
 import 'package:hiyaza_finder/features/cities/presentation/cubit/city_picker_cubit.dart';
 import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_screen.dart';
@@ -27,7 +28,7 @@ class AppRouter {
       case Routes.login:
         return _buildRoute(const LoginScreen(), settings);
       case Routes.cityPicker:
-        return _buildRoute(
+        return _buildRoute<CitySnapshot>(
           BlocProvider<CityPickerCubit>(
             create: (final _) => getIt<CityPickerCubit>(),
             child: const CityPickerScreen(),
@@ -57,11 +58,11 @@ class AppRouter {
     }
   }
 
-  static PageRouteBuilder _buildRoute(
+  static PageRouteBuilder<T> _buildRoute<T>(
     final Widget page,
     final RouteSettings settings,
   ) {
-    return PageRouteBuilder(
+    return PageRouteBuilder<T>(
       settings: settings,
       pageBuilder: (final context, final animation, final secondaryAnimation) =>
           page,
