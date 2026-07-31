@@ -78,10 +78,10 @@ class HiyazaFinderApp extends StatelessWidget {
             child: BlocProvider<SyncStatusCubit>.value(
               value: getIt<SyncStatusCubit>(),
               child: BlocListener<SessionCubit, SessionState>(
-                listenWhen: (final SessionState previous,
-                        final SessionState current) =>
-                    previous.status != SessionStatus.unauthenticated &&
-                    current.status == SessionStatus.unauthenticated,
+                listenWhen:
+                    (final SessionState previous, final SessionState current) =>
+                        previous.status != SessionStatus.unauthenticated &&
+                        current.status == SessionStatus.unauthenticated,
                 // Catches a session that becomes invalid while the user is
                 // already past login (e.g. an expired/revoked refresh
                 // token) and bounces them back rather than leaving screens

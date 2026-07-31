@@ -56,6 +56,12 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Per-parcel edit snapshots for the active city.
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
 
+  /// Ids of parcels added this session via [addLocalParcel] — drives the
+  /// "new / pending sync" badge on the detail card. Session-scoped (not
+  /// persisted): after an app restart a still-unsynced added record loses
+  /// this marker even though it may still be sitting in the outbox.
+  final Set<String> _locallyAddedIds = <String>{};
+
   @override
   List<Parcel> get parcels => _parcels;
 
@@ -96,6 +102,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final Parcel withId = parcel.copyWith(id: _uuid.v4());
     _parcels = <Parcel>[..._parcels, withId];
     _originalById[withId.id] = withId;
+    _locallyAddedIds.add(withId.id);
 
     if (syncQueue != null) {
       await syncQueue!.enqueue(
@@ -156,6 +163,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   }
 
   bool isParcelEdited(final String id) => _edits.containsKey(id);
+
+  /// Whether [id] was added in the field this session and hasn't been
+  /// confirmed synced yet — drives the "new / pending sync" badge.
+  bool isNewLocalRecord(final String id) => _locallyAddedIds.contains(id);
 
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole
   /// dataset — narrowing the scope keeps matching fast on large cities.

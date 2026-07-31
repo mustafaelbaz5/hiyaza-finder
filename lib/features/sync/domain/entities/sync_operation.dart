@@ -10,6 +10,7 @@ sealed class SyncOperation {
     required this.createdAt,
     this.attempts = 0,
     this.lastAttemptAt,
+    this.lastError,
   });
 
   final String id;
@@ -21,7 +22,15 @@ sealed class SyncOperation {
   /// until `lastAttemptAt + backoff(attempts)` has passed.
   final DateTime? lastAttemptAt;
 
-  SyncOperation withIncrementedAttempts(final DateTime attemptedAt);
+  /// The exception message from the most recent failed attempt — `null`
+  /// until the first failure. Surfaced on the sync details sheet so a
+  /// failed operation isn't just a bare count with no explanation.
+  final String? lastError;
+
+  SyncOperation withIncrementedAttempts(
+    final DateTime attemptedAt, {
+    final String? error,
+  });
 
   /// Clears [attempts]/[lastAttemptAt] so a permanently-failed operation
   /// (one at `syncMaxAttempts`) becomes eligible for the next flush again
@@ -46,6 +55,7 @@ Map<String, dynamic> _baseJson(final SyncOperation o, final String type) => <Str
       'createdAt': o.createdAt.toIso8601String(),
       'attempts': o.attempts,
       'lastAttemptAt': o.lastAttemptAt?.toIso8601String(),
+      'lastError': o.lastError,
     };
 
 int _attemptsOf(final Map<String, dynamic> json) => json['attempts'] as int? ?? 0;
@@ -54,6 +64,8 @@ DateTime? _lastAttemptAtOf(final Map<String, dynamic> json) {
   final String? raw = json['lastAttemptAt'] as String?;
   return raw == null ? null : DateTime.parse(raw);
 }
+
+String? _lastErrorOf(final Map<String, dynamic> json) => json['lastError'] as String?;
 
 /// A single-parcel field correction — mirrors `HoldingsRepository
 /// .updateParcel()`. [payload] is the same `Parcel.toEditableJson()` shape
@@ -65,6 +77,7 @@ final class EditHoldingOperation extends SyncOperation {
     required super.createdAt,
     super.attempts,
     super.lastAttemptAt,
+    super.lastError,
     required this.cityId,
     required this.holdingId,
     required this.payload,
@@ -75,12 +88,16 @@ final class EditHoldingOperation extends SyncOperation {
   final Map<String, dynamic> payload;
 
   @override
-  EditHoldingOperation withIncrementedAttempts(final DateTime attemptedAt) =>
+  EditHoldingOperation withIncrementedAttempts(
+    final DateTime attemptedAt, {
+    final String? error,
+  }) =>
       EditHoldingOperation(
         id: id,
         createdAt: createdAt,
         attempts: attempts + 1,
         lastAttemptAt: attemptedAt,
+        lastError: error,
         cityId: cityId,
         holdingId: holdingId,
         payload: payload,
@@ -109,6 +126,7 @@ final class EditHoldingOperation extends SyncOperation {
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),
         lastAttemptAt: _lastAttemptAtOf(json),
+        lastError: _lastErrorOf(json),
         cityId: json['cityId'] as String,
         holdingId: json['holdingId'] as String,
         payload: json['payload'] as Map<String, dynamic>,
@@ -163,6 +181,7 @@ final class BulkEditOperation extends SyncOperation {
     required super.createdAt,
     super.attempts,
     super.lastAttemptAt,
+    super.lastError,
     required this.cityId,
     required this.rows,
   });
@@ -171,12 +190,16 @@ final class BulkEditOperation extends SyncOperation {
   final List<BulkEditRow> rows;
 
   @override
-  BulkEditOperation withIncrementedAttempts(final DateTime attemptedAt) =>
+  BulkEditOperation withIncrementedAttempts(
+    final DateTime attemptedAt, {
+    final String? error,
+  }) =>
       BulkEditOperation(
         id: id,
         createdAt: createdAt,
         attempts: attempts + 1,
         lastAttemptAt: attemptedAt,
+        lastError: error,
         cityId: cityId,
         rows: rows,
       );
@@ -202,6 +225,7 @@ final class BulkEditOperation extends SyncOperation {
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),
         lastAttemptAt: _lastAttemptAtOf(json),
+        lastError: _lastErrorOf(json),
         cityId: json['cityId'] as String,
         rows: (json['rows'] as List<dynamic>)
             .map(
@@ -223,6 +247,7 @@ final class AddRecordOperation extends SyncOperation {
     required super.createdAt,
     super.attempts,
     super.lastAttemptAt,
+    super.lastError,
     required this.cityId,
     required this.record,
     this.parentHoldingId,
@@ -233,12 +258,16 @@ final class AddRecordOperation extends SyncOperation {
   final Map<String, dynamic> record;
 
   @override
-  AddRecordOperation withIncrementedAttempts(final DateTime attemptedAt) =>
+  AddRecordOperation withIncrementedAttempts(
+    final DateTime attemptedAt, {
+    final String? error,
+  }) =>
       AddRecordOperation(
         id: id,
         createdAt: createdAt,
         attempts: attempts + 1,
         lastAttemptAt: attemptedAt,
+        lastError: error,
         cityId: cityId,
         record: record,
         parentHoldingId: parentHoldingId,
@@ -267,6 +296,7 @@ final class AddRecordOperation extends SyncOperation {
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),
         lastAttemptAt: _lastAttemptAtOf(json),
+        lastError: _lastErrorOf(json),
         cityId: json['cityId'] as String,
         parentHoldingId: json['parentHoldingId'] as String?,
         record: json['record'] as Map<String, dynamic>,

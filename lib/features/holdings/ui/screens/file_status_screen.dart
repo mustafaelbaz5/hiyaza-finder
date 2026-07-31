@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/crop_type_picker.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/picker_row.dart';
@@ -10,6 +11,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../data/repository/holdings_repository.dart';
@@ -27,20 +29,21 @@ class FileStatusScreen extends StatefulWidget {
 class _FileStatusScreenState extends State<FileStatusScreen> {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
 
-  String? _bulkBasin; // null = whole file
+  String? _bulkBasin; // null = whole city
   BulkEditableField _bulkField = BulkEditableField.cropType;
   Object? _bulkValue;
+  bool _isApplying = false;
 
   Future<void> _pickBulkBasin() async {
     final List<String> basins = _repository.availableBasins;
     final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
-      title: 'اختر الحوض',
+      title: 'holdings.bulk_edit.pick_basin_title'.tr(),
       options: [
         for (final String b in basins) ChoiceOption<String>(value: b, label: b),
       ],
       selected: _bulkBasin,
-      clearLabel: 'كل الأحواض',
+      clearLabel: 'holdings.bulk_edit.scope_all'.tr(),
     );
     if (result == null) return;
     setState(() {
@@ -52,7 +55,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
     final ChoiceDialogResult<BulkEditableField>? result =
         await showChoiceDialog<BulkEditableField>(
       context,
-      title: 'اختر الحقل',
+      title: 'holdings.bulk_edit.pick_field_title'.tr(),
       options: [
         for (final BulkEditableField f in BulkEditableField.values)
           ChoiceOption<BulkEditableField>(value: f, label: f.label),
@@ -71,9 +74,15 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
         context,
         title: _bulkField.label,
-        options: const [
-          ChoiceOption<bool>(value: true, label: 'وراثة'),
-          ChoiceOption<bool>(value: false, label: 'ليست وراثة'),
+        options: [
+          ChoiceOption<bool>(
+            value: true,
+            label: 'holdings.bulk_edit.inheritance_true'.tr(),
+          ),
+          ChoiceOption<bool>(
+            value: false,
+            label: 'holdings.bulk_edit.inheritance_false'.tr(),
+          ),
         ],
         selected: _bulkValue as bool?,
       );
@@ -100,26 +109,52 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
           ChoiceOption<String>(value: o, label: o),
       ],
       selected: _bulkValue as String?,
-      clearLabel: _bulkField.allowClear ? '—' : null,
+      clearLabel: _bulkField.allowClear
+          ? 'holdings.bulk_edit.value_placeholder'.tr()
+          : null,
     );
     if (result == null) return;
     setState(() => _bulkValue = result.isClear ? null : result.value);
   }
 
+  Future<void> _confirmAndApplyBulkEdit() async {
+    final String scope = _bulkBasin ?? 'holdings.bulk_edit.scope_all'.tr();
+    await AppDialogs.showConfirm(
+      context,
+      message: 'holdings.bulk_edit.confirm_message'.tr(
+        namedArgs: {
+          'field': _bulkField.label,
+          'value': _valueLabel(_bulkValue),
+          'scope': scope,
+        },
+      ),
+      onConfirm: _applyBulkEdit,
+    );
+  }
+
   Future<void> _applyBulkEdit() async {
+    setState(() => _isApplying = true);
     final int changed = await _repository.bulkApplyField(
       field: _bulkField,
       value: _bulkValue,
       basin: _bulkBasin,
     );
     if (!mounted) return;
-    setState(() {});
-    context.showSuccessSnackBar('تم تحديث $changed سجل');
+    setState(() => _isApplying = false);
+    context.showSuccessSnackBar(
+      'holdings.bulk_edit.applied_message'.tr(
+        namedArgs: {'count': changed.toString()},
+      ),
+    );
   }
 
   String _valueLabel(final Object? value) {
-    if (value == null) return '—';
-    if (value is bool) return value ? 'وراثة' : 'ليست وراثة';
+    if (value == null) return 'holdings.bulk_edit.value_placeholder'.tr();
+    if (value is bool) {
+      return value
+          ? 'holdings.bulk_edit.inheritance_true'.tr()
+          : 'holdings.bulk_edit.inheritance_false'.tr();
+    }
     return value as String;
   }
 
@@ -147,7 +182,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                       horizontalSpacing(12),
                       Expanded(
                         child: Text(
-                          'حالة الملف',
+                          'holdings.bulk_edit.title'.tr(),
                           style: AppTextStyles.font20Bold.copyWith(
                             color: colors.textPrimary,
                           ),
@@ -169,11 +204,11 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SectionCard(
-                      title: 'الأحواض',
-                      subtitle: 'عدد الحيازات في كل حوض',
+                      title: 'holdings.bulk_edit.basins_title'.tr(),
+                      subtitle: 'holdings.bulk_edit.basins_subtitle'.tr(),
                       child: basins.isEmpty
                           ? Text(
-                              'لا توجد أحواض في هذا الملف',
+                              'holdings.bulk_edit.basins_empty'.tr(),
                               style: AppTextStyles.font14Regular.copyWith(
                                 color: colors.textHint,
                               ),
@@ -226,33 +261,34 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                     ),
                     verticalSpacing(16),
                     SectionCard(
-                      title: 'تعديل جماعي لحقل',
-                      subtitle:
-                          'يطبَّق على كل حيازات الحوض المختار (أو كل الملف)',
+                      title: 'holdings.bulk_edit.section_title'.tr(),
+                      subtitle: 'holdings.bulk_edit.section_subtitle'.tr(),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           PickerRow(
-                            label: 'النطاق',
-                            value: _bulkBasin ?? 'كل الأحواض',
+                            label: 'holdings.bulk_edit.scope_label'.tr(),
+                            value:
+                                _bulkBasin ?? 'holdings.bulk_edit.scope_all'.tr(),
                             onTap: _pickBulkBasin,
                           ),
                           verticalSpacing(8),
                           PickerRow(
-                            label: 'الحقل',
+                            label: 'holdings.bulk_edit.field_label'.tr(),
                             value: _bulkField.label,
                             onTap: _pickBulkField,
                           ),
                           verticalSpacing(8),
                           PickerRow(
-                            label: 'القيمة',
+                            label: 'holdings.bulk_edit.value_label'.tr(),
                             value: _valueLabel(_bulkValue),
                             onTap: _pickBulkValue,
                           ),
                           verticalSpacing(16),
                           CustomTextButton(
-                            text: 'تطبيق',
-                            onPressed: _applyBulkEdit,
+                            text: 'holdings.bulk_edit.apply'.tr(),
+                            onPressed: _confirmAndApplyBulkEdit,
+                            isLoading: _isApplying,
                             prefixIcon: const Icon(
                               Icons.done_all_rounded,
                               color: AppColors.white,

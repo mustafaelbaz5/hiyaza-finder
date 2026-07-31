@@ -50,7 +50,9 @@ class AppRouter {
             (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
         return _buildRoute(DetailScreen(parcels: parcels), settings);
       case Routes.addRecord:
-        final AddRecordArgs args = settings.arguments as AddRecordArgs;
+        final AddRecordArgs args =
+            (settings.arguments as AddRecordArgs?) ??
+                const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
         return _buildRoute<bool>(
           AddRecordScreen(
             initialParcel: args.initialParcel,

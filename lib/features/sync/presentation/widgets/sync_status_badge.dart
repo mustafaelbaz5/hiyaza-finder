@@ -6,6 +6,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../cubit/sync_status_cubit.dart';
 import '../cubit/sync_status_state.dart';
+import 'sync_details_sheet.dart';
 
 /// Small top-bar affordance showing whether there's unsynced work — the
 /// user's only way to tell their edits are safe, per APP_PLAN.md § 7.6.
@@ -38,11 +39,7 @@ class SyncStatusBadge extends StatelessWidget {
         return Tooltip(
           message: 'sync.status.tap_to_sync'.tr(),
           child: InkWell(
-            onTap: state.isSyncing
-                ? null
-                : () => state.hasFailed
-                    ? context.read<SyncStatusCubit>().retryFailed()
-                    : context.read<SyncStatusCubit>().flushNow(),
+            onTap: () => showSyncDetailsSheet(context),
             borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

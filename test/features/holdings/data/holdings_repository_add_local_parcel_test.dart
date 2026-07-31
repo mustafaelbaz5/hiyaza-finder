@@ -116,4 +116,14 @@ void main() {
     final AddRecordOperation op = syncQueue.enqueued.single as AddRecordOperation;
     expect(op.id, added!.id);
   });
+
+  test('isNewLocalRecord is true for a just-added parcel and false otherwise',
+      () async {
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '', holderName: 'محمد'),
+    );
+
+    expect(repository.isNewLocalRecord(added!.id), isTrue);
+    expect(repository.isNewLocalRecord('some-other-id'), isFalse);
+  });
 }

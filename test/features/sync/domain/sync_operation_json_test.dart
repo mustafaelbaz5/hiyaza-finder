@@ -124,6 +124,55 @@ void main() {
     expect(reset.payload, <String, dynamic>{'notes': 'x'});
   });
 
+  test('withIncrementedAttempts records the error message', () {
+    final EditHoldingOperation op = EditHoldingOperation(
+      id: 'op-1',
+      createdAt: DateTime(2026),
+      cityId: 'c',
+      holdingId: 'h',
+      payload: const <String, dynamic>{},
+    );
+
+    final EditHoldingOperation bumped = op.withIncrementedAttempts(
+      DateTime(2026, 2, 1),
+      error: 'network error',
+    );
+
+    expect(bumped.lastError, 'network error');
+  });
+
+  test('resetAttempts clears lastError', () {
+    final EditHoldingOperation op = EditHoldingOperation(
+      id: 'op-1',
+      createdAt: DateTime(2026),
+      attempts: 5,
+      lastAttemptAt: DateTime(2026, 1, 2),
+      lastError: 'network error',
+      cityId: 'c',
+      holdingId: 'h',
+      payload: const <String, dynamic>{},
+    );
+
+    expect(op.resetAttempts().lastError, isNull);
+  });
+
+  test('lastError round-trips through toJson/fromJson', () {
+    final EditHoldingOperation op = EditHoldingOperation(
+      id: 'op-1',
+      createdAt: DateTime(2026),
+      attempts: 1,
+      lastAttemptAt: DateTime(2026, 1, 2),
+      lastError: 'server rejected the record',
+      cityId: 'c',
+      holdingId: 'h',
+      payload: const <String, dynamic>{},
+    );
+
+    final SyncOperation restored = SyncOperation.fromJson(op.toJson());
+
+    expect(restored.lastError, 'server rejected the record');
+  });
+
   test('fromJson throws on an unknown type', () {
     expect(
       () => SyncOperation.fromJson(<String, dynamic>{'type': 'nope'}),

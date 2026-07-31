@@ -45,8 +45,10 @@ class SyncRunner {
         try {
           await _push(op, userId);
           await _queue.remove(op.id);
-        } catch (_) {
-          await _queue.update(op.withIncrementedAttempts(DateTime.now()));
+        } catch (e) {
+          await _queue.update(
+            op.withIncrementedAttempts(DateTime.now(), error: e.toString()),
+          );
         }
       }
     } finally {

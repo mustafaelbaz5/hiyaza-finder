@@ -102,7 +102,7 @@ class FileInfoCard extends StatelessWidget {
           verticalSpacing(10),
           InlineAction(
             icon: Icons.dashboard_customize_rounded,
-            label: 'حالة الملف وتعديل جماعي',
+            label: 'holdings.bulk_edit.entry_pill'.tr(),
             onTap: onOpenFileStatus,
           ),
         ],

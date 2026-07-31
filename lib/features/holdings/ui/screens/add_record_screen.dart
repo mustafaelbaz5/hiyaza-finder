@@ -2,11 +2,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/repository/holdings_repository.dart';
@@ -84,9 +86,23 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      context.showErrorSnackBar(e.toString());
+      context.showErrorSnackBar('errors.unknown'.tr());
       setState(() => _isSaving = false);
     }
+  }
+
+  bool get _hasUnsavedChanges => !identical(_parcel, widget.initialParcel);
+
+  Future<void> _confirmDiscardAndPop(final BuildContext context) async {
+    if (!_hasUnsavedChanges) {
+      Navigator.pop(context);
+      return;
+    }
+    await AppDialogs.showConfirm(
+      context,
+      message: 'holdings.add.discard_confirm'.tr(),
+      onConfirm: () => Navigator.pop(context),
+    );
   }
 
   Future<void> _editText(
@@ -179,10 +195,16 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         ? 'holdings.add.new_person_title'.tr()
         : 'holdings.add.new_parcel_title'.tr();
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: SafeArea(
-        child: Column(
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (final bool didPop, final _) {
+        if (didPop) return;
+        _confirmDiscardAndPop(context);
+      },
+      child: Scaffold(
+        backgroundColor: colors.background,
+        body: SafeArea(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             verticalSpacing(16),
@@ -190,7 +212,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               padding: EdgeInsets.symmetric(horizontal: rw(16)),
               child: Row(
                 children: [
-                  const AppBackButton(),
+                  AppBackButton(
+                    onTap: () => _confirmDiscardAndPop(context),
+                  ),
                   horizontalSpacing(12),
                   Expanded(
                     child: Text(
@@ -204,6 +228,34 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 ],
               ),
             ),
+            if (widget.parentHoldingId != null) ...[
+              verticalSpacing(12),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue200.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'holdings.add.for_person'.tr(
+                      namedArgs: {
+                        'name': widget.initialParcel.holderName ?? '',
+                      },
+                    ),
+                    style: AppTextStyles.font12Bold.copyWith(
+                      color: AppColors.blue200,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ),
+            ],
             verticalSpacing(16),
             Expanded(
               child: SingleChildScrollView(
@@ -276,6 +328,18 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                         ),
+                        if (widget.parentHoldingId != null &&
+                            _parcel.landNumber == '-1')
+                          Padding(
+                            padding: EdgeInsets.only(top: rh(4)),
+                            child: Text(
+                              'holdings.add.land_number_hint'.tr(),
+                              style: AppTextStyles.font12Regular.copyWith(
+                                color: AppColors.amber300,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
                         FieldRow(
                           label: 'المساحة',
                           value: _areaFraction(_parcel),
@@ -364,6 +428,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

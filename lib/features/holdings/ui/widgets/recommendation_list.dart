@@ -22,8 +22,10 @@ class RecommendationList extends StatelessWidget {
   final List<SearchResult> results;
   final void Function(SearchResult result) onSelect;
 
-  /// Offers "إضافة بيانات جديدة" on the no-results state — `null` when no
-  /// city is active (Excel-sourced data has no server to add records to).
+  /// Offers "إضافة بيانات جديدة" on the no-results state. Always provided
+  /// in practice today (this list only ever builds once a city is
+  /// loaded), kept nullable so a future "no active city" state can still
+  /// hide the CTA without a call-site change.
   final VoidCallback? onAddNew;
 
   @override

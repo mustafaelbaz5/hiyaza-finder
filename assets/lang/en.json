@@ -33,7 +33,21 @@
       "syncing": "Syncing…",
       "pending": "{count} pending sync",
       "failed": "{count} failed to sync",
-      "tap_to_sync": "Tap to sync now"
+      "tap_to_sync": "Sync details"
+    },
+    "details": {
+      "title": "Sync",
+      "explainer": "Your data is saved on this device and will upload once you're online",
+      "retry_all": "Retry all",
+      "sync_now": "Sync now",
+      "empty": "Nothing waiting to sync"
+    },
+    "operation": {
+      "edit_holding": "Holding edit",
+      "bulk_edit": "Bulk edit ({count} records)",
+      "add_person": "New person: {name}",
+      "add_parcel": "New parcel",
+      "unnamed": "Unnamed"
     }
   },
   "cities": {
@@ -101,20 +115,13 @@
     "home": {
       "brand": "Hiyaza",
       "holdings_loaded": "{count} holdings loaded",
-      "change_file": "Change file",
-      "history": "History"
+      "change_file": "Change city"
     },
     "search": {
       "hint": "Search by holder name or holding number …",
       "no_results": "No results",
       "voice": "Voice search",
       "mic_permission_denied": "Microphone access is required for voice search"
-    },
-    "association": {
-      "title": "Association name",
-      "subtitle": "Derived from the file name — edit it if it isn't right",
-      "hint": "Association name",
-      "confirm": "Confirm"
     },
     "detail": {
       "see_more": "See more",
@@ -125,6 +132,7 @@
       "copied": "Copied",
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
+      "new_badge": "New — pending sync",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
@@ -134,10 +142,13 @@
       "new_person_cta": "Add new record",
       "new_person_title": "Add new person",
       "new_parcel_title": "Add a new parcel",
+      "for_person": "Add a new parcel for {name}",
+      "land_number_hint": "Enter the correct land number",
       "save": "Save",
       "saved": "Saved — will upload once you're online",
       "holder_required": "Holder name is required",
-      "no_active_city": "Can't add without a loaded city"
+      "no_active_city": "Can't add without a loaded city",
+      "discard_confirm": "Your changes will be lost. Leave anyway?"
     },
     "edit": {
       "title": "Edit holding {id}",
@@ -151,11 +162,26 @@
       "save": "Save changes",
       "saved": "Changes saved"
     },
-    "history": {
-      "title": "File history",
-      "empty": "No file history yet",
-      "holdings_count": "{count} holdings",
-      "file_missing": "The file no longer exists on this device."
+    "bulk_edit": {
+      "entry_pill": "City tools",
+      "title": "City tools",
+      "basins_title": "Basins",
+      "basins_subtitle": "Holding count per basin",
+      "basins_empty": "No basins in this city",
+      "section_title": "Bulk edit a field",
+      "section_subtitle": "Applies to every holding in the chosen basin (or the whole city)",
+      "scope_label": "Scope",
+      "field_label": "Field",
+      "value_label": "Value",
+      "scope_all": "All basins",
+      "pick_basin_title": "Choose a basin",
+      "pick_field_title": "Choose a field",
+      "value_placeholder": "—",
+      "inheritance_true": "Inheritance",
+      "inheritance_false": "Not inheritance",
+      "apply": "Apply",
+      "confirm_message": "This will set \"{field}\" to \"{value}\" for {scope}. Continue?",
+      "applied_message": "{count} records updated"
     },
     "basin": {
       "title": "Focus on a basin",

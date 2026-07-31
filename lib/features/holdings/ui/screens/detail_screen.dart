@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
-import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/custom_text_button.dart';
 import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../widgets/parcel_detail_card.dart';
@@ -102,18 +102,18 @@ class _DetailScreenState extends State<DetailScreen> {
                           textAlign: TextAlign.right,
                         ),
                       ),
-                      if (_parcels.isNotEmpty)
-                        IconButton(
-                          tooltip: 'holdings.add.new_parcel_title'.tr(),
-                          icon: const Icon(
-                            Icons.add_location_alt_rounded,
-                            color: AppColors.primary200,
-                          ),
-                          onPressed: () =>
-                              _addParcelForPerson(_parcels.first),
-                        ),
                     ],
                   ),
+                  if (_parcels.isNotEmpty) ...<Widget>[
+                    verticalSpacing(12),
+                    CustomTextButton.outlined(
+                      text: 'holdings.add.new_parcel_title'.tr(),
+                      size: CustomButtonSize.small,
+                      isFullWidth: false,
+                      prefixIcon: const Icon(Icons.add_location_alt_rounded),
+                      onPressed: () => _addParcelForPerson(_parcels.first),
+                    ),
+                  ],
                   verticalSpacing(16),
                 ],
               ),
@@ -140,6 +140,7 @@ class _DetailScreenState extends State<DetailScreen> {
                           child: ParcelDetailCard(
                             parcel: parcel,
                             isEdited: _repository.isParcelEdited(parcel.id),
+                            isNew: _repository.isNewLocalRecord(parcel.id),
                             onFieldChanged: _updateField,
                             animationDelay: Duration(milliseconds: i * 80),
                           ),

@@ -59,6 +59,10 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
     emit(state.copyWith(isSyncing: false));
   }
 
+  /// The full queue contents — what the sync details sheet lists, since
+  /// [state] only tracks aggregate counts.
+  Future<List<SyncOperation>> pendingOperations() => _queue.pending();
+
   /// Clears every permanently-failed operation's attempt count and
   /// immediately retries — the sync badge's action when tapped in the
   /// "failed" state, since [flushNow] alone would just skip them again.

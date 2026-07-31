@@ -30,6 +30,7 @@ class ParcelDetailCard extends StatelessWidget {
     required this.parcel,
     required this.onFieldChanged,
     this.isEdited = false,
+    this.isNew = false,
     this.animationDelay = Duration.zero,
   });
 
@@ -39,6 +40,10 @@ class ParcelDetailCard extends StatelessWidget {
   /// via its inline pencil-icon editor — the only way fields are edited.
   final void Function(Parcel updated) onFieldChanged;
   final bool isEdited;
+
+  /// Added in the field this session and not yet confirmed synced — shown
+  /// independently of [isEdited] (a record can be both).
+  final bool isNew;
   final Duration animationDelay;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
@@ -57,35 +62,26 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isEdited) ...<Widget>[
+          if (isEdited || isNew) ...<Widget>[
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.amber200.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.edit_note_rounded,
-                      size: 14,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  if (isNew)
+                    _StatusBadge(
+                      icon: Icons.fiber_new_rounded,
+                      label: 'holdings.detail.new_badge'.tr(),
+                      color: AppColors.blue200,
+                    ),
+                  if (isEdited)
+                    _StatusBadge(
+                      icon: Icons.edit_note_rounded,
+                      label: 'holdings.edit.edited_badge'.tr(),
                       color: AppColors.amber300,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'holdings.edit.edited_badge'.tr(),
-                      style: AppTextStyles.font12Bold.copyWith(
-                        color: AppColors.amber300,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
             verticalSpacing(8),
@@ -240,5 +236,41 @@ class ParcelDetailCard extends StatelessWidget {
       HapticFeedback.mediumImpact();
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
     }
+  }
+}
+
+/// A small tinted pill used for the "edited" and "new / pending sync"
+/// markers above a [ParcelDetailCard]'s fields.
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(final BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTextStyles.font12Bold.copyWith(color: color),
+          ),
+        ],
+      ),
+    );
   }
 }
