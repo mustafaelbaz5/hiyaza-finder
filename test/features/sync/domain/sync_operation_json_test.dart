@@ -105,6 +105,25 @@ void main() {
     });
   });
 
+  test('resetAttempts clears attempts and lastAttemptAt, keeps the payload', () {
+    final EditHoldingOperation op = EditHoldingOperation(
+      id: 'op-1',
+      createdAt: DateTime(2026),
+      attempts: 5,
+      lastAttemptAt: DateTime(2026, 1, 2),
+      cityId: 'c',
+      holdingId: 'h',
+      payload: const <String, dynamic>{'notes': 'x'},
+    );
+
+    final EditHoldingOperation reset = op.resetAttempts();
+
+    expect(reset.attempts, 0);
+    expect(reset.lastAttemptAt, isNull);
+    expect(reset.id, 'op-1');
+    expect(reset.payload, <String, dynamic>{'notes': 'x'});
+  });
+
   test('fromJson throws on an unknown type', () {
     expect(
       () => SyncOperation.fromJson(<String, dynamic>{'type': 'nope'}),

@@ -35,8 +35,14 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
   late final StreamSubscription<int> _countSub;
   late final StreamSubscription<InternetConnectionStatus> _connectivitySub;
 
+  /// [_queue.pendingCountChanges] can fire (e.g. mid-[retryFailed], from
+  /// one of its several `update()` calls) after this cubit has already
+  /// been closed — the listener registration itself is cancelled in
+  /// [close], but an in-flight `await` here can still resolve afterwards.
+  /// Every `emit` in this class is guarded by [isClosed] for that reason.
   Future<void> _refresh() async {
     final List<SyncOperation> ops = await _queue.pending();
+    if (isClosed) return;
     final int failed =
         ops.where((final SyncOperation o) => o.attempts >= syncMaxAttempts).length;
     emit(state.copyWith(pendingCount: ops.length, failedCount: failed));
@@ -49,7 +55,22 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
     emit(state.copyWith(isSyncing: true));
     await _runner.flush();
     await _refresh();
+    if (isClosed) return;
     emit(state.copyWith(isSyncing: false));
+  }
+
+  /// Clears every permanently-failed operation's attempt count and
+  /// immediately retries — the sync badge's action when tapped in the
+  /// "failed" state, since [flushNow] alone would just skip them again.
+  Future<void> retryFailed() async {
+    if (state.isSyncing) return;
+    final List<SyncOperation> ops = await _queue.pending();
+    for (final SyncOperation op in ops) {
+      if (op.attempts >= syncMaxAttempts) {
+        await _queue.update(op.resetAttempts());
+      }
+    }
+    await flushNow();
   }
 
   @override

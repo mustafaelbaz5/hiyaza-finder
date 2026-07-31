@@ -40,7 +40,9 @@ class SyncStatusBadge extends StatelessWidget {
           child: InkWell(
             onTap: state.isSyncing
                 ? null
-                : () => context.read<SyncStatusCubit>().flushNow(),
+                : () => state.hasFailed
+                    ? context.read<SyncStatusCubit>().retryFailed()
+                    : context.read<SyncStatusCubit>().flushNow(),
             borderRadius: BorderRadius.circular(20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

@@ -23,6 +23,11 @@ sealed class SyncOperation {
 
   SyncOperation withIncrementedAttempts(final DateTime attemptedAt);
 
+  /// Clears [attempts]/[lastAttemptAt] so a permanently-failed operation
+  /// (one at `syncMaxAttempts`) becomes eligible for the next flush again
+  /// — the "retry" action on the sync status badge's failed state.
+  SyncOperation resetAttempts();
+
   Map<String, dynamic> toJson();
 
   static SyncOperation fromJson(final Map<String, dynamic> json) {
@@ -76,6 +81,15 @@ final class EditHoldingOperation extends SyncOperation {
         createdAt: createdAt,
         attempts: attempts + 1,
         lastAttemptAt: attemptedAt,
+        cityId: cityId,
+        holdingId: holdingId,
+        payload: payload,
+      );
+
+  @override
+  EditHoldingOperation resetAttempts() => EditHoldingOperation(
+        id: id,
+        createdAt: createdAt,
         cityId: cityId,
         holdingId: holdingId,
         payload: payload,
@@ -168,6 +182,14 @@ final class BulkEditOperation extends SyncOperation {
       );
 
   @override
+  BulkEditOperation resetAttempts() => BulkEditOperation(
+        id: id,
+        createdAt: createdAt,
+        cityId: cityId,
+        rows: rows,
+      );
+
+  @override
   Map<String, dynamic> toJson() => <String, dynamic>{
         ..._baseJson(this, 'bulkEdit'),
         'cityId': cityId,
@@ -217,6 +239,15 @@ final class AddRecordOperation extends SyncOperation {
         createdAt: createdAt,
         attempts: attempts + 1,
         lastAttemptAt: attemptedAt,
+        cityId: cityId,
+        record: record,
+        parentHoldingId: parentHoldingId,
+      );
+
+  @override
+  AddRecordOperation resetAttempts() => AddRecordOperation(
+        id: id,
+        createdAt: createdAt,
         cityId: cityId,
         record: record,
         parentHoldingId: parentHoldingId,
