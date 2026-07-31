@@ -20,6 +20,7 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
 import '../../../cities/domain/entities/city_snapshot.dart';
 import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
@@ -27,6 +28,7 @@ import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/city_stale_banner.dart';
 import '../widgets/recommendation_list.dart';
+import 'add_record_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -250,6 +252,18 @@ class _LoadedBodyState extends State<_LoadedBody> {
     );
   }
 
+  Future<void> _openAddPerson(final BuildContext context) async {
+    final bool? added = await context.pushNamed<bool>(
+      Routes.addRecord,
+      arguments: const AddRecordArgs(
+        initialParcel: Parcel(holdingId: ''),
+      ),
+    );
+    if (added == true && context.mounted) {
+      widget.cubit.refreshData();
+    }
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -328,6 +342,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
                   results: widget.state.results,
                   onSelect: (final SearchResult result) =>
                       _openDetail(context, result),
+                  onAddNew: () => _openAddPerson(context),
                 ),
               ),
             ),

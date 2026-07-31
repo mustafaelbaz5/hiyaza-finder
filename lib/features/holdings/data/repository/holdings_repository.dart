@@ -17,6 +17,7 @@ import '../../domain/services/bulk_edit_service.dart';
 import '../../domain/services/parcel_edit_overlay.dart';
 import '../../domain/services/parcel_query_service.dart';
 import '../../logic/services/holding_search_service.dart';
+import '../added_holdings_mapper.dart';
 import '../excel/holdings_excel_parser.dart';
 import '../models/cached_file_entry.dart';
 import 'parcel_edits_store.dart';
@@ -237,6 +238,41 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _edits = await _editsStore.load(key);
     _parcels = parcels.map(_applyEdit).toList();
     return _parcels;
+  }
+
+  /// Adds a brand-new record created in the field — either a new person
+  /// ([parentHoldingId] `null`) or a new parcel for an existing person
+  /// ([parentHoldingId] set to that person's `Parcel.id`). Writes are
+  /// local-first: [parcel] is assigned a fresh client id and appended to
+  /// the in-memory dataset immediately (so it's searchable/visible right
+  /// away, even offline), and an [AddRecordOperation] is enqueued in the
+  /// same call — this never waits on the network.
+  ///
+  /// Only meaningful for city-sourced data (there's no server to sync an
+  /// Excel-only addition to); does nothing if no city is active.
+  Future<Parcel?> addLocalParcel(
+    final Parcel parcel, {
+    final String? parentHoldingId,
+  }) async {
+    final String? cityId = _activeCityId;
+    if (cityId == null) return null;
+
+    final Parcel withId = parcel.copyWith(id: _uuid.v4());
+    _parcels = <Parcel>[..._parcels, withId];
+    _originalById[withId.id] = withId;
+
+    if (syncQueue != null) {
+      await syncQueue!.enqueue(
+        AddRecordOperation(
+          id: withId.id,
+          createdAt: DateTime.now(),
+          cityId: cityId,
+          parentHoldingId: parentHoldingId,
+          record: parcelToAddedHoldingsRecord(withId),
+        ),
+      );
+    }
+    return withId;
   }
 
   /// Confirms (or corrects) the active file's اسم الجمعية, persists it so

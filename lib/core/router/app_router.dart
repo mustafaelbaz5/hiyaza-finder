@@ -13,6 +13,7 @@ import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_s
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/ui/screens/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/detail_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/file_status_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/history_screen.dart';
@@ -49,6 +50,15 @@ class AppRouter {
         final List<Parcel> parcels =
             (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
         return _buildRoute(DetailScreen(parcels: parcels), settings);
+      case Routes.addRecord:
+        final AddRecordArgs args = settings.arguments as AddRecordArgs;
+        return _buildRoute<bool>(
+          AddRecordScreen(
+            initialParcel: args.initialParcel,
+            parentHoldingId: args.parentHoldingId,
+          ),
+          settings,
+        );
       case Routes.fileHistory:
         return _buildRoute(const HistoryScreen(), settings);
       case Routes.fileStatus:

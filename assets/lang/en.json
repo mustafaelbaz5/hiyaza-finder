@@ -124,10 +124,20 @@
       "copy_all": "Copy all data",
       "copied": "Copied",
       "holding_id": "Holding number",
+      "holding_id_pending": "No number yet — new",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
       "total_sqm": "Total area (m²)"
+    },
+    "add": {
+      "new_person_cta": "Add new record",
+      "new_person_title": "Add new person",
+      "new_parcel_title": "Add a new parcel",
+      "save": "Save",
+      "saved": "Saved — will upload once you're online",
+      "holder_required": "Holder name is required",
+      "no_active_city": "Can't add without a loaded city"
     },
     "edit": {
       "title": "Edit holding {id}",

@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -9,6 +11,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../widgets/parcel_detail_card.dart';
+import 'add_record_screen.dart';
 
 /// Full record for one holding. If the holding has multiple parcels they
 /// are all stacked in one scrollable view, each with its own compass and
@@ -41,6 +44,29 @@ class _DetailScreenState extends State<DetailScreen> {
       setState(() => _parcels[idx] = updated);
     }
     if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
+  }
+
+  /// Pre-fills a new-parcel form from [source] per APP_PLAN.md decision
+  /// #8: everything copied except المساحة (blanked — entered fresh for
+  /// the new land) and رقم الأرض (defaults to `-1`, must be corrected).
+  Future<void> _addParcelForPerson(final Parcel source) async {
+    final Parcel template = source.copyWith(
+      landNumber: '-1',
+      feddan: null,
+      qirat: null,
+      sahm: null,
+      totalSqm: null,
+    );
+    final bool? added = await context.pushNamed<bool>(
+      Routes.addRecord,
+      arguments: AddRecordArgs(
+        initialParcel: template,
+        parentHoldingId: source.id,
+      ),
+    );
+    if (added == true && mounted) {
+      context.showSuccessSnackBar('holdings.add.saved'.tr());
+    }
   }
 
   @override
@@ -76,6 +102,16 @@ class _DetailScreenState extends State<DetailScreen> {
                           textAlign: TextAlign.right,
                         ),
                       ),
+                      if (_parcels.isNotEmpty)
+                        IconButton(
+                          tooltip: 'holdings.add.new_parcel_title'.tr(),
+                          icon: const Icon(
+                            Icons.add_location_alt_rounded,
+                            color: AppColors.primary200,
+                          ),
+                          onPressed: () =>
+                              _addParcelForPerson(_parcels.first),
+                        ),
                     ],
                   ),
                   verticalSpacing(16),
