@@ -28,6 +28,14 @@
     "user_disabled": "تم تعطيل هذا الحساب.",
     "operation_not_allowed": "هذه العملية غير مسموح بها."
   },
+  "sync": {
+    "status": {
+      "syncing": "جارِ المزامنة…",
+      "pending": "{count} بانتظار المزامنة",
+      "failed": "فشلت مزامنة {count}",
+      "tap_to_sync": "اضغط للمزامنة الآن"
+    }
+  },
   "cities": {
     "picker": {
       "title": "اختيار مدينة",

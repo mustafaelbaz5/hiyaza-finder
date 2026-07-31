@@ -28,6 +28,14 @@
     "user_disabled": "This account has been disabled.",
     "operation_not_allowed": "This operation is not allowed."
   },
+  "sync": {
+    "status": {
+      "syncing": "Syncing…",
+      "pending": "{count} pending sync",
+      "failed": "{count} failed to sync",
+      "tap_to_sync": "Tap to sync now"
+    }
+  },
   "cities": {
     "picker": {
       "title": "Choose a city",

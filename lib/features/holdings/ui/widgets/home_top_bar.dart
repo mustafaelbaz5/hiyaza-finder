@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
 import 'package:hiyaza_finder/core/utils/spacing.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/top_bar_icon_button.dart';
+import 'package:hiyaza_finder/features/sync/presentation/widgets/sync_status_badge.dart';
 
 class HomeTopBar extends StatelessWidget {
   const HomeTopBar(
@@ -54,6 +55,8 @@ class HomeTopBar extends StatelessWidget {
                     color: colors.textHint,
                   ),
                 ),
+                verticalSpacing(4),
+                const SyncStatusBadge(),
               ],
             ),
           ),

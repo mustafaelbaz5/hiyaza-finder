@@ -4,8 +4,11 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/storage/key_value_store.dart';
+import '../../../sync/domain/entities/sync_operation.dart';
+import '../../../sync/domain/repositories/sync_queue.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/repositories/holdings_reader.dart';
@@ -38,11 +41,14 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final ParcelQueryService queryService = const ParcelQueryService(),
     final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
     final BulkEditService bulkEditService = const BulkEditService(),
+    this.syncQueue,
+    final Uuid uuid = const Uuid(),
   })  : _editsStore = editsStore,
         _keyValueStore = keyValueStore,
         _queryService = queryService,
         _editOverlay = editOverlay,
-        _bulkEditService = bulkEditService;
+        _bulkEditService = bulkEditService,
+        _uuid = uuid;
 
   static const String _activeFilePathKey = 'holdings_active_file_path';
   static const String _historyKey = 'holdings_file_history';
@@ -57,6 +63,13 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   final ParcelQueryService _queryService;
   final ParcelEditOverlay _editOverlay;
   final BulkEditService _bulkEditService;
+  final Uuid _uuid;
+
+  /// `null` until a city has been downloaded/loaded — outbox entries are
+  /// only enqueued for city-sourced data (Excel-sourced edits have no
+  /// server to sync to; that whole flow is retired in APP_PLAN.md Phase 5).
+  final SyncQueue? syncQueue;
+  String? _activeCityId;
 
   List<Parcel> _parcels = <Parcel>[];
 
@@ -184,6 +197,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String fileName,
   ) async {
     _activeFilePath = filePath;
+    _activeCityId = null;
 
     final String? override =
         await _keyValueStore.getString(_associationNameKey(filePath));
@@ -215,6 +229,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   ) async {
     final String key = 'city::$cityId';
     _activeFilePath = key;
+    _activeCityId = cityId;
     _associationNameConfirmed = true;
     _originalById = <String, Parcel>{
       for (final Parcel p in parcels) p.id: p,
@@ -251,14 +266,30 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// Persists an edited parcel and reflects it in the in-memory dataset so
   /// search, detail, and border navigation immediately use the new values.
+  /// Writes are local-first: this returns as soon as the local cache is
+  /// updated — [syncQueue] enqueueing never waits on the network.
   @override
   Future<void> updateParcel(final Parcel edited) async {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
     if (idx < 0) return;
     _parcels[idx] = edited;
-    _edits[edited.id] = _editOverlay.snapshot(edited);
+    final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
+    _edits[edited.id] = snapshot;
     if (_activeFilePath != null) {
       await _editsStore.save(_activeFilePath!, _edits);
+    }
+
+    final String? cityId = _activeCityId;
+    if (cityId != null && syncQueue != null) {
+      await syncQueue!.enqueue(
+        EditHoldingOperation(
+          id: _uuid.v4(),
+          createdAt: DateTime.now(),
+          cityId: cityId,
+          holdingId: edited.id,
+          payload: snapshot,
+        ),
+      );
     }
   }
 
@@ -404,13 +435,30 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     );
     _parcels = result.parcels;
     if (result.changedCount > 0) {
+      final List<BulkEditRow> syncRows = <BulkEditRow>[];
       for (final Parcel p in _parcels) {
         if (basin == null || p.basinName == basin) {
-          _edits[p.id] = _editOverlay.snapshot(p);
+          final Map<String, dynamic> snapshot = _editOverlay.snapshot(p);
+          _edits[p.id] = snapshot;
+          syncRows.add(
+            BulkEditRow(holdingId: p.id, opId: _uuid.v4(), payload: snapshot),
+          );
         }
       }
       if (_activeFilePath != null) {
         await _editsStore.save(_activeFilePath!, _edits);
+      }
+
+      final String? cityId = _activeCityId;
+      if (cityId != null && syncQueue != null) {
+        await syncQueue!.enqueue(
+          BulkEditOperation(
+            id: _uuid.v4(),
+            createdAt: DateTime.now(),
+            cityId: cityId,
+            rows: syncRows,
+          ),
+        );
       }
     }
     return result.changedCount;

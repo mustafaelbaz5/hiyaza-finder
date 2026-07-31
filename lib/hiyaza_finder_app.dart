@@ -17,6 +17,7 @@ import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
 import 'features/auth/presentation/cubit/session_cubit.dart';
 import 'features/auth/presentation/cubit/session_state.dart';
+import 'features/sync/presentation/cubit/sync_status_cubit.dart';
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
@@ -74,52 +75,58 @@ class HiyazaFinderApp extends StatelessWidget {
           create: (final _) => AppSettingsCubit(),
           child: BlocProvider<SessionCubit>.value(
             value: getIt<SessionCubit>(),
-            child: BlocListener<SessionCubit, SessionState>(
-              listenWhen: (final SessionState previous,
-                      final SessionState current) =>
-                  previous.status != SessionStatus.unauthenticated &&
-                  current.status == SessionStatus.unauthenticated,
-              // Catches a session that becomes invalid while the user is
-              // already past login (e.g. an expired/revoked refresh
-              // token) and bounces them back rather than leaving screens
-              // silently calling an API that will now reject them.
-              listener: (final BuildContext context, final SessionState _) {
-                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                  Routes.login,
-                  (final _) => false,
-                );
-              },
-              child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-                builder: (
-                  final BuildContext context,
-                  final AppSettingsState settings,
-                ) {
-                  return MaterialApp(
-                    navigatorKey: _navigatorKey,
-                    localizationsDelegates: context.localizationDelegates,
-                    supportedLocales: context.supportedLocales,
-                    locale: settings.locale, // driven by cubit
-                    debugShowCheckedModeBanner: false,
-                    scrollBehavior: const _AppScrollBehavior(),
-                    initialRoute: getIt<SessionCubit>().state.isAuthenticated
-                        ? Routes.home
-                        : Routes.login,
-                    onGenerateRoute: AppRouter.generateRoute,
-                    title: AppConfig.appName,
-                    // font family injected into both themes
-                    theme: getLightTheme().copyWith(
-                      textTheme: getLightTheme().textTheme.apply(
-                            fontFamily: settings.fontFamily,
-                          ),
-                    ),
-                    darkTheme: getDarkTheme().copyWith(
-                      textTheme: getDarkTheme().textTheme.apply(
-                            fontFamily: settings.fontFamily,
-                          ),
-                    ),
-                    themeMode: settings.themeMode,
+            child: BlocProvider<SyncStatusCubit>.value(
+              value: getIt<SyncStatusCubit>(),
+              child: BlocListener<SessionCubit, SessionState>(
+                listenWhen: (final SessionState previous,
+                        final SessionState current) =>
+                    previous.status != SessionStatus.unauthenticated &&
+                    current.status == SessionStatus.unauthenticated,
+                // Catches a session that becomes invalid while the user is
+                // already past login (e.g. an expired/revoked refresh
+                // token) and bounces them back rather than leaving screens
+                // silently calling an API that will now reject them.
+                listener: (final BuildContext context, final SessionState _) {
+                  _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                    Routes.login,
+                    (final _) => false,
                   );
                 },
+                child: _AppLifecycleSyncTrigger(
+                  child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                    builder: (
+                      final BuildContext context,
+                      final AppSettingsState settings,
+                    ) {
+                      return MaterialApp(
+                        navigatorKey: _navigatorKey,
+                        localizationsDelegates: context.localizationDelegates,
+                        supportedLocales: context.supportedLocales,
+                        locale: settings.locale, // driven by cubit
+                        debugShowCheckedModeBanner: false,
+                        scrollBehavior: const _AppScrollBehavior(),
+                        initialRoute:
+                            getIt<SessionCubit>().state.isAuthenticated
+                                ? Routes.home
+                                : Routes.login,
+                        onGenerateRoute: AppRouter.generateRoute,
+                        title: AppConfig.appName,
+                        // font family injected into both themes
+                        theme: getLightTheme().copyWith(
+                          textTheme: getLightTheme().textTheme.apply(
+                                fontFamily: settings.fontFamily,
+                              ),
+                        ),
+                        darkTheme: getDarkTheme().copyWith(
+                          textTheme: getDarkTheme().textTheme.apply(
+                                fontFamily: settings.fontFamily,
+                              ),
+                        ),
+                        themeMode: settings.themeMode,
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -127,6 +134,44 @@ class HiyazaFinderApp extends StatelessWidget {
       },
     );
   }
+}
+
+/// Triggers a sync flush whenever the app comes back to the foreground —
+/// one of the three flush triggers alongside connectivity-regained
+/// (wired inside `SyncStatusCubit`) and the manual badge tap.
+class _AppLifecycleSyncTrigger extends StatefulWidget {
+  const _AppLifecycleSyncTrigger({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_AppLifecycleSyncTrigger> createState() =>
+      _AppLifecycleSyncTriggerState();
+}
+
+class _AppLifecycleSyncTriggerState extends State<_AppLifecycleSyncTrigger>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      getIt<SyncStatusCubit>().flushNow();
+    }
+  }
+
+  @override
+  Widget build(final BuildContext context) => widget.child;
 }
 
 /// Overrides the ambient [MediaQuery] width so descendants (ScreenUtil,
