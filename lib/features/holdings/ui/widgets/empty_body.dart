@@ -28,7 +28,7 @@ class EmptyBody extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.folder_open_rounded,
+                Icons.location_city_rounded,
                 size: rf(64),
                 color: AppColors.primary200,
               ),
@@ -59,7 +59,7 @@ class EmptyBody extends StatelessWidget {
               text: 'holdings.empty.pick_file'.tr(),
               onPressed: onPickFile,
               prefixIcon: const Icon(
-                Icons.upload_file_rounded,
+                Icons.location_city_rounded,
                 color: AppColors.white,
               ),
               isFullWidth: false,

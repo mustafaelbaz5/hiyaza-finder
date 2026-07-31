@@ -18,12 +18,14 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
+import '../../../cities/domain/entities/city_snapshot.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
+import '../widgets/city_stale_banner.dart';
 import '../widgets/recommendation_list.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -113,6 +115,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) cubit.refreshData();
   }
 
+  Future<void> _openCityPicker(final HomeCubit cubit) async {
+    final CitySnapshot? snapshot =
+        await context.pushNamed<CitySnapshot>(Routes.cityPicker);
+    if (snapshot != null && mounted) {
+      cubit.loadFromDownloadedCity(snapshot);
+    }
+  }
+
   /// Runs once right after a file finishes loading: confirms اسم الجمعية
   /// first (if needed), then opens the basin filter (if there's more than
   /// one basin) — sequential, never both sheets at once.
@@ -160,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: switch (state.status) {
                         HomeStatus.loading => const _LoadingBody(),
                         HomeStatus.noFile => EmptyBody(
-                            onPickFile: cubit.pickFile,
+                            onPickFile: () => _openCityPicker(cubit),
                           ),
                         HomeStatus.error => ErrorBody(
                             state: state,
@@ -282,6 +292,10 @@ class _LoadedBodyState extends State<_LoadedBody> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   verticalSpacing(8),
+                  if (widget.state.isCityDataStale) ...[
+                    CityStaleBanner(onRefresh: widget.cubit.refreshActiveCity),
+                    verticalSpacing(8),
+                  ],
                   FileInfoCard(
                     holdingCount: widget.state.holdingCount,
                     selectedBasin: widget.state.selectedBasin,

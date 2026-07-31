@@ -28,6 +28,16 @@
     "user_disabled": "This account has been disabled.",
     "operation_not_allowed": "This operation is not allowed."
   },
+  "cities": {
+    "picker": {
+      "title": "Choose a city",
+      "empty": "No cities available yet"
+    },
+    "stale_banner": {
+      "message": "Newer data is available on the server",
+      "refresh": "Update data"
+    }
+  },
   "auth": {
     "sign_out": "Sign out",
     "login": {
@@ -71,9 +81,9 @@
   },
   "holdings": {
     "empty": {
-      "title": "No file loaded",
-      "desc": "Choose the Excel file produced by the desktop app.",
-      "pick_file": "Choose file"
+      "title": "No data loaded",
+      "desc": "Choose a city to download its data.",
+      "pick_file": "Choose a city"
     },
     "error": {
       "invalid_file": "Invalid file. Missing columns: {columns}",

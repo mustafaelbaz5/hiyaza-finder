@@ -22,6 +22,7 @@ class HomeState extends Equatable {
     this.selectedBasin,
     this.needsAssociationConfirm = false,
     this.associationNameDraft,
+    this.isCityDataStale = false,
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -47,6 +48,11 @@ class HomeState extends Equatable {
   /// confirmation sheet with.
   final String? associationNameDraft;
 
+  /// Whether the server has newer data for the active city than what's
+  /// cached locally — drives a non-blocking "تحديث البيانات" banner.
+  /// Always `false` for Excel-sourced datasets (no server to compare to).
+  final bool isCityDataStale;
+
   int get holdingCount =>
       parcels.map((final Parcel p) => p.holdingId).toSet().length;
 
@@ -61,6 +67,7 @@ class HomeState extends Equatable {
     final Object? selectedBasin = _unset,
     final bool? needsAssociationConfirm,
     final Object? associationNameDraft = _unset,
+    final bool? isCityDataStale,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -78,6 +85,7 @@ class HomeState extends Equatable {
       associationNameDraft: identical(associationNameDraft, _unset)
           ? this.associationNameDraft
           : associationNameDraft as String?,
+      isCityDataStale: isCityDataStale ?? this.isCityDataStale,
     );
   }
 
@@ -93,5 +101,6 @@ class HomeState extends Equatable {
         selectedBasin,
         needsAssociationConfirm,
         associationNameDraft,
+        isCityDataStale,
       ];
 }

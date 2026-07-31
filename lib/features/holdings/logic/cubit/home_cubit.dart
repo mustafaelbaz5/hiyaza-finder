@@ -1,19 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../cities/domain/entities/city.dart';
+import '../../../cities/domain/entities/city_snapshot.dart';
+import '../../../cities/domain/repositories/city_repository.dart';
 import '../../data/excel/holdings_excel_parser.dart';
 import '../../data/models/cached_file_entry.dart';
-import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import '../services/holding_search_service.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository) : super(HomeState.initial());
+  HomeCubit(this._repository, this._cityRepository) : super(HomeState.initial());
 
   final HoldingsRepository _repository;
+  final CityRepository _cityRepository;
+
+  /// Metadata for the active city, if the loaded dataset came from a
+  /// downloaded city rather than a picked Excel file — `null` for the
+  /// (legacy, Phase 5-retired) Excel path, since there's no server
+  /// version to compare against for those.
+  CitySnapshot? _activeCitySnapshot;
 
   Future<void> init() async {
     emit(state.copyWith(status: HomeStatus.loading));
+
+    final CitySnapshot? cached = await _tryLoadCachedCity();
+    if (cached != null) {
+      _activeCitySnapshot = cached;
+      emit(_loadedState(_repository.parcels));
+      unawaited(_checkStaleness());
+      return;
+    }
+
+    // Legacy fallback during the Excel→Supabase migration window — retired
+    // in APP_PLAN.md Phase 5 alongside the rest of the picked-file flow.
     try {
       final List<Parcel>? parcels = await _repository.loadCachedFileIfAny();
       if (parcels == null) {
@@ -25,6 +48,70 @@ class HomeCubit extends Cubit<HomeState> {
       emit(_parseErrorState(e));
     } catch (_) {
       emit(state.copyWith(status: HomeStatus.noFile));
+    }
+  }
+
+  Future<CitySnapshot?> _tryLoadCachedCity() async {
+    try {
+      final CitySnapshot? snapshot =
+          await _cityRepository.loadActiveCachedSnapshot();
+      if (snapshot == null) return null;
+      await _repository.loadParcelsForCity(snapshot.cityId, snapshot.parcels);
+      return snapshot;
+    } catch (_) {
+      // A corrupt/unreadable cache file should look like "nothing loaded
+      // yet", not an error — the city picker is always available to
+      // re-download from.
+      return null;
+    }
+  }
+
+  /// Adopts whatever `HoldingsRepository` currently holds as the loaded
+  /// dataset — called after returning from the city picker, which
+  /// downloads straight into the repository via `loadParcelsForCity`.
+  void loadFromDownloadedCity(final CitySnapshot snapshot) {
+    _activeCitySnapshot = snapshot;
+    emit(_loadedState(_repository.parcels));
+  }
+
+  Future<void> _checkStaleness() async {
+    final CitySnapshot? snapshot = _activeCitySnapshot;
+    if (snapshot == null) return;
+    try {
+      final int remoteVersion =
+          await _cityRepository.remoteDataVersion(snapshot.cityId);
+      if (remoteVersion > snapshot.dataVersion) {
+        emit(state.copyWith(isCityDataStale: true));
+      }
+    } catch (_) {
+      // Offline, or the request failed — staleness is a courtesy notice,
+      // not worth surfacing an error for.
+    }
+  }
+
+  /// Re-downloads the active city and adopts the fresh data — the
+  /// staleness banner's "تحديث البيانات" action.
+  Future<void> refreshActiveCity() async {
+    final CitySnapshot? current = _activeCitySnapshot;
+    if (current == null) return;
+
+    emit(state.copyWith(status: HomeStatus.loading));
+    try {
+      final int remoteVersion =
+          await _cityRepository.remoteDataVersion(current.cityId);
+      final CitySnapshot fresh = await _cityRepository.downloadCity(
+        City(
+          id: current.cityId,
+          name: current.cityName,
+          status: CityStatus.published,
+          dataVersion: remoteVersion,
+        ),
+      );
+      await _repository.loadParcelsForCity(fresh.cityId, fresh.parcels);
+      _activeCitySnapshot = fresh;
+      emit(_loadedState(_repository.parcels));
+    } catch (e) {
+      emit(state.copyWith(status: HomeStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -90,6 +177,7 @@ class HomeCubit extends Cubit<HomeState> {
       selectedBasin: null,
       needsAssociationConfirm: _repository.associationNameNeedsConfirmation,
       associationNameDraft: _repository.activeAssociationName,
+      isCityDataStale: false,
     );
   }
 
