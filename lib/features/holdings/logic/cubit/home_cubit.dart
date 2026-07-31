@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/excel/holdings_excel_parser.dart';
 import '../../data/models/cached_file_entry.dart';
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../services/holding_search_service.dart';
 import 'home_state.dart';

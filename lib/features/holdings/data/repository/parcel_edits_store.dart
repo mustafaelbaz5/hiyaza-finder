@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/storage/key_value_store.dart';
 
 /// Persists user corrections to parcel data, scoped per loaded file so each
 /// workbook keeps its own set of edits. The original `.xlsx` is never
@@ -9,13 +9,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Shape: `{ parcelId: { fieldName: value, ... }, ... }` where each inner
 /// map is a full snapshot of the editable fields for that parcel.
 class ParcelEditsStore {
-  const ParcelEditsStore();
+  const ParcelEditsStore({
+    final KeyValueStore store = const SharedPreferencesKeyValueStore(),
+  }) : _store = store;
+
+  final KeyValueStore _store;
 
   static String _prefsKey(final String fileKey) => 'parcel_edits::$fileKey';
 
   Future<Map<String, Map<String, dynamic>>> load(final String fileKey) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? raw = prefs.getString(_prefsKey(fileKey));
+    final String? raw = await _store.getString(_prefsKey(fileKey));
     if (raw == null || raw.isEmpty) return <String, Map<String, dynamic>>{};
 
     final Map<String, dynamic> decoded =
@@ -33,11 +36,10 @@ class ParcelEditsStore {
     final String fileKey,
     final Map<String, Map<String, dynamic>> edits,
   ) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
     if (edits.isEmpty) {
-      await prefs.remove(_prefsKey(fileKey));
+      await _store.remove(_prefsKey(fileKey));
       return;
     }
-    await prefs.setString(_prefsKey(fileKey), jsonEncode(edits));
+    await _store.setString(_prefsKey(fileKey), jsonEncode(edits));
   }
 }

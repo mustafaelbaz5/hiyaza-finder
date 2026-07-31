@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 
-import '../models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 
 /// Thrown when the workbook is missing one or more required columns.
 class HoldingsParseException implements Exception {

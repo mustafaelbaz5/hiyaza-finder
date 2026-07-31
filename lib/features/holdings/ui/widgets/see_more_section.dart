@@ -4,7 +4,7 @@ import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/choice_dialog.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';

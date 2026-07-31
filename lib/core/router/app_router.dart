@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/ui/about_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/detail_screen.dart';

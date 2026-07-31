@@ -1,4 +1,4 @@
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 import 'arabic_normalizer.dart';
 
 class SearchResult {

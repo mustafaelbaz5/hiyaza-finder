@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/data/excel/holdings_excel_parser.dart';
-import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 
 const String _sheetName = HoldingsExcelParser.sheetName;
 

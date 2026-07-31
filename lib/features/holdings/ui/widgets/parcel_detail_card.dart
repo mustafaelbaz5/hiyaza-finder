@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+﻿import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -11,7 +11,8 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
+import '../../domain/services/clipboard_formatter.dart';
 import '../../logic/services/area_calculator.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
@@ -39,6 +40,8 @@ class ParcelDetailCard extends StatelessWidget {
   final void Function(Parcel updated) onFieldChanged;
   final bool isEdited;
   final Duration animationDelay;
+
+  static const ClipboardFormatter _formatter = ClipboardFormatter();
 
   @override
   Widget build(final BuildContext context) {
@@ -105,11 +108,11 @@ class ParcelDetailCard extends StatelessWidget {
               ),
               FieldRow(
                 label: 'اسم المالك',
-                value: _effectiveOwnerName(parcel),
+                value: _formatter.effectiveOwnerName(parcel),
                 onEdit: () => _editText(
                   context,
                   title: 'اسم المالك',
-                  initialValue: _effectiveOwnerName(parcel) ?? '',
+                  initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
                   apply: (final String v) =>
                       parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
@@ -121,12 +124,12 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(label: 'رقم الأرض', value: parcel.landNumber),
               FieldRow(
                 label: 'المساحة',
-                value: _areaFraction(parcel),
+                value: _formatter.areaFraction(parcel),
                 onEdit: () => _editArea(context),
               ),
               FieldRow(
                 label: 'المساحة بالمتر',
-                value: _formatNumber(parcel.totalSqm),
+                value: _formatter.formatNumber(parcel.totalSqm),
               ),
               FieldRow(
                 label: 'نوع الزرع',
@@ -228,100 +231,12 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
-  /// اسم المالك defaults to اسم الحائز when not explicitly set — most
-  /// owners and holders are the same person, so this saves re-typing the
-  /// name while still letting it be overridden per parcel.
-  String? _effectiveOwnerName(final Parcel p) {
-    final String? owner = p.ownerName?.trim();
-    if (owner != null && owner.isNotEmpty) return owner;
-    final String? holder = p.holderName?.trim();
-    return (holder != null && holder.isNotEmpty) ? holder : null;
-  }
-
-  /// `null`/empty values are formatted with [FieldRow.emptyPlaceholder] so
-  /// the on-screen display and the copy-all text stay consistent.
-  String? _formatNumber(final double? value) {
-    if (value == null) return null;
-    if (value == value.roundToDouble()) return value.toInt().toString();
-    return value.toString();
-  }
-
-  String _areaFraction(final Parcel p) {
-    final String feddan = _formatNumber(p.feddan) ?? FieldRow.emptyPlaceholder;
-    final String qirat = _formatNumber(p.qirat) ?? FieldRow.emptyPlaceholder;
-    final String sahm = _formatNumber(p.sahm) ?? FieldRow.emptyPlaceholder;
-    return '$feddan فدان، $qirat قيراط، $sahm سهم';
-  }
-
   Future<void> _copyAll(final BuildContext context) async {
-    final String text = _formatForClipboard(parcel);
+    final String text = _formatter.format(parcel);
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) {
       HapticFeedback.mediumImpact();
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
     }
-  }
-
-  /// One "label: value," field per line (blank slots kept, never skipped)
-  /// so the pasted text both reads clearly on its own and lines up
-  /// row-for-row when pasted into an external spreadsheet template.
-  String _formatForClipboard(final Parcel p) {
-    String slot(final String? v) =>
-        (v == null || v.trim().isEmpty) ? FieldRow.emptyPlaceholder : v.trim();
-
-    // اسم المالك only ever gets "(ورثة)" (مفوض doesn't touch it). اسم الحائز
-    // gets "(مفوض عنه)" whenever مفوض is on — overriding "(ورثة)" there
-    // specifically — otherwise "(ورثة)" if وراثة alone is on.
-    String withPrefix(final String? prefixLabel, final String name) {
-      final String display = name.isEmpty ? FieldRow.emptyPlaceholder : name;
-      return prefixLabel == null ? display : '$prefixLabel $display';
-    }
-
-    final String holderName = p.holderName?.trim() ?? '';
-    final String? holderPrefix =
-        p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
-    final String holderSlot = holderPrefix == null
-        ? slot(p.holderName)
-        : withPrefix(holderPrefix, holderName);
-
-    final String ownerName = _effectiveOwnerName(p) ?? '';
-    final String? ownerPrefix = p.isInheritance ? '(ورثة)' : null;
-    final String ownerSlot = ownerPrefix == null
-        ? slot(ownerName.isEmpty ? null : ownerName)
-        : withPrefix(ownerPrefix, ownerName);
-    final String nationalIdSlot =
-        (p.nationalId == null || p.nationalId!.trim().isEmpty)
-            ? '11111111111111'
-            : p.nationalId!.trim();
-    final String creditSentence =
-        p.creditType == 'أوقاف' ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية' : '';
-
-    // Grouping فدان/قيراط/سهم and نوع الزرع/نوع الائتمان on shared lines
-    // (instead of one field per line) trims the message's height while
-    // keeping every field's own "label: value," so it still pastes cleanly
-    // into a spreadsheet.
-    String field(final String label, final String value) => '$label: $value,';
-
-    final List<String> lines = <String>[
-      field('رقم الحيازة', p.holdingId),
-      field('اسم المالك', ownerSlot),
-      field('اسم الحائز', holderSlot),
-      field('الرقم القومي', nationalIdSlot),
-      field('اسم الجمعية', slot(p.associationName)),
-      field('اسم الحوض', slot(p.basinName)),
-      field('رقم الأرض', slot(p.landNumber)),
-      '${field('فدان', _formatNumber(p.feddan) ?? FieldRow.emptyPlaceholder)}     '
-          '${field('قيراط', _formatNumber(p.qirat) ?? FieldRow.emptyPlaceholder)}   '
-          '${field('سهم', _formatNumber(p.sahm) ?? FieldRow.emptyPlaceholder)}',
-      field(
-        'المساحة بالمتر',
-        _formatNumber(p.totalSqm) ?? FieldRow.emptyPlaceholder,
-      ),
-      '${field('نوع الزرع', slot(p.cropType))}   '
-          '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
-      field('ملاحظات', slot(p.notes)),
-    ];
-
-    return lines.join('\n');
   }
 }

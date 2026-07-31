@@ -4,13 +4,18 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/storage/key_value_store.dart';
+import '../../domain/entities/bulk_editable_field.dart';
+import '../../domain/entities/parcel.dart';
+import '../../domain/repositories/holdings_reader.dart';
+import '../../domain/repositories/holdings_writer.dart';
+import '../../domain/services/bulk_edit_service.dart';
+import '../../domain/services/parcel_edit_overlay.dart';
+import '../../domain/services/parcel_query_service.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../excel/holdings_excel_parser.dart';
-import '../models/bulk_editable_field.dart';
 import '../models/cached_file_entry.dart';
-import '../models/parcel.dart';
 import 'parcel_edits_store.dart';
 
 /// Runs the (potentially heavy) Excel parse in a background isolate via
@@ -26,12 +31,18 @@ List<Parcel> _parseHoldingsBytes(final Uint8List bytes) =>
 ///
 /// Keeps a small history of every distinct file that has been loaded, so
 /// the user can switch back to a previous one from the History screen.
-class HoldingsRepository {
+class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   HoldingsRepository({
-    final HoldingSearchService searchService = const HoldingSearchService(),
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
-  })  : _searchService = searchService,
-        _editsStore = editsStore;
+    final KeyValueStore keyValueStore = const SharedPreferencesKeyValueStore(),
+    final ParcelQueryService queryService = const ParcelQueryService(),
+    final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
+    final BulkEditService bulkEditService = const BulkEditService(),
+  })  : _editsStore = editsStore,
+        _keyValueStore = keyValueStore,
+        _queryService = queryService,
+        _editOverlay = editOverlay,
+        _bulkEditService = bulkEditService;
 
   static const String _activeFilePathKey = 'holdings_active_file_path';
   static const String _historyKey = 'holdings_file_history';
@@ -41,8 +52,11 @@ class HoldingsRepository {
   static String _associationNameKey(final String filePath) =>
       'association_name::$filePath';
 
-  final HoldingSearchService _searchService;
   final ParcelEditsStore _editsStore;
+  final KeyValueStore _keyValueStore;
+  final ParcelQueryService _queryService;
+  final ParcelEditOverlay _editOverlay;
+  final BulkEditService _bulkEditService;
 
   List<Parcel> _parcels = <Parcel>[];
 
@@ -84,6 +98,7 @@ class HoldingsRepository {
   /// Per-parcel edit snapshots for the active file.
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
 
+  @override
   List<Parcel> get parcels => _parcels;
 
   /// Picks a `.xlsx` file, copies it into app storage under a unique name,
@@ -123,8 +138,7 @@ class HoldingsRepository {
   /// Loads the previously active file, if any. Returns `null` when nothing
   /// has been cached yet (caller should show the Empty state).
   Future<List<Parcel>?> loadCachedFileIfAny() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? path = prefs.getString(_activeFilePathKey);
+    final String? path = await _keyValueStore.getString(_activeFilePathKey);
     if (path == null) return null;
     return _loadFromPath(path);
   }
@@ -171,8 +185,8 @@ class HoldingsRepository {
   ) async {
     _activeFilePath = filePath;
 
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? override = prefs.getString(_associationNameKey(filePath));
+    final String? override =
+        await _keyValueStore.getString(_associationNameKey(filePath));
     _associationNameConfirmed = override != null;
     final String associationName = override ?? deriveAssociationName(fileName);
 
@@ -196,8 +210,10 @@ class HoldingsRepository {
     if (trimmed.isEmpty) return;
 
     if (_activeFilePath != null) {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_associationNameKey(_activeFilePath!), trimmed);
+      await _keyValueStore.setString(
+        _associationNameKey(_activeFilePath!),
+        trimmed,
+      );
     }
     _associationNameConfirmed = true;
     _parcels = <Parcel>[
@@ -209,27 +225,23 @@ class HoldingsRepository {
     };
   }
 
-  Parcel _applyEdit(final Parcel p) {
-    final Map<String, dynamic>? e = _edits[p.id];
-    if (e == null) return p;
-    return Parcel.fromEditableJson(p, e);
-  }
-
-  Map<String, dynamic> _snapshot(final Parcel p) => p.toEditableJson();
+  Parcel _applyEdit(final Parcel p) => _editOverlay.apply(p, _edits[p.id]);
 
   /// Persists an edited parcel and reflects it in the in-memory dataset so
   /// search, detail, and border navigation immediately use the new values.
+  @override
   Future<void> updateParcel(final Parcel edited) async {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
     if (idx < 0) return;
     _parcels[idx] = edited;
-    _edits[edited.id] = _snapshot(edited);
+    _edits[edited.id] = _editOverlay.snapshot(edited);
     if (_activeFilePath != null) {
       await _editsStore.save(_activeFilePath!, _edits);
     }
   }
 
   /// Reverts a parcel to its original parsed values.
+  @override
   Future<void> resetParcel(final String id) async {
     final Parcel? original = _originalById[id];
     if (original == null) return;
@@ -267,8 +279,7 @@ class HoldingsRepository {
   }
 
   Future<void> _setActivePath(final String path) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_activeFilePathKey, path);
+    await _keyValueStore.setString(_activeFilePathKey, path);
   }
 
   Future<void> _rememberInHistory(final CachedFileEntry entry) async {
@@ -305,8 +316,7 @@ class HoldingsRepository {
 
   /// All previously loaded files, most recently added first.
   Future<List<CachedFileEntry>> getHistory() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? raw = prefs.getString(_historyKey);
+    final String? raw = await _keyValueStore.getString(_historyKey);
     if (raw == null || raw.isEmpty) return <CachedFileEntry>[];
 
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
@@ -329,80 +339,59 @@ class HoldingsRepository {
   }
 
   Future<void> _saveHistory(final List<CachedFileEntry> history) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String encoded = jsonEncode(
       history.map((final CachedFileEntry e) => e.toJson()).toList(),
     );
-    await prefs.setString(_historyKey, encoded);
+    await _keyValueStore.setString(_historyKey, encoded);
   }
 
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole
-  /// dataset — narrowing the scope keeps fuzzy matching fast on large files.
-  List<SearchResult> search(final String query, {final String? basin}) {
-    final List<Parcel> scope = basin == null
-        ? _parcels
-        : _parcels.where((final Parcel p) => p.basinName == basin).toList();
-    return _searchService.search(scope, query);
-  }
+  /// dataset — narrowing the scope keeps matching fast on large files.
+  @override
+  List<SearchResult> search(final String query, {final String? basin}) =>
+      _queryService.search(_parcels, query, basin: basin);
 
   /// Distinct اسم الحوض values in the active dataset, sorted.
-  List<String> get availableBasins {
-    final Set<String> basins = <String>{};
-    for (final Parcel p in _parcels) {
-      final String? name = p.basinName?.trim();
-      if (name != null && name.isNotEmpty) basins.add(name);
-    }
-    final List<String> sorted = basins.toList()..sort();
-    return sorted;
-  }
+  @override
+  List<String> get availableBasins => _queryService.availableBasins(_parcels);
 
   /// Distinct-holding count per اسم الحوض — how many holdings sit in each
   /// basin, shown beside the basin filter/status views.
-  Map<String, int> get basinHoldingCounts {
-    final Map<String, Set<String>> holdingsByBasin = <String, Set<String>>{};
-    for (final Parcel p in _parcels) {
-      final String? name = p.basinName?.trim();
-      if (name == null || name.isEmpty) continue;
-      holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.holdingId);
-    }
-    return <String, int>{
-      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
-        e.key: e.value.length,
-    };
-  }
+  @override
+  Map<String, int> get basinHoldingCounts =>
+      _queryService.basinHoldingCounts(_parcels);
 
+  @override
   List<Parcel> parcelsForHolding(final String holdingId) =>
-      _parcels.where((final Parcel p) => p.holdingId == holdingId).toList();
+      _queryService.parcelsForHolding(_parcels, holdingId);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
   /// [basin] (only parcels whose اسم الحوض matches). Returns how many
   /// parcels were changed, for user feedback.
+  @override
   Future<int> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
   }) async {
-    int changed = 0;
-    for (var i = 0; i < _parcels.length; i++) {
-      final Parcel p = _parcels[i];
-      if (basin != null && p.basinName != basin) continue;
-
-      final Parcel updated = switch (field) {
-        BulkEditableField.cropType => p.copyWith(cropType: value as String?),
-        BulkEditableField.notes => p.copyWith(notes: value as String?),
-        BulkEditableField.creditType => p.copyWith(creditType: value as String),
-        BulkEditableField.usageType => p.copyWith(usageType: value as String),
-        BulkEditableField.isInheritance =>
-          p.copyWith(isInheritance: value as bool),
-      };
-      _parcels[i] = updated;
-      _edits[updated.id] = updated.toEditableJson();
-      changed++;
+    final BulkEditResult result = _bulkEditService.apply(
+      _parcels,
+      field: field,
+      value: value,
+      basin: basin,
+    );
+    _parcels = result.parcels;
+    if (result.changedCount > 0) {
+      for (final Parcel p in _parcels) {
+        if (basin == null || p.basinName == basin) {
+          _edits[p.id] = _editOverlay.snapshot(p);
+        }
+      }
+      if (_activeFilePath != null) {
+        await _editsStore.save(_activeFilePath!, _edits);
+      }
     }
-    if (changed > 0 && _activeFilePath != null) {
-      await _editsStore.save(_activeFilePath!, _edits);
-    }
-    return changed;
+    return result.changedCount;
   }
 }
 

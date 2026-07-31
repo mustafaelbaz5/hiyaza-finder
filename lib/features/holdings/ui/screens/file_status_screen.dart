@@ -12,7 +12,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../data/models/bulk_editable_field.dart';
+import '../../domain/entities/bulk_editable_field.dart';
 import '../../data/repository/holdings_repository.dart';
 
 /// Overview of the loaded file — holding counts per حوض — plus two bulk
