@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../features/auth/presentation/cubit/session_cubit.dart';
 import '../../router/routes.dart';
 import '../../themes/app_colors.dart';
 import '../../themes/app_text_styles.dart';
@@ -142,6 +143,17 @@ class _SettingsSheet extends StatelessWidget {
                   context.pushNamed(Routes.aboutScreen);
                 },
               ),
+              verticalSpacing(10),
+              _SettingsRow(
+                icon: Icons.logout_rounded,
+                iconColor: AppColors.red200,
+                label: 'auth.sign_out'.tr(),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.read<SessionCubit>().signOut();
+                  context.pushNamedAndRemoveAll(Routes.login);
+                },
+              ),
             ],
           ),
         ),
@@ -272,11 +284,13 @@ class _SettingsRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final Color? iconColor;
 
   @override
   Widget build(final BuildContext context) {
@@ -294,7 +308,7 @@ class _SettingsRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(icon, color: AppColors.primary200),
+            Icon(icon, color: iconColor ?? AppColors.primary200),
             horizontalSpacing(14),
             Expanded(
               child: Text(

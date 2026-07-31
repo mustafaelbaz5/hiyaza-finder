@@ -28,6 +28,18 @@
     "user_disabled": "تم تعطيل هذا الحساب.",
     "operation_not_allowed": "هذه العملية غير مسموح بها."
   },
+  "auth": {
+    "sign_out": "تسجيل الخروج",
+    "login": {
+      "subtitle": "تسجيل الدخول للمتابعة",
+      "email_hint": "البريد الإلكتروني",
+      "password_hint": "كلمة المرور",
+      "submit": "تسجيل الدخول",
+      "email_required": "البريد الإلكتروني مطلوب",
+      "email_invalid": "صيغة البريد الإلكتروني غير صحيحة",
+      "password_required": "كلمة المرور مطلوبة"
+    }
+  },
     "about": {
     "sections": {
       "app_info": "معلومات التطبيق",

@@ -28,6 +28,18 @@
     "user_disabled": "This account has been disabled.",
     "operation_not_allowed": "This operation is not allowed."
   },
+  "auth": {
+    "sign_out": "Sign out",
+    "login": {
+      "subtitle": "Sign in to continue",
+      "email_hint": "Email",
+      "password_hint": "Password",
+      "submit": "Sign in",
+      "email_required": "Email is required",
+      "email_invalid": "Invalid email format",
+      "password_required": "Password is required"
+    }
+  },
   "about": {
     "sections": {
       "app_info": "App Info",

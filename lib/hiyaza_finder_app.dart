@@ -8,15 +8,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/config/app_config.dart';
+import 'core/di/dependency_injection.dart';
 import 'core/router/app_router.dart';
 import 'core/router/routes.dart';
 import 'core/settings/cubit/app_settings_cubit.dart';
 import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
+import 'features/auth/presentation/cubit/session_cubit.dart';
+import 'features/auth/presentation/cubit/session_state.dart';
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
+
+  static final GlobalKey<NavigatorState> _navigatorKey =
+      GlobalKey<NavigatorState>();
 
   /// Width of the centred app column on desktop. Kept phone-like so the
   /// phone-first (375dp) layout and its ScreenUtil scaling stay natural
@@ -66,32 +72,56 @@ class HiyazaFinderApp extends StatelessWidget {
       builder: (final BuildContext context, final Widget? child) {
         return BlocProvider(
           create: (final _) => AppSettingsCubit(),
-          child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-            builder:
-                (final BuildContext context, final AppSettingsState settings) {
-              return MaterialApp(
-                localizationsDelegates: context.localizationDelegates,
-                supportedLocales: context.supportedLocales,
-                locale: settings.locale, // driven by cubit
-                debugShowCheckedModeBanner: false,
-                scrollBehavior: const _AppScrollBehavior(),
-                initialRoute: Routes.home,
-                onGenerateRoute: AppRouter.generateRoute,
-                title: AppConfig.appName,
-                // font family injected into both themes
-                theme: getLightTheme().copyWith(
-                  textTheme: getLightTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
-                      ),
-                ),
-                darkTheme: getDarkTheme().copyWith(
-                  textTheme: getDarkTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
-                      ),
-                ),
-                themeMode: settings.themeMode,
-              );
-            },
+          child: BlocProvider<SessionCubit>.value(
+            value: getIt<SessionCubit>(),
+            child: BlocListener<SessionCubit, SessionState>(
+              listenWhen: (final SessionState previous,
+                      final SessionState current) =>
+                  previous.status != SessionStatus.unauthenticated &&
+                  current.status == SessionStatus.unauthenticated,
+              // Catches a session that becomes invalid while the user is
+              // already past login (e.g. an expired/revoked refresh
+              // token) and bounces them back rather than leaving screens
+              // silently calling an API that will now reject them.
+              listener: (final BuildContext context, final SessionState _) {
+                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  Routes.login,
+                  (final _) => false,
+                );
+              },
+              child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                builder: (
+                  final BuildContext context,
+                  final AppSettingsState settings,
+                ) {
+                  return MaterialApp(
+                    navigatorKey: _navigatorKey,
+                    localizationsDelegates: context.localizationDelegates,
+                    supportedLocales: context.supportedLocales,
+                    locale: settings.locale, // driven by cubit
+                    debugShowCheckedModeBanner: false,
+                    scrollBehavior: const _AppScrollBehavior(),
+                    initialRoute: getIt<SessionCubit>().state.isAuthenticated
+                        ? Routes.home
+                        : Routes.login,
+                    onGenerateRoute: AppRouter.generateRoute,
+                    title: AppConfig.appName,
+                    // font family injected into both themes
+                    theme: getLightTheme().copyWith(
+                      textTheme: getLightTheme().textTheme.apply(
+                            fontFamily: settings.fontFamily,
+                          ),
+                    ),
+                    darkTheme: getDarkTheme().copyWith(
+                      textTheme: getDarkTheme().textTheme.apply(
+                            fontFamily: settings.fontFamily,
+                          ),
+                    ),
+                    themeMode: settings.themeMode,
+                  );
+                },
+              ),
+            ),
           ),
         );
       },

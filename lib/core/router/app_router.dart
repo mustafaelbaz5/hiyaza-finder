@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/ui/about_screen.dart';
+import 'package:hiyaza_finder/features/auth/presentation/screens/login_screen.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
@@ -20,6 +21,8 @@ class AppRouter {
     switch (settings.name) {
       case Routes.aboutScreen:
         return _buildRoute(const AboutScreen(), settings);
+      case Routes.login:
+        return _buildRoute(const LoginScreen(), settings);
       case Routes.home:
         return _buildRoute(
           BlocProvider<HomeCubit>(
