@@ -24,7 +24,6 @@ import '../../domain/entities/parcel.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
-import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/city_stale_banner.dart';
 import '../widgets/recommendation_list.dart';
@@ -97,8 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isListening = true);
   }
 
-  void _openHistory() => context.pushNamed(Routes.fileHistory);
-
   Future<void> _openBasinFilter(final HomeCubit cubit) async {
     final HomeState state = cubit.state;
     final String? selected = await showBasinFilterSheet(
@@ -125,18 +122,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Runs once right after a file finishes loading: confirms اسم الجمعية
-  /// first (if needed), then opens the basin filter (if there's more than
-  /// one basin) — sequential, never both sheets at once.
-  Future<void> _onFileLoaded(final HomeCubit cubit) async {
-    if (cubit.state.needsAssociationConfirm) {
-      final String confirmed = await showAssociationNameSheet(
-        context,
-        derivedName: cubit.state.associationNameDraft ?? '',
-      );
-      if (mounted) await cubit.confirmAssociationName(confirmed);
-    }
-    if (!mounted) return;
+  /// Runs once right after a city finishes loading: opens the basin
+  /// filter automatically if there's more than one basin to choose from.
+  Future<void> _onCityLoaded(final HomeCubit cubit) async {
     if (cubit.state.availableBasins.length > 1) {
       await _openBasinFilter(cubit);
     }
@@ -155,14 +143,13 @@ class _HomeScreenState extends State<HomeScreen> {
               current.status == HomeStatus.loaded &&
               previous.status != HomeStatus.loaded,
           listener: (final BuildContext context, final HomeState state) {
-            _onFileLoaded(cubit);
+            _onCityLoaded(cubit);
           },
           builder: (final BuildContext context, final HomeState state) {
             return Column(
               children: <Widget>[
                 HomeTopBar(
                   onSettings: () => showSettingsSheet(context),
-                  onHistory: _openHistory,
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -176,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         HomeStatus.error => ErrorBody(
                             state: state,
-                            onPickFile: cubit.pickFile,
+                            onPickFile: () => _openCityPicker(cubit),
                           ),
                         HomeStatus.loaded => _LoadedBody(
                             state: state,
@@ -186,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _onQueryChanged(q, cubit),
                             onOpenBasinFilter: () => _openBasinFilter(cubit),
                             onOpenFileStatus: () => _openFileStatus(cubit),
+                            onChangeCity: () => _openCityPicker(cubit),
                             onToggleVoice: _voiceService == null
                                 ? null
                                 : () => _toggleVoiceSearch(cubit),
@@ -226,6 +214,7 @@ class _LoadedBody extends StatefulWidget {
     required this.onQueryChanged,
     required this.onOpenBasinFilter,
     required this.onOpenFileStatus,
+    required this.onChangeCity,
     required this.onToggleVoice,
     required this.isListening,
   });
@@ -236,6 +225,7 @@ class _LoadedBody extends StatefulWidget {
   final void Function(String query) onQueryChanged;
   final VoidCallback onOpenBasinFilter;
   final VoidCallback onOpenFileStatus;
+  final VoidCallback onChangeCity;
   final VoidCallback? onToggleVoice;
   final bool isListening;
 
@@ -314,7 +304,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
                     holdingCount: widget.state.holdingCount,
                     selectedBasin: widget.state.selectedBasin,
                     hasBasins: widget.state.availableBasins.isNotEmpty,
-                    onChangeFile: widget.cubit.changeFile,
+                    onChangeFile: widget.onChangeCity,
                     onOpenBasinFilter: widget.onOpenBasinFilter,
                     onOpenFileStatus: widget.onOpenFileStatus,
                   ),

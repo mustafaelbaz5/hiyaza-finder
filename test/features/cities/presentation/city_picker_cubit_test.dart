@@ -66,7 +66,6 @@ void main() {
     cityRepository = _FakeCityRepository();
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     holdingsRepository = HoldingsRepository(
-      keyValueStore: store,
       editsStore: ParcelEditsStore(store: store),
     );
   });

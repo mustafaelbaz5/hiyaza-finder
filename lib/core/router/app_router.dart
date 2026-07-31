@@ -16,7 +16,6 @@ import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/detail_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/file_status_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/history_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/home_screen.dart';
 
 class AppRouter {
@@ -59,8 +58,6 @@ class AppRouter {
           ),
           settings,
         );
-      case Routes.fileHistory:
-        return _buildRoute(const HistoryScreen(), settings);
       case Routes.fileStatus:
         return _buildRoute(const FileStatusScreen(), settings);
       default:

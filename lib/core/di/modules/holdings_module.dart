@@ -12,9 +12,9 @@ import '../../storage/key_value_store.dart';
 
 /// The holdings feature's data layer: the domain services `HoldingsRepository`
 /// composes, and the repository itself, exposed under its `HoldingsReader`/
-/// `HoldingsWriter` interfaces as well as its concrete type (screens still
-/// reach a few Excel-era-only methods that aren't part of either interface
-/// yet — see `APP_PLAN.md` Phase 5 for their retirement).
+/// `HoldingsWriter` interfaces as well as its concrete type (a few methods,
+/// like `addLocalParcel`/`loadParcelsForCity`, aren't part of either
+/// interface yet).
 void registerHoldingsModule(final GetIt getIt) {
   getIt.registerLazySingleton(ParcelQueryService.new);
   getIt.registerLazySingleton(ParcelEditOverlay.new);
@@ -26,7 +26,6 @@ void registerHoldingsModule(final GetIt getIt) {
   getIt.registerLazySingleton<HoldingsRepository>(
     () => HoldingsRepository(
       editsStore: getIt(),
-      keyValueStore: getIt<KeyValueStore>(),
       queryService: getIt(),
       editOverlay: getIt(),
       bulkEditService: getIt(),

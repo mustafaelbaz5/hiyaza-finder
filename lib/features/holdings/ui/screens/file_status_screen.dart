@@ -11,15 +11,12 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../data/repository/holdings_repository.dart';
 
-/// Overview of the loaded file — holding counts per حوض — plus two bulk
-/// edit tools: setting اسم الجمعية for the whole file at once (same action
-/// as the load-time confirm sheet), and applying one of the app-added
-/// fields (نوع الزرع، ملاحظات، …) to every parcel in one حوض (or the whole
-/// file) at once.
+/// Overview of the active city's data — holding counts per حوض — plus a
+/// bulk edit tool applying one of the app-added fields (نوع الزرع،
+/// ملاحظات، …) to every parcel in one حوض (or the whole city) at once.
 class FileStatusScreen extends StatefulWidget {
   const FileStatusScreen({super.key});
 
@@ -33,20 +30,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   String? _bulkBasin; // null = whole file
   BulkEditableField _bulkField = BulkEditableField.cropType;
   Object? _bulkValue;
-
-  Future<void> _editAssociationName() async {
-    final String? name = await showTextInputDialog(
-      context,
-      title: 'اسم الجمعية',
-      initialValue: _repository.activeAssociationName ?? '',
-    );
-    if (name == null || name.trim().isEmpty) return;
-    await _repository.confirmAssociationName(name);
-    if (mounted) {
-      setState(() {});
-      context.showSuccessSnackBar('تم تطبيق اسم الجمعية على كل البيانات');
-    }
-  }
 
   Future<void> _pickBulkBasin() async {
     final List<String> basins = _repository.availableBasins;
@@ -185,35 +168,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SectionCard(
-                      title: 'اسم الجمعية',
-                      subtitle: 'يُطبَّق على كل بيانات الملف دفعة واحدة',
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _repository.activeAssociationName?.isNotEmpty ==
-                                      true
-                                  ? _repository.activeAssociationName!
-                                  : '—',
-                              style: AppTextStyles.font16SemiBold.copyWith(
-                                color: colors.textPrimary,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                          horizontalSpacing(8),
-                          IconButton(
-                            onPressed: _editAssociationName,
-                            icon: const Icon(
-                              Icons.edit_rounded,
-                              color: AppColors.primary200,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    verticalSpacing(16),
                     SectionCard(
                       title: 'الأحواض',
                       subtitle: 'عدد الحيازات في كل حوض',

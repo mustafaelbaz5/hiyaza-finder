@@ -9,11 +9,15 @@ import 'package:hiyaza_finder/features/holdings/ui/widgets/top_bar_icon_button.d
 import 'package:hiyaza_finder/features/sync/presentation/widgets/sync_status_badge.dart';
 
 class HomeTopBar extends StatelessWidget {
-  const HomeTopBar(
-      {super.key, required this.onSettings, required this.onHistory});
+  const HomeTopBar({super.key, required this.onSettings});
 
   final VoidCallback onSettings;
-  final VoidCallback onHistory;
+
+  /// Matches [TopBarIconButton]'s footprint so the centered title/brand
+  /// column stays visually centered without a second icon button on the
+  /// trailing side (the history button/screen was retired along with the
+  /// rest of the Excel-file flow — APP_PLAN.md Phase 5).
+  static const double _iconButtonFootprint = 42;
 
   @override
   Widget build(final BuildContext context) {
@@ -60,10 +64,9 @@ class HomeTopBar extends StatelessWidget {
               ],
             ),
           ),
-          TopBarIconButton(
-            icon: Icons.history_rounded,
-            tooltip: 'holdings.home.history'.tr(),
-            onTap: onHistory,
+          const SizedBox(
+            width: _iconButtonFootprint,
+            height: _iconButtonFootprint,
           ),
         ],
       ),

@@ -52,7 +52,6 @@ void main() {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     syncQueue = _FakeSyncQueue();
     repository = HoldingsRepository(
-      keyValueStore: store,
       editsStore: ParcelEditsStore(store: store),
       syncQueue: syncQueue,
     );
@@ -63,7 +62,6 @@ void main() {
   test('returns null and enqueues nothing when no city is active', () async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     final HoldingsRepository noCityRepo = HoldingsRepository(
-      keyValueStore: store,
       editsStore: ParcelEditsStore(store: store),
       syncQueue: syncQueue,
     );

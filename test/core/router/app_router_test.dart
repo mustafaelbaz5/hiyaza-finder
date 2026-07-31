@@ -29,7 +29,6 @@ void main() {
       Routes.login,
       Routes.cityPicker,
       Routes.home,
-      Routes.fileHistory,
       Routes.fileStatus,
     ]) {
       final Route<dynamic>? route = AppRouter.generateRoute(
