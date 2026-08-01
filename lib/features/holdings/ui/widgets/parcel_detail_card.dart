@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/holding_detail_args.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart';
 
@@ -367,7 +366,7 @@ class ParcelDetailCard extends StatelessWidget {
         getIt<HoldingsRepository>().parcelsForHolding(match.groupKey);
     await context.pushNamed(
       Routes.holdingDetail,
-      arguments: HoldingDetailArgs(parcels: holdingParcels),
+      arguments: holdingParcels,
     );
   }
 
