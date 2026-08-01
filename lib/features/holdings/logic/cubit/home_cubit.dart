@@ -72,29 +72,31 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   /// Re-downloads the active city and adopts the fresh data — the
-  /// staleness banner's "تحديث البيانات" action.
+  /// staleness banner's "تحديث البيانات" action and pull-to-refresh.
+  /// Deliberately keeps `status: loaded` throughout and rethrows on
+  /// failure instead of switching to `HomeStatus.loading`/`error`: those
+  /// would swap out the entire loaded screen (fighting a pull gesture's
+  /// own spinner, or discarding a perfectly working offline session over
+  /// a transient refresh failure). Callers decide how to surface the
+  /// error (e.g. a snackbar) while the current data stays on screen.
   Future<void> refreshActiveCity() async {
     final CitySnapshot? current = _activeCitySnapshot;
     if (current == null) return;
 
-    emit(state.copyWith(status: HomeStatus.loading));
-    try {
-      final int remoteVersion =
-          await _cityRepository.remoteDataVersion(current.cityId);
-      final CitySnapshot fresh = await _cityRepository.downloadCity(
-        City(
-          id: current.cityId,
-          name: current.cityName,
-          status: CityStatus.published,
-          dataVersion: remoteVersion,
-        ),
-      );
-      await _repository.loadParcelsForCity(fresh.cityId, fresh.parcels);
-      _activeCitySnapshot = fresh;
-      emit(_loadedState(_repository.parcels));
-    } catch (e) {
-      emit(state.copyWith(status: HomeStatus.error, errorMessage: e.toString()));
-    }
+    final int remoteVersion =
+        await _cityRepository.remoteDataVersion(current.cityId);
+    final CitySnapshot fresh = await _cityRepository.downloadCity(
+      City(
+        id: current.cityId,
+        name: current.cityName,
+        status: CityStatus.published,
+        dataVersion: remoteVersion,
+      ),
+    );
+    await _repository.loadParcelsForCity(fresh.cityId, fresh.parcels);
+    _activeCitySnapshot = fresh;
+    emit(state.copyWith(isCityDataStale: false));
+    refreshData();
   }
 
   HomeState _loadedState(final List<Parcel> parcels) {

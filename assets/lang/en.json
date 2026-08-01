@@ -58,6 +58,17 @@
     "stale_banner": {
       "message": "Newer data is available on the server",
       "refresh": "Update data"
+    },
+    "manage": {
+      "entry": "Manage downloaded cities",
+      "title": "Downloaded cities",
+      "empty": "No cities downloaded on this device",
+      "current_badge": "Current",
+      "summary": "{count} holdings — {size}",
+      "delete": "Delete",
+      "delete_confirm": "This deletes \"{name}\"'s data from this device only. You can download it again later. Continue?",
+      "delete_confirm_active": "\"{name}\" is the current city. Its data will be deleted from this device only (it stays on the server), but it will disappear from the home screen until downloaded again. Continue?",
+      "deleted": "City data deleted from this device"
     }
   },
   "auth": {
@@ -133,6 +144,7 @@
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
       "new_badge": "New — pending sync",
+      "parcel_count": "{count} parcels",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",

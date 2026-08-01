@@ -10,6 +10,7 @@ import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart
 import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
 import 'package:hiyaza_finder/features/cities/presentation/cubit/city_picker_cubit.dart';
 import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_screen.dart';
+import 'package:hiyaza_finder/features/cities/presentation/screens/manage_cities_screen.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
@@ -62,6 +63,8 @@ class AppRouter {
         );
       case Routes.fileStatus:
         return _buildRoute(const FileStatusScreen(), settings);
+      case Routes.manageCities:
+        return _buildRoute(const ManageCitiesScreen(), settings);
       default:
         return null;
     }

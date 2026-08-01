@@ -88,18 +88,38 @@ class _DetailScreenState extends State<DetailScreen> {
                 children: <Widget>[
                   verticalSpacing(16),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       const AppBackButton(),
                       horizontalSpacing(12),
                       Expanded(
-                        child: Text(
-                          'holdings.detail.title'.tr(
-                            namedArgs: {'id': holdingId},
-                          ),
-                          style: AppTextStyles.font20Bold.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                          textAlign: TextAlign.right,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Text(
+                              'holdings.detail.title'.tr(
+                                namedArgs: {'id': holdingId},
+                              ),
+                              style: AppTextStyles.font20Bold.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            if (_parcels.length > 1) ...<Widget>[
+                              verticalSpacing(2),
+                              Text(
+                                'holdings.detail.parcel_count'.tr(
+                                  namedArgs: {
+                                    'count': _parcels.length.toString(),
+                                  },
+                                ),
+                                style: AppTextStyles.font12Regular.copyWith(
+                                  color: colors.textSecondary,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../../holdings/domain/entities/parcel.dart';
+import '../domain/entities/cached_city_meta.dart';
 import '../domain/entities/city_snapshot.dart';
 
 /// Persists a downloaded [CitySnapshot] to a JSON file in app storage —
@@ -49,5 +50,48 @@ class CitySnapshotCache {
           .map((final dynamic e) => Parcel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
+  }
+
+  /// The city ids with a snapshot currently on disk — cheap, no JSON
+  /// parsing (just lists filenames in the cache directory).
+  Future<List<String>> listCachedCityIds() async {
+    final Directory docsDir = await getApplicationDocumentsDirectory();
+    final Directory dir = Directory('${docsDir.path}/$_dirName');
+    if (!dir.existsSync()) return const <String>[];
+
+    return dir
+        .listSync()
+        .whereType<File>()
+        .where((final File f) => f.path.endsWith('.json'))
+        .map((final File f) => f.uri.pathSegments.last.replaceAll('.json', ''))
+        .toList();
+  }
+
+  /// A cached snapshot's summary — city name/version/download time, row
+  /// count, and file size — without mapping every row through
+  /// `Parcel.fromJson` the way [load] does. Used by the "manage downloaded
+  /// cities" screen, where only the summary is shown.
+  Future<CachedCityMeta?> loadMetadata(final String cityId) async {
+    final File file = await _fileFor(cityId);
+    if (!file.existsSync()) return null;
+
+    final int sizeBytes = file.statSync().size;
+    final Map<String, dynamic> json =
+        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return CachedCityMeta(
+      cityId: json['cityId'] as String,
+      cityName: json['cityName'] as String,
+      dataVersion: json['dataVersion'] as int,
+      downloadedAt: DateTime.parse(json['downloadedAt'] as String),
+      holdingsCount: (json['parcels'] as List<dynamic>).length,
+      fileSizeBytes: sizeBytes,
+    );
+  }
+
+  /// Deletes [cityId]'s cached snapshot file, if any. Does nothing if it's
+  /// already gone.
+  Future<void> delete(final String cityId) async {
+    final File file = await _fileFor(cityId);
+    if (file.existsSync()) await file.delete();
   }
 }

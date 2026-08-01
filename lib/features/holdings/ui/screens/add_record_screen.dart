@@ -68,12 +68,20 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   bool get _canSave => (_parcel.holderName?.trim().isNotEmpty ?? false);
 
+  /// Owner name defaults to holder name when left blank — most parcels
+  /// have the same person as both, so this avoids making the user type
+  /// the same name twice.
+  Parcel get _parcelToSave =>
+      (_parcel.ownerName?.trim().isEmpty ?? true)
+          ? _parcel.copyWith(ownerName: _parcel.holderName)
+          : _parcel;
+
   Future<void> _save() async {
     if (!_canSave || _isSaving) return;
     setState(() => _isSaving = true);
     try {
       final Parcel? saved = await getIt<HoldingsRepository>().addLocalParcel(
-        _parcel,
+        _parcelToSave,
         parentHoldingId: widget.parentHoldingId,
       );
       if (!mounted) return;

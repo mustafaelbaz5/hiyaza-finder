@@ -246,11 +246,28 @@ class _LoadedBodyState extends State<_LoadedBody> {
     final bool? added = await context.pushNamed<bool>(
       Routes.addRecord,
       arguments: const AddRecordArgs(
-        initialParcel: Parcel(holdingId: ''),
+        initialParcel: Parcel(
+          holdingId: '', // pending — see holdings.detail.holding_id_pending
+          nationalId: '11111111111111',
+          landNumber: '-1',
+          notes: 'غير محيز',
+        ),
       ),
     );
     if (added == true && context.mounted) {
       widget.cubit.refreshData();
+    }
+  }
+
+  /// Shared by the stale banner and pull-to-refresh: `HomeCubit.refreshActiveCity`
+  /// keeps the loaded screen on-screen and rethrows on failure rather than
+  /// emitting an error state, so both trigger points surface it the same way
+  /// without wiping out a working (if stale) session.
+  Future<void> _refreshCity(final BuildContext context) async {
+    try {
+      await widget.cubit.refreshActiveCity();
+    } catch (_) {
+      if (context.mounted) context.showErrorSnackBar('errors.unknown'.tr());
     }
   }
 
@@ -297,7 +314,9 @@ class _LoadedBodyState extends State<_LoadedBody> {
                 children: <Widget>[
                   verticalSpacing(8),
                   if (widget.state.isCityDataStale) ...[
-                    CityStaleBanner(onRefresh: widget.cubit.refreshActiveCity),
+                    CityStaleBanner(
+                      onRefresh: () => _refreshCity(context),
+                    ),
                     verticalSpacing(8),
                   ],
                   FileInfoCard(
@@ -327,12 +346,16 @@ class _LoadedBodyState extends State<_LoadedBody> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: RecommendationList(
-                  query: widget.state.query,
-                  results: widget.state.results,
-                  onSelect: (final SearchResult result) =>
-                      _openDetail(context, result),
-                  onAddNew: () => _openAddPerson(context),
+                child: RefreshIndicator(
+                  color: AppColors.primary200,
+                  onRefresh: () => _refreshCity(context),
+                  child: RecommendationList(
+                    query: widget.state.query,
+                    results: widget.state.results,
+                    onSelect: (final SearchResult result) =>
+                        _openDetail(context, result),
+                    onAddNew: () => _openAddPerson(context),
+                  ),
                 ),
               ),
             ),

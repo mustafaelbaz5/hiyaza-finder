@@ -1,3 +1,4 @@
+import '../entities/cached_city_meta.dart';
 import '../entities/city.dart';
 import '../entities/city_snapshot.dart';
 
@@ -19,4 +20,14 @@ abstract class CityRepository {
   /// The server's current `data_version` for [cityId] — used to compare
   /// against a cached snapshot's stored version.
   Future<int> remoteDataVersion(final String cityId);
+
+  /// Summaries of every city with a snapshot currently on disk — a field
+  /// worker may have downloaded (and left behind) more than one over time
+  /// even though only one is ever "active".
+  Future<List<CachedCityMeta>> listCachedCities();
+
+  /// Deletes [cityId]'s local snapshot only — server data is untouched.
+  /// If [cityId] is the active city, also clears the active-city marker
+  /// so the app doesn't think a deleted city is still loaded.
+  Future<void> deleteCachedCity(final String cityId);
 }

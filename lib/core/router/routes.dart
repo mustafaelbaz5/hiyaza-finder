@@ -6,4 +6,5 @@ class Routes {
   static const String holdingDetail = '/holdingDetail';
   static const String addRecord = '/addRecord';
   static const String fileStatus = '/fileStatus';
+  static const String manageCities = '/manageCities';
 }

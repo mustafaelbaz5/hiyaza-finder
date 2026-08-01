@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/errors/exceptions.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
+import 'package:hiyaza_finder/features/cities/domain/entities/cached_city_meta.dart';
 import 'package:hiyaza_finder/features/cities/domain/entities/city.dart';
 import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
@@ -56,6 +57,12 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<int> remoteDataVersion(final String cityId) async => 1;
+
+  @override
+  Future<List<CachedCityMeta>> listCachedCities() async => const <CachedCityMeta>[];
+
+  @override
+  Future<void> deleteCachedCity(final String cityId) async {}
 }
 
 void main() {

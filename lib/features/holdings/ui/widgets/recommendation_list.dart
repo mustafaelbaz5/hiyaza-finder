@@ -28,42 +28,68 @@ class RecommendationList extends StatelessWidget {
   /// hide the CTA without a call-site change.
   final VoidCallback? onAddNew;
 
+  /// `AlwaysScrollableScrollPhysics` on every branch (even the empty ones)
+  /// is what lets `RefreshIndicator` in `home_screen.dart` register a pull
+  /// gesture regardless of search state — a non-scrollable child can never
+  /// trigger it.
+  static const ScrollPhysics _pullToRefreshPhysics =
+      AlwaysScrollableScrollPhysics();
+
   @override
   Widget build(final BuildContext context) {
-    if (query.trim().isEmpty) return const SizedBox.shrink();
+    if (query.trim().isEmpty) {
+      return ListView(physics: _pullToRefreshPhysics);
+    }
 
     if (results.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      // `ListView`'s children stack at their intrinsic height rather than
+      // stretching to fill the viewport, so a bare `Center` wouldn't
+      // actually center — constrain it to at least the available height
+      // first (needed now that this branch must be scrollable too, for
+      // `RefreshIndicator` to register a pull gesture on the no-results
+      // state).
+      return LayoutBuilder(
+        builder: (final BuildContext context, final BoxConstraints constraints) {
+          return ListView(
+            physics: _pullToRefreshPhysics,
+            padding: const EdgeInsets.symmetric(vertical: 24),
             children: [
-              Text(
-                'holdings.search.no_results'.tr(),
-                style: AppTextStyles.font14Regular.copyWith(
-                  color: context.customColors.textHint,
-                ),
-              ),
-              if (onAddNew != null) ...[
-                verticalSpacing(16),
-                CustomTextButton(
-                  text: 'holdings.add.new_person_cta'.tr(),
-                  onPressed: onAddNew,
-                  isFullWidth: false,
-                  prefixIcon: const Icon(
-                    Icons.person_add_alt_1_rounded,
-                    color: AppColors.white,
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'holdings.search.no_results'.tr(),
+                        style: AppTextStyles.font14Regular.copyWith(
+                          color: context.customColors.textHint,
+                        ),
+                      ),
+                      if (onAddNew != null) ...[
+                        verticalSpacing(16),
+                        CustomTextButton(
+                          text: 'holdings.add.new_person_cta'.tr(),
+                          onPressed: onAddNew,
+                          isFullWidth: false,
+                          prefixIcon: const Icon(
+                            Icons.person_add_alt_1_rounded,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
-        ),
+          );
+        },
       );
     }
 
     return ListView.builder(
+      physics: _pullToRefreshPhysics,
       padding: const EdgeInsets.only(top: 4, bottom: 24),
       itemCount: results.length,
       itemBuilder: (final BuildContext context, final int i) {
