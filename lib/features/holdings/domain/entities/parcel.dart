@@ -26,6 +26,7 @@ class Parcel {
     this.cropType,
     this.notes,
     this.creditType = defaultCreditType,
+    this.reformType = defaultReformType,
     this.isInheritance = false,
     this.isDelegate = false,
     this.usageType = defaultUsageType,
@@ -58,7 +59,8 @@ class Parcel {
   final String? associationName; // اسم الجمعية — derived from the file name
   final String? cropType; // نوع الزرع
   final String? notes; // ملاحظات
-  final String creditType; // نوع الائتمان: ملك / أوقاف
+  final String creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
+  final String reformType; // نوع الإصلاح: for agricultural reform cities
   final bool isInheritance; // وراثة
   final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
@@ -85,9 +87,16 @@ class Parcel {
   String get groupKey => isHoldingIdPending ? 'pending:$id' : holdingId;
 
   static const String defaultCreditType = 'ملك';
+  static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';
 
   static const List<String> creditTypeOptions = <String>['ملك', 'أوقاف'];
+
+  static const List<String> reformTypeOptions = <String>[
+    'إصلاح مُملك',
+    'إصلاح اشتراكي',
+    'إصلاح قانون ثلاثة',
+  ];
 
   static const List<String> usageTypeOptions = <String>[
     'زراعة',
@@ -153,6 +162,7 @@ class Parcel {
     final Object? cropType = _unset,
     final Object? notes = _unset,
     final Object? creditType = _unset,
+    final Object? reformType = _unset,
     final Object? isInheritance = _unset,
     final Object? isDelegate = _unset,
     final Object? usageType = _unset,
@@ -184,6 +194,7 @@ class Parcel {
       cropType: resolve(cropType, this.cropType),
       notes: resolve(notes, this.notes),
       creditType: resolve(creditType, this.creditType),
+      reformType: resolve(reformType, this.reformType),
       isInheritance: resolve(isInheritance, this.isInheritance),
       isDelegate: resolve(isDelegate, this.isDelegate),
       usageType: resolve(usageType, this.usageType),
@@ -211,6 +222,7 @@ class Parcel {
         'cropType': cropType,
         'notes': notes,
         'creditType': creditType,
+        'reformType': reformType,
         'isInheritance': isInheritance,
         'isDelegate': isDelegate,
         'usageType': usageType,
@@ -248,6 +260,7 @@ class Parcel {
       cropType: json['cropType'] as String?,
       notes: json['notes'] as String?,
       creditType: json['creditType'] as String? ?? defaultCreditType,
+      reformType: json['reformType'] as String? ?? defaultReformType,
       isInheritance: json['isInheritance'] as bool? ?? false,
       isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,
@@ -282,6 +295,7 @@ class Parcel {
         'cropType': cropType,
         'notes': notes,
         'creditType': creditType,
+        'reformType': reformType,
         'isInheritance': isInheritance,
         'isDelegate': isDelegate,
         'usageType': usageType,
@@ -313,6 +327,7 @@ class Parcel {
       cropType: json['cropType'] as String?,
       notes: json['notes'] as String?,
       creditType: json['creditType'] as String? ?? defaultCreditType,
+      reformType: json['reformType'] as String? ?? defaultReformType,
       isInheritance: json['isInheritance'] as bool? ?? false,
       isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,

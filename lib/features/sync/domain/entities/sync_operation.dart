@@ -120,8 +120,7 @@ final class EditHoldingOperation extends SyncOperation {
         'payload': payload,
       };
 
-  factory EditHoldingOperation.fromJson(final Map<String, dynamic> json) =>
-      EditHoldingOperation(
+  factory EditHoldingOperation.fromJson(final Map<String, dynamic> json) => EditHoldingOperation(
         id: json['id'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),
@@ -219,8 +218,7 @@ final class BulkEditOperation extends SyncOperation {
         'rows': rows.map((final BulkEditRow r) => r.toJson()).toList(),
       };
 
-  factory BulkEditOperation.fromJson(final Map<String, dynamic> json) =>
-      BulkEditOperation(
+  factory BulkEditOperation.fromJson(final Map<String, dynamic> json) => BulkEditOperation(
         id: json['id'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),
@@ -290,8 +288,7 @@ final class AddRecordOperation extends SyncOperation {
         'record': record,
       };
 
-  factory AddRecordOperation.fromJson(final Map<String, dynamic> json) =>
-      AddRecordOperation(
+  factory AddRecordOperation.fromJson(final Map<String, dynamic> json) => AddRecordOperation(
         id: json['id'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         attempts: _attemptsOf(json),

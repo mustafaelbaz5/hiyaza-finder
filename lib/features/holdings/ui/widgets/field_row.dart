@@ -36,9 +36,8 @@ class FieldRow extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String displayValue = (value == null || value!.trim().isEmpty)
-        ? (placeholder ?? emptyPlaceholder)
-        : value!;
+    final String displayValue =
+        (value == null || value!.trim().isEmpty) ? (placeholder ?? emptyPlaceholder) : value!;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -77,8 +76,7 @@ class FieldRow extends StatelessWidget {
             ),
           ),
           if (onEdit != null)
-            TileIconButton(
-                icon: Icons.edit_rounded, onTap: onEdit!, tooltip: 'تعديل'),
+            TileIconButton(icon: Icons.edit_rounded, onTap: onEdit!, tooltip: 'تعديل'),
           TileIconButton(
             icon: Icons.copy_rounded,
             onTap: () => _copy(context, displayValue),

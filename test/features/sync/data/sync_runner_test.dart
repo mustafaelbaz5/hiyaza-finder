@@ -86,8 +86,7 @@ class _FakeSyncApi implements SyncApi {
   }
 }
 
-EditHoldingOperation _op(final String id, {final int attempts = 0}) =>
-    EditHoldingOperation(
+EditHoldingOperation _op(final String id, {final int attempts = 0}) => EditHoldingOperation(
       id: id,
       createdAt: DateTime(2026),
       attempts: attempts,
@@ -117,8 +116,7 @@ void main() {
     expect(await outbox.pending(), isEmpty);
   });
 
-  test('a failed push increments attempts and keeps the operation queued',
-      () async {
+  test('a failed push increments attempts and keeps the operation queued', () async {
     api.failingIds.add('a');
     await outbox.enqueue(_op('a'));
     await runner.flush();
@@ -129,8 +127,7 @@ void main() {
     expect(pending.single.lastAttemptAt, isNotNull);
   });
 
-  test('an operation at syncMaxAttempts is skipped, not retried forever',
-      () async {
+  test('an operation at syncMaxAttempts is skipped, not retried forever', () async {
     await outbox.enqueue(_op('a', attempts: syncMaxAttempts));
     await runner.flush();
 
@@ -139,8 +136,7 @@ void main() {
     expect(await outbox.pending(), hasLength(1));
   });
 
-  test('a just-failed operation is skipped again immediately (backoff)',
-      () async {
+  test('a just-failed operation is skipped again immediately (backoff)', () async {
     api.failingIds.add('a');
     await outbox.enqueue(_op('a'));
     await runner.flush(); // attempts -> 1, lastAttemptAt set to "now"

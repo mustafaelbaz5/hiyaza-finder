@@ -35,8 +35,7 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<CitySnapshot?> _tryLoadCachedCity() async {
     try {
-      final CitySnapshot? snapshot =
-          await _cityRepository.loadActiveCachedSnapshot();
+      final CitySnapshot? snapshot = await _cityRepository.loadActiveCachedSnapshot();
       if (snapshot == null) return null;
       await _repository.loadParcelsForCity(
         snapshot.cityId,
@@ -64,8 +63,7 @@ class HomeCubit extends Cubit<HomeState> {
     final CitySnapshot? snapshot = _activeCitySnapshot;
     if (snapshot == null) return;
     try {
-      final int remoteVersion =
-          await _cityRepository.remoteDataVersion(snapshot.cityId);
+      final int remoteVersion = await _cityRepository.remoteDataVersion(snapshot.cityId);
       if (remoteVersion > snapshot.dataVersion) {
         emit(state.copyWith(isCityDataStale: true));
       }
@@ -87,8 +85,7 @@ class HomeCubit extends Cubit<HomeState> {
     final CitySnapshot? current = _activeCitySnapshot;
     if (current == null) return;
 
-    final int remoteVersion =
-        await _cityRepository.remoteDataVersion(current.cityId);
+    final int remoteVersion = await _cityRepository.remoteDataVersion(current.cityId);
     final CitySnapshot fresh = await _cityRepository.downloadCity(
       City(
         id: current.cityId,

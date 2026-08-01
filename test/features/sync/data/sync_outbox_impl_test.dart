@@ -61,8 +61,7 @@ void main() {
 
   test('update replaces an operation with the same id (e.g. after a retry)', () async {
     await outbox.enqueue(_op('a'));
-    final EditHoldingOperation bumped =
-        (_op('a')).withIncrementedAttempts(DateTime(2026, 1, 2));
+    final EditHoldingOperation bumped = (_op('a')).withIncrementedAttempts(DateTime(2026, 1, 2));
     await outbox.update(bumped);
 
     final List<SyncOperation> pending = await outbox.pending();

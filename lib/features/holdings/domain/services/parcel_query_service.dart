@@ -19,9 +19,8 @@ class ParcelQueryService {
     final String query, {
     final String? basin,
   }) {
-    final List<Parcel> scope = basin == null
-        ? parcels
-        : parcels.where((final Parcel p) => p.basinName == basin).toList();
+    final List<Parcel> scope =
+        basin == null ? parcels : parcels.where((final Parcel p) => p.basinName == basin).toList();
     return _searchService.search(scope, query);
   }
 
@@ -49,8 +48,7 @@ class ParcelQueryService {
       holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.groupKey);
     }
     return <String, int>{
-      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
-        e.key: e.value.length,
+      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries) e.key: e.value.length,
     };
   }
 

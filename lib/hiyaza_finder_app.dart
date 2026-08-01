@@ -22,8 +22,7 @@ import 'features/sync/presentation/cubit/sync_status_cubit.dart';
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
 
-  static final GlobalKey<NavigatorState> _navigatorKey =
-      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   /// Width of the centred app column on desktop. Kept phone-like so the
   /// phone-first (375dp) layout and its ScreenUtil scaling stay natural
@@ -34,15 +33,13 @@ class HiyazaFinderApp extends StatelessWidget {
   /// phone layout (also covers narrow/resized desktop windows).
   static const double _frameBreakpoint = 640;
 
-  bool get _isDesktop =>
-      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   @override
   Widget build(final BuildContext context) {
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
-        final bool useFrame =
-            _isDesktop && constraints.maxWidth > _frameBreakpoint;
+        final bool useFrame = _isDesktop && constraints.maxWidth > _frameBreakpoint;
 
         if (!useFrame) return _buildApp();
 
@@ -78,10 +75,9 @@ class HiyazaFinderApp extends StatelessWidget {
             child: BlocProvider<SyncStatusCubit>.value(
               value: getIt<SyncStatusCubit>(),
               child: BlocListener<SessionCubit, SessionState>(
-                listenWhen:
-                    (final SessionState previous, final SessionState current) =>
-                        previous.status != SessionStatus.unauthenticated &&
-                        current.status == SessionStatus.unauthenticated,
+                listenWhen: (final SessionState previous, final SessionState current) =>
+                    previous.status != SessionStatus.unauthenticated &&
+                    current.status == SessionStatus.unauthenticated,
                 // Catches a session that becomes invalid while the user is
                 // already past login (e.g. an expired/revoked refresh
                 // token) and bounces them back rather than leaving screens
@@ -105,10 +101,9 @@ class HiyazaFinderApp extends StatelessWidget {
                         locale: settings.locale, // driven by cubit
                         debugShowCheckedModeBanner: false,
                         scrollBehavior: const _AppScrollBehavior(),
-                        initialRoute:
-                            getIt<SessionCubit>().state.isAuthenticated
-                                ? Routes.home
-                                : Routes.login,
+                        initialRoute: getIt<SessionCubit>().state.isAuthenticated
+                            ? Routes.home
+                            : Routes.login,
                         onGenerateRoute: AppRouter.generateRoute,
                         title: AppConfig.appName,
                         // font family injected into both themes
@@ -145,8 +140,7 @@ class _AppLifecycleSyncTrigger extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_AppLifecycleSyncTrigger> createState() =>
-      _AppLifecycleSyncTriggerState();
+  State<_AppLifecycleSyncTrigger> createState() => _AppLifecycleSyncTriggerState();
 }
 
 class _AppLifecycleSyncTriggerState extends State<_AppLifecycleSyncTrigger>

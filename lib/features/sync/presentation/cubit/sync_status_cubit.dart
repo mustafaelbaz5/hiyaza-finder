@@ -43,8 +43,7 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
   Future<void> _refresh() async {
     final List<SyncOperation> ops = await _queue.pending();
     if (isClosed) return;
-    final int failed =
-        ops.where((final SyncOperation o) => o.attempts >= syncMaxAttempts).length;
+    final int failed = ops.where((final SyncOperation o) => o.attempts >= syncMaxAttempts).length;
     emit(state.copyWith(pendingCount: ops.length, failedCount: failed));
   }
 

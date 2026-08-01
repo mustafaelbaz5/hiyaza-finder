@@ -14,9 +14,7 @@ extension DateTimeExt on DateTime {
 
   bool get isYesterday {
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    return year == yesterday.year &&
-        month == yesterday.month &&
-        day == yesterday.day;
+    return year == yesterday.year && month == yesterday.month && day == yesterday.day;
   }
 
   String get timeAgo {
@@ -29,6 +27,5 @@ extension DateTimeExt on DateTime {
     return 'Just now';
   }
 
-  String _plural(final int value, final String unit) =>
-      '$value $unit${value == 1 ? '' : 's'} ago';
+  String _plural(final int value, final String unit) => '$value $unit${value == 1 ? '' : 's'} ago';
 }

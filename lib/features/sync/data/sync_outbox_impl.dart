@@ -15,8 +15,7 @@ class SyncOutboxImpl implements SyncQueue {
   static const String _key = 'sync_outbox';
 
   final KeyValueStore _keyValueStore;
-  final StreamController<int> _countController =
-      StreamController<int>.broadcast();
+  final StreamController<int> _countController = StreamController<int>.broadcast();
 
   @override
   Stream<int> get pendingCountChanges => _countController.stream;
@@ -27,8 +26,7 @@ class SyncOutboxImpl implements SyncQueue {
     final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
     return decoded
         .map(
-          (final dynamic e) =>
-              SyncOperation.fromJson(e as Map<String, dynamic>),
+          (final dynamic e) => SyncOperation.fromJson(e as Map<String, dynamic>),
         )
         .toList();
   }
@@ -49,7 +47,8 @@ class SyncOutboxImpl implements SyncQueue {
 
   @override
   Future<void> enqueue(final SyncOperation operation) async {
-    final List<SyncOperation> ops = await _readAll()..add(operation);
+    final List<SyncOperation> ops = await _readAll()
+      ..add(operation);
     await _writeAll(ops);
   }
 

@@ -14,13 +14,10 @@ import 'session_state.dart';
 /// sign-out (e.g. a refresh token that stops being valid) and reflects it
 /// here without any screen having to notice on its own.
 class SessionCubit extends Cubit<SessionState> {
-  SessionCubit(this._authRepository)
-      : super(_initialState(_authRepository)) {
+  SessionCubit(this._authRepository) : super(_initialState(_authRepository)) {
     _subscription = _authRepository.userChanges.listen((final AppUser? user) {
       emit(
-        user == null
-            ? SessionState.unauthenticated()
-            : SessionState.authenticated(user),
+        user == null ? SessionState.unauthenticated() : SessionState.authenticated(user),
       );
     });
   }
@@ -30,9 +27,7 @@ class SessionCubit extends Cubit<SessionState> {
 
   static SessionState _initialState(final AuthRepository repo) {
     final AppUser? user = repo.currentUser;
-    return user == null
-        ? SessionState.unauthenticated()
-        : SessionState.authenticated(user);
+    return user == null ? SessionState.unauthenticated() : SessionState.authenticated(user);
   }
 
   Future<void> signIn({

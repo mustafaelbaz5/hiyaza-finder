@@ -197,8 +197,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Distinct-holding count per اسم الحوض — how many holdings sit in each
   /// basin, shown beside the basin filter/status views.
   @override
-  Map<String, int> get basinHoldingCounts =>
-      _queryService.basinHoldingCounts(_parcels);
+  Map<String, int> get basinHoldingCounts => _queryService.basinHoldingCounts(_parcels);
 
   @override
   List<Parcel> parcelsForHolding(final String holdingId) =>

@@ -72,8 +72,7 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String holdingId =
-        _parcels.isNotEmpty ? _parcels.first.holdingId : '';
+    final String holdingId = _parcels.isNotEmpty ? _parcels.first.holdingId : '';
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -162,6 +161,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             isEdited: _repository.isParcelEdited(parcel.id),
                             isNew: _repository.isNewLocalRecord(parcel.id),
                             hideCreditType: _repository.hideCreditType,
+                            cityType: _repository.activeCityType,
                             onFieldChanged: _updateField,
                             animationDelay: Duration(milliseconds: i * 80),
                           ),

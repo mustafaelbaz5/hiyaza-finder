@@ -1,4 +1,4 @@
-﻿import 'package:easy_localization/easy_localization.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -11,6 +11,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../cities/domain/entities/city_type.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/clipboard_formatter.dart';
 import '../../logic/services/area_calculator.dart';
@@ -32,6 +33,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.isEdited = false,
     this.isNew = false,
     this.hideCreditType = false,
+    this.cityType = CityType.unspecified,
     this.animationDelay = Duration.zero,
   });
 
@@ -51,6 +53,10 @@ class ParcelDetailCard extends StatelessWidget {
   /// (`HoldingsRepository.hideCreditType`) rather than read via DI here,
   /// so this reusable/tested widget stays a pure function of its props.
   final bool hideCreditType;
+
+  /// The active city's detected agricultural system — determines whether to
+  /// display نوع الائتمان (agricultural credit) or نوع الإصلاح (reform).
+  final CityType cityType;
   final Duration animationDelay;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
@@ -118,8 +124,7 @@ class ParcelDetailCard extends StatelessWidget {
                   context,
                   title: 'اسم المالك',
                   initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(ownerName: v.isEmpty ? null : v),
+                  apply: (final String v) => parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(label: 'اسم الحائز', value: parcel.holderName),
@@ -159,13 +164,11 @@ class ParcelDetailCard extends StatelessWidget {
             parcel: parcel,
             onFieldChanged: onFieldChanged,
             hideCreditType: hideCreditType,
+            cityType: cityType,
           ),
         ],
       ),
-    )
-        .animate(delay: animationDelay)
-        .fadeIn(duration: 300.ms)
-        .slideY(begin: 0.04, end: 0);
+    ).animate(delay: animationDelay).fadeIn(duration: 300.ms).slideY(begin: 0.04, end: 0);
   }
 
   Future<void> _editText(
@@ -197,8 +200,7 @@ class ParcelDetailCard extends StatelessWidget {
       context,
       title: title,
       options: [
-        for (final String option in options)
-          ChoiceOption<String>(value: option, label: option),
+        for (final String option in options) ChoiceOption<String>(value: option, label: option),
       ],
       selected: initialValue,
       clearLabel: allowClear ? '—' : null,
@@ -241,7 +243,11 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    final String text = _formatter.format(parcel, hideCreditType: hideCreditType);
+    final String text = _formatter.format(
+      parcel,
+      hideCreditType: hideCreditType,
+      cityType: cityType,
+    );
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) {
       HapticFeedback.mediumImpact();

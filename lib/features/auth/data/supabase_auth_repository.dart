@@ -24,9 +24,7 @@ class SupabaseAuthRepository implements AuthRepository {
     return AppUser(
       id: user.id,
       email: user.email ?? '',
-      displayName: (displayName == null || displayName.isEmpty)
-          ? (user.email ?? '')
-          : displayName,
+      displayName: (displayName == null || displayName.isEmpty) ? (user.email ?? '') : displayName,
       role: UserRole.field,
     );
   }

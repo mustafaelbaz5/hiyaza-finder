@@ -111,7 +111,8 @@ void main() {
     expect(service.search(parcels, '   '), isEmpty);
   });
 
-  test('two pending (not-yet-numbered) new people are not merged into one '
+  test(
+      'two pending (not-yet-numbered) new people are not merged into one '
       'result — they share the same placeholder holdingId but have '
       'distinct ids, so grouping must key off Parcel.groupKey, not the '
       'raw holdingId', () {

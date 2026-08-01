@@ -69,8 +69,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  test('labels an AddRecordOperation with no parentHoldingId as a new person',
-      () {
+  test('labels an AddRecordOperation with no parentHoldingId as a new person', () {
     final AddRecordOperation op = AddRecordOperation(
       id: 'a',
       createdAt: DateTime(2026),
@@ -92,8 +91,7 @@ void main() {
     expect(syncOperationSummary(op), isNot(contains('محمد')));
   });
 
-  test('labels an AddRecordOperation with a parentHoldingId as a new parcel',
-      () {
+  test('labels an AddRecordOperation with a parentHoldingId as a new parcel', () {
     final AddRecordOperation op = AddRecordOperation(
       id: 'a',
       createdAt: DateTime(2026),

@@ -35,8 +35,7 @@ void main() {
         payload: const <String, dynamic>{},
       );
       final DateTime attemptedAt = DateTime(2026, 2, 1);
-      final EditHoldingOperation bumped =
-          op.withIncrementedAttempts(attemptedAt);
+      final EditHoldingOperation bumped = op.withIncrementedAttempts(attemptedAt);
 
       expect(bumped.attempts, 1);
       expect(bumped.lastAttemptAt, attemptedAt);
@@ -99,8 +98,7 @@ void main() {
         record: const <String, dynamic>{'holder_name': 'محمد'},
       );
 
-      final AddRecordOperation r =
-          SyncOperation.fromJson(op.toJson()) as AddRecordOperation;
+      final AddRecordOperation r = SyncOperation.fromJson(op.toJson()) as AddRecordOperation;
       expect(r.parentHoldingId, 'parent-1');
     });
   });

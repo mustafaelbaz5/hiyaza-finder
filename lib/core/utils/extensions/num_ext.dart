@@ -1,6 +1,5 @@
 extension NumExt on num {
-  String toCurrency({final String symbol = '\$'}) =>
-      '$symbol${toStringAsFixed(2)}';
+  String toCurrency({final String symbol = '\$'}) => '$symbol${toStringAsFixed(2)}';
 
   String toFileSize() {
     if (this < 1024) return '$this B';

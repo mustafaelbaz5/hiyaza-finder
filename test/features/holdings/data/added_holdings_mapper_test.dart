@@ -55,7 +55,8 @@ void main() {
     expect(record['holding_id_number'], '101');
   });
 
-  test('the "-1" placeholder is sent literally, not converted to null — '
+  test(
+      'the "-1" placeholder is sent literally, not converted to null — '
       "isHoldingIdPending only affects app-side grouping/badge display, "
       'not what reaches the server', () {
     const Parcel p = Parcel(holdingId: '-1', holderName: 'محمد');
@@ -71,7 +72,8 @@ void main() {
     expect(record['sahm'], 0);
   });
 
-  test('feddan/qirat/sahm serialize as int, not double — the DB columns are '
+  test(
+      'feddan/qirat/sahm serialize as int, not double — the DB columns are '
       '`int`, and Postgres rejects a JSON double like 1.0 with "invalid '
       'input syntax for type integer" even when the value is whole '
       '(Dart\'s `1.0 == 1` being true means a plain value-equality check '

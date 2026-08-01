@@ -25,9 +25,7 @@ class ToggleFieldRow extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String stateText = value
-        ? (activeLabel ?? 'نعم')
-        : (inactiveLabel ?? 'لا');
+    final String stateText = value ? (activeLabel ?? 'نعم') : (inactiveLabel ?? 'لا');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),

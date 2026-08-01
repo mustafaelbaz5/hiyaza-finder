@@ -52,8 +52,7 @@ class CityRepositoryImpl implements CityRepository {
   }
 
   @override
-  Future<int> remoteDataVersion(final String cityId) =>
-      _dataSource.remoteDataVersion(cityId);
+  Future<int> remoteDataVersion(final String cityId) => _dataSource.remoteDataVersion(cityId);
 
   @override
   Future<List<CachedCityMeta>> listCachedCities() async {

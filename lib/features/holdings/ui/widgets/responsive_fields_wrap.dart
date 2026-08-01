@@ -23,8 +23,7 @@ class ResponsiveFieldsWrap extends StatelessWidget {
           spacing: _spacing,
           runSpacing: _spacing,
           children: [
-            for (final Widget child in children)
-              SizedBox(width: itemWidth, child: child),
+            for (final Widget child in children) SizedBox(width: itemWidth, child: child),
           ],
         );
       },

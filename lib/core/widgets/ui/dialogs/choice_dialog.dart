@@ -69,8 +69,7 @@ class _ChoiceDialog<T> extends StatelessWidget {
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(horizontal: rw(32), vertical: rh(24)),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
       backgroundColor: colors.surface,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: rh(440)),
@@ -97,8 +96,7 @@ class _ChoiceDialog<T> extends StatelessWidget {
                         label: clearLabel!,
                         isSelected: selected == null,
                         icon: Icons.remove_circle_outline_rounded,
-                        onTap: () => Navigator.pop(
-                            context, ChoiceDialogResult<T>.clear()),
+                        onTap: () => Navigator.pop(context, ChoiceDialogResult<T>.clear()),
                       ),
                     for (final ChoiceOption<T> option in options)
                       _ChoiceTile(
@@ -145,9 +143,7 @@ class _ChoiceTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary50.withValues(alpha: 0.35)
-              : Colors.transparent,
+          color: isSelected ? AppColors.primary50.withValues(alpha: 0.35) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary200 : colors.border,
@@ -157,9 +153,7 @@ class _ChoiceTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isSelected
-                  ? Icons.check_circle_rounded
-                  : (icon ?? Icons.radio_button_off_rounded),
+              isSelected ? Icons.check_circle_rounded : (icon ?? Icons.radio_button_off_rounded),
               size: 20,
               color: isSelected ? AppColors.primary200 : colors.iconSecondary,
             ),

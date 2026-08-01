@@ -38,8 +38,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
     if (_downloadingCity != null) return;
     setState(() => _downloadingCity = city);
 
-    final CitySnapshot? snapshot =
-        await context.read<CityPickerCubit>().downloadAndActivate(city);
+    final CitySnapshot? snapshot = await context.read<CityPickerCubit>().downloadAndActivate(city);
 
     if (!mounted) return;
     if (snapshot != null) {
@@ -92,8 +91,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                     );
                   }
 
-                  if (state.status == CityPickerStatus.error &&
-                      state.cities.isEmpty) {
+                  if (state.status == CityPickerStatus.error && state.cities.isEmpty) {
                     return Center(
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: rw(24)),
@@ -132,10 +130,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                           city: city,
                           isDownloading: _downloadingCity?.id == city.id,
                           onTap: () => _pick(city),
-                        )
-                            .animate()
-                            .fadeIn(duration: 220.ms, delay: (i * 30).ms)
-                            .slideY(
+                        ).animate().fadeIn(duration: 220.ms, delay: (i * 30).ms).slideY(
                               begin: 0.08,
                               end: 0,
                               duration: 220.ms,

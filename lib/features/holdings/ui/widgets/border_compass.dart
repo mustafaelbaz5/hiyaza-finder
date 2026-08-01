@@ -100,8 +100,7 @@ class _BorderCell extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String displayText =
-        (text == null || text!.trim().isEmpty) ? '—' : text!;
+    final String displayText = (text == null || text!.trim().isEmpty) ? '—' : text!;
 
     return Container(
       width: double.infinity,

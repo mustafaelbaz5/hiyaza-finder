@@ -69,8 +69,7 @@ void main() {
   });
 
   group('addedHoldingRowToParcel', () {
-    test('maps a full added_holdings row, including the in-app-only fields',
-        () {
+    test('maps a full added_holdings row, including the in-app-only fields', () {
       final Parcel p = addedHoldingRowToParcel(<String, dynamic>{
         'id': 'added-uuid-1',
         'holding_id_number': null, // brand-new person, no number yet
@@ -120,7 +119,8 @@ void main() {
       expect(p.isDelegate, isFalse);
     });
 
-    test('a promoted person\'s holding_id_number (assigned by the '
+    test(
+        'a promoted person\'s holding_id_number (assigned by the '
         'dashboard) is preserved, not treated as pending', () {
       final Parcel p = addedHoldingRowToParcel(<String, dynamic>{
         'id': 'added-uuid-3',

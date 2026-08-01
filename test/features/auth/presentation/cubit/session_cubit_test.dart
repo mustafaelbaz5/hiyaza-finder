@@ -12,8 +12,7 @@ class _FakeAuthRepository implements AuthRepository {
 
   AppUser? initialUser;
   Object? signInError;
-  final StreamController<AppUser?> _controller =
-      StreamController<AppUser?>.broadcast();
+  final StreamController<AppUser?> _controller = StreamController<AppUser?>.broadcast();
 
   bool signOutCalled = false;
 
@@ -84,8 +83,7 @@ void main() {
     repo.dispose();
   });
 
-  test('signIn failure emits unauthenticated with an error message',
-      () async {
+  test('signIn failure emits unauthenticated with an error message', () async {
     final _FakeAuthRepository repo = _FakeAuthRepository()
       ..signInError = UnauthorizedException(message: 'Invalid email or password.');
     final SessionCubit cubit = SessionCubit(repo);

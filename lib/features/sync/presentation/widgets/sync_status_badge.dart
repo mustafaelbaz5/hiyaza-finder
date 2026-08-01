@@ -24,8 +24,7 @@ class SyncStatusBadge extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        final Color tint =
-            state.hasFailed ? AppColors.red200 : AppColors.amber300;
+        final Color tint = state.hasFailed ? AppColors.red200 : AppColors.amber300;
         final String label = state.isSyncing
             ? 'sync.status.syncing'.tr()
             : state.hasFailed
@@ -62,9 +61,7 @@ class SyncStatusBadge extends StatelessWidget {
                     )
                   else
                     Icon(
-                      state.hasFailed
-                          ? Icons.sync_problem_rounded
-                          : Icons.cloud_sync_rounded,
+                      state.hasFailed ? Icons.sync_problem_rounded : Icons.cloud_sync_rounded,
                       size: 14,
                       color: tint,
                     ),

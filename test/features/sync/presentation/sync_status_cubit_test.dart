@@ -83,8 +83,7 @@ class _FakeSyncApi implements SyncApi {
   }) async {}
 }
 
-EditHoldingOperation _op(final String id, {final int attempts = 0}) =>
-    EditHoldingOperation(
+EditHoldingOperation _op(final String id, {final int attempts = 0}) => EditHoldingOperation(
       id: id,
       createdAt: DateTime(2026),
       attempts: attempts,
@@ -134,8 +133,7 @@ void main() {
     await cubit.close();
   });
 
-  test('retryFailed resets attempts and re-flushes, clearing failedCount on success',
-      () async {
+  test('retryFailed resets attempts and re-flushes, clearing failedCount on success', () async {
     final SyncOutboxImpl outbox = SyncOutboxImpl(_InMemoryKeyValueStore());
     await outbox.enqueue(_op('a', attempts: syncMaxAttempts));
     final _FakeSyncApi api = _FakeSyncApi(); // no longer failing

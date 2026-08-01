@@ -38,8 +38,7 @@ class VoiceSearchService {
     };
 
     await _speech.listen(
-      onResult: (final SpeechRecognitionResult result) =>
-          onResult(result.recognizedWords),
+      onResult: (final SpeechRecognitionResult result) => onResult(result.recognizedWords),
       listenOptions: stt.SpeechListenOptions(
         listenMode: stt.ListenMode.search,
         localeId: localeId,

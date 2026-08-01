@@ -40,20 +40,17 @@ class AppRouter {
         return _buildRoute(
           BlocProvider<HomeCubit>(
             create: (final _) =>
-                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepository>())
-                  ..init(),
+                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepository>())..init(),
             child: const HomeScreen(),
           ),
           settings,
         );
       case Routes.holdingDetail:
-        final List<Parcel> parcels =
-            (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
+        final List<Parcel> parcels = (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
         return _buildRoute(DetailScreen(parcels: parcels), settings);
       case Routes.addRecord:
-        final AddRecordArgs args =
-            (settings.arguments as AddRecordArgs?) ??
-                const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
+        final AddRecordArgs args = (settings.arguments as AddRecordArgs?) ??
+            const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
         return _buildRoute<bool>(
           AddRecordScreen(
             initialParcel: args.initialParcel,
@@ -76,8 +73,7 @@ class AppRouter {
   ) {
     return PageRouteBuilder<T>(
       settings: settings,
-      pageBuilder: (final context, final animation, final secondaryAnimation) =>
-          page,
+      pageBuilder: (final context, final animation, final secondaryAnimation) => page,
       transitionsBuilder: (
         final context,
         final animation,

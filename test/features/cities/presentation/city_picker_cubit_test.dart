@@ -95,8 +95,7 @@ void main() {
     expect(cubit.state.errorMessage, 'nope');
   });
 
-  test('downloadAndActivate returns the snapshot and populates HoldingsRepository',
-      () async {
+  test('downloadAndActivate returns the snapshot and populates HoldingsRepository', () async {
     final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
     const City city =
         City(id: 'c1', name: 'مدينة اختبار', status: CityStatus.published, dataVersion: 1);
@@ -109,8 +108,7 @@ void main() {
     expect(holdingsRepository.parcels.first.holdingId, '101');
   });
 
-  test('downloadAndActivate returns null and surfaces the error on failure',
-      () async {
+  test('downloadAndActivate returns null and surfaces the error on failure', () async {
     cityRepository.downloadError = UnauthorizedException(message: 'denied');
     final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
     const City city =

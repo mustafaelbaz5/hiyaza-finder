@@ -63,10 +63,8 @@ class SyncRunner {
   }
 
   Future<void> _push(final SyncOperation op, final String userId) => switch (op) {
-        final EditHoldingOperation o =>
-          _api.pushEditHolding(o, editedByUserId: userId),
+        final EditHoldingOperation o => _api.pushEditHolding(o, editedByUserId: userId),
         final BulkEditOperation o => _api.pushBulkEdit(o, editedByUserId: userId),
-        final AddRecordOperation o =>
-          _api.pushAddRecord(o, createdByUserId: userId),
+        final AddRecordOperation o => _api.pushAddRecord(o, createdByUserId: userId),
       };
 }

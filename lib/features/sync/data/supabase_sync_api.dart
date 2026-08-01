@@ -14,8 +14,7 @@ class SupabaseSyncApi implements SyncApi {
 
   final SupabaseClient _client;
 
-  bool _isDuplicate(final Object error) =>
-      error is PostgrestException && error.code == '23505';
+  bool _isDuplicate(final Object error) => error is PostgrestException && error.code == '23505';
 
   @override
   Future<void> pushEditHolding(

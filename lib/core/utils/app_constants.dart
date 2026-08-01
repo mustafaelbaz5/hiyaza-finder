@@ -84,12 +84,8 @@ class AppConstants {
   );
 
   // Error Messages
-  static const String genericErrorMessage =
-      'Something went wrong. Please try again.';
-  static const String networkErrorMessage =
-      'No internet connection. Please check your network.';
-  static const String timeoutErrorMessage =
-      'Request timeout. Please try again.';
-  static const String unauthorizedErrorMessage =
-      'Unauthorized. Please login again.';
+  static const String genericErrorMessage = 'Something went wrong. Please try again.';
+  static const String networkErrorMessage = 'No internet connection. Please check your network.';
+  static const String timeoutErrorMessage = 'Request timeout. Please try again.';
+  static const String unauthorizedErrorMessage = 'Unauthorized. Please login again.';
 }

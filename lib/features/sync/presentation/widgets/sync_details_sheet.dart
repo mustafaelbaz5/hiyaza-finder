@@ -193,9 +193,7 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
                             onPressed: state.isSyncing
                                 ? null
                                 : () => _runAndReport(
-                                      () => context
-                                          .read<SyncStatusCubit>()
-                                          .retryFailed(),
+                                      () => context.read<SyncStatusCubit>().retryFailed(),
                                     ),
                             child: Text('sync.details.retry_all'.tr()),
                           ),
@@ -210,9 +208,7 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
                           onPressed: state.isSyncing
                               ? null
                               : () => _runAndReport(
-                                    () => context
-                                        .read<SyncStatusCubit>()
-                                        .flushNow(),
+                                    () => context.read<SyncStatusCubit>().flushNow(),
                                   ),
                           child: Text(
                             'sync.details.sync_now'.tr(),
@@ -252,9 +248,7 @@ class _SyncOperationTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: failed
-            ? AppColors.red50.withValues(alpha: 0.3)
-            : colors.surface,
+        color: failed ? AppColors.red50.withValues(alpha: 0.3) : colors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: failed ? AppColors.red200 : colors.border,

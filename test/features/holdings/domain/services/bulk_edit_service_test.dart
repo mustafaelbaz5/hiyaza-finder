@@ -42,9 +42,7 @@ void main() {
       isTrue,
     );
     expect(
-      result.parcels
-          .firstWhere((final Parcel p) => p.basinName == 'السواخ')
-          .notes,
+      result.parcels.firstWhere((final Parcel p) => p.basinName == 'السواخ').notes,
       isNull,
     );
   });
@@ -63,9 +61,8 @@ void main() {
   });
 
   test('a value can clear a nullable field', () {
-    final List<Parcel> withCrop = parcels
-        .map((final Parcel p) => p.copyWith(cropType: 'قمح'))
-        .toList();
+    final List<Parcel> withCrop =
+        parcels.map((final Parcel p) => p.copyWith(cropType: 'قمح')).toList();
 
     final BulkEditResult result = service.apply(
       withCrop,

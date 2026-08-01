@@ -61,8 +61,7 @@ void main() {
 
     test('parcelsForHolding scoped to one groupKey returns only that person', () {
       final String firstKey = pendingParcels[0].groupKey;
-      final List<Parcel> result =
-          service.parcelsForHolding(pendingParcels, firstKey);
+      final List<Parcel> result = service.parcelsForHolding(pendingParcels, firstKey);
       expect(result, hasLength(1));
       expect(result.single.holderName, 'شخص أول');
     });

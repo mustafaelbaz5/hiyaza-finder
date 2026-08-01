@@ -15,9 +15,8 @@ class AreaCalculator {
     final double? sahm,
   }) {
     if (feddan == null && qirat == null && sahm == null) return null;
-    final double total = (feddan ?? 0) * _sqmPerFeddan +
-        (qirat ?? 0) * _sqmPerQirat +
-        (sahm ?? 0) * _sqmPerSahm;
+    final double total =
+        (feddan ?? 0) * _sqmPerFeddan + (qirat ?? 0) * _sqmPerQirat + (sahm ?? 0) * _sqmPerSahm;
     return double.parse(total.toStringAsFixed(2));
   }
 }

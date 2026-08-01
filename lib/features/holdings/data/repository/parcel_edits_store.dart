@@ -21,11 +21,9 @@ class ParcelEditsStore {
     final String? raw = await _store.getString(_prefsKey(fileKey));
     if (raw == null || raw.isEmpty) return <String, Map<String, dynamic>>{};
 
-    final Map<String, dynamic> decoded =
-        jsonDecode(raw) as Map<String, dynamic>;
+    final Map<String, dynamic> decoded = jsonDecode(raw) as Map<String, dynamic>;
     return decoded.map(
-      (final String id, final dynamic fields) =>
-          MapEntry<String, Map<String, dynamic>>(
+      (final String id, final dynamic fields) => MapEntry<String, Map<String, dynamic>>(
         id,
         (fields as Map<String, dynamic>),
       ),

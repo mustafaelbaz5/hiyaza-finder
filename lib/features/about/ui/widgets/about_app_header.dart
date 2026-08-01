@@ -60,8 +60,7 @@ class AboutAppHeader extends StatelessWidget {
                 ),
                 child: Text(
                   'about.app_info.development_badge'.tr(),
-                  style:
-                      AppTextStyles.font12Bold.copyWith(color: AppColors.white),
+                  style: AppTextStyles.font12Bold.copyWith(color: AppColors.white),
                 ),
               ),
             ],

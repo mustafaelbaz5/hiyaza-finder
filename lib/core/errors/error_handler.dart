@@ -9,9 +9,7 @@ class ErrorHandler {
   static Never handleException(final dynamic error) {
     if (error is AppException) throw error;
 
-    if (error is AuthException ||
-        error is PostgrestException ||
-        error is StorageException) {
+    if (error is AuthException || error is PostgrestException || error is StorageException) {
       throw SupabaseHandler.handle(error);
     }
 
@@ -25,9 +23,7 @@ class ErrorHandler {
   }
 
   static AppException _toException(final dynamic error) {
-    if (error is AuthException ||
-        error is PostgrestException ||
-        error is StorageException) {
+    if (error is AuthException || error is PostgrestException || error is StorageException) {
       return SupabaseHandler.handle(error);
     }
     return ServerException(message: error?.toString() ?? 'Unknown error.');

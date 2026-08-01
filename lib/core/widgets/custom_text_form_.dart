@@ -104,12 +104,11 @@ class _CustomTextFormState extends State<CustomTextForm> {
           color: widget.enabled ? colors.textPrimary : colors.textDisabled,
         );
 
-    final TextStyle effectiveHintStyle = widget.hintStyle ??
-        AppTextStyles.font16Regular.copyWith(color: colors.textHint);
+    final TextStyle effectiveHintStyle =
+        widget.hintStyle ?? AppTextStyles.font16Regular.copyWith(color: colors.textHint);
 
     final Color defaultBorder = widget.borderColor ?? colors.border;
-    final Color focusedBorder =
-        widget.focusedBorderColor ?? AppColors.primary50;
+    final Color focusedBorder = widget.focusedBorderColor ?? AppColors.primary50;
     final Color fillColor = widget.backgroundColor ?? colors.surface;
 
     return TextFormField(
@@ -138,8 +137,8 @@ class _CustomTextFormState extends State<CustomTextForm> {
         hintStyle: effectiveHintStyle,
         hintTextDirection: textDirection,
         counterText: '',
-        contentPadding: widget.contentPadding ??
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+        contentPadding:
+            widget.contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
 
         // ─── Prefix / Suffix ───────────────────────────────────────
         prefixIcon: widget.prefixIcon,

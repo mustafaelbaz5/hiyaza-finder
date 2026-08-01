@@ -15,11 +15,8 @@ class ArabicNormalizer {
     // Dart strings are UTF-16 and already NFC-normalized in practice for
     // Arabic text; no separate NFC step is available without extra
     // packages, so this mirrors the effective behavior.
-    result = result
-        .replaceAll('ى', 'ي')
-        .replaceAll('أ', 'ا')
-        .replaceAll('إ', 'ا')
-        .replaceAll('آ', 'ا');
+    result =
+        result.replaceAll('ى', 'ي').replaceAll('أ', 'ا').replaceAll('إ', 'ا').replaceAll('آ', 'ا');
 
     result = result.replaceAll(_diacritics, '');
     result = result.replaceAll(_whitespace, ' ').trim();

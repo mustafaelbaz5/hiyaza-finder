@@ -35,7 +35,8 @@ void main() {
       expect(p.groupKey, '101');
     });
 
-    test('is derived from the unique id for a pending record, not the '
+    test(
+        'is derived from the unique id for a pending record, not the '
         'shared placeholder — two different new people must not collide '
         'just because neither has a real number yet', () {
       const Parcel a = Parcel(id: 'a', holdingId: '-');

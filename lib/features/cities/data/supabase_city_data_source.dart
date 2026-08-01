@@ -34,8 +34,7 @@ class SupabaseCityDataSource {
     final List<Map<String, dynamic>> all = <Map<String, dynamic>>[];
     int from = 0;
     while (true) {
-      final List<Map<String, dynamic>> page =
-          await query.range(from, from + _pageSize - 1);
+      final List<Map<String, dynamic>> page = await query.range(from, from + _pageSize - 1);
       all.addAll(page);
       if (page.length < _pageSize) break;
       from += _pageSize;
@@ -45,11 +44,8 @@ class SupabaseCityDataSource {
 
   Future<List<City>> listPublishedCities() async {
     try {
-      final List<Map<String, dynamic>> rows = await _client
-          .from('cities')
-          .select()
-          .eq('status', 'published')
-          .order('name');
+      final List<Map<String, dynamic>> rows =
+          await _client.from('cities').select().eq('status', 'published').order('name');
       return rows.map(_cityFromRow).toList();
     } catch (error) {
       ErrorHandler.handleException(error);
@@ -58,11 +54,8 @@ class SupabaseCityDataSource {
 
   Future<int> remoteDataVersion(final String cityId) async {
     try {
-      final Map<String, dynamic> row = await _client
-          .from('cities')
-          .select('data_version')
-          .eq('id', cityId)
-          .single();
+      final Map<String, dynamic> row =
+          await _client.from('cities').select('data_version').eq('id', cityId).single();
       return row['data_version'] as int;
     } catch (error) {
       ErrorHandler.handleException(error);
@@ -87,18 +80,11 @@ class SupabaseCityDataSource {
   Future<List<Parcel>> downloadHoldings(final String cityId) async {
     try {
       final List<Map<String, dynamic>> holdingRows = await _fetchAllPages(
-        _client
-            .from('holdings')
-            .select()
-            .eq('city_id', cityId)
-            .eq('is_stale', false),
+        _client.from('holdings').select().eq('city_id', cityId).eq('is_stale', false),
       );
 
       final List<Map<String, dynamic>> editRows = await _fetchAllPages(
-        _client
-            .from('holding_edits_latest')
-            .select('holding_id, payload')
-            .eq('city_id', cityId),
+        _client.from('holding_edits_latest').select('holding_id, payload').eq('city_id', cityId),
       );
 
       final List<Map<String, dynamic>> addedRows = await _fetchAllPages(

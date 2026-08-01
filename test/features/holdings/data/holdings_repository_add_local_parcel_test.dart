@@ -72,8 +72,7 @@ void main() {
     expect(syncQueue.enqueued, isEmpty);
   });
 
-  test('appends the new parcel to the in-memory dataset with a fresh id',
-      () async {
+  test('appends the new parcel to the in-memory dataset with a fresh id', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
@@ -84,8 +83,7 @@ void main() {
     expect(repository.parcels.single.holderName, 'محمد');
   });
 
-  test('enqueues an AddRecordOperation with a null parentHoldingId for a new person',
-      () async {
+  test('enqueues an AddRecordOperation with a null parentHoldingId for a new person', () async {
     await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
@@ -97,8 +95,7 @@ void main() {
     expect(op.record['holder_name'], 'محمد');
   });
 
-  test('enqueues an AddRecordOperation with the given parentHoldingId for a new parcel',
-      () async {
+  test('enqueues an AddRecordOperation with the given parentHoldingId for a new parcel', () async {
     await repository.addLocalParcel(
       const Parcel(holdingId: '101', holderName: 'محمد', landNumber: '-1'),
       parentHoldingId: 'existing-holding-id',
@@ -108,8 +105,7 @@ void main() {
     expect(op.parentHoldingId, 'existing-holding-id');
   });
 
-  test('the operation id matches the new parcel\'s id (doubles as client_id)',
-      () async {
+  test('the operation id matches the new parcel\'s id (doubles as client_id)', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
@@ -117,8 +113,7 @@ void main() {
     expect(op.id, added!.id);
   });
 
-  test('isNewLocalRecord is true for a just-added parcel and false otherwise',
-      () async {
+  test('isNewLocalRecord is true for a just-added parcel and false otherwise', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );

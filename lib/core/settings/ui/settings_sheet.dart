@@ -82,10 +82,8 @@ class _SettingsSheet extends StatelessWidget {
               ],
               verticalSpacing(24),
               BlocBuilder<AppSettingsCubit, AppSettingsState>(
-                builder:
-                    (final BuildContext context, final AppSettingsState state) {
-                  final AppSettingsCubit cubit =
-                      context.read<AppSettingsCubit>();
+                builder: (final BuildContext context, final AppSettingsState state) {
+                  final AppSettingsCubit cubit = context.read<AppSettingsCubit>();
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

@@ -130,6 +130,11 @@
     }
   },
   "holdings": {
+    "reform_types": {
+      "owned": "Owned Reform",
+      "cooperative": "Cooperative Reform",
+      "law_three": "Law Three Reform"
+    },
     "empty": {
       "title": "No data loaded",
       "desc": "Choose a city to download its data.",

@@ -65,8 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: BlocConsumer<SessionCubit, SessionState>(
           listenWhen: (final SessionState previous, final SessionState current) =>
-              previous.status != current.status ||
-              previous.errorMessage != current.errorMessage,
+              previous.status != current.status || previous.errorMessage != current.errorMessage,
           listener: (final BuildContext context, final SessionState state) {
             if (state.isAuthenticated) {
               context.pushNamedAndRemoveAll(Routes.home);

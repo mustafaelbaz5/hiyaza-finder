@@ -41,8 +41,7 @@ class CitySnapshotCache {
     final File file = await _fileFor(cityId);
     if (!file.existsSync()) return null;
 
-    final Map<String, dynamic> json =
-        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final Map<String, dynamic> json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
     return CitySnapshot(
       cityId: json['cityId'] as String,
       cityName: json['cityName'] as String,
@@ -82,8 +81,7 @@ class CitySnapshotCache {
     if (!file.existsSync()) return null;
 
     final int sizeBytes = file.statSync().size;
-    final Map<String, dynamic> json =
-        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final Map<String, dynamic> json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
     return CachedCityMeta(
       cityId: json['cityId'] as String,
       cityName: json['cityName'] as String,

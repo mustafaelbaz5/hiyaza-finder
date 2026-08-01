@@ -159,9 +159,7 @@ class _BasinTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary50.withValues(alpha: 0.3)
-              : colors.surface,
+          color: isSelected ? AppColors.primary50.withValues(alpha: 0.3) : colors.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary200 : colors.border,
@@ -171,9 +169,7 @@ class _BasinTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isSelected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
               color: isSelected ? AppColors.primary200 : colors.iconSecondary,
             ),
             horizontalSpacing(12),
@@ -202,9 +198,7 @@ class _BasinTile extends StatelessWidget {
                 child: Text(
                   '$count',
                   style: AppTextStyles.font12Bold.copyWith(
-                    color: isSelected
-                        ? AppColors.primary200
-                        : colors.textSecondary,
+                    color: isSelected ? AppColors.primary200 : colors.textSecondary,
                   ),
                 ),
               ),

@@ -43,9 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Voice search is Android-only: speech_to_text's desktop support is too
   // unreliable to expose on Windows.
   final VoiceSearchService? _voiceService =
-      defaultTargetPlatform == TargetPlatform.android
-          ? getIt<VoiceSearchService>()
-          : null;
+      defaultTargetPlatform == TargetPlatform.android ? getIt<VoiceSearchService>() : null;
   bool _isListening = false;
 
   @override
@@ -73,8 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final String localeId =
-        context.locale.languageCode == 'ar' ? 'ar-EG' : 'en-US';
+    final String localeId = context.locale.languageCode == 'ar' ? 'ar-EG' : 'en-US';
     final bool started = await voice.startListening(
       localeId: localeId,
       onResult: (final String text) {
@@ -115,8 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openCityPicker(final HomeCubit cubit) async {
-    final CitySnapshot? snapshot =
-        await context.pushNamed<CitySnapshot>(Routes.cityPicker);
+    final CitySnapshot? snapshot = await context.pushNamed<CitySnapshot>(Routes.cityPicker);
     if (snapshot != null && mounted) {
       cubit.loadFromDownloadedCity(snapshot);
     }
@@ -140,8 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: BlocConsumer<HomeCubit, HomeState>(
           listenWhen: (final HomeState previous, final HomeState current) =>
-              current.status == HomeStatus.loaded &&
-              previous.status != HomeStatus.loaded,
+              current.status == HomeStatus.loaded && previous.status != HomeStatus.loaded,
           listener: (final BuildContext context, final HomeState state) {
             _onCityLoaded(cubit);
           },
@@ -169,14 +164,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             state: state,
                             controller: _controller,
                             cubit: cubit,
-                            onQueryChanged: (final String q) =>
-                                _onQueryChanged(q, cubit),
+                            onQueryChanged: (final String q) => _onQueryChanged(q, cubit),
                             onOpenBasinFilter: () => _openBasinFilter(cubit),
                             onOpenFileStatus: () => _openFileStatus(cubit),
                             onChangeCity: () => _openCityPicker(cubit),
-                            onToggleVoice: _voiceService == null
-                                ? null
-                                : () => _toggleVoiceSearch(cubit),
+                            onToggleVoice:
+                                _voiceService == null ? null : () => _toggleVoiceSearch(cubit),
                             isListening: _isListening,
                           ),
                       },
@@ -280,9 +273,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
         IconButton(
           icon: Icon(
             widget.isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-            color: widget.isListening
-                ? AppColors.primary200
-                : colors.iconSecondary,
+            color: widget.isListening ? AppColors.primary200 : colors.iconSecondary,
           ),
           tooltip: 'holdings.search.voice'.tr(),
           onPressed: widget.onToggleVoice,
@@ -296,9 +287,8 @@ class _LoadedBodyState extends State<_LoadedBody> {
           },
         ),
     ];
-    final Widget? suffixIcon = suffixButtons.isEmpty
-        ? null
-        : Row(mainAxisSize: MainAxisSize.min, children: suffixButtons);
+    final Widget? suffixIcon =
+        suffixButtons.isEmpty ? null : Row(mainAxisSize: MainAxisSize.min, children: suffixButtons);
 
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
@@ -354,8 +344,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
                       child: RecommendationList(
                         query: widget.state.query,
                         results: widget.state.results,
-                        onSelect: (final SearchResult result) =>
-                            _openDetail(context, result),
+                        onSelect: (final SearchResult result) => _openDetail(context, result),
                         onAddNew: () => _openAddPerson(context),
                       ),
                     ),

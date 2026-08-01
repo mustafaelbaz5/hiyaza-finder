@@ -71,10 +71,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   /// Owner name defaults to holder name when left blank — most parcels
   /// have the same person as both, so this avoids making the user type
   /// the same name twice.
-  Parcel get _parcelToSave =>
-      (_parcel.ownerName?.trim().isEmpty ?? true)
-          ? _parcel.copyWith(ownerName: _parcel.holderName)
-          : _parcel;
+  Parcel get _parcelToSave => (_parcel.ownerName?.trim().isEmpty ?? true)
+      ? _parcel.copyWith(ownerName: _parcel.holderName)
+      : _parcel;
 
   Future<void> _save() async {
     if (!_canSave || _isSaving) return;
@@ -142,8 +141,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       context,
       title: title,
       options: [
-        for (final String option in options)
-          ChoiceOption<String>(value: option, label: option),
+        for (final String option in options) ChoiceOption<String>(value: option, label: option),
       ],
       selected: initialValue,
       clearLabel: allowClear ? '—' : null,
@@ -214,242 +212,240 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         backgroundColor: colors.background,
         body: SafeArea(
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            verticalSpacing(16),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16)),
-              child: Row(
-                children: [
-                  AppBackButton(
-                    onTap: () => _confirmDiscardAndPop(context),
-                  ),
-                  horizontalSpacing(12),
-                  Expanded(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              verticalSpacing(16),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                child: Row(
+                  children: [
+                    AppBackButton(
+                      onTap: () => _confirmDiscardAndPop(context),
+                    ),
+                    horizontalSpacing(12),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTextStyles.font20Bold.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.parentHoldingId != null) ...[
+                verticalSpacing(12),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.blue200.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     child: Text(
-                      title,
-                      style: AppTextStyles.font20Bold.copyWith(
-                        color: colors.textPrimary,
+                      'holdings.add.for_person'.tr(
+                        namedArgs: {
+                          'name': widget.initialParcel.holderName ?? '',
+                        },
+                      ),
+                      style: AppTextStyles.font12Bold.copyWith(
+                        color: AppColors.blue200,
                       ),
                       textAlign: TextAlign.right,
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (widget.parentHoldingId != null) ...[
-              verticalSpacing(12),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+                ),
+              ],
+              verticalSpacing(16),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
+                    bottom: rh(24),
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.blue200.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'holdings.add.for_person'.tr(
-                      namedArgs: {
-                        'name': widget.initialParcel.holderName ?? '',
-                      },
-                    ),
-                    style: AppTextStyles.font12Bold.copyWith(
-                      color: AppColors.blue200,
-                    ),
-                    textAlign: TextAlign.right,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ResponsiveFieldsWrap(
+                        children: [
+                          FieldRow(
+                            label: 'رقم الحيازة',
+                            value: _parcel.holdingId,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'رقم الحيازة',
+                              initialValue: _parcel.holdingId,
+                              apply: (final String v) => _parcel.copyWith(
+                                holdingId: v.isEmpty ? '-1' : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'اسم الحائز *',
+                            value: _parcel.holderName,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'اسم الحائز',
+                              initialValue: _parcel.holderName ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                holderName: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'اسم المالك',
+                            value: _parcel.ownerName,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'اسم المالك',
+                              initialValue: _parcel.ownerName ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                ownerName: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'الرقم القومي',
+                            value: _parcel.nationalId,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'الرقم القومي',
+                              initialValue: _parcel.nationalId ?? '',
+                              keyboardType: TextInputType.number,
+                              apply: (final String v) => _parcel.copyWith(
+                                nationalId: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'اسم الحوض',
+                            value: _parcel.basinName,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'اسم الحوض',
+                              initialValue: _parcel.basinName ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                basinName: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'رقم الأرض',
+                            value: _parcel.landNumber,
+                            onEdit: () => _editText(
+                              context,
+                              title: 'رقم الأرض',
+                              initialValue: _parcel.landNumber ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                landNumber: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          if (widget.parentHoldingId != null && _parcel.landNumber == '-1')
+                            Padding(
+                              padding: EdgeInsets.only(top: rh(4)),
+                              child: Text(
+                                'holdings.add.land_number_hint'.tr(),
+                                style: AppTextStyles.font12Regular.copyWith(
+                                  color: AppColors.amber300,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          FieldRow(
+                            label: 'المساحة',
+                            value: _areaFraction(_parcel),
+                            onEdit: () => _editArea(context),
+                          ),
+                          FieldRow(
+                            label: 'نوع الزرع',
+                            value: _parcel.cropType,
+                            onEdit: () => _editCropType(context),
+                          ),
+                          FieldRow(
+                            label: 'ملاحظات',
+                            value: _parcel.notes,
+                            onEdit: () => _editDropdown(
+                              context,
+                              title: 'ملاحظات',
+                              initialValue: _parcel.notes,
+                              options: Parcel.notesOptions,
+                              apply: (final String? v) => _parcel.copyWith(notes: v),
+                            ),
+                          ),
+                          if (!hideCreditType)
+                            FieldRow(
+                              label: 'نوع الائتمان',
+                              value: _parcel.creditType,
+                              onEdit: () => _editDropdown(
+                                context,
+                                title: 'نوع الائتمان',
+                                initialValue: _parcel.creditType,
+                                options: Parcel.creditTypeOptions,
+                                allowClear: false,
+                                apply: (final String? v) => _parcel.copyWith(
+                                  creditType: v ?? Parcel.defaultCreditType,
+                                ),
+                              ),
+                            ),
+                          FieldRow(
+                            label: 'نوع الاستخدام',
+                            value: _parcel.usageType,
+                            onEdit: () => _editDropdown(
+                              context,
+                              title: 'نوع الاستخدام',
+                              initialValue: _parcel.usageType,
+                              options: Parcel.usageTypeOptions,
+                              allowClear: false,
+                              apply: (final String? v) => _parcel.copyWith(
+                                usageType: v ?? Parcel.defaultUsageType,
+                              ),
+                            ),
+                          ),
+                          ToggleFieldRow(
+                            label: 'وراثة',
+                            value: _parcel.isInheritance,
+                            onChanged: (final bool v) => setState(
+                              () => _parcel = _parcel.copyWith(isInheritance: v),
+                            ),
+                          ),
+                          ToggleFieldRow(
+                            label: 'مفوض',
+                            value: _parcel.isDelegate,
+                            onChanged: (final bool v) => setState(
+                              () => _parcel = _parcel.copyWith(isDelegate: v),
+                            ),
+                          ),
+                        ],
+                      ),
+                      verticalSpacing(24),
+                      CustomTextButton(
+                        text: 'holdings.add.save'.tr(),
+                        onPressed: _canSave ? _save : null,
+                        isLoading: _isSaving,
+                        size: CustomButtonSize.large,
+                      ),
+                      if (!_canSave) ...[
+                        verticalSpacing(8),
+                        Text(
+                          'holdings.add.holder_required'.tr(),
+                          style: AppTextStyles.font12Regular.copyWith(
+                            color: colors.textHint,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
             ],
-            verticalSpacing(16),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
-                  bottom: rh(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ResponsiveFieldsWrap(
-                      children: [
-                        FieldRow(
-                          label: 'رقم الحيازة',
-                          value: _parcel.holdingId,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'رقم الحيازة',
-                            initialValue: _parcel.holdingId,
-                            apply: (final String v) => _parcel.copyWith(
-                              holdingId: v.isEmpty ? '-1' : v,
-                            ),
-                          ),
-                        ),
-                        FieldRow(
-                          label: 'اسم الحائز *',
-                          value: _parcel.holderName,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'اسم الحائز',
-                            initialValue: _parcel.holderName ?? '',
-                            apply: (final String v) => _parcel.copyWith(
-                              holderName: v.isEmpty ? null : v,
-                            ),
-                          ),
-                        ),
-                        FieldRow(
-                          label: 'اسم المالك',
-                          value: _parcel.ownerName,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'اسم المالك',
-                            initialValue: _parcel.ownerName ?? '',
-                            apply: (final String v) => _parcel.copyWith(
-                              ownerName: v.isEmpty ? null : v,
-                            ),
-                          ),
-                        ),
-                        FieldRow(
-                          label: 'الرقم القومي',
-                          value: _parcel.nationalId,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'الرقم القومي',
-                            initialValue: _parcel.nationalId ?? '',
-                            keyboardType: TextInputType.number,
-                            apply: (final String v) => _parcel.copyWith(
-                              nationalId: v.isEmpty ? null : v,
-                            ),
-                          ),
-                        ),
-                        FieldRow(
-                          label: 'اسم الحوض',
-                          value: _parcel.basinName,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'اسم الحوض',
-                            initialValue: _parcel.basinName ?? '',
-                            apply: (final String v) => _parcel.copyWith(
-                              basinName: v.isEmpty ? null : v,
-                            ),
-                          ),
-                        ),
-                        FieldRow(
-                          label: 'رقم الأرض',
-                          value: _parcel.landNumber,
-                          onEdit: () => _editText(
-                            context,
-                            title: 'رقم الأرض',
-                            initialValue: _parcel.landNumber ?? '',
-                            apply: (final String v) => _parcel.copyWith(
-                              landNumber: v.isEmpty ? null : v,
-                            ),
-                          ),
-                        ),
-                        if (widget.parentHoldingId != null &&
-                            _parcel.landNumber == '-1')
-                          Padding(
-                            padding: EdgeInsets.only(top: rh(4)),
-                            child: Text(
-                              'holdings.add.land_number_hint'.tr(),
-                              style: AppTextStyles.font12Regular.copyWith(
-                                color: AppColors.amber300,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        FieldRow(
-                          label: 'المساحة',
-                          value: _areaFraction(_parcel),
-                          onEdit: () => _editArea(context),
-                        ),
-                        FieldRow(
-                          label: 'نوع الزرع',
-                          value: _parcel.cropType,
-                          onEdit: () => _editCropType(context),
-                        ),
-                        FieldRow(
-                          label: 'ملاحظات',
-                          value: _parcel.notes,
-                          onEdit: () => _editDropdown(
-                            context,
-                            title: 'ملاحظات',
-                            initialValue: _parcel.notes,
-                            options: Parcel.notesOptions,
-                            apply: (final String? v) =>
-                                _parcel.copyWith(notes: v),
-                          ),
-                        ),
-                        if (!hideCreditType)
-                          FieldRow(
-                            label: 'نوع الائتمان',
-                            value: _parcel.creditType,
-                            onEdit: () => _editDropdown(
-                              context,
-                              title: 'نوع الائتمان',
-                              initialValue: _parcel.creditType,
-                              options: Parcel.creditTypeOptions,
-                              allowClear: false,
-                              apply: (final String? v) => _parcel.copyWith(
-                                creditType: v ?? Parcel.defaultCreditType,
-                              ),
-                            ),
-                          ),
-                        FieldRow(
-                          label: 'نوع الاستخدام',
-                          value: _parcel.usageType,
-                          onEdit: () => _editDropdown(
-                            context,
-                            title: 'نوع الاستخدام',
-                            initialValue: _parcel.usageType,
-                            options: Parcel.usageTypeOptions,
-                            allowClear: false,
-                            apply: (final String? v) => _parcel.copyWith(
-                              usageType: v ?? Parcel.defaultUsageType,
-                            ),
-                          ),
-                        ),
-                        ToggleFieldRow(
-                          label: 'وراثة',
-                          value: _parcel.isInheritance,
-                          onChanged: (final bool v) => setState(
-                            () => _parcel = _parcel.copyWith(isInheritance: v),
-                          ),
-                        ),
-                        ToggleFieldRow(
-                          label: 'مفوض',
-                          value: _parcel.isDelegate,
-                          onChanged: (final bool v) => setState(
-                            () => _parcel = _parcel.copyWith(isDelegate: v),
-                          ),
-                        ),
-                      ],
-                    ),
-                    verticalSpacing(24),
-                    CustomTextButton(
-                      text: 'holdings.add.save'.tr(),
-                      onPressed: _canSave ? _save : null,
-                      isLoading: _isSaving,
-                      size: CustomButtonSize.large,
-                    ),
-                    if (!_canSave) ...[
-                      verticalSpacing(8),
-                      Text(
-                        'holdings.add.holder_required'.tr(),
-                        style: AppTextStyles.font12Regular.copyWith(
-                          color: colors.textHint,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
           ),
         ),
       ),

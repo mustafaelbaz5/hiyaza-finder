@@ -40,8 +40,7 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   Future<void> _load() async {
     setState(() => _isLoading = true);
     final List<CachedCityMeta> cities = await _repository.listCachedCities();
-    final String? activeCityId =
-        (await _repository.loadActiveCachedSnapshot())?.cityId;
+    final String? activeCityId = (await _repository.loadActiveCachedSnapshot())?.cityId;
     if (!mounted) return;
     setState(() {
       _cities = cities;

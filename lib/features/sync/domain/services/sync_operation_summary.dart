@@ -14,8 +14,7 @@ String syncOperationSummary(final SyncOperation operation) {
     final AddRecordOperation o => o.parentHoldingId == null
         ? 'sync.operation.add_person'.tr(
             namedArgs: {
-              'name': (o.record['holder_name'] as String?)?.trim().isNotEmpty ==
-                      true
+              'name': (o.record['holder_name'] as String?)?.trim().isNotEmpty == true
                   ? o.record['holder_name'] as String
                   : 'sync.operation.unnamed'.tr(),
             },

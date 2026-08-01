@@ -46,8 +46,7 @@ void main() {
     });
 
     test('وراثة alone — both slots get (ورثة)', () {
-      final String text =
-          formatter.format(baseParcel(isInheritance: true));
+      final String text = formatter.format(baseParcel(isInheritance: true));
       expect(text, contains('اسم المالك: (ورثة) محمد علي,'));
       expect(text, contains('اسم الحائز: (ورثة) محمد علي,'));
     });
@@ -97,9 +96,8 @@ void main() {
     test('فدان/قيراط/سهم share one line', () {
       const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
       final String text = formatter.format(p);
-      final String feddanLine = text
-          .split('\n')
-          .firstWhere((final String line) => line.contains('فدان:'));
+      final String feddanLine =
+          text.split('\n').firstWhere((final String line) => line.contains('فدان:'));
       expect(feddanLine, contains('فدان: 1,'));
       expect(feddanLine, contains('قيراط: 2,'));
       expect(feddanLine, contains('سهم: 3,'));

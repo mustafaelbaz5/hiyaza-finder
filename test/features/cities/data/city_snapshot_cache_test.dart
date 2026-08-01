@@ -8,8 +8,7 @@ import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class _FakePathProviderPlatform extends PathProviderPlatform
-    with MockPlatformInterfaceMixin {
+class _FakePathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
   _FakePathProviderPlatform(this.tempDirPath);
 
   final String tempDirPath;
@@ -62,8 +61,7 @@ void main() {
     expect(await cache.loadMetadata('missing'), isNull);
   });
 
-  test('loadMetadata summarizes a saved snapshot without full parcel mapping',
-      () async {
+  test('loadMetadata summarizes a saved snapshot without full parcel mapping', () async {
     await cache.save(snapshotFor('city-1', parcelCount: 5));
 
     final CachedCityMeta? meta = await cache.loadMetadata('city-1');
@@ -76,8 +74,7 @@ void main() {
     expect(meta.fileSizeBytes, greaterThan(0));
   });
 
-  test('delete removes the cached file so load/loadMetadata see nothing',
-      () async {
+  test('delete removes the cached file so load/loadMetadata see nothing', () async {
     await cache.save(snapshotFor('city-1'));
     expect(await cache.load('city-1'), isNotNull);
 

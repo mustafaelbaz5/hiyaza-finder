@@ -43,8 +43,7 @@ class HomeState extends Equatable {
   /// Counts by `groupKey`, not raw رقم الحيازة — several pending
   /// (not-yet-numbered) new people can share the same blank/"-" id, and
   /// counting by it directly would undercount them as one holding.
-  int get holdingCount =>
-      parcels.map((final Parcel p) => p.groupKey).toSet().length;
+  int get holdingCount => parcels.map((final Parcel p) => p.groupKey).toSet().length;
 
   HomeState copyWith({
     final HomeStatus? status,
@@ -63,9 +62,8 @@ class HomeState extends Equatable {
       results: results ?? this.results,
       errorMessage: errorMessage,
       availableBasins: availableBasins ?? this.availableBasins,
-      selectedBasin: identical(selectedBasin, _unset)
-          ? this.selectedBasin
-          : selectedBasin as String?,
+      selectedBasin:
+          identical(selectedBasin, _unset) ? this.selectedBasin : selectedBasin as String?,
       isCityDataStale: isCityDataStale ?? this.isCityDataStale,
     );
   }

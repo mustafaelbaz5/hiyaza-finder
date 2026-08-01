@@ -3,13 +3,21 @@ import 'parcel.dart';
 /// A per-parcel "app-added" field that can be bulk-applied across many
 /// parcels at once (optionally scoped to one حوض) from the file-status
 /// screen — e.g. setting نوع الزرع for every parcel in a basin in one go.
-enum BulkEditableField { cropType, notes, creditType, usageType, isInheritance }
+enum BulkEditableField {
+  cropType,
+  notes,
+  creditType,
+  reformType,
+  usageType,
+  isInheritance,
+}
 
 extension BulkEditableFieldX on BulkEditableField {
   String get label => switch (this) {
         BulkEditableField.cropType => 'نوع الزرع',
         BulkEditableField.notes => 'ملاحظات',
         BulkEditableField.creditType => 'نوع الائتمان',
+        BulkEditableField.reformType => 'نوع الإصلاح',
         BulkEditableField.usageType => 'نوع الاستخدام',
         BulkEditableField.isInheritance => 'وراثة',
       };
@@ -23,11 +31,11 @@ extension BulkEditableFieldX on BulkEditableField {
         BulkEditableField.cropType => Parcel.cropTypeOptions,
         BulkEditableField.notes => Parcel.notesOptions,
         BulkEditableField.creditType => Parcel.creditTypeOptions,
+        BulkEditableField.reformType => Parcel.reformTypeOptions,
         BulkEditableField.usageType => Parcel.usageTypeOptions,
         BulkEditableField.isInheritance => const <String>[],
       };
 
   /// Whether the picker offers a "—" (clear/unset) option.
-  bool get allowClear =>
-      this == BulkEditableField.cropType || this == BulkEditableField.notes;
+  bool get allowClear => this == BulkEditableField.cropType || this == BulkEditableField.notes;
 }

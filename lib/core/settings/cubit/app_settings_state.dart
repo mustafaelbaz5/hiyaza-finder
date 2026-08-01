@@ -21,8 +21,7 @@ class AppSettingsState extends Equatable {
       );
 
   /// Font family derived from locale — no manual switching needed
-  String get fontFamily =>
-      isArabic ? AppFontFamily.tajawal : AppFontFamily.manrope;
+  String get fontFamily => isArabic ? AppFontFamily.tajawal : AppFontFamily.manrope;
 
   AppSettingsState copyWith({
     final ThemeMode? themeMode,

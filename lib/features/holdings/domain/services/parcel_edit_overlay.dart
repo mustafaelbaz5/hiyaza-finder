@@ -15,6 +15,5 @@ class ParcelEditOverlay {
     return Parcel.fromEditableJson(original, edits);
   }
 
-  Map<String, dynamic> snapshot(final Parcel parcel) =>
-      parcel.toEditableJson();
+  Map<String, dynamic> snapshot(final Parcel parcel) => parcel.toEditableJson();
 }
