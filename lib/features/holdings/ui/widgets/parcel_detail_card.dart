@@ -2,6 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hiyaza_finder/core/router/routes.dart';
+import 'package:hiyaza_finder/features/holdings/ui/screens/holding_detail_args.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart';
 
@@ -107,6 +109,7 @@ class ParcelDetailCard extends StatelessWidget {
             south: parcel.borderSouth,
             east: parcel.borderEast,
             west: parcel.borderWest,
+            onTapBorder: (final String? borderText) => _openBorderPerson(context, borderText),
           ),
           verticalSpacing(8),
           CopyAllButton(onTap: () => _copyAll(context)),
@@ -131,7 +134,8 @@ class ParcelDetailCard extends StatelessWidget {
                   context,
                   title: 'اسم المالك',
                   initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                  apply: (final String v) => parcel.copyWith(ownerName: v.isEmpty ? null : v),
+                  apply: (final String v) =>
+                      parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(
@@ -141,7 +145,8 @@ class ParcelDetailCard extends StatelessWidget {
                   context,
                   title: 'اسم الحائز',
                   initialValue: parcel.holderName ?? '',
-                  apply: (final String v) => parcel.copyWith(holderName: v.isEmpty ? null : v),
+                  apply: (final String v) =>
+                      parcel.copyWith(holderName: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(
@@ -152,7 +157,8 @@ class ParcelDetailCard extends StatelessWidget {
                   title: 'الرقم القومي',
                   initialValue: parcel.nationalId ?? '',
                   keyboardType: TextInputType.number,
-                  apply: (final String v) => parcel.copyWith(nationalId: v.isEmpty ? null : v),
+                  apply: (final String v) =>
+                      parcel.copyWith(nationalId: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(
@@ -162,7 +168,8 @@ class ParcelDetailCard extends StatelessWidget {
                   context,
                   title: 'اسم الجمعية',
                   initialValue: parcel.associationName ?? '',
-                  apply: (final String v) => parcel.copyWith(associationName: v.isEmpty ? null : v),
+                  apply: (final String v) =>
+                      parcel.copyWith(associationName: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(
@@ -177,7 +184,8 @@ class ParcelDetailCard extends StatelessWidget {
                   context,
                   title: 'رقم الأرض',
                   initialValue: parcel.landNumber ?? '',
-                  apply: (final String v) => parcel.copyWith(landNumber: v.isEmpty ? null : v),
+                  apply: (final String v) =>
+                      parcel.copyWith(landNumber: v.isEmpty ? null : v),
                 ),
               ),
               FieldRow(
@@ -217,7 +225,10 @@ class ParcelDetailCard extends StatelessWidget {
           ),
         ],
       ),
-    ).animate(delay: animationDelay).fadeIn(duration: 300.ms).slideY(begin: 0.04, end: 0);
+    )
+        .animate(delay: animationDelay)
+        .fadeIn(duration: 300.ms)
+        .slideY(begin: 0.04, end: 0);
   }
 
   Future<void> _editText(
@@ -249,7 +260,8 @@ class ParcelDetailCard extends StatelessWidget {
       context,
       title: title,
       options: [
-        for (final String option in options) ChoiceOption<String>(value: option, label: option),
+        for (final String option in options)
+          ChoiceOption<String>(value: option, label: option),
       ],
       selected: initialValue,
       clearLabel: allowClear ? '—' : null,
@@ -298,7 +310,8 @@ class ParcelDetailCard extends StatelessWidget {
         context,
         title: 'اسم الحوض',
         initialValue: parcel.basinName ?? '',
-        apply: (final String v) => parcel.copyWith(basinName: v.isEmpty ? null : v),
+        apply: (final String v) =>
+            parcel.copyWith(basinName: v.isEmpty ? null : v),
       );
       return;
     }
@@ -307,7 +320,8 @@ class ParcelDetailCard extends StatelessWidget {
       context,
       title: 'اسم الحوض',
       options: [
-        for (final String basin in basins) ChoiceOption<String>(value: basin, label: basin),
+        for (final String basin in basins)
+          ChoiceOption<String>(value: basin, label: basin),
       ],
       selected: parcel.basinName,
       clearLabel: '—',
@@ -315,6 +329,30 @@ class ParcelDetailCard extends StatelessWidget {
     if (result == null) return;
     onFieldChanged(
       parcel.copyWith(basinName: result.isClear ? null : result.value),
+    );
+  }
+
+  /// Resolves [borderText] (a الحدود cell) to the holding it refers to and
+  /// navigates there directly, or shows a "no data" snackbar when it can't
+  /// be resolved (blank text, a road/canal/etc., or no matching حائز/مالك
+  /// in the currently loaded city). See `ParcelQueryService.findByBorderText`
+  /// for why the match is exact rather than fuzzy.
+  Future<void> _openBorderPerson(
+    final BuildContext context,
+    final String? borderText,
+  ) async {
+    final Parcel? match =
+        getIt<HoldingsRepository>().findByBorderText(borderText);
+    if (match == null) {
+      context.showSnackBar('holdings.detail.border_no_data'.tr());
+      return;
+    }
+
+    final List<Parcel> holdingParcels =
+        getIt<HoldingsRepository>().parcelsForHolding(match.groupKey);
+    await context.pushNamed(
+      Routes.holdingDetail,
+      arguments: HoldingDetailArgs(parcels: holdingParcels, backToHome: true),
     );
   }
 

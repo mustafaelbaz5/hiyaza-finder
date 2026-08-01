@@ -251,6 +251,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   List<Parcel> parcelsForHolding(final String holdingId) =>
       _queryService.parcelsForHolding(_parcels, holdingId);
 
+  @override
+  Parcel? findByBorderText(final String? borderText) =>
+      _queryService.findByBorderText(_parcels, borderText);
+
   /// Applies [value] to every parcel's [field], optionally scoped to
   /// [basin] (only parcels whose اسم الحوض matches). Returns how many
   /// parcels were changed, for user feedback.

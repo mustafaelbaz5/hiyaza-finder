@@ -46,8 +46,17 @@ class AppRouter {
           settings,
         );
       case Routes.holdingDetail:
-        final List<Parcel> parcels = (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
-        return _buildRoute(DetailScreen(parcels: parcels), settings);
+        final Object? args = settings.arguments;
+        final HoldingDetailArgs detailArgs = args is HoldingDetailArgs
+            ? args
+            : HoldingDetailArgs(parcels: (args as List<Parcel>?) ?? const <Parcel>[]);
+        return _buildRoute(
+          DetailScreen(
+            parcels: detailArgs.parcels,
+            backToHome: detailArgs.backToHome,
+          ),
+          settings,
+        );
       case Routes.addRecord:
         final AddRecordArgs args = (settings.arguments as AddRecordArgs?) ??
             const AddRecordArgs(initialParcel: Parcel(holdingId: ''));

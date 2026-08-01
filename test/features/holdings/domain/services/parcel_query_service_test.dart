@@ -66,4 +66,52 @@ void main() {
       expect(result.single.holderName, 'شخص أول');
     });
   });
+
+  group('findByBorderText', () {
+    test('matches a حائز name exactly (after Arabic normalization)', () {
+      final Parcel? match = service.findByBorderText(parcels, 'محمد على');
+      expect(match, isNotNull);
+      expect(match!.holdingId, '101');
+    });
+
+    test('matches a مالك name when the حائز differs', () {
+      final List<Parcel> withOwner = <Parcel>[
+        const Parcel(
+          id: '5',
+          holdingId: '104',
+          holderName: 'ورثة فلان',
+          ownerName: 'خالد سعيد',
+        ),
+      ];
+      final Parcel? match = service.findByBorderText(withOwner, 'خالد سعيد');
+      expect(match, isNotNull);
+      expect(match!.holdingId, '104');
+    });
+
+    test('does not match on partial/substring overlap', () {
+      // 'محمد' alone should not match 'محمد علي' — exact match only, unlike
+      // HoldingSearchService's fuzzy substring search, since a wrong guess
+      // here means navigating to the wrong person's land.
+      final Parcel? match = service.findByBorderText(parcels, 'محمد');
+      expect(match, isNull);
+    });
+
+    test('returns null for blank or placeholder border text', () {
+      expect(service.findByBorderText(parcels, null), isNull);
+      expect(service.findByBorderText(parcels, ''), isNull);
+      expect(service.findByBorderText(parcels, '   '), isNull);
+      expect(service.findByBorderText(parcels, '-'), isNull);
+    });
+
+    test('returns null for non-person boundary text (طريق/مصرف/ترعة/...)', () {
+      expect(service.findByBorderText(parcels, 'طريق'), isNull);
+      expect(service.findByBorderText(parcels, 'مصرف عام'), isNull);
+      expect(service.findByBorderText(parcels, 'ترعة الشيخ'), isNull);
+    });
+
+    test('returns null when no holder/owner matches', () {
+      final Parcel? match = service.findByBorderText(parcels, 'شخص غير موجود');
+      expect(match, isNull);
+    });
+  });
 }

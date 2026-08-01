@@ -166,6 +166,7 @@
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
       "holdings_count": "Number of parcels in holding",
+      "border_no_data": "No data exists for this person",
       "new_badge": "New — pending sync",
       "parcel_count": "{count} parcels",
       "feddan": "Feddan",

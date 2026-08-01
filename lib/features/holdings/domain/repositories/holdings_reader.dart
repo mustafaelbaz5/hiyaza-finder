@@ -19,4 +19,10 @@ abstract class HoldingsReader {
   Map<String, int> get basinHoldingCounts;
 
   List<Parcel> parcelsForHolding(final String holdingId);
+
+  /// Resolves a الحدود (border) cell's free text to the holding it refers
+  /// to, if any currently-loaded حائز/مالك matches it exactly. `null` when
+  /// the text is blank, a non-person boundary (طريق/مصرف/...), or doesn't
+  /// match anyone in the active dataset.
+  Parcel? findByBorderText(final String? borderText);
 }

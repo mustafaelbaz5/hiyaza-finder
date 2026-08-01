@@ -166,6 +166,7 @@
       "holding_id": "رقم الحيازة",
       "holding_id_pending": "بدون رقم — جديد",
       "holdings_count": "عدد القطع في الحيازة",
+      "border_no_data": "لا توجد بيانات لهذا الشخص",
       "new_badge": "جديد — بانتظار المزامنة",
       "parcel_count": "{count} قطعة",
       "feddan": "فدان",

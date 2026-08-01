@@ -6,7 +6,10 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
 /// A 3×3 "compass" — the holding ID sits in the center, its four borders
-/// (north/south/east/west) surround it as plain, non-navigable text.
+/// (north/south/east/west) surround it. Each border cell is tappable via
+/// [onTapBorder] — the border text is free-form (APP_PLAN.md § 4), so
+/// whether a tap resolves to another holding's data (vs. a "no data for
+/// this person" snackbar) is decided by the caller, not this widget.
 ///
 /// The middle row is forced to LTR so west/east always render on the
 /// geographically correct side regardless of the app's RTL layout.
@@ -18,6 +21,7 @@ class BorderCompass extends StatelessWidget {
     required this.south,
     required this.east,
     required this.west,
+    this.onTapBorder,
   });
 
   final String holdingId;
@@ -26,24 +30,47 @@ class BorderCompass extends StatelessWidget {
   final String? east;
   final String? west;
 
+  /// Called with the tapped cell's raw border text (شمال/جنوب/شرق/غرب).
+  final void Function(String? borderText)? onTapBorder;
+
   @override
   Widget build(final BuildContext context) {
     return Column(
       children: [
-        _BorderCell(label: 'شمال (البحري)', text: north),
+        _BorderCell(
+          label: 'شمال (البحري)',
+          text: north,
+          onTap: onTapBorder == null ? null : () => onTapBorder!(north),
+        ),
         const SizedBox(height: 5),
         Row(
           textDirection: TextDirection.ltr,
           children: [
-            Expanded(child: _BorderCell(label: 'غرب (الغربي)', text: west)),
+            Expanded(
+              child: _BorderCell(
+                label: 'غرب (الغربي)',
+                text: west,
+                onTap: onTapBorder == null ? null : () => onTapBorder!(west),
+              ),
+            ),
             const SizedBox(width: 5),
             Expanded(child: _CenterCell(holdingId: holdingId)),
             const SizedBox(width: 5),
-            Expanded(child: _BorderCell(label: 'شرق (الشرقي)', text: east)),
+            Expanded(
+              child: _BorderCell(
+                label: 'شرق (الشرقي)',
+                text: east,
+                onTap: onTapBorder == null ? null : () => onTapBorder!(east),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 5),
-        _BorderCell(label: 'جنوب (القبلي)', text: south),
+        _BorderCell(
+          label: 'جنوب (القبلي)',
+          text: south,
+          onTap: onTapBorder == null ? null : () => onTapBorder!(south),
+        ),
       ],
     );
   }
@@ -92,49 +119,54 @@ class _CenterCell extends StatelessWidget {
 }
 
 class _BorderCell extends StatelessWidget {
-  const _BorderCell({required this.label, required this.text});
+  const _BorderCell({required this.label, required this.text, this.onTap});
 
   final String label;
   final String? text;
+  final VoidCallback? onTap;
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final String displayText = (text == null || text!.trim().isEmpty) ? '—' : text!;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.font12Regular.copyWith(
-              color: colors.textHint,
-              fontSize: 10,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colors.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.font12Regular.copyWith(
+                color: colors.textHint,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 1),
-          Text(
-            displayText,
-            style: AppTextStyles.font14SemiBold.copyWith(
-              color: colors.textPrimary,
-              fontSize: 12,
+            const SizedBox(height: 1),
+            Text(
+              displayText,
+              style: AppTextStyles.font14SemiBold.copyWith(
+                color: colors.textPrimary,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
