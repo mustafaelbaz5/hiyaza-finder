@@ -39,6 +39,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.hideCreditType = false,
     this.cityType = CityType.unspecified,
     this.animationDelay = Duration.zero,
+    this.resolveBorderMatch,
   });
 
   final Parcel parcel;
@@ -62,6 +63,16 @@ class ParcelDetailCard extends StatelessWidget {
   /// display نوع الائتمان (agricultural credit) or نوع الإصلاح (reform).
   final CityType cityType;
   final Duration animationDelay;
+
+  /// Resolves a الحدود cell's text to the holding it refers to, for both
+  /// the compass's navigable-cell highlighting and the tap navigation
+  /// itself. Passed in by the caller (`DetailScreen`, via
+  /// `HoldingsRepository.findByBorderText`) — same reasoning as
+  /// [hideCreditType]: this widget stays a pure function of its props and
+  /// never resolves DI during `build()`, so it renders correctly in
+  /// isolation (incl. widget tests) whether or not one is provided. `null`
+  /// means "no border navigation available" — every cell renders plain.
+  final Parcel? Function(String? borderText)? resolveBorderMatch;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -109,7 +120,12 @@ class ParcelDetailCard extends StatelessWidget {
             south: parcel.borderSouth,
             east: parcel.borderEast,
             west: parcel.borderWest,
-            onTapBorder: (final String? borderText) => _openBorderPerson(context, borderText),
+            onTapBorder: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) => _openBorderPerson(context, borderText),
+            isBorderNavigable: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) => resolveBorderMatch!(borderText) != null,
           ),
           verticalSpacing(8),
           CopyAllButton(onTap: () => _copyAll(context)),
@@ -341,8 +357,7 @@ class ParcelDetailCard extends StatelessWidget {
     final BuildContext context,
     final String? borderText,
   ) async {
-    final Parcel? match =
-        getIt<HoldingsRepository>().findByBorderText(borderText);
+    final Parcel? match = resolveBorderMatch?.call(borderText);
     if (match == null) {
       context.showSnackBar('holdings.detail.border_no_data'.tr());
       return;
@@ -352,7 +367,7 @@ class ParcelDetailCard extends StatelessWidget {
         getIt<HoldingsRepository>().parcelsForHolding(match.groupKey);
     await context.pushNamed(
       Routes.holdingDetail,
-      arguments: HoldingDetailArgs(parcels: holdingParcels, backToHome: true),
+      arguments: HoldingDetailArgs(parcels: holdingParcels),
     );
   }
 

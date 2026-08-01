@@ -13,28 +13,13 @@ import '../../data/repository/holdings_repository.dart';
 import '../widgets/parcel_detail_card.dart';
 import 'add_record_screen.dart';
 
-export 'holding_detail_args.dart' show HoldingDetailArgs;
-
 /// Full record for one holding. If the holding has multiple parcels they
 /// are all stacked in one scrollable view, each with its own compass and
 /// fields (per the chosen UX — no per-parcel sub-routing).
 class DetailScreen extends StatefulWidget {
-  const DetailScreen({
-    super.key,
-    required this.parcels,
-    this.backToHome = false,
-  });
+  const DetailScreen({super.key, required this.parcels});
 
   final List<Parcel> parcels;
-
-  /// `true` when this screen was reached by tapping a name in another
-  /// holding's الحدود compass (see `BorderCompass`/`_findAndOpenBorderPerson`
-  /// in this file) rather than from search. Chaining several of those jumps
-  /// (person A's border → person B's border → person C's...) would
-  /// otherwise stack up screens the user never meant to navigate "through" —
-  /// so in that case the back button returns straight to Home instead of
-  /// unwinding one border-jump at a time.
-  final bool backToHome;
 
   @override
   State<DetailScreen> createState() => _DetailScreenState();
@@ -92,117 +77,106 @@ class _DetailScreenState extends State<DetailScreen> {
     final String holdingId =
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
 
-    return PopScope(
-      canPop: !widget.backToHome,
-      onPopInvokedWithResult: (final bool didPop, final _) {
-        if (didPop || !widget.backToHome) return;
-        context.pushNamedAndRemoveAll(Routes.home);
-      },
-      child: Scaffold(
-        backgroundColor: colors.background,
-        body: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    verticalSpacing(16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: <Widget>[
-                        AppBackButton(
-                          onTap: widget.backToHome
-                              ? () => context.pushNamedAndRemoveAll(Routes.home)
-                              : null,
-                        ),
-                        horizontalSpacing(12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
+    return Scaffold(
+      backgroundColor: colors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: rw(16)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  verticalSpacing(16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      const AppBackButton(),
+                      horizontalSpacing(12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Text(
+                              'holdings.detail.title'.tr(
+                                namedArgs: {'id': holdingId},
+                              ),
+                              style: AppTextStyles.font20Bold.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            if (_parcels.length > 1) ...<Widget>[
+                              verticalSpacing(2),
                               Text(
-                                'holdings.detail.title'.tr(
-                                  namedArgs: {'id': holdingId},
+                                'holdings.detail.parcel_count'.tr(
+                                  namedArgs: {
+                                    'count': _parcels.length.toString(),
+                                  },
                                 ),
-                                style: AppTextStyles.font20Bold.copyWith(
-                                  color: colors.textPrimary,
+                                style: AppTextStyles.font12Regular.copyWith(
+                                  color: colors.textSecondary,
                                 ),
                                 textAlign: TextAlign.right,
                               ),
-                              if (_parcels.length > 1) ...<Widget>[
-                                verticalSpacing(2),
-                                Text(
-                                  'holdings.detail.parcel_count'.tr(
-                                    namedArgs: {
-                                      'count': _parcels.length.toString(),
-                                    },
-                                  ),
-                                  style: AppTextStyles.font12Regular.copyWith(
-                                    color: colors.textSecondary,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ],
                             ],
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
-                    if (_parcels.isNotEmpty) ...<Widget>[
-                      verticalSpacing(12),
-                      CustomTextButton.outlined(
-                        text: 'holdings.add.new_parcel_title'.tr(),
-                        size: CustomButtonSize.small,
-                        isFullWidth: false,
-                        prefixIcon: const Icon(Icons.add_location_alt_rounded),
-                        onPressed: () => _addParcelForPerson(_parcels.first),
                       ),
                     ],
-                    verticalSpacing(16),
+                  ),
+                  if (_parcels.isNotEmpty) ...<Widget>[
+                    verticalSpacing(12),
+                    CustomTextButton.outlined(
+                      text: 'holdings.add.new_parcel_title'.tr(),
+                      size: CustomButtonSize.small,
+                      isFullWidth: false,
+                      prefixIcon: const Icon(Icons.add_location_alt_rounded),
+                      onPressed: () => _addParcelForPerson(_parcels.first),
+                    ),
                   ],
-                ),
+                  verticalSpacing(16),
+                ],
               ),
-              Expanded(
-                child: _parcels.isEmpty
-                    ? Center(
-                        child: Text(
-                          'holdings.detail.empty'.tr(),
-                          style: AppTextStyles.font16Regular.copyWith(
-                            color: colors.textHint,
-                          ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () => _repository.syncNow(),
-                        child: ListView.builder(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: rw(16),
-                          ).copyWith(bottom: rh(16)),
-                          itemCount: _parcels.length,
-                          itemBuilder:
-                              (final BuildContext context, final int i) {
-                            final Parcel parcel = _parcels[i];
-                            return Padding(
-                              padding: EdgeInsets.only(bottom: rh(16)),
-                              child: ParcelDetailCard(
-                                parcel: parcel,
-                                isEdited: _repository.isParcelEdited(parcel.id),
-                                isNew: _repository.isNewLocalRecord(parcel.id),
-                                hideCreditType: _repository.hideCreditType,
-                                cityType: _repository.activeCityType,
-                                onFieldChanged: _updateField,
-                                animationDelay: Duration(milliseconds: i * 80),
-                              ),
-                            );
-                          },
+            ),
+            Expanded(
+              child: _parcels.isEmpty
+                  ? Center(
+                      child: Text(
+                        'holdings.detail.empty'.tr(),
+                        style: AppTextStyles.font16Regular.copyWith(
+                          color: colors.textHint,
                         ),
                       ),
-              ),
-            ],
-          ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => _repository.syncNow(),
+                      child: ListView.builder(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: rw(16),
+                        ).copyWith(bottom: rh(16)),
+                        itemCount: _parcels.length,
+                        itemBuilder: (final BuildContext context, final int i) {
+                          final Parcel parcel = _parcels[i];
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: rh(16)),
+                            child: ParcelDetailCard(
+                              parcel: parcel,
+                              isEdited: _repository.isParcelEdited(parcel.id),
+                              isNew: _repository.isNewLocalRecord(parcel.id),
+                              hideCreditType: _repository.hideCreditType,
+                              cityType: _repository.activeCityType,
+                              onFieldChanged: _updateField,
+                              animationDelay: Duration(milliseconds: i * 80),
+                              resolveBorderMatch: _repository.findByBorderText,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
