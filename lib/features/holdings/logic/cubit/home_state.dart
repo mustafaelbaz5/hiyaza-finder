@@ -40,10 +40,10 @@ class HomeState extends Equatable {
   /// cached locally — drives a non-blocking "تحديث البيانات" banner.
   final bool isCityDataStale;
 
-  /// Counts by `groupKey`, not raw رقم الحيازة — several pending
-  /// (not-yet-numbered) new people can share the same blank/"-" id, and
-  /// counting by it directly would undercount them as one holding.
-  int get holdingCount => parcels.map((final Parcel p) => p.groupKey).toSet().length;
+  /// Raw parcel row count for the loaded dataset — a single حيازة can span
+  /// several قطع, so this counts every parcel row, not distinct holdings
+  /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
+  int get holdingCount => parcels.length;
 
   HomeState copyWith({
     final HomeStatus? status,

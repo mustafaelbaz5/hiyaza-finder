@@ -1,6 +1,7 @@
 -- Materialized view for top holders per city with holding counts
 -- Used by the app to display "عدد القطع في الحيازة" (number of parcels in holding)
 -- This view counts the number of parcels for each holding_id_number per city
+-- Uses INNER JOIN to exclude NULL holding_id_numbers from the count
 create materialized view city_top_holders as
 select
   c.id as city_id,
@@ -11,7 +12,7 @@ select
   count(*) as holdings_count,
   max(h.imported_at) as last_updated
 from cities c
-left join holdings h on c.id = h.city_id and not h.is_stale
+inner join holdings h on c.id = h.city_id and not h.is_stale
 group by c.id, c.name, h.holding_id_number, h.holder_name, h.national_id
 with data;
 

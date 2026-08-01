@@ -70,7 +70,7 @@ void main() {
     expect(meta!.cityId, 'city-1');
     expect(meta.cityName, 'مدينة city-1');
     expect(meta.dataVersion, 3);
-    expect(meta.holdingsCount, 5);
+    expect(meta.parcelsCount, 5);
     expect(meta.fileSizeBytes, greaterThan(0));
   });
 

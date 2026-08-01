@@ -87,7 +87,7 @@ class CitySnapshotCache {
       cityName: json['cityName'] as String,
       dataVersion: json['dataVersion'] as int,
       downloadedAt: DateTime.parse(json['downloadedAt'] as String),
-      holdingsCount: (json['parcels'] as List<dynamic>).length,
+      parcelsCount: (json['parcels'] as List<dynamic>).length,
       fileSizeBytes: sizeBytes,
     );
   }

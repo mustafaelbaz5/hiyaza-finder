@@ -81,7 +81,7 @@
       "title": "Downloaded cities",
       "empty": "No cities downloaded on this device",
       "current_badge": "Current",
-      "summary": "{count} holdings — {size}",
+      "summary": "{count} parcels — {size}",
       "delete": "Delete",
       "delete_confirm": "This deletes \"{name}\"'s data from this device only. You can download it again later. Continue?",
       "delete_confirm_active": "\"{name}\" is the current city. Its data will be deleted from this device only (it stays on the server), but it will disappear from the home screen until downloaded again. Continue?",

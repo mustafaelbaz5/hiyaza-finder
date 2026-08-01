@@ -19,11 +19,14 @@ class CityPickerCubit extends Cubit<CityPickerState> {
   final HoldingsRepository _holdingsRepository;
 
   Future<void> loadCities() async {
+    if (isClosed) return;
     emit(state.copyWith(status: CityPickerStatus.loading));
     try {
       final List<City> cities = await _cityRepository.listPublishedCities();
+      if (isClosed) return;
       emit(state.copyWith(status: CityPickerStatus.loaded, cities: cities));
     } on AppException catch (e) {
+      if (isClosed) return;
       emit(
         state.copyWith(
           status: CityPickerStatus.error,
@@ -31,6 +34,7 @@ class CityPickerCubit extends Cubit<CityPickerState> {
         ),
       );
     } catch (e) {
+      if (isClosed) return;
       emit(
         state.copyWith(
           status: CityPickerStatus.error,
@@ -46,6 +50,7 @@ class CityPickerCubit extends Cubit<CityPickerState> {
   /// on success, matching how `confirmAssociationName`/similar one-shot
   /// actions are already awaited elsewhere in this codebase.
   Future<CitySnapshot?> downloadAndActivate(final City city) async {
+    if (isClosed) return null;
     emit(state.copyWith(status: CityPickerStatus.downloading));
     try {
       final CitySnapshot snapshot = await _cityRepository.downloadCity(city);
@@ -56,11 +61,13 @@ class CityPickerCubit extends Cubit<CityPickerState> {
       );
       return snapshot;
     } on AppException catch (e) {
+      if (isClosed) return null;
       emit(
         state.copyWith(status: CityPickerStatus.loaded, errorMessage: e.message),
       );
       return null;
     } catch (e) {
+      if (isClosed) return null;
       emit(
         state.copyWith(
           status: CityPickerStatus.loaded,

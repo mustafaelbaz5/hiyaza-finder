@@ -127,6 +127,8 @@ class SupabaseCityDataSource {
       return <Parcel>[...holdings, ...added];
     } catch (error) {
       ErrorHandler.handleException(error);
+      // ignore: dead_code
+      return <Parcel>[];
     }
   }
 

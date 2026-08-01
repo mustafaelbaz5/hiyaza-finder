@@ -7,7 +7,7 @@ class CachedCityMeta {
     required this.cityName,
     required this.dataVersion,
     required this.downloadedAt,
-    required this.holdingsCount,
+    required this.parcelsCount,
     required this.fileSizeBytes,
   });
 
@@ -15,6 +15,12 @@ class CachedCityMeta {
   final String cityName;
   final int dataVersion;
   final DateTime downloadedAt;
-  final int holdingsCount;
+
+  /// Raw row count in the cached snapshot — one row per **parcel** (قطعة),
+  /// not per distinct holding (حيازة). A single holding can span several
+  /// parcels, so this is always ≥ the home screen's `HomeState.holdingCount`
+  /// (which counts distinct `Parcel.groupKey`s). Kept as a raw count here
+  /// since that's what maps 1:1 to file size without re-parsing every row.
+  final int parcelsCount;
   final int fileSizeBytes;
 }

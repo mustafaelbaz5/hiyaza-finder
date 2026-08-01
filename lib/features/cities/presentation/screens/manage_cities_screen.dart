@@ -219,7 +219,7 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
                     Text(
                       'cities.manage.summary'.tr(
                         namedArgs: {
-                          'count': city.holdingsCount.toString(),
+                          'count': city.parcelsCount.toString(),
                           'size': _formatSize(city.fileSizeBytes),
                         },
                       ),
