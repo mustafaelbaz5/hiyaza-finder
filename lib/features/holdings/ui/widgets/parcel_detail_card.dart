@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart';
 
+import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -12,6 +13,7 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/domain/entities/city_type.dart';
+import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/clipboard_formatter.dart';
 import '../../logic/services/area_calculator.dart';
@@ -117,6 +119,11 @@ class ParcelDetailCard extends StatelessWidget {
                     ? 'holdings.detail.holding_id_pending'.tr()
                     : parcel.holdingId,
               ),
+              if (parcel.holdingsCount != null)
+                FieldRow(
+                  label: 'عدد القطع في الحيازة',
+                  value: parcel.holdingsCount.toString(),
+                ),
               FieldRow(
                 label: 'اسم المالك',
                 value: _formatter.effectiveOwnerName(parcel),
@@ -127,11 +134,52 @@ class ParcelDetailCard extends StatelessWidget {
                   apply: (final String v) => parcel.copyWith(ownerName: v.isEmpty ? null : v),
                 ),
               ),
-              FieldRow(label: 'اسم الحائز', value: parcel.holderName),
-              FieldRow(label: 'الرقم القومي', value: parcel.nationalId),
-              FieldRow(label: 'اسم الجمعية', value: parcel.associationName),
-              FieldRow(label: 'اسم الحوض', value: parcel.basinName),
-              FieldRow(label: 'رقم الأرض', value: parcel.landNumber),
+              FieldRow(
+                label: 'اسم الحائز',
+                value: parcel.holderName,
+                onEdit: () => _editText(
+                  context,
+                  title: 'اسم الحائز',
+                  initialValue: parcel.holderName ?? '',
+                  apply: (final String v) => parcel.copyWith(holderName: v.isEmpty ? null : v),
+                ),
+              ),
+              FieldRow(
+                label: 'الرقم القومي',
+                value: parcel.nationalId,
+                onEdit: () => _editText(
+                  context,
+                  title: 'الرقم القومي',
+                  initialValue: parcel.nationalId ?? '',
+                  keyboardType: TextInputType.number,
+                  apply: (final String v) => parcel.copyWith(nationalId: v.isEmpty ? null : v),
+                ),
+              ),
+              FieldRow(
+                label: 'اسم الجمعية',
+                value: parcel.associationName,
+                onEdit: () => _editText(
+                  context,
+                  title: 'اسم الجمعية',
+                  initialValue: parcel.associationName ?? '',
+                  apply: (final String v) => parcel.copyWith(associationName: v.isEmpty ? null : v),
+                ),
+              ),
+              FieldRow(
+                label: 'اسم الحوض',
+                value: parcel.basinName,
+                onEdit: () => _editBasin(context),
+              ),
+              FieldRow(
+                label: 'رقم الأرض',
+                value: parcel.landNumber,
+                onEdit: () => _editText(
+                  context,
+                  title: 'رقم الأرض',
+                  initialValue: parcel.landNumber ?? '',
+                  apply: (final String v) => parcel.copyWith(landNumber: v.isEmpty ? null : v),
+                ),
+              ),
               FieldRow(
                 label: 'المساحة',
                 value: _formatter.areaFraction(parcel),
@@ -140,6 +188,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'المساحة بالمتر',
                 value: _formatter.formatNumber(parcel.totalSqm),
+                onEdit: () => _editArea(context),
               ),
               FieldRow(
                 label: 'نوع الزرع',
@@ -239,6 +288,33 @@ class ParcelDetailCard extends StatelessWidget {
           sahm: result.sahm,
         ),
       ),
+    );
+  }
+
+  Future<void> _editBasin(final BuildContext context) async {
+    final List<String> basins = getIt<HoldingsRepository>().availableBasins;
+    if (basins.isEmpty) {
+      await _editText(
+        context,
+        title: 'اسم الحوض',
+        initialValue: parcel.basinName ?? '',
+        apply: (final String v) => parcel.copyWith(basinName: v.isEmpty ? null : v),
+      );
+      return;
+    }
+
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+      context,
+      title: 'اسم الحوض',
+      options: [
+        for (final String basin in basins) ChoiceOption<String>(value: basin, label: basin),
+      ],
+      selected: parcel.basinName,
+      clearLabel: '—',
+    );
+    if (result == null) return;
+    onFieldChanged(
+      parcel.copyWith(basinName: result.isClear ? null : result.value),
     );
   }
 

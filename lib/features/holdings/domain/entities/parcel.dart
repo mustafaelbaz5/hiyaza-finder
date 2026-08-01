@@ -30,6 +30,7 @@ class Parcel {
     this.isInheritance = false,
     this.isDelegate = false,
     this.usageType = defaultUsageType,
+    this.holdingsCount,
   });
 
   /// Stable identity within a loaded dataset (the parse-order index).
@@ -64,6 +65,7 @@ class Parcel {
   final bool isInheritance; // وراثة
   final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
+  final int? holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
 
   /// Whether رقم الحيازة hasn't been officially assigned yet — true for a
   /// brand-new person added in the field whose display value is still one
@@ -166,6 +168,7 @@ class Parcel {
     final Object? isInheritance = _unset,
     final Object? isDelegate = _unset,
     final Object? usageType = _unset,
+    final Object? holdingsCount = _unset,
   }) {
     T resolve<T>(final Object? value, final T fallback) =>
         identical(value, _unset) ? fallback : value as T;
@@ -198,6 +201,7 @@ class Parcel {
       isInheritance: resolve(isInheritance, this.isInheritance),
       isDelegate: resolve(isDelegate, this.isDelegate),
       usageType: resolve(usageType, this.usageType),
+      holdingsCount: resolve(holdingsCount, this.holdingsCount),
     );
   }
 
@@ -299,6 +303,7 @@ class Parcel {
         'isInheritance': isInheritance,
         'isDelegate': isDelegate,
         'usageType': usageType,
+        'holdingsCount': holdingsCount,
       };
 
   factory Parcel.fromJson(final Map<String, dynamic> json) {
@@ -331,6 +336,7 @@ class Parcel {
       isInheritance: json['isInheritance'] as bool? ?? false,
       isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,
+      holdingsCount: json['holdingsCount'] as int?,
     );
   }
 }

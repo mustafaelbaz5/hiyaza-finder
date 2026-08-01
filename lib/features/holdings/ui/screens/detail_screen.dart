@@ -147,26 +147,29 @@ class _DetailScreenState extends State<DetailScreen> {
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: rw(16),
-                      ).copyWith(bottom: rh(16)),
-                      itemCount: _parcels.length,
-                      itemBuilder: (final BuildContext context, final int i) {
-                        final Parcel parcel = _parcels[i];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: rh(16)),
-                          child: ParcelDetailCard(
-                            parcel: parcel,
-                            isEdited: _repository.isParcelEdited(parcel.id),
-                            isNew: _repository.isNewLocalRecord(parcel.id),
-                            hideCreditType: _repository.hideCreditType,
-                            cityType: _repository.activeCityType,
-                            onFieldChanged: _updateField,
-                            animationDelay: Duration(milliseconds: i * 80),
-                          ),
-                        );
-                      },
+                  : RefreshIndicator(
+                      onRefresh: () => _repository.syncNow(),
+                      child: ListView.builder(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: rw(16),
+                        ).copyWith(bottom: rh(16)),
+                        itemCount: _parcels.length,
+                        itemBuilder: (final BuildContext context, final int i) {
+                          final Parcel parcel = _parcels[i];
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: rh(16)),
+                            child: ParcelDetailCard(
+                              parcel: parcel,
+                              isEdited: _repository.isParcelEdited(parcel.id),
+                              isNew: _repository.isNewLocalRecord(parcel.id),
+                              hideCreditType: _repository.hideCreditType,
+                              cityType: _repository.activeCityType,
+                              onFieldChanged: _updateField,
+                              animationDelay: Duration(milliseconds: i * 80),
+                            ),
+                          );
+                        },
+                      ),
                     ),
             ),
           ],

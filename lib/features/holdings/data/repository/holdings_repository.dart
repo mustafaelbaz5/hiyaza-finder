@@ -1,6 +1,8 @@
+import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
 import '../../../cities/domain/entities/city_type.dart';
+import '../../../sync/data/sync_runner.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
 import '../../domain/entities/bulk_editable_field.dart';
@@ -64,6 +66,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// this marker even though it may still be sitting in the outbox.
   final Set<String> _locallyAddedIds = <String>{};
 
+  /// Whether a sync operation is currently in flight.
+  var _isSyncing = false;
+
   @override
   List<Parcel> get parcels => _parcels;
 
@@ -98,6 +103,33 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// (detection miss) shows the field rather than risk hiding one that
   /// might matter.
   bool get hideCreditType => _activeCityType == CityType.agriculturalReform;
+
+  /// The default association name (اسم الجمعية) from the active city's
+  /// dataset — used to auto-populate this field for new records so they're
+  /// consistent. Returns the first non-empty association name found, or
+  /// `null` if none exist in the active dataset.
+  String? get defaultAssociationName {
+    for (final Parcel p in _parcels) {
+      if (p.associationName?.trim().isNotEmpty ?? false) {
+        return p.associationName;
+      }
+    }
+    return null;
+  }
+
+  /// Triggers a synchronization of pending operations.
+  /// Used by the RefreshIndicator on the detail screen — same action as the
+  /// "مزامنة الآن" button, but called via pull-to-refresh gesture.
+  Future<void> syncNow() async {
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      final SyncRunner syncRunner = GetIt.instance<SyncRunner>();
+      await syncRunner.flush();
+    } finally {
+      _isSyncing = false;
+    }
+  }
 
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person

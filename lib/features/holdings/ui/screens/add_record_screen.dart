@@ -70,10 +70,21 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   /// Owner name defaults to holder name when left blank — most parcels
   /// have the same person as both, so this avoids making the user type
-  /// the same name twice.
-  Parcel get _parcelToSave => (_parcel.ownerName?.trim().isEmpty ?? true)
-      ? _parcel.copyWith(ownerName: _parcel.holderName)
-      : _parcel;
+  /// the same name twice. Association name is auto-populated from the city
+  /// data for consistency.
+  Parcel get _parcelToSave {
+    final HoldingsRepository repo = getIt<HoldingsRepository>();
+    final String? defaultAssociation = repo.defaultAssociationName;
+
+    Parcel result = _parcel;
+    if ((_parcel.ownerName?.trim().isEmpty ?? true)) {
+      result = result.copyWith(ownerName: _parcel.holderName);
+    }
+    if ((result.associationName?.trim().isEmpty ?? true) && defaultAssociation != null) {
+      result = result.copyWith(associationName: defaultAssociation);
+    }
+    return result;
+  }
 
   Future<void> _save() async {
     if (!_canSave || _isSaving) return;
@@ -181,6 +192,37 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
           qirat: result.qirat,
           sahm: result.sahm,
         ),
+      ),
+    );
+  }
+
+  Future<void> _editBasin(final BuildContext context) async {
+    final List<String> basins = getIt<HoldingsRepository>().availableBasins;
+    if (basins.isEmpty) {
+      await _editText(
+        context,
+        title: 'اسم الحوض',
+        initialValue: _parcel.basinName ?? '',
+        apply: (final String v) => _parcel.copyWith(
+          basinName: v.isEmpty ? null : v,
+        ),
+      );
+      return;
+    }
+
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+      context,
+      title: 'اسم الحوض',
+      options: [
+        for (final String basin in basins) ChoiceOption<String>(value: basin, label: basin),
+      ],
+      selected: _parcel.basinName,
+      clearLabel: '—',
+    );
+    if (result == null) return;
+    setState(
+      () => _parcel = _parcel.copyWith(
+        basinName: result.isClear ? null : result.value,
       ),
     );
   }
@@ -326,14 +368,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'اسم الحوض',
                             value: _parcel.basinName,
-                            onEdit: () => _editText(
-                              context,
-                              title: 'اسم الحوض',
-                              initialValue: _parcel.basinName ?? '',
-                              apply: (final String v) => _parcel.copyWith(
-                                basinName: v.isEmpty ? null : v,
-                              ),
-                            ),
+                            onEdit: () => _editBasin(context),
                           ),
                           FieldRow(
                             label: 'رقم الأرض',

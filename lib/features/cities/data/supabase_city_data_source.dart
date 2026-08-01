@@ -72,6 +72,9 @@ class SupabaseCityDataSource {
   /// promoted record is never counted twice once it also appears via the
   /// `holdings` query above.
   ///
+  /// Also fetches holdings count per holding ID from `city_top_holders`
+  /// materialized view to populate `Parcel.holdingsCount`.
+  ///
   /// Note: an `added_holdings`-derived `Parcel.id` is that table's row id,
   /// not a `holdings.id` — `holding_edits.holding_id` is FK'd to
   /// `holdings(id)` only, so editing one of these records inline and
@@ -96,6 +99,15 @@ class SupabaseCityDataSource {
             .isFilter('promoted_holding_id', null),
       );
 
+      final List<Map<String, dynamic>> countRows = await _fetchAllPages(
+        _client.from('city_top_holders').select('holding_id_number, holdings_count').eq('city_id', cityId),
+      );
+
+      final Map<String, int> countByHoldingId = <String, int>{
+        for (final Map<String, dynamic> row in countRows)
+          row['holding_id_number'] as String: row['holdings_count'] as int,
+      };
+
       final Map<String, Map<String, dynamic>> latestEditByHoldingId =
           <String, Map<String, dynamic>>{
         for (final Map<String, dynamic> row in editRows)
@@ -104,7 +116,10 @@ class SupabaseCityDataSource {
 
       final List<Parcel> holdings = holdingRows.map((final Map<String, dynamic> row) {
         final Parcel base = holdingRowToParcel(row);
-        return _editOverlay.apply(base, latestEditByHoldingId[base.id]);
+        final Parcel withCount = base.copyWith(
+          holdingsCount: countByHoldingId[base.holdingId],
+        );
+        return _editOverlay.apply(withCount, latestEditByHoldingId[base.id]);
       }).toList();
 
       final List<Parcel> added = addedRows.map(addedHoldingRowToParcel).toList();
