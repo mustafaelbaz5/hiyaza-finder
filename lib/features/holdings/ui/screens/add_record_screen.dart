@@ -328,6 +328,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               ),
                             ),
                           ),
+                          if (_parcel.holdingsCount != null)
+                            FieldRow(
+                              label: 'holdings.detail.holdings_count'.tr(),
+                              value: _parcel.holdingsCount.toString(),
+                            ),
                           FieldRow(
                             label: 'اسم الحائز *',
                             value: _parcel.holderName,

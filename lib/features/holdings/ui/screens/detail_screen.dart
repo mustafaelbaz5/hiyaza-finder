@@ -56,6 +56,8 @@ class _DetailScreenState extends State<DetailScreen> {
       qirat: null,
       sahm: null,
       totalSqm: null,
+      // عدد القطع في الحيازة grows by one for the new parcel being added.
+      holdingsCount: (source.holdingsCount ?? 1) + 1,
     );
     final bool? added = await context.pushNamed<bool>(
       Routes.addRecord,

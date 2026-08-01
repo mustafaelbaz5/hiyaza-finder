@@ -244,6 +244,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
           nationalId: '11111111111111',
           landNumber: '-1',
           notes: 'غير محيز',
+          holdingsCount: 1, // a brand-new person starts with one قطعة
         ),
       ),
     );

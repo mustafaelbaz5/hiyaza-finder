@@ -148,6 +148,22 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     if (cityId == null) return null;
 
     final Parcel withId = parcel.copyWith(id: _uuid.v4());
+
+    // Keep عدد القطع في الحيازة consistent across every parcel that shares
+    // this holding — the new parcel's count already reflects the total
+    // (set by the caller), so every sibling parcel is bumped to match it.
+    if (parentHoldingId != null) {
+      final Parcel? parent = _parcels
+          .cast<Parcel?>()
+          .firstWhere((final Parcel? p) => p?.id == parentHoldingId, orElse: () => null);
+      if (parent != null) {
+        _parcels = <Parcel>[
+          for (final Parcel p in _parcels)
+            if (p.groupKey == parent.groupKey) p.copyWith(holdingsCount: withId.holdingsCount) else p,
+        ];
+      }
+    }
+
     _parcels = <Parcel>[..._parcels, withId];
     _originalById[withId.id] = withId;
     _locallyAddedIds.add(withId.id);
