@@ -52,12 +52,17 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   }
 
   Future<void> _pickBulkField() async {
+    final List<BulkEditableField> selectableFields = <BulkEditableField>[
+      for (final BulkEditableField f in BulkEditableField.values)
+        if (f != BulkEditableField.creditType || !_repository.hideCreditType)
+          f,
+    ];
     final ChoiceDialogResult<BulkEditableField>? result =
         await showChoiceDialog<BulkEditableField>(
       context,
       title: 'holdings.bulk_edit.pick_field_title'.tr(),
       options: [
-        for (final BulkEditableField f in BulkEditableField.values)
+        for (final BulkEditableField f in selectableFields)
           ChoiceOption<BulkEditableField>(value: f, label: f.label),
       ],
       selected: _bulkField,

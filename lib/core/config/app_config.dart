@@ -32,6 +32,4 @@ class AppConfig {
   static const String developerLinkedIn =
       'https://www.linkedin.com/in/mustafa-elbaz-725a6631a';
   static const String developerEmail = 'm9stafa05@gmail.com';
-
-
 }

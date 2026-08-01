@@ -38,7 +38,11 @@ class HomeCubit extends Cubit<HomeState> {
       final CitySnapshot? snapshot =
           await _cityRepository.loadActiveCachedSnapshot();
       if (snapshot == null) return null;
-      await _repository.loadParcelsForCity(snapshot.cityId, snapshot.parcels);
+      await _repository.loadParcelsForCity(
+        snapshot.cityId,
+        snapshot.parcels,
+        cityType: snapshot.cityType,
+      );
       return snapshot;
     } catch (_) {
       // A corrupt/unreadable cache file should look like "nothing loaded
@@ -93,7 +97,11 @@ class HomeCubit extends Cubit<HomeState> {
         dataVersion: remoteVersion,
       ),
     );
-    await _repository.loadParcelsForCity(fresh.cityId, fresh.parcels);
+    await _repository.loadParcelsForCity(
+      fresh.cityId,
+      fresh.parcels,
+      cityType: fresh.cityType,
+    );
     _activeCitySnapshot = fresh;
     emit(state.copyWith(isCityDataStale: false));
     refreshData();

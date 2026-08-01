@@ -161,6 +161,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             parcel: parcel,
                             isEdited: _repository.isParcelEdited(parcel.id),
                             isNew: _repository.isNewLocalRecord(parcel.id),
+                            hideCreditType: _repository.hideCreditType,
                             onFieldChanged: _updateField,
                             animationDelay: Duration(milliseconds: i * 80),
                           ),

@@ -14,11 +14,19 @@ import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart
 /// card so stacking many cards on the detail screen doesn't overwhelm the
 /// view by default.
 class SeeMoreSection extends StatefulWidget {
-  const SeeMoreSection(
-      {super.key, required this.parcel, required this.onFieldChanged});
+  const SeeMoreSection({
+    super.key,
+    required this.parcel,
+    required this.onFieldChanged,
+    this.hideCreditType = false,
+  });
 
   final Parcel parcel;
   final void Function(Parcel updated) onFieldChanged;
+
+  /// Omits نوع الائتمان entirely (no row, no reserved space) for
+  /// الإصلاح الزراعي cities, where the field has no meaning.
+  final bool hideCreditType;
 
   @override
   State<SeeMoreSection> createState() => SeeMoreSectionState();
@@ -122,20 +130,21 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                         widget.parcel.copyWith(isDelegate: v),
                       ),
                     ),
-                    FieldRow(
-                      label: 'نوع الائتمان',
-                      value: widget.parcel.creditType,
-                      onEdit: () => _editDropdown(
-                        context,
-                        title: 'نوع الائتمان',
-                        initialValue: widget.parcel.creditType,
-                        options: Parcel.creditTypeOptions,
-                        allowClear: false,
-                        apply: (final String? v) => widget.parcel.copyWith(
-                          creditType: v ?? Parcel.defaultCreditType,
+                    if (!widget.hideCreditType)
+                      FieldRow(
+                        label: 'نوع الائتمان',
+                        value: widget.parcel.creditType,
+                        onEdit: () => _editDropdown(
+                          context,
+                          title: 'نوع الائتمان',
+                          initialValue: widget.parcel.creditType,
+                          options: Parcel.creditTypeOptions,
+                          allowClear: false,
+                          apply: (final String? v) => widget.parcel.copyWith(
+                            creditType: v ?? Parcel.defaultCreditType,
+                          ),
                         ),
                       ),
-                    ),
                     FieldRow(
                       label: 'نوع الاستخدام',
                       value: widget.parcel.usageType,

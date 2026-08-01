@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../holdings/domain/entities/parcel.dart';
 import '../domain/entities/cached_city_meta.dart';
 import '../domain/entities/city_snapshot.dart';
+import '../domain/entities/city_type.dart';
 
 /// Persists a downloaded [CitySnapshot] to a JSON file in app storage —
 /// a city's holdings (thousands of rows) are too big for
@@ -31,6 +32,7 @@ class CitySnapshotCache {
       'dataVersion': snapshot.dataVersion,
       'downloadedAt': snapshot.downloadedAt.toIso8601String(),
       'parcels': snapshot.parcels.map((final Parcel p) => p.toJson()).toList(),
+      'cityType': snapshot.cityType.name,
     };
     await file.writeAsString(jsonEncode(json), flush: true);
   }
@@ -49,6 +51,10 @@ class CitySnapshotCache {
       parcels: (json['parcels'] as List<dynamic>)
           .map((final dynamic e) => Parcel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      // `json['cityType']` is absent in snapshots cached before this field
+      // existed — `cityTypeFromString(null)` falls back to `unspecified`,
+      // same as a fresh detection miss.
+      cityType: cityTypeFromString(json['cityType'] as String?),
     );
   }
 

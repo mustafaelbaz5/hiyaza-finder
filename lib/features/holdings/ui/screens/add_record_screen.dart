@@ -199,6 +199,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
+    final bool hideCreditType = getIt<HoldingsRepository>().hideCreditType;
     final String title = widget.parentHoldingId == null
         ? 'holdings.add.new_person_title'.tr()
         : 'holdings.add.new_parcel_title'.tr();
@@ -382,20 +383,21 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 _parcel.copyWith(notes: v),
                           ),
                         ),
-                        FieldRow(
-                          label: 'نوع الائتمان',
-                          value: _parcel.creditType,
-                          onEdit: () => _editDropdown(
-                            context,
-                            title: 'نوع الائتمان',
-                            initialValue: _parcel.creditType,
-                            options: Parcel.creditTypeOptions,
-                            allowClear: false,
-                            apply: (final String? v) => _parcel.copyWith(
-                              creditType: v ?? Parcel.defaultCreditType,
+                        if (!hideCreditType)
+                          FieldRow(
+                            label: 'نوع الائتمان',
+                            value: _parcel.creditType,
+                            onEdit: () => _editDropdown(
+                              context,
+                              title: 'نوع الائتمان',
+                              initialValue: _parcel.creditType,
+                              options: Parcel.creditTypeOptions,
+                              allowClear: false,
+                              apply: (final String? v) => _parcel.copyWith(
+                                creditType: v ?? Parcel.defaultCreditType,
+                              ),
                             ),
                           ),
-                        ),
                         FieldRow(
                           label: 'نوع الاستخدام',
                           value: _parcel.usageType,

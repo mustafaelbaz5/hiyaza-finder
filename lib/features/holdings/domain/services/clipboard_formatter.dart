@@ -23,7 +23,9 @@ class ClipboardFormatter {
   /// One "label: value," field per line (blank slots kept, never skipped)
   /// so the pasted text both reads clearly on its own and lines up
   /// row-for-row when pasted into an external spreadsheet template.
-  String format(final Parcel p) {
+  /// [hideCreditType] omits نوع الائتمان entirely (not even a blank slot)
+  /// for الإصلاح الزراعي cities, where the field has no meaning.
+  String format(final Parcel p, {final bool hideCreditType = false}) {
     String slot(final String? v) =>
         (v == null || v.trim().isEmpty) ? emptyPlaceholder : v.trim();
 
@@ -75,8 +77,10 @@ class ClipboardFormatter {
         'المساحة بالمتر',
         formatNumber(p.totalSqm) ?? emptyPlaceholder,
       ),
-      '${field('نوع الزرع', slot(p.cropType))}   '
-          '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
+      hideCreditType
+          ? field('نوع الزرع', slot(p.cropType))
+          : '${field('نوع الزرع', slot(p.cropType))}   '
+              '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
       field('ملاحظات', slot(p.notes)),
     ];
 

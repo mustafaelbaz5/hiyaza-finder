@@ -3,6 +3,7 @@ import '../domain/entities/cached_city_meta.dart';
 import '../domain/entities/city.dart';
 import '../domain/entities/city_snapshot.dart';
 import '../domain/repositories/city_repository.dart';
+import '../domain/services/city_type_detector.dart';
 import 'city_snapshot_cache.dart';
 import 'supabase_city_data_source.dart';
 
@@ -33,6 +34,10 @@ class CityRepositoryImpl implements CityRepository {
       dataVersion: city.dataVersion,
       downloadedAt: DateTime.now(),
       parcels: parcels,
+      // Detected once here, at download time, and cached on the snapshot
+      // — every other read (offline load, UI) uses the stored value
+      // instead of re-scanning the parcel list.
+      cityType: CityTypeDetector.detect(parcels),
     );
     await _cache.save(snapshot);
     await _keyValueStore.setString(_activeCityIdKey, city.id);

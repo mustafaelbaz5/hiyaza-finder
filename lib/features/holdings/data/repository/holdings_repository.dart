@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 
+import '../../../cities/domain/entities/city_type.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
 import '../../domain/entities/bulk_editable_field.dart';
@@ -43,6 +44,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// only enqueued once a city (and therefore a server to sync to) exists.
   final SyncQueue? syncQueue;
   String? _activeCityId;
+  CityType _activeCityType = CityType.unspecified;
 
   List<Parcel> _parcels = <Parcel>[];
 
@@ -67,14 +69,18 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
   /// dataset, keyed by [cityId] for local edit persistence. Local edits
-  /// made after this call reapply on the next load from cache.
+  /// made after this call reapply on the next load from cache. [cityType]
+  /// is the detection already cached on the `CitySnapshot` — this never
+  /// recomputes it from [parcels].
   Future<List<Parcel>> loadParcelsForCity(
     final String cityId,
-    final List<Parcel> parcels,
-  ) async {
+    final List<Parcel> parcels, {
+    final CityType cityType = CityType.unspecified,
+  }) async {
     final String key = 'city::$cityId';
     _activeEditsKey = key;
     _activeCityId = cityId;
+    _activeCityType = cityType;
     _originalById = <String, Parcel>{
       for (final Parcel p in parcels) p.id: p,
     };
@@ -82,6 +88,16 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _parcels = parcels.map(_applyEdit).toList();
     return _parcels;
   }
+
+  /// The active city's detected agricultural system — `unspecified` until
+  /// a city is loaded or if detection couldn't determine one.
+  CityType get activeCityType => _activeCityType;
+
+  /// Whether نوع الائتمان should be hidden everywhere in the UI — true
+  /// only for a confirmed الإصلاح الزراعي city. An `unspecified` result
+  /// (detection miss) shows the field rather than risk hiding one that
+  /// might matter.
+  bool get hideCreditType => _activeCityType == CityType.agriculturalReform;
 
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person

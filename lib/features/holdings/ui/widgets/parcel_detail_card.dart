@@ -31,6 +31,7 @@ class ParcelDetailCard extends StatelessWidget {
     required this.onFieldChanged,
     this.isEdited = false,
     this.isNew = false,
+    this.hideCreditType = false,
     this.animationDelay = Duration.zero,
   });
 
@@ -44,6 +45,12 @@ class ParcelDetailCard extends StatelessWidget {
   /// Added in the field this session and not yet confirmed synced — shown
   /// independently of [isEdited] (a record can be both).
   final bool isNew;
+
+  /// Omits نوع الائتمان from the field list, see-more section, and
+  /// copy-all output for الإصلاح الزراعي cities. Passed in by the caller
+  /// (`HoldingsRepository.hideCreditType`) rather than read via DI here,
+  /// so this reusable/tested widget stays a pure function of its props.
+  final bool hideCreditType;
   final Duration animationDelay;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
@@ -148,7 +155,11 @@ class ParcelDetailCard extends StatelessWidget {
             ],
           ),
           verticalSpacing(6),
-          SeeMoreSection(parcel: parcel, onFieldChanged: onFieldChanged),
+          SeeMoreSection(
+            parcel: parcel,
+            onFieldChanged: onFieldChanged,
+            hideCreditType: hideCreditType,
+          ),
         ],
       ),
     )
@@ -230,7 +241,7 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    final String text = _formatter.format(parcel);
+    final String text = _formatter.format(parcel, hideCreditType: hideCreditType);
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) {
       HapticFeedback.mediumImpact();

@@ -52,6 +52,7 @@ class CityPickerCubit extends Cubit<CityPickerState> {
       await _holdingsRepository.loadParcelsForCity(
         snapshot.cityId,
         snapshot.parcels,
+        cityType: snapshot.cityType,
       );
       return snapshot;
     } on AppException catch (e) {

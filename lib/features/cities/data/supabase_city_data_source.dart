@@ -17,6 +17,32 @@ class SupabaseCityDataSource {
   final SupabaseClient _client;
   final ParcelEditOverlay _editOverlay;
 
+  /// PostgREST caps a bare `.select()` at its server-side `db-max-rows`
+  /// (commonly 1000) with no error and no signal that rows were dropped —
+  /// the postgrest-dart client never auto-paginates. Every query in this
+  /// file must page through [_fetchAllPages] instead of awaiting a query
+  /// directly, or a city with more rows than the server limit silently
+  /// loses data past the cutoff.
+  static const int _pageSize = 1000;
+
+  /// Pages through [query] via `.range()` until a page comes back shorter
+  /// than [_pageSize], which is the only reliable "no more rows" signal
+  /// PostgREST gives without a separate count request.
+  Future<List<Map<String, dynamic>>> _fetchAllPages(
+    final PostgrestTransformBuilder<List<Map<String, dynamic>>> query,
+  ) async {
+    final List<Map<String, dynamic>> all = <Map<String, dynamic>>[];
+    int from = 0;
+    while (true) {
+      final List<Map<String, dynamic>> page =
+          await query.range(from, from + _pageSize - 1);
+      all.addAll(page);
+      if (page.length < _pageSize) break;
+      from += _pageSize;
+    }
+    return all;
+  }
+
   Future<List<City>> listPublishedCities() async {
     try {
       final List<Map<String, dynamic>> rows = await _client
@@ -60,23 +86,29 @@ class SupabaseCityDataSource {
   /// solved here; flagged as a known follow-up.
   Future<List<Parcel>> downloadHoldings(final String cityId) async {
     try {
-      final List<Map<String, dynamic>> holdingRows = await _client
-          .from('holdings')
-          .select()
-          .eq('city_id', cityId)
-          .eq('is_stale', false);
+      final List<Map<String, dynamic>> holdingRows = await _fetchAllPages(
+        _client
+            .from('holdings')
+            .select()
+            .eq('city_id', cityId)
+            .eq('is_stale', false),
+      );
 
-      final List<Map<String, dynamic>> editRows = await _client
-          .from('holding_edits_latest')
-          .select('holding_id, payload')
-          .eq('city_id', cityId);
+      final List<Map<String, dynamic>> editRows = await _fetchAllPages(
+        _client
+            .from('holding_edits_latest')
+            .select('holding_id, payload')
+            .eq('city_id', cityId),
+      );
 
-      final List<Map<String, dynamic>> addedRows = await _client
-          .from('added_holdings')
-          .select()
-          .eq('city_id', cityId)
-          .eq('status', 'approved')
-          .isFilter('promoted_holding_id', null);
+      final List<Map<String, dynamic>> addedRows = await _fetchAllPages(
+        _client
+            .from('added_holdings')
+            .select()
+            .eq('city_id', cityId)
+            .eq('status', 'approved')
+            .isFilter('promoted_holding_id', null),
+      );
 
       final Map<String, Map<String, dynamic>> latestEditByHoldingId =
           <String, Map<String, dynamic>>{
