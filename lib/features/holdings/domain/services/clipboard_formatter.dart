@@ -68,7 +68,10 @@ class ClipboardFormatter {
     String field(final String label, final String value) => '$label: $value,';
 
     final List<String> lines = <String>[
-      field('رقم الحيازة', p.holdingId),
+      p.holdingsCount != null
+          ? '${field('رقم الحيازة', p.holdingId)}     '
+              '${field('عدد القطع في الحيازة', p.holdingsCount.toString())}'
+          : field('رقم الحيازة', p.holdingId),
       field('اسم المالك', ownerSlot),
       field('اسم الحائز', holderSlot),
       field('الرقم القومي', nationalIdSlot),

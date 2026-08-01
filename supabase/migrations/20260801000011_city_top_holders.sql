@@ -1,5 +1,6 @@
 -- Materialized view for top holders per city with holding counts
--- Used by the app to display "عدد القطع في الحيازة" field
+-- Used by the app to display "عدد القطع في الحيازة" (number of parcels in holding)
+-- This view counts the number of parcels for each holding_id_number per city
 create materialized view city_top_holders as
 select
   c.id as city_id,

@@ -121,7 +121,7 @@ class ParcelDetailCard extends StatelessWidget {
               ),
               if (parcel.holdingsCount != null)
                 FieldRow(
-                  label: 'عدد القطع في الحيازة',
+                  label: 'holdings.detail.holdings_count'.tr(),
                   value: parcel.holdingsCount.toString(),
                 ),
               FieldRow(

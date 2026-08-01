@@ -54,6 +54,7 @@ class Parcel {
   final double? qirat; // قيراط
   final double? sahm; // سهم
   final double? totalSqm; // إجمالي المساحة (م²)
+  final int? holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
 
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
@@ -65,7 +66,6 @@ class Parcel {
   final bool isInheritance; // وراثة
   final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
-  final int? holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
 
   /// Whether رقم الحيازة hasn't been officially assigned yet — true for a
   /// brand-new person added in the field whose display value is still one
