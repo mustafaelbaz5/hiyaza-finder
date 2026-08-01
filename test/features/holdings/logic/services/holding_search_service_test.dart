@@ -110,4 +110,23 @@ void main() {
   test('empty query returns no results', () {
     expect(service.search(parcels, '   '), isEmpty);
   });
+
+  test('two pending (not-yet-numbered) new people are not merged into one '
+      'result — they share the same placeholder holdingId but have '
+      'distinct ids, so grouping must key off Parcel.groupKey, not the '
+      'raw holdingId', () {
+    final List<Parcel> pending = <Parcel>[
+      const Parcel(id: 'new-1', holdingId: '-', holderName: 'محمد الأول'),
+      const Parcel(id: 'new-2', holdingId: '-', holderName: 'محمد الثاني'),
+    ];
+
+    final results = service.search(pending, 'محمد');
+
+    expect(results, hasLength(2));
+    expect(
+      results.map((final r) => r.holderName).toSet(),
+      <String>{'محمد الأول', 'محمد الثاني'},
+    );
+    expect(results[0].groupKey, isNot(results[1].groupKey));
+  });
 }

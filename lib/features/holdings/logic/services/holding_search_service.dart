@@ -4,12 +4,19 @@ import 'arabic_normalizer.dart';
 class SearchResult {
   const SearchResult({
     required this.holdingId,
+    required this.groupKey,
     required this.holderName,
     required this.parcelCount,
     required this.score,
   });
 
+  /// رقم الحيازة as shown to the user — may be a shared placeholder
+  /// ("" or "-") for a pending record. Display only; use [groupKey] to
+  /// look up this holding's parcels.
   final String holdingId;
+
+  /// What actually identifies this result — see `Parcel.groupKey`.
+  final String groupKey;
   final String? holderName;
   final int parcelCount;
   final int score;
@@ -58,8 +65,8 @@ class HoldingSearchService {
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
-      parcelCountsByHolding[parcel.holdingId] =
-          (parcelCountsByHolding[parcel.holdingId] ?? 0) + 1;
+      parcelCountsByHolding[parcel.groupKey] =
+          (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
     }
 
     return _groupAndRank(scored, parcelCountsByHolding);
@@ -125,10 +132,10 @@ class HoldingSearchService {
   ) {
     final Map<String, _ScoredParcel> bestByHolding = <String, _ScoredParcel>{};
     for (final _ScoredParcel entry in scored) {
-      final String id = entry.parcel.holdingId;
-      final _ScoredParcel? existing = bestByHolding[id];
+      final String key = entry.parcel.groupKey;
+      final _ScoredParcel? existing = bestByHolding[key];
       if (existing == null || entry.score > existing.score) {
-        bestByHolding[id] = entry;
+        bestByHolding[key] = entry;
       }
     }
 
@@ -136,8 +143,9 @@ class HoldingSearchService {
         .map(
           (final _ScoredParcel entry) => SearchResult(
             holdingId: entry.parcel.holdingId,
+            groupKey: entry.parcel.groupKey,
             holderName: entry.parcel.holderName,
-            parcelCount: parcelCountsByHolding[entry.parcel.holdingId] ?? 1,
+            parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
           ),
         )

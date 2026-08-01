@@ -63,6 +63,27 @@ class Parcel {
   final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
 
+  /// Whether رقم الحيازة hasn't been officially assigned yet — true for a
+  /// brand-new person added in the field whose display value is still one
+  /// of the placeholder forms (`""`/`"-"` from older records, `"-1"` the
+  /// current add-person form default). This only gates app-side concerns
+  /// — [groupKey] (search/detail grouping) and the pending badge — not
+  /// what gets sent to the server: `added_holdings_mapper.dart` sends
+  /// whatever literal value is in the field, placeholder or not.
+  bool get isHoldingIdPending {
+    final String trimmed = holdingId.trim();
+    return trimmed.isEmpty || trimmed == '-' || trimmed == '-1';
+  }
+
+  /// What actually identifies "one holding" for search grouping and the
+  /// detail-screen lookup. For a confirmed record this is just
+  /// [holdingId] (unchanged behavior). For a pending one, [holdingId] is
+  /// a shared placeholder ("", "-", or "-1") that every new person has
+  /// until given a real number — grouping by it directly would silently
+  /// merge unrelated new people into one search result/detail screen, so
+  /// pending records group by their own unique [id] instead.
+  String get groupKey => isHoldingIdPending ? 'pending:$id' : holdingId;
+
   static const String defaultCreditType = 'ملك';
   static const String defaultUsageType = 'زراعة';
 
@@ -114,6 +135,7 @@ class Parcel {
   /// inline edits.
   Parcel copyWith({
     final String? id,
+    final String? holdingId,
     final Object? pageNumber = _unset,
     final Object? directorate = _unset,
     final Object? administration = _unset,
@@ -140,7 +162,7 @@ class Parcel {
 
     return Parcel(
       id: id ?? this.id,
-      holdingId: holdingId,
+      holdingId: holdingId ?? this.holdingId,
       pageNumber: resolve(pageNumber, this.pageNumber),
       directorate: resolve(directorate, this.directorate),
       administration: resolve(administration, this.administration),

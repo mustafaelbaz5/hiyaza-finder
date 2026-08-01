@@ -238,7 +238,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
     context.pushNamed(
       Routes.holdingDetail,
-      arguments: repository.parcelsForHolding(result.holdingId),
+      arguments: repository.parcelsForHolding(result.groupKey),
     );
   }
 
@@ -247,7 +247,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
       Routes.addRecord,
       arguments: const AddRecordArgs(
         initialParcel: Parcel(
-          holdingId: '', // pending — see holdings.detail.holding_id_pending
+          holdingId: '-1', // default; editable in the form below
           nationalId: '11111111111111',
           landNumber: '-1',
           notes: 'غير محيز',
@@ -305,58 +305,77 @@ class _LoadedBodyState extends State<_LoadedBody> {
         final bool isTablet = constraints.maxWidth >= 600;
         final double horizontalPadding = isTablet ? rw(64) : rw(16);
 
-        return Column(
+        return Stack(
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  verticalSpacing(8),
-                  if (widget.state.isCityDataStale) ...[
-                    CityStaleBanner(
-                      onRefresh: () => _refreshCity(context),
-                    ),
-                    verticalSpacing(8),
-                  ],
-                  FileInfoCard(
-                    holdingCount: widget.state.holdingCount,
-                    selectedBasin: widget.state.selectedBasin,
-                    hasBasins: widget.state.availableBasins.isNotEmpty,
-                    onChangeFile: widget.onChangeCity,
-                    onOpenBasinFilter: widget.onOpenBasinFilter,
-                    onOpenFileStatus: widget.onOpenFileStatus,
-                  ),
-                  verticalSpacing(16),
-                  CustomTextForm(
-                    hintText: 'holdings.search.hint'.tr(),
-                    controller: widget.controller,
-                    isRTL: true,
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: colors.iconSecondary,
-                    ),
-                    suffixIcon: suffixIcon,
-                    onChanged: widget.onQueryChanged,
-                  ),
-                  verticalSpacing(8),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: RefreshIndicator(
-                  color: AppColors.primary200,
-                  onRefresh: () => _refreshCity(context),
-                  child: RecommendationList(
-                    query: widget.state.query,
-                    results: widget.state.results,
-                    onSelect: (final SearchResult result) =>
-                        _openDetail(context, result),
-                    onAddNew: () => _openAddPerson(context),
+            Column(
+              children: <Widget>[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      verticalSpacing(8),
+                      if (widget.state.isCityDataStale) ...[
+                        CityStaleBanner(
+                          onRefresh: () => _refreshCity(context),
+                        ),
+                        verticalSpacing(8),
+                      ],
+                      FileInfoCard(
+                        holdingCount: widget.state.holdingCount,
+                        selectedBasin: widget.state.selectedBasin,
+                        hasBasins: widget.state.availableBasins.isNotEmpty,
+                        onChangeFile: widget.onChangeCity,
+                        onOpenBasinFilter: widget.onOpenBasinFilter,
+                        onOpenFileStatus: widget.onOpenFileStatus,
+                      ),
+                      verticalSpacing(16),
+                      CustomTextForm(
+                        hintText: 'holdings.search.hint'.tr(),
+                        controller: widget.controller,
+                        isRTL: true,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colors.iconSecondary,
+                        ),
+                        suffixIcon: suffixIcon,
+                        onChanged: widget.onQueryChanged,
+                      ),
+                      verticalSpacing(8),
+                    ],
                   ),
                 ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: RefreshIndicator(
+                      color: AppColors.primary200,
+                      onRefresh: () => _refreshCity(context),
+                      child: RecommendationList(
+                        query: widget.state.query,
+                        results: widget.state.results,
+                        onSelect: (final SearchResult result) =>
+                            _openDetail(context, result),
+                        onAddNew: () => _openAddPerson(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Always-visible add-person entry point — previously only
+            // reachable after typing a search that returned no results,
+            // which meant a brand-new person could only be added by first
+            // proving they weren't already in the data.
+            PositionedDirectional(
+              bottom: rh(20),
+              end: rw(20),
+              child: FloatingActionButton.extended(
+                onPressed: () => _openAddPerson(context),
+                backgroundColor: AppColors.primary200,
+                foregroundColor: AppColors.white,
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: Text('holdings.add.new_person_cta'.tr()),
               ),
             ),
           ],

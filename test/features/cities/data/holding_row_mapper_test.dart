@@ -67,4 +67,69 @@ void main() {
     });
     expect(p.feddan, isNull);
   });
+
+  group('addedHoldingRowToParcel', () {
+    test('maps a full added_holdings row, including the in-app-only fields',
+        () {
+      final Parcel p = addedHoldingRowToParcel(<String, dynamic>{
+        'id': 'added-uuid-1',
+        'holding_id_number': null, // brand-new person, no number yet
+        'holder_name': 'محمد الجديد',
+        'owner_name': 'مالك',
+        'national_id': '11111111111111',
+        'land_number': '-1',
+        'basin_name': 'البشيط',
+        'feddan': 2,
+        'qirat': 5,
+        'sahm': 0,
+        'crop_type': 'قمح',
+        'notes': 'غير محيز',
+        'credit_type': 'أوقاف',
+        'usage_type': 'مباني',
+        'is_inheritance': true,
+        'is_delegate': false,
+      });
+
+      expect(p.id, 'added-uuid-1');
+      expect(p.isHoldingIdPending, isTrue);
+      expect(p.holderName, 'محمد الجديد');
+      expect(p.ownerName, 'مالك');
+      expect(p.nationalId, '11111111111111');
+      expect(p.landNumber, '-1');
+      expect(p.basinName, 'البشيط');
+      expect(p.feddan, 2);
+      expect(p.qirat, 5);
+      expect(p.sahm, 0);
+      expect(p.cropType, 'قمح');
+      expect(p.notes, 'غير محيز');
+      expect(p.creditType, 'أوقاف');
+      expect(p.usageType, 'مباني');
+      expect(p.isInheritance, isTrue);
+      expect(p.isDelegate, isFalse);
+    });
+
+    test('missing credit_type/usage_type fall back to Parcel defaults', () {
+      final Parcel p = addedHoldingRowToParcel(<String, dynamic>{
+        'id': 'added-uuid-2',
+        'holder_name': 'محمد',
+      });
+
+      expect(p.creditType, Parcel.defaultCreditType);
+      expect(p.usageType, Parcel.defaultUsageType);
+      expect(p.isInheritance, isFalse);
+      expect(p.isDelegate, isFalse);
+    });
+
+    test('a promoted person\'s holding_id_number (assigned by the '
+        'dashboard) is preserved, not treated as pending', () {
+      final Parcel p = addedHoldingRowToParcel(<String, dynamic>{
+        'id': 'added-uuid-3',
+        'holding_id_number': '205',
+        'holder_name': 'محمد',
+      });
+
+      expect(p.holdingId, '205');
+      expect(p.isHoldingIdPending, isFalse);
+    });
+  });
 }

@@ -46,11 +46,18 @@ class SupabaseCityDataSource {
   /// Fetches every non-stale holding for [cityId] and overlays the latest
   /// saved correction (if any) from `holding_edits_latest` — same merge
   /// logic the local edit overlay already uses, just sourced from the
-  /// server instead of on-device storage.
+  /// server instead of on-device storage. Also merges in every approved
+  /// `added_holdings` record for the city (field-created persons/parcels
+  /// the dashboard has cleared) that hasn't been promoted into `holdings`
+  /// yet — `promoted_holding_id is null` excludes ones that have, so a
+  /// promoted record is never counted twice once it also appears via the
+  /// `holdings` query above.
   ///
-  /// Approved app-added records (`added_holdings`) aren't included yet —
-  /// there's nothing to promote into them until the add-person/add-parcel
-  /// flows land (APP_PLAN.md Phase 4).
+  /// Note: an `added_holdings`-derived `Parcel.id` is that table's row id,
+  /// not a `holdings.id` — `holding_edits.holding_id` is FK'd to
+  /// `holdings(id)` only, so editing one of these records inline and
+  /// syncing that edit will fail until the dashboard promotes it. Not
+  /// solved here; flagged as a known follow-up.
   Future<List<Parcel>> downloadHoldings(final String cityId) async {
     try {
       final List<Map<String, dynamic>> holdingRows = await _client
@@ -64,16 +71,27 @@ class SupabaseCityDataSource {
           .select('holding_id, payload')
           .eq('city_id', cityId);
 
+      final List<Map<String, dynamic>> addedRows = await _client
+          .from('added_holdings')
+          .select()
+          .eq('city_id', cityId)
+          .eq('status', 'approved')
+          .isFilter('promoted_holding_id', null);
+
       final Map<String, Map<String, dynamic>> latestEditByHoldingId =
           <String, Map<String, dynamic>>{
         for (final Map<String, dynamic> row in editRows)
           row['holding_id'] as String: row['payload'] as Map<String, dynamic>,
       };
 
-      return holdingRows.map((final Map<String, dynamic> row) {
+      final List<Parcel> holdings = holdingRows.map((final Map<String, dynamic> row) {
         final Parcel base = holdingRowToParcel(row);
         return _editOverlay.apply(base, latestEditByHoldingId[base.id]);
       }).toList();
+
+      final List<Parcel> added = addedRows.map(addedHoldingRowToParcel).toList();
+
+      return <Parcel>[...holdings, ...added];
     } catch (error) {
       ErrorHandler.handleException(error);
     }

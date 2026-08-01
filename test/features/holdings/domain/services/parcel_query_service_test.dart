@@ -44,4 +44,27 @@ void main() {
     expect(result, hasLength(2));
     expect(result.every((final Parcel p) => p.holdingId == '101'), isTrue);
   });
+
+  group('pending (not-yet-numbered) new people don\'t collide', () {
+    // Two different brand-new people, both with the "-" placeholder
+    // رقم الحيازة — a raw-holdingId comparison would incorrectly treat
+    // them as the same holding.
+    final List<Parcel> pendingParcels = <Parcel>[
+      const Parcel(id: 'new-1', holdingId: '-', holderName: 'شخص أول', basinName: 'البشيط'),
+      const Parcel(id: 'new-2', holdingId: '-', holderName: 'شخص ثاني', basinName: 'البشيط'),
+    ];
+
+    test('basinHoldingCounts counts them as two separate holdings', () {
+      final Map<String, int> counts = service.basinHoldingCounts(pendingParcels);
+      expect(counts['البشيط'], 2);
+    });
+
+    test('parcelsForHolding scoped to one groupKey returns only that person', () {
+      final String firstKey = pendingParcels[0].groupKey;
+      final List<Parcel> result =
+          service.parcelsForHolding(pendingParcels, firstKey);
+      expect(result, hasLength(1));
+      expect(result.single.holderName, 'شخص أول');
+    });
+  });
 }

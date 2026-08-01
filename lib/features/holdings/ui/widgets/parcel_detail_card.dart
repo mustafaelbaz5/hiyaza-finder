@@ -100,7 +100,7 @@ class ParcelDetailCard extends StatelessWidget {
             children: [
               FieldRow(
                 label: 'holdings.detail.holding_id'.tr(),
-                value: parcel.holdingId.trim().isEmpty
+                value: parcel.isHoldingIdPending
                     ? 'holdings.detail.holding_id_pending'.tr()
                     : parcel.holdingId,
               ),

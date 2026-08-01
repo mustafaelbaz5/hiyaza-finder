@@ -37,13 +37,16 @@ class ParcelQueryService {
   }
 
   /// Distinct-holding count per اسم الحوض — how many holdings sit in each
-  /// basin, shown beside the basin filter/status views.
+  /// basin, shown beside the basin filter/status views. Counts by
+  /// `groupKey`, not `holdingId` — several pending (not-yet-numbered) new
+  /// people can share the same blank/"-" رقم الحيازة, and counting by the
+  /// raw id would collapse them into one.
   Map<String, int> basinHoldingCounts(final List<Parcel> parcels) {
     final Map<String, Set<String>> holdingsByBasin = <String, Set<String>>{};
     for (final Parcel p in parcels) {
       final String? name = p.basinName?.trim();
       if (name == null || name.isEmpty) continue;
-      holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.holdingId);
+      holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.groupKey);
     }
     return <String, int>{
       for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
@@ -51,9 +54,12 @@ class ParcelQueryService {
     };
   }
 
+  /// [groupKey] is `Parcel.groupKey` (from a `SearchResult`), not the raw
+  /// رقم الحيازة — see that getter's doc for why: several pending records
+  /// can share the same placeholder id and must not be merged together.
   List<Parcel> parcelsForHolding(
     final List<Parcel> parcels,
-    final String holdingId,
+    final String groupKey,
   ) =>
-      parcels.where((final Parcel p) => p.holdingId == holdingId).toList();
+      parcels.where((final Parcel p) => p.groupKey == groupKey).toList();
 }

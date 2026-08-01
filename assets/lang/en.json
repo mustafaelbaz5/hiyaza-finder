@@ -28,6 +28,17 @@
     "user_disabled": "This account has been disabled.",
     "operation_not_allowed": "This operation is not allowed."
   },
+  "app_dialogs": {
+    "info": "Info",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "confirm": "Confirm",
+    "ok": "OK",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
   "sync": {
     "status": {
       "syncing": "Syncing…",
@@ -40,7 +51,13 @@
       "explainer": "Your data is saved on this device and will upload once you're online",
       "retry_all": "Retry all",
       "sync_now": "Sync now",
-      "empty": "Nothing waiting to sync"
+      "empty": "Nothing waiting to sync",
+      "result_all_synced": "Everything synced successfully",
+      "result_partial": "{synced} synced, {remaining} still pending",
+      "result_none": "Sync failed — check your internet connection and try again",
+      "discard": "Discard",
+      "discard_confirm": "This removes the item from the queue without uploading it. This can't be undone. Continue?",
+      "discarded": "Item discarded"
     },
     "operation": {
       "edit_holding": "Holding edit",
@@ -151,7 +168,7 @@
       "total_sqm": "Total area (m²)"
     },
     "add": {
-      "new_person_cta": "Add new record",
+      "new_person_cta": "Add",
       "new_person_title": "Add new person",
       "new_parcel_title": "Add a new parcel",
       "for_person": "Add a new parcel for {name}",

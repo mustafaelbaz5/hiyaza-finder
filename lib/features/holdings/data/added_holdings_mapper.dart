@@ -6,8 +6,11 @@ import '../domain/entities/parcel.dart';
 /// `created_by`) — see `supabase/migrations/20260731000007_added_holdings.sql`.
 Map<String, dynamic> parcelToAddedHoldingsRecord(final Parcel p) {
   return <String, dynamic>{
-    'holding_id_number':
-        p.holdingId.trim().isEmpty ? null : p.holdingId.trim(),
+    // Sent as the literal value the user left/typed in the field — even a
+    // placeholder like "-1" — not converted to null. `isHoldingIdPending`
+    // is only for app-side grouping/badge concerns; the server payload
+    // reflects exactly what's shown in the form.
+    'holding_id_number': p.holdingId.trim().isEmpty ? null : p.holdingId.trim(),
     'holder_name': p.holderName,
     'owner_name': p.ownerName,
     'national_id': p.nationalId,
@@ -22,9 +25,13 @@ Map<String, dynamic> parcelToAddedHoldingsRecord(final Parcel p) {
     'border_west': p.borderWest,
     'border_south': p.borderSouth,
     'border_north': p.borderNorth,
-    'feddan': p.feddan ?? 0,
-    'qirat': p.qirat ?? 0,
-    'sahm': p.sahm ?? 0,
+    // `added_holdings.feddan/qirat/sahm` are Postgres `int` columns, but
+    // `Parcel`'s are `double?` (the area editor deals in fractional
+    // فدان) — sending a double like `1.0` straight through fails
+    // Postgres' integer cast ("invalid input syntax for type integer").
+    'feddan': (p.feddan ?? 0).round(),
+    'qirat': (p.qirat ?? 0).round(),
+    'sahm': (p.sahm ?? 0).round(),
     'total_sqm': p.totalSqm,
     'crop_type': p.cropType,
     'notes': p.notes,

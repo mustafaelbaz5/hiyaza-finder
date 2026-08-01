@@ -63,6 +63,16 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
   /// [state] only tracks aggregate counts.
   Future<List<SyncOperation>> pendingOperations() => _queue.pending();
 
+  /// Discards a single queued operation without pushing it — the sync
+  /// sheet's escape hatch for an operation that can never succeed (e.g.
+  /// one enqueued with a payload shape a since-fixed bug produced; fixing
+  /// the bug only prevents *new* operations from having the problem, it
+  /// can't repair one already serialized to the local outbox).
+  Future<void> discardOperation(final String operationId) async {
+    await _queue.remove(operationId);
+    await _refresh();
+  }
+
   /// Clears every permanently-failed operation's attempt count and
   /// immediately retries — the sync badge's action when tapped in the
   /// "failed" state, since [flushNow] alone would just skip them again.

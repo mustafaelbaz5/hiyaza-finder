@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../auth/domain/repositories/auth_repository.dart';
 import '../domain/entities/sync_operation.dart';
 import '../domain/repositories/sync_api.dart';
@@ -31,7 +33,10 @@ class SyncRunner {
     _isFlushing = true;
     try {
       final String? userId = _authRepository.currentUser?.id;
-      if (userId == null) return; // signed out — nothing to sync as whom
+      if (userId == null) {
+        debugPrint('[SyncRunner] flush skipped — no signed-in user');
+        return; // signed out — nothing to sync as whom
+      }
 
       final List<SyncOperation> ops = await _queue.pending();
       final DateTime now = DateTime.now();
@@ -46,6 +51,7 @@ class SyncRunner {
           await _push(op, userId);
           await _queue.remove(op.id);
         } catch (e) {
+          debugPrint('[SyncRunner] push failed for ${op.runtimeType} (${op.id}): $e');
           await _queue.update(
             op.withIncrementedAttempts(DateTime.now(), error: e.toString()),
           );

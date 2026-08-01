@@ -276,6 +276,18 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                     ResponsiveFieldsWrap(
                       children: [
                         FieldRow(
+                          label: 'رقم الحيازة',
+                          value: _parcel.holdingId,
+                          onEdit: () => _editText(
+                            context,
+                            title: 'رقم الحيازة',
+                            initialValue: _parcel.holdingId,
+                            apply: (final String v) => _parcel.copyWith(
+                              holdingId: v.isEmpty ? '-1' : v,
+                            ),
+                          ),
+                        ),
+                        FieldRow(
                           label: 'اسم الحائز *',
                           value: _parcel.holderName,
                           onEdit: () => _editText(

@@ -6,6 +6,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../data/sync_runner.dart';
 import '../../domain/entities/sync_operation.dart';
 import '../../domain/services/sync_operation_summary.dart';
@@ -47,6 +48,46 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
     setState(() {
       _operations = context.read<SyncStatusCubit>().pendingOperations();
     });
+  }
+
+  /// Runs [action] (a sync/retry trigger) and shows a snackbar reporting
+  /// what actually happened — without this, a failing sync (e.g. no
+  /// network, or a server error) looks identical to a successful one: the
+  /// list just silently doesn't change, with no feedback that anything
+  /// was even attempted.
+  Future<void> _runAndReport(final Future<void> Function() action) async {
+    final int before = (await context.read<SyncStatusCubit>().pendingOperations()).length;
+    await action();
+    if (!mounted) return;
+    final int after = (await context.read<SyncStatusCubit>().pendingOperations()).length;
+    _refresh();
+    if (!mounted) return;
+
+    final int synced = before - after;
+    if (after == 0) {
+      context.showSuccessSnackBar('sync.details.result_all_synced'.tr());
+    } else if (synced > 0) {
+      context.showSuccessSnackBar(
+        'sync.details.result_partial'.tr(
+          namedArgs: {'synced': synced.toString(), 'remaining': after.toString()},
+        ),
+      );
+    } else {
+      context.showErrorSnackBar('sync.details.result_none'.tr());
+    }
+  }
+
+  Future<void> _confirmDiscard(final SyncOperation op) async {
+    await AppDialogs.showConfirm(
+      context,
+      message: 'sync.details.discard_confirm'.tr(),
+      onConfirm: () async {
+        await context.read<SyncStatusCubit>().discardOperation(op.id);
+        if (!mounted) return;
+        _refresh();
+        context.showSuccessSnackBar('sync.details.discarded'.tr());
+      },
+    );
   }
 
   @override
@@ -131,7 +172,10 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
                     padding: EdgeInsets.symmetric(horizontal: rw(16)),
                     children: [
                       for (final SyncOperation op in ops)
-                        _SyncOperationTile(operation: op),
+                        _SyncOperationTile(
+                          operation: op,
+                          onDiscard: () => _confirmDiscard(op),
+                        ),
                     ],
                   );
                 },
@@ -148,12 +192,11 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
                           child: OutlinedButton(
                             onPressed: state.isSyncing
                                 ? null
-                                : () async {
-                                    await context
-                                        .read<SyncStatusCubit>()
-                                        .retryFailed();
-                                    _refresh();
-                                  },
+                                : () => _runAndReport(
+                                      () => context
+                                          .read<SyncStatusCubit>()
+                                          .retryFailed(),
+                                    ),
                             child: Text('sync.details.retry_all'.tr()),
                           ),
                         ),
@@ -166,12 +209,11 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
                           ),
                           onPressed: state.isSyncing
                               ? null
-                              : () async {
-                                  await context
-                                      .read<SyncStatusCubit>()
-                                      .flushNow();
-                                  _refresh();
-                                },
+                              : () => _runAndReport(
+                                    () => context
+                                        .read<SyncStatusCubit>()
+                                        .flushNow(),
+                                  ),
                           child: Text(
                             'sync.details.sync_now'.tr(),
                             style: const TextStyle(color: AppColors.white),
@@ -191,9 +233,15 @@ class _SyncDetailsSheetState extends State<_SyncDetailsSheet> {
 }
 
 class _SyncOperationTile extends StatelessWidget {
-  const _SyncOperationTile({required this.operation});
+  const _SyncOperationTile({required this.operation, required this.onDiscard});
 
   final SyncOperation operation;
+
+  /// Removes this operation from the outbox without pushing it — the
+  /// escape hatch for one that can never succeed (e.g. a payload shaped
+  /// by a since-fixed bug; the fix only prevents new operations from
+  /// having the problem, not this already-queued one).
+  final VoidCallback onDiscard;
 
   @override
   Widget build(final BuildContext context) {
@@ -232,7 +280,7 @@ class _SyncOperationTile extends StatelessWidget {
                   ),
                   textAlign: TextAlign.right,
                 ),
-                if (failed && operation.lastError != null) ...[
+                if (operation.lastError != null) ...[
                   verticalSpacing(4),
                   Text(
                     operation.lastError!,
@@ -246,6 +294,13 @@ class _SyncOperationTile extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+          horizontalSpacing(4),
+          IconButton(
+            tooltip: 'sync.details.discard'.tr(),
+            icon: Icon(Icons.close_rounded, size: 18, color: colors.textHint),
+            onPressed: onDiscard,
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
