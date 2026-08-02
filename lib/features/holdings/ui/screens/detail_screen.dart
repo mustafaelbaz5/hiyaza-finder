@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -29,10 +31,40 @@ class _DetailScreenState extends State<DetailScreen> {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
+  /// Ids of the currently-shown parcels that are still-unsynced field-added
+  /// records — the only ones deletable (see
+  /// `HoldingsRepository.canDeleteLocalParcel`). Computed once per load
+  /// (not per `build()`, since the underlying check reads the async sync
+  /// outbox) and refreshed after any add/delete on this screen.
+  Set<String> _deletableIds = <String>{};
+
   @override
   void initState() {
     super.initState();
     _parcels = List<Parcel>.of(widget.parcels);
+    unawaited(_refreshDeletableIds());
+  }
+
+  Future<void> _refreshDeletableIds() async {
+    final Set<String> deletable = <String>{};
+    for (final Parcel p in _parcels) {
+      if (await _repository.canDeleteLocalParcel(p.id)) deletable.add(p.id);
+    }
+    if (mounted) setState(() => _deletableIds = deletable);
+  }
+
+  Future<void> _deleteParcel(final Parcel parcel) async {
+    final bool deleted = await _repository.deleteLocalParcel(parcel.id);
+    if (!mounted) return;
+    if (!deleted) {
+      context.showErrorSnackBar('holdings.detail.delete_failed'.tr());
+      return;
+    }
+    setState(() {
+      _parcels = _parcels.where((final Parcel p) => p.id != parcel.id).toList();
+      _deletableIds.remove(parcel.id);
+    });
+    context.showSuccessSnackBar('holdings.detail.deleted'.tr());
   }
 
   /// Default الملاحظات value applied automatically whenever an existing
@@ -190,6 +222,9 @@ class _DetailScreenState extends State<DetailScreen> {
                               onFieldChanged: _updateField,
                               animationDelay: Duration(milliseconds: i * 80),
                               resolveBorderMatch: _repository.findByBorderText,
+                              onDelete: _deletableIds.contains(parcel.id)
+                                  ? () => _deleteParcel(parcel)
+                                  : null,
                             ),
                           );
                         },

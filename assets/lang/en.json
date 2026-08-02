@@ -177,7 +177,11 @@
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
-      "total_sqm": "Total area (m²)"
+      "total_sqm": "Total area (m²)",
+      "delete": "Delete",
+      "delete_confirm": "This record will be permanently deleted before it's uploaded to the server. Continue?",
+      "deleted": "Record deleted",
+      "delete_failed": "This record can't be deleted — it has already been uploaded"
     },
     "add": {
       "new_person_cta": "Add",

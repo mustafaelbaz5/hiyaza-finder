@@ -214,6 +214,57 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     return withId;
   }
 
+  /// Whether [id] can be deleted via [deleteLocalParcel] — only records
+  /// created in the field ([addLocalParcel]) that haven't synced to the
+  /// server yet. Once a field-added record reaches `added_holdings` it
+  /// enters the dashboard's pending/approved/rejected review workflow —
+  /// there is no client-side delete for it beyond this point (staff review
+  /// it instead; see APP_PLAN.md § "added_holdings"). Checks the live
+  /// outbox — not [_locallyAddedIds], which is session-scoped and would
+  /// wrongly say "no" for a still-unsynced record after an app restart.
+  Future<bool> canDeleteLocalParcel(final String id) async {
+    final SyncQueue? queue = syncQueue;
+    if (queue == null) return false;
+    final List<SyncOperation> pending = await queue.pending();
+    return pending.any(
+      (final SyncOperation op) => op is AddRecordOperation && op.id == id,
+    );
+  }
+
+  /// Deletes a still-unsynced field-added record — removes its queued
+  /// [AddRecordOperation] (so it's never pushed to the server at all) and
+  /// drops it from the in-memory dataset. Does nothing and returns `false`
+  /// if [id] isn't eligible (see [canDeleteLocalParcel]): already synced,
+  /// or was never a locally-added record to begin with (e.g. part of the
+  /// authoritative `holdings` import, which this app never deletes).
+  Future<bool> deleteLocalParcel(final String id) async {
+    if (!await canDeleteLocalParcel(id)) return false;
+
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == id);
+    if (idx < 0) return false;
+    final Parcel removed = _parcels[idx];
+
+    await syncQueue!.remove(id);
+
+    _parcels = <Parcel>[
+      for (final Parcel p in _parcels)
+        if (p.id != id)
+          // Mirrors addLocalParcel's bump: undo it for any sibling parcel
+          // still sharing this holding.
+          (p.groupKey == removed.groupKey && p.holdingsCount != null)
+              ? p.copyWith(holdingsCount: p.holdingsCount! - 1)
+              : p,
+    ];
+    _originalById.remove(id);
+    _locallyAddedIds.remove(id);
+    _edits.remove(id);
+    if (_activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
+    }
+    _rebuildBorderIndex();
+    return true;
+  }
+
   Parcel _applyEdit(final Parcel p) => _editOverlay.apply(p, _edits[p.id]);
 
   /// Persists an edited parcel and reflects it in the in-memory dataset so

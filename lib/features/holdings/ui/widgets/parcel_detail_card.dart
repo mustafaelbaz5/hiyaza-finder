@@ -11,6 +11,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/domain/entities/association_type.dart';
@@ -39,6 +40,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.associationType,
     this.animationDelay = Duration.zero,
     this.resolveBorderMatch,
+    this.onDelete,
   });
 
   final Parcel parcel;
@@ -51,6 +53,15 @@ class ParcelDetailCard extends StatelessWidget {
   /// Added in the field this session and not yet confirmed synced — shown
   /// independently of [isEdited] (a record can be both).
   final bool isNew;
+
+  /// Shows a delete (trash) icon when non-null and removes this parcel on
+  /// confirm. Passed in by the caller (`DetailScreen`, gated on
+  /// `HoldingsRepository.canDeleteLocalParcel`) rather than decided here —
+  /// only a still-unsynced, field-added record can be deleted at all (see
+  /// that method's doc for why), and checking eligibility is async, so this
+  /// widget stays a pure function of its props instead of resolving it
+  /// itself during `build()`.
+  final VoidCallback? onDelete;
 
   /// Omits نوع الائتمان from the field list, see-more section, and
   /// copy-all output for الإصلاح الزراعي cities. Passed in by the caller
@@ -90,27 +101,37 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isEdited || isNew) ...<Widget>[
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: <Widget>[
-                  if (isNew)
-                    _StatusBadge(
-                      icon: Icons.fiber_new_rounded,
-                      label: 'holdings.detail.new_badge'.tr(),
-                      color: AppColors.blue200,
-                    ),
-                  if (isEdited)
-                    _StatusBadge(
-                      icon: Icons.edit_note_rounded,
-                      label: 'holdings.edit.edited_badge'.tr(),
-                      color: AppColors.amber300,
-                    ),
-                ],
-              ),
+          if (isEdited || isNew || onDelete != null) ...<Widget>[
+            Row(
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      if (isNew)
+                        _StatusBadge(
+                          icon: Icons.fiber_new_rounded,
+                          label: 'holdings.detail.new_badge'.tr(),
+                          color: AppColors.blue200,
+                        ),
+                      if (isEdited)
+                        _StatusBadge(
+                          icon: Icons.edit_note_rounded,
+                          label: 'holdings.edit.edited_badge'.tr(),
+                          color: AppColors.amber300,
+                        ),
+                    ],
+                  ),
+                ),
+                if (onDelete != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: AppColors.red200),
+                    tooltip: 'holdings.detail.delete'.tr(),
+                    onPressed: () => _confirmDelete(context),
+                  ),
+              ],
             ),
             verticalSpacing(8),
           ],
@@ -384,6 +405,15 @@ class ParcelDetailCard extends StatelessWidget {
       HapticFeedback.mediumImpact();
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
     }
+  }
+
+  Future<void> _confirmDelete(final BuildContext context) async {
+    await AppDialogs.showConfirm(
+      context,
+      message: 'holdings.detail.delete_confirm'.tr(),
+      confirmText: 'holdings.detail.delete'.tr(),
+      onConfirm: onDelete!,
+    );
   }
 }
 
