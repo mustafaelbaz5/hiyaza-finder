@@ -32,7 +32,8 @@ class RecommendationList extends StatelessWidget {
   /// is what lets `RefreshIndicator` in `home_screen.dart` register a pull
   /// gesture regardless of search state — a non-scrollable child can never
   /// trigger it.
-  static const ScrollPhysics _pullToRefreshPhysics = AlwaysScrollableScrollPhysics();
+  static const ScrollPhysics _pullToRefreshPhysics =
+      AlwaysScrollableScrollPhysics();
 
   @override
   Widget build(final BuildContext context) {
@@ -48,7 +49,8 @@ class RecommendationList extends StatelessWidget {
       // `RefreshIndicator` to register a pull gesture on the no-results
       // state).
       return LayoutBuilder(
-        builder: (final BuildContext context, final BoxConstraints constraints) {
+        builder:
+            (final BuildContext context, final BoxConstraints constraints) {
           return ListView(
             physics: _pullToRefreshPhysics,
             padding: const EdgeInsets.symmetric(vertical: 24),

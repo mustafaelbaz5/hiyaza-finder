@@ -62,8 +62,9 @@ class HomeState extends Equatable {
       results: results ?? this.results,
       errorMessage: errorMessage,
       availableBasins: availableBasins ?? this.availableBasins,
-      selectedBasin:
-          identical(selectedBasin, _unset) ? this.selectedBasin : selectedBasin as String?,
+      selectedBasin: identical(selectedBasin, _unset)
+          ? this.selectedBasin
+          : selectedBasin as String?,
       isCityDataStale: isCityDataStale ?? this.isCityDataStale,
     );
   }

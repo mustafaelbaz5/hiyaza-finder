@@ -28,7 +28,9 @@ class InlineAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: highlighted ? AppColors.primary50.withValues(alpha: 0.3) : colors.surfaceVariant,
+          color: highlighted
+              ? AppColors.primary50.withValues(alpha: 0.3)
+              : colors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: highlighted ? AppColors.primary200 : Colors.transparent,

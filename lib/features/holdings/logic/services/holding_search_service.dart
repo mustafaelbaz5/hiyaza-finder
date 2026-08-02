@@ -65,7 +65,8 @@ class HoldingSearchService {
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
-      parcelCountsByHolding[parcel.groupKey] = (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      parcelCountsByHolding[parcel.groupKey] =
+          (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
     }
 
     return _groupAndRank(scored, parcelCountsByHolding);
@@ -115,8 +116,9 @@ class HoldingSearchService {
       return _fullNameStartScore;
     }
 
-    final bool matchesAWord =
-        normalizedName.split(' ').any((final String word) => word.startsWith(normalizedQuery));
+    final bool matchesAWord = normalizedName
+        .split(' ')
+        .any((final String word) => word.startsWith(normalizedQuery));
     if (matchesAWord) return _wordStartScore;
 
     if (normalizedName.contains(normalizedQuery)) return _containsScore;
@@ -149,7 +151,8 @@ class HoldingSearchService {
         )
         .toList()
       ..sort(
-        (final SearchResult a, final SearchResult b) => b.score.compareTo(a.score),
+        (final SearchResult a, final SearchResult b) =>
+            b.score.compareTo(a.score),
       );
 
     return results.take(_maxResults).toList();

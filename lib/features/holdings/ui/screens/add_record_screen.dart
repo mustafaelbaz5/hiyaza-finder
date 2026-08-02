@@ -80,7 +80,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     if ((_parcel.ownerName?.trim().isEmpty ?? true)) {
       result = result.copyWith(ownerName: _parcel.holderName);
     }
-    if ((result.associationName?.trim().isEmpty ?? true) && defaultAssociation != null) {
+    if ((result.associationName?.trim().isEmpty ?? true) &&
+        defaultAssociation != null) {
       result = result.copyWith(associationName: defaultAssociation);
     }
     return result;
@@ -152,7 +153,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       context,
       title: title,
       options: [
-        for (final String option in options) ChoiceOption<String>(value: option, label: option),
+        for (final String option in options)
+          ChoiceOption<String>(value: option, label: option),
       ],
       selected: initialValue,
       clearLabel: allowClear ? '—' : null,
@@ -214,7 +216,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       context,
       title: 'اسم الحوض',
       options: [
-        for (final String basin in basins) ChoiceOption<String>(value: basin, label: basin),
+        for (final String basin in basins)
+          ChoiceOption<String>(value: basin, label: basin),
       ],
       selected: _parcel.basinName,
       clearLabel: '—',
@@ -387,7 +390,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               ),
                             ),
                           ),
-                          if (widget.parentHoldingId != null && _parcel.landNumber == '-1')
+                          if (widget.parentHoldingId != null &&
+                              _parcel.landNumber == '-1')
                             Padding(
                               padding: EdgeInsets.only(top: rh(4)),
                               child: Text(
@@ -416,7 +420,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               title: 'ملاحظات',
                               initialValue: _parcel.notes,
                               options: Parcel.notesOptions,
-                              apply: (final String? v) => _parcel.copyWith(notes: v),
+                              apply: (final String? v) =>
+                                  _parcel.copyWith(notes: v),
                             ),
                           ),
                           if (!hideCreditType)
@@ -452,7 +457,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             label: 'وراثة',
                             value: _parcel.isInheritance,
                             onChanged: (final bool v) => setState(
-                              () => _parcel = _parcel.copyWith(isInheritance: v),
+                              () =>
+                                  _parcel = _parcel.copyWith(isInheritance: v),
                             ),
                           ),
                           ToggleFieldRow(

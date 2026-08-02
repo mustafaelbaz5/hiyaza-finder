@@ -54,11 +54,13 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   Future<void> _pickBulkField() async {
     final List<BulkEditableField> selectableFields = <BulkEditableField>[
       for (final BulkEditableField f in BulkEditableField.values)
-        if ((f != BulkEditableField.creditType || !_repository.hideCreditType) &&
+        if ((f != BulkEditableField.creditType ||
+                !_repository.hideCreditType) &&
             (f != BulkEditableField.reformType || _repository.hideCreditType))
           f,
     ];
-    final ChoiceDialogResult<BulkEditableField>? result = await showChoiceDialog<BulkEditableField>(
+    final ChoiceDialogResult<BulkEditableField>? result =
+        await showChoiceDialog<BulkEditableField>(
       context,
       title: 'holdings.bulk_edit.pick_field_title'.tr(),
       options: [
@@ -110,10 +112,13 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       context,
       title: _bulkField.label,
       options: [
-        for (final String o in _bulkField.textOptions) ChoiceOption<String>(value: o, label: o),
+        for (final String o in _bulkField.textOptions)
+          ChoiceOption<String>(value: o, label: o),
       ],
       selected: _bulkValue as String?,
-      clearLabel: _bulkField.allowClear ? 'holdings.bulk_edit.value_placeholder'.tr() : null,
+      clearLabel: _bulkField.allowClear
+          ? 'holdings.bulk_edit.value_placeholder'.tr()
+          : null,
     );
     if (result == null) return;
     setState(() => _bulkValue = result.isClear ? null : result.value);
@@ -231,12 +236,15 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.primary50.withValues(alpha: 0.3),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: AppColors.primary50
+                                                .withValues(alpha: 0.3),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
                                           child: Text(
                                             '${counts[basin] ?? 0}',
-                                            style: AppTextStyles.font12Bold.copyWith(
+                                            style: AppTextStyles.font12Bold
+                                                .copyWith(
                                               color: AppColors.primary200,
                                             ),
                                           ),
@@ -245,7 +253,8 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                                         Expanded(
                                           child: Text(
                                             basin,
-                                            style: AppTextStyles.font14SemiBold.copyWith(
+                                            style: AppTextStyles.font14SemiBold
+                                                .copyWith(
                                               color: colors.textPrimary,
                                             ),
                                             textAlign: TextAlign.right,
@@ -266,7 +275,8 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                         children: [
                           PickerRow(
                             label: 'holdings.bulk_edit.scope_label'.tr(),
-                            value: _bulkBasin ?? 'holdings.bulk_edit.scope_all'.tr(),
+                            value: _bulkBasin ??
+                                'holdings.bulk_edit.scope_all'.tr(),
                             onTap: _pickBulkBasin,
                           ),
                           verticalSpacing(8),

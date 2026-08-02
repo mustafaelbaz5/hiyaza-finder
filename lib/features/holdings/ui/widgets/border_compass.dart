@@ -47,7 +47,8 @@ class BorderCompass extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    bool navigable(final String? text) => isBorderNavigable?.call(text) ?? false;
+    bool navigable(final String? text) =>
+        isBorderNavigable?.call(text) ?? false;
 
     return Column(
       children: [
@@ -156,7 +157,8 @@ class _BorderCell extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String displayText = (text == null || text!.trim().isEmpty) ? '—' : text!;
+    final String displayText =
+        (text == null || text!.trim().isEmpty) ? '—' : text!;
 
     return InkWell(
       onTap: isNavigable ? onTap : null,
@@ -165,7 +167,9 @@ class _BorderCell extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
-          color: isNavigable ? AppColors.primary50.withValues(alpha: 0.25) : colors.surface,
+          color: isNavigable
+              ? AppColors.primary50.withValues(alpha: 0.25)
+              : colors.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isNavigable ? AppColors.primary200 : colors.border,
@@ -205,7 +209,9 @@ class _BorderCell extends StatelessWidget {
               style: AppTextStyles.font14SemiBold.copyWith(
                 color: isNavigable ? AppColors.primary300 : colors.textPrimary,
                 fontSize: 12,
-                decoration: isNavigable ? TextDecoration.underline : TextDecoration.none,
+                decoration: isNavigable
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
                 decorationColor: AppColors.primary200,
               ),
               textAlign: TextAlign.center,

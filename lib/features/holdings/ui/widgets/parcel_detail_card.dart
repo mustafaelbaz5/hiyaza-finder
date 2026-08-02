@@ -13,7 +13,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../../cities/domain/entities/city_type.dart';
+import '../../../cities/domain/entities/association_type.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/clipboard_formatter.dart';
@@ -36,7 +36,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.isEdited = false,
     this.isNew = false,
     this.hideCreditType = false,
-    this.cityType = CityType.unspecified,
+    this.associationType,
     this.animationDelay = Duration.zero,
     this.resolveBorderMatch,
   });
@@ -58,9 +58,10 @@ class ParcelDetailCard extends StatelessWidget {
   /// so this reusable/tested widget stays a pure function of its props.
   final bool hideCreditType;
 
-  /// The active city's detected agricultural system — determines whether to
-  /// display نوع الائتمان (agricultural credit) or نوع الإصلاح (reform).
-  final CityType cityType;
+  /// The active city's association type, read from
+  /// `cities.association_type` — determines whether to display نوع الائتمان
+  /// (agricultural credit) or نوع الإصلاح (reform). `null` when unset.
+  final AssociationType? associationType;
   final Duration animationDelay;
 
   /// Resolves a الحدود cell's text to the holding it refers to, for both
@@ -121,10 +122,12 @@ class ParcelDetailCard extends StatelessWidget {
             west: parcel.borderWest,
             onTapBorder: resolveBorderMatch == null
                 ? null
-                : (final String? borderText) => _openBorderPerson(context, borderText),
+                : (final String? borderText) =>
+                    _openBorderPerson(context, borderText),
             isBorderNavigable: resolveBorderMatch == null
                 ? null
-                : (final String? borderText) => resolveBorderMatch!(borderText) != null,
+                : (final String? borderText) =>
+                    resolveBorderMatch!(borderText) != null,
           ),
           verticalSpacing(8),
           CopyAllButton(onTap: () => _copyAll(context)),
@@ -236,7 +239,7 @@ class ParcelDetailCard extends StatelessWidget {
             parcel: parcel,
             onFieldChanged: onFieldChanged,
             hideCreditType: hideCreditType,
-            cityType: cityType,
+            associationType: associationType,
           ),
         ],
       ),
@@ -374,7 +377,7 @@ class ParcelDetailCard extends StatelessWidget {
     final String text = _formatter.format(
       parcel,
       hideCreditType: hideCreditType,
-      cityType: cityType,
+      associationType: associationType,
     );
     await Clipboard.setData(ClipboardData(text: text));
     if (context.mounted) {

@@ -11,9 +11,10 @@ class CopyAllButton extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final TextStyle textStyle = (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
-        .merge(AppTextStyles.font16Bold)
-        .copyWith(color: AppColors.white);
+    final TextStyle textStyle =
+        (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
+            .merge(AppTextStyles.font16Bold)
+            .copyWith(color: AppColors.white);
 
     return Material(
       color: AppColors.primary200,

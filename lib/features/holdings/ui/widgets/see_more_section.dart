@@ -4,7 +4,7 @@ import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/choice_dialog.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_type.dart';
+import 'package:hiyaza_finder/features/cities/domain/entities/association_type.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
@@ -20,7 +20,7 @@ class SeeMoreSection extends StatefulWidget {
     required this.parcel,
     required this.onFieldChanged,
     this.hideCreditType = false,
-    this.cityType = CityType.unspecified,
+    this.associationType,
   });
 
   final Parcel parcel;
@@ -30,9 +30,13 @@ class SeeMoreSection extends StatefulWidget {
   /// الإصلاح الزراعي cities, where the field has no meaning.
   final bool hideCreditType;
 
-  /// The active city's detected agricultural system — determines whether to
-  /// display نوع الائتمان (agricultural credit) or نوع الإصلاح (reform).
-  final CityType cityType;
+  /// The active city's association type, read from
+  /// `cities.association_type` — determines whether to display نوع الائتمان
+  /// (agricultural credit) or نوع الإصلاح (reform). `null` when the
+  /// dashboard hasn't set it for this city; treated like
+  /// `agriculturalCredit` (shows نوع الائتمان) so an unset value never
+  /// silently hides a field that might matter.
+  final AssociationType? associationType;
 
   @override
   State<SeeMoreSection> createState() => SeeMoreSectionState();
@@ -68,7 +72,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       context,
       title: title,
       options: [
-        for (final String option in options) ChoiceOption<String>(value: option, label: option),
+        for (final String option in options)
+          ChoiceOption<String>(value: option, label: option),
       ],
       selected: initialValue,
       clearLabel: allowClear ? '—' : null,
@@ -91,7 +96,9 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _expanded ? 'holdings.detail.see_less'.tr() : 'holdings.detail.see_more'.tr(),
+                  _expanded
+                      ? 'holdings.detail.see_less'.tr()
+                      : 'holdings.detail.see_more'.tr(),
                   style: AppTextStyles.font12Bold.copyWith(
                     color: AppColors.primary200,
                   ),
@@ -133,7 +140,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                         widget.parcel.copyWith(isDelegate: v),
                       ),
                     ),
-                    if (widget.cityType == CityType.agriculturalReform)
+                    if (widget.associationType ==
+                        AssociationType.agriculturalReform)
                       FieldRow(
                         label: 'نوع الإصلاح',
                         value: widget.parcel.reformType,
@@ -190,7 +198,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                         ),
                       ),
                     ),
-                    FieldRow(label: 'المديرية', value: widget.parcel.directorate),
+                    FieldRow(
+                        label: 'المديرية', value: widget.parcel.directorate),
                     FieldRow(
                       label: 'الإدارة',
                       value: widget.parcel.administration,

@@ -166,7 +166,8 @@ class _DetailScreenState extends State<DetailScreen> {
                               isEdited: _repository.isParcelEdited(parcel.id),
                               isNew: _repository.isNewLocalRecord(parcel.id),
                               hideCreditType: _repository.hideCreditType,
-                              cityType: _repository.activeCityType,
+                              associationType:
+                                  _repository.activeAssociationType,
                               onFieldChanged: _updateField,
                               animationDelay: Duration(milliseconds: i * 80),
                               resolveBorderMatch: _repository.findByBorderText,
