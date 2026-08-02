@@ -9,6 +9,7 @@ import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/repositories/holdings_reader.dart';
 import '../../domain/repositories/holdings_writer.dart';
+import '../../domain/services/border_name_index.dart';
 import '../../domain/services/bulk_edit_service.dart';
 import '../../domain/services/parcel_edit_overlay.dart';
 import '../../domain/services/parcel_query_service.dart';
@@ -50,6 +51,12 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   String? _activeAssociationSubtype;
 
   List<Parcel> _parcels = <Parcel>[];
+
+  /// Precomputed حائز/مالك name → holding lookup for الحدود navigation —
+  /// rebuilt (see [_rebuildBorderIndex]) every time [_parcels] changes so
+  /// [findByBorderText] never scans the dataset itself. See
+  /// [BorderNameIndex] for why this exists and how ambiguous names resolve.
+  BorderNameIndex _borderIndex = BorderNameIndex.empty();
 
   /// Key under which the active city's local edit overlay is persisted —
   /// `null` until a city has been loaded.
@@ -95,7 +102,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     };
     _edits = await _editsStore.load(key);
     _parcels = parcels.map(_applyEdit).toList();
+    _rebuildBorderIndex();
     return _parcels;
+  }
+
+  /// Rebuilds [_borderIndex] from the current [_parcels] — called any time
+  /// [_parcels] is reassigned (city load, add/edit/bulk-edit) so الحدود
+  /// navigation always reflects the latest حائز/مالك names without ever
+  /// scanning the dataset at lookup time. O(n) like the reassignment itself
+  /// it accompanies, so it adds no new order-of-growth cost to those calls.
+  void _rebuildBorderIndex() {
+    _borderIndex = BorderNameIndex.build(_parcels);
   }
 
   /// The active city's جمعية system, read from `cities.association_type` —
@@ -181,6 +198,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _parcels = <Parcel>[..._parcels, withId];
     _originalById[withId.id] = withId;
     _locallyAddedIds.add(withId.id);
+    _rebuildBorderIndex();
 
     if (syncQueue != null) {
       await syncQueue!.enqueue(
@@ -207,6 +225,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
     if (idx < 0) return;
     _parcels[idx] = edited;
+    // A single-field edit can change حائز/مالك name — rebuild so a fresh
+    // الحدود lookup elsewhere in the city sees the update immediately.
+    _rebuildBorderIndex();
     final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
     _edits[edited.id] = snapshot;
     if (_activeEditsKey != null) {
@@ -268,7 +289,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   @override
   Parcel? findByBorderText(final String? borderText) =>
-      _queryService.findByBorderText(_parcels, borderText);
+      _queryService.findByBorderText(_borderIndex, borderText);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
   /// [basin] (only parcels whose اسم الحوض matches). Returns how many
@@ -286,6 +307,11 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       basin: basin,
     );
     _parcels = result.parcels;
+    // Defensive: no `BulkEditableField` touches حائز/مالك today, but
+    // rebuilding here is O(n) same as the reassignment above and keeps
+    // this repository from silently drifting out of sync if that ever
+    // changes, without needing every future field to remember this rule.
+    _rebuildBorderIndex();
     if (result.changedCount > 0) {
       final List<BulkEditRow> syncRows = <BulkEditRow>[];
       for (final Parcel p in _parcels) {

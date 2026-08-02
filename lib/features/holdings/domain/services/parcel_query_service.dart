@@ -1,6 +1,7 @@
 import '../../logic/services/arabic_normalizer.dart';
 import '../../logic/services/holding_search_service.dart';
 import '../entities/parcel.dart';
+import 'border_name_index.dart';
 
 /// Pure read-side queries over an in-memory parcel list: search, basin
 /// aggregation, and holding lookup. Extracted from `HoldingsRepository` so
@@ -66,7 +67,11 @@ class ParcelQueryService {
 
   /// Resolves free-text الحدود (border) text — e.g. "ورثة محمد علي" — to the
   /// holding it refers to, so the compass can offer "go see this person's
-  /// data" instead of leaving it as dead text.
+  /// data" instead of leaving it as dead text. Looks up [index] (an O(1)
+  /// hash lookup built once per dataset load — see [BorderNameIndex]) rather
+  /// than scanning the dataset: this is called on every الحدود cell render,
+  /// up to 4× per parcel card, so it must never re-scan or re-normalize the
+  /// whole city's names per call.
   ///
   /// The border columns are unstructured text typed by whoever filled the
   /// original register (APP_PLAN.md § 4, columns I–L) — there is no id or
@@ -75,29 +80,21 @@ class ParcelQueryService {
   /// deliberately **exact** (after Arabic normalization only — no fuzzy
   /// substring/word scoring like [HoldingSearchService]) because a wrong
   /// guess here means silently navigating the field worker to the wrong
-  /// person's land, which is worse than not offering navigation at all.
+  /// person's land, which is worse than not offering navigation at all. When
+  /// a name is ambiguous (matches more than one holding), [index] resolves
+  /// it deterministically — see [BorderNameIndex.build]'s doc for the exact
+  /// tie-break rule.
   ///
   /// Returns `null` if [borderText] is blank, is a non-name placeholder
   /// (e.g. "طريق"/"مصرف"/"ترعة" — public/infrastructure boundaries, not
   /// people), or doesn't exactly match any حائز/مالك currently loaded.
   Parcel? findByBorderText(
-    final List<Parcel> parcels,
+    final BorderNameIndex index,
     final String? borderText,
   ) {
     final String? normalized = _normalizedBorderName(borderText);
     if (normalized == null) return null;
-
-    for (final Parcel p in parcels) {
-      final String? holder = p.holderName;
-      if (holder != null && ArabicNormalizer.normalize(holder) == normalized) {
-        return p;
-      }
-      final String? owner = p.ownerName;
-      if (owner != null && ArabicNormalizer.normalize(owner) == normalized) {
-        return p;
-      }
-    }
-    return null;
+    return index.lookup(normalized);
   }
 
   /// Border text that clearly isn't a person's name — public/infrastructure

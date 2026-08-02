@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/domain/services/border_name_index.dart';
 import 'package:hiyaza_finder/features/holdings/domain/services/parcel_query_service.dart';
 import 'package:hiyaza_finder/features/holdings/logic/services/holding_search_service.dart';
 
@@ -68,8 +69,10 @@ void main() {
   });
 
   group('findByBorderText', () {
+    final BorderNameIndex index = BorderNameIndex.build(parcels);
+
     test('matches a حائز name exactly (after Arabic normalization)', () {
-      final Parcel? match = service.findByBorderText(parcels, 'محمد على');
+      final Parcel? match = service.findByBorderText(index, 'محمد على');
       expect(match, isNotNull);
       expect(match!.holdingId, '101');
     });
@@ -83,7 +86,8 @@ void main() {
           ownerName: 'خالد سعيد',
         ),
       ];
-      final Parcel? match = service.findByBorderText(withOwner, 'خالد سعيد');
+      final BorderNameIndex ownerIndex = BorderNameIndex.build(withOwner);
+      final Parcel? match = service.findByBorderText(ownerIndex, 'خالد سعيد');
       expect(match, isNotNull);
       expect(match!.holdingId, '104');
     });
@@ -92,26 +96,52 @@ void main() {
       // 'محمد' alone should not match 'محمد علي' — exact match only, unlike
       // HoldingSearchService's fuzzy substring search, since a wrong guess
       // here means navigating to the wrong person's land.
-      final Parcel? match = service.findByBorderText(parcels, 'محمد');
+      final Parcel? match = service.findByBorderText(index, 'محمد');
       expect(match, isNull);
     });
 
     test('returns null for blank or placeholder border text', () {
-      expect(service.findByBorderText(parcels, null), isNull);
-      expect(service.findByBorderText(parcels, ''), isNull);
-      expect(service.findByBorderText(parcels, '   '), isNull);
-      expect(service.findByBorderText(parcels, '-'), isNull);
+      expect(service.findByBorderText(index, null), isNull);
+      expect(service.findByBorderText(index, ''), isNull);
+      expect(service.findByBorderText(index, '   '), isNull);
+      expect(service.findByBorderText(index, '-'), isNull);
     });
 
     test('returns null for non-person boundary text (طريق/مصرف/ترعة/...)', () {
-      expect(service.findByBorderText(parcels, 'طريق'), isNull);
-      expect(service.findByBorderText(parcels, 'مصرف عام'), isNull);
-      expect(service.findByBorderText(parcels, 'ترعة الشيخ'), isNull);
+      expect(service.findByBorderText(index, 'طريق'), isNull);
+      expect(service.findByBorderText(index, 'مصرف عام'), isNull);
+      expect(service.findByBorderText(index, 'ترعة الشيخ'), isNull);
     });
 
     test('returns null when no holder/owner matches', () {
-      final Parcel? match = service.findByBorderText(parcels, 'شخص غير موجود');
+      final Parcel? match = service.findByBorderText(index, 'شخص غير موجود');
       expect(match, isNull);
+    });
+
+    test('ambiguous name resolves to the holding with the most parcels', () {
+      // Two unrelated holdings both named "علي حسن" — holding '201' has
+      // one parcel, holding '202' has three. The larger holding wins.
+      final List<Parcel> ambiguous = <Parcel>[
+        const Parcel(id: 'a1', holdingId: '201', holderName: 'علي حسن'),
+        const Parcel(id: 'a2', holdingId: '202', holderName: 'علي حسن'),
+        const Parcel(id: 'a3', holdingId: '202', holderName: 'علي حسن'),
+        const Parcel(id: 'a4', holdingId: '202', holderName: 'علي حسن'),
+      ];
+      final BorderNameIndex ambiguousIndex = BorderNameIndex.build(ambiguous);
+      final Parcel? match = service.findByBorderText(ambiguousIndex, 'علي حسن');
+      expect(match, isNotNull);
+      expect(match!.holdingId, '202');
+    });
+
+    test('ambiguous name with equal-sized holdings resolves to the first encountered', () {
+      final List<Parcel> tied = <Parcel>[
+        const Parcel(id: 'b1', holdingId: '301', holderName: 'محمود سيد'),
+        const Parcel(id: 'b2', holdingId: '302', holderName: 'محمود سيد'),
+      ];
+      final BorderNameIndex tiedIndex = BorderNameIndex.build(tied);
+      final Parcel? match = service.findByBorderText(tiedIndex, 'محمود سيد');
+      expect(match, isNotNull);
+      expect(match!.holdingId, '301');
     });
   });
 }
