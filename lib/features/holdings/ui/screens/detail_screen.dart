@@ -35,13 +35,28 @@ class _DetailScreenState extends State<DetailScreen> {
     _parcels = List<Parcel>.of(widget.parcels);
   }
 
+  /// Default الملاحظات value applied automatically whenever an existing
+  /// record is edited or a new parcel is added for an existing person —
+  /// flags the record as needing a field-survey follow-up without relying
+  /// on the user to remember to set it themselves.
+  static const String _needsSurveyNote = 'نقص بيانات الحصر';
+
   Future<void> _updateField(final Parcel updated) async {
-    await _repository.updateParcel(updated);
     final int idx = _parcels.indexWhere(
       (final Parcel p) => p.id == updated.id,
     );
+    // Force الملاحظات to the "needs survey" default on every field edit —
+    // unless this save is itself the user explicitly changing الملاحظات
+    // (detected by comparing against the pre-edit value), in which case
+    // their choice wins instead of being overwritten.
+    final Parcel? before = idx >= 0 ? _parcels[idx] : null;
+    final Parcel toSave = (before != null && updated.notes == before.notes)
+        ? updated.copyWith(notes: _needsSurveyNote)
+        : updated;
+
+    await _repository.updateParcel(toSave);
     if (idx >= 0) {
-      setState(() => _parcels[idx] = updated);
+      setState(() => _parcels[idx] = toSave);
     }
     if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
   }
@@ -58,6 +73,10 @@ class _DetailScreenState extends State<DetailScreen> {
       totalSqm: null,
       // عدد القطع في الحيازة grows by one for the new parcel being added.
       holdingsCount: (source.holdingsCount ?? 1) + 1,
+      // Flags the new parcel as needing a field-survey follow-up, same as
+      // an edit to an existing record — still user-editable in the form
+      // before saving.
+      notes: _needsSurveyNote,
     );
     final bool? added = await context.pushNamed<bool>(
       Routes.addRecord,

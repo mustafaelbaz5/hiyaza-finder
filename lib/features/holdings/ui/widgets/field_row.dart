@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/tile_icon_button.dart';
 
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
@@ -16,6 +17,7 @@ class FieldRow extends StatelessWidget {
     required this.value,
     this.onEdit,
     this.placeholder,
+    this.isModified = false,
   });
 
   final String label;
@@ -28,6 +30,13 @@ class FieldRow extends StatelessWidget {
   /// Overrides [emptyPlaceholder] for this one field (e.g. كود الحوض shows
   /// "-1" specifically, while every other empty field shows "-").
   final String? placeholder;
+
+  /// Whether the current value differs from the field's original value in
+  /// this edit session — highlights the tile (amber border + "تم التعديل"
+  /// badge) so unsaved changes are obvious before the record is saved. The
+  /// caller decides what "original" means (see `FieldChangeTracker`); this
+  /// widget only renders the flag, it never compares values itself.
+  final bool isModified;
 
   /// Placeholder shown (and copied) when the underlying value is empty —
   /// the copy action stays active either way.
@@ -43,9 +52,13 @@ class FieldRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color:
+            isModified ? AppColors.amber300.withValues(alpha: 0.08) : colors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
+        border: Border.all(
+          color: isModified ? AppColors.amber300 : colors.border,
+          width: isModified ? 1.5 : 1,
+        ),
       ),
       child: Row(
         children: [
@@ -54,14 +67,23 @@ class FieldRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.font12Regular.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.font12Regular.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (isModified) ...[
+                      const SizedBox(width: 4),
+                      const _ModifiedBadge(),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -95,5 +117,31 @@ class FieldRow extends StatelessWidget {
       HapticFeedback.lightImpact();
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
     }
+  }
+}
+
+/// Tiny "تم التعديل" pill shown beside a field's label when
+/// [FieldRow.isModified]/[ToggleFieldRow.isModified] is true. Kept as one
+/// shared widget (rather than inlined in each field type) so both stay
+/// visually identical and only need updating in one place.
+class _ModifiedBadge extends StatelessWidget {
+  const _ModifiedBadge();
+
+  @override
+  Widget build(final BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.amber300.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'تم التعديل',
+        style: AppTextStyles.font12Bold.copyWith(
+          color: AppColors.amber300,
+          fontSize: 9,
+        ),
+      ),
+    );
   }
 }

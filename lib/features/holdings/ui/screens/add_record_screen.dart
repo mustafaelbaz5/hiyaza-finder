@@ -13,6 +13,7 @@ import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
+import '../../domain/services/field_change_tracker.dart';
 import '../../logic/services/area_calculator.dart';
 import '../widgets/crop_type_picker.dart';
 import '../widgets/field_edit_dialogs.dart';
@@ -67,6 +68,16 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   }
 
   bool get _canSave => (_parcel.holderName?.trim().isNotEmpty ?? false);
+
+  /// Whether the field read via [current] from `_parcel` differs from
+  /// `widget.initialParcel`'s value for the same field — drives every
+  /// `FieldRow`/`ToggleFieldRow`'s modified-indicator below. One generic
+  /// comparison instead of duplicating `!=` at each field.
+  bool _isModified<T>(final T Function(Parcel p) current) =>
+      FieldChangeTracker.isModified(
+        current(_parcel),
+        current(widget.initialParcel),
+      );
 
   /// Owner name defaults to holder name when left blank — most parcels
   /// have the same person as both, so this avoids making the user type
@@ -322,6 +333,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'رقم الحيازة',
                             value: _parcel.holdingId,
+                            isModified: _isModified((final p) => p.holdingId),
                             onEdit: () => _editText(
                               context,
                               title: 'رقم الحيازة',
@@ -339,6 +351,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'اسم الحائز *',
                             value: _parcel.holderName,
+                            isModified: _isModified((final p) => p.holderName),
                             onEdit: () => _editText(
                               context,
                               title: 'اسم الحائز',
@@ -351,6 +364,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'اسم المالك',
                             value: _parcel.ownerName,
+                            isModified: _isModified((final p) => p.ownerName),
                             onEdit: () => _editText(
                               context,
                               title: 'اسم المالك',
@@ -363,6 +377,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'الرقم القومي',
                             value: _parcel.nationalId,
+                            isModified: _isModified((final p) => p.nationalId),
                             onEdit: () => _editText(
                               context,
                               title: 'الرقم القومي',
@@ -376,11 +391,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'اسم الحوض',
                             value: _parcel.basinName,
+                            isModified: _isModified((final p) => p.basinName),
                             onEdit: () => _editBasin(context),
                           ),
                           FieldRow(
                             label: 'رقم الأرض',
                             value: _parcel.landNumber,
+                            isModified: _isModified((final p) => p.landNumber),
                             onEdit: () => _editText(
                               context,
                               title: 'رقم الأرض',
@@ -405,16 +422,21 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'المساحة',
                             value: _areaFraction(_parcel),
+                            isModified: _isModified((final p) => p.feddan) ||
+                                _isModified((final p) => p.qirat) ||
+                                _isModified((final p) => p.sahm),
                             onEdit: () => _editArea(context),
                           ),
                           FieldRow(
                             label: 'نوع الزرع',
                             value: _parcel.cropType,
+                            isModified: _isModified((final p) => p.cropType),
                             onEdit: () => _editCropType(context),
                           ),
                           FieldRow(
                             label: 'ملاحظات',
                             value: _parcel.notes,
+                            isModified: _isModified((final p) => p.notes),
                             onEdit: () => _editDropdown(
                               context,
                               title: 'ملاحظات',
@@ -428,6 +450,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             FieldRow(
                               label: 'نوع الائتمان',
                               value: _parcel.creditType,
+                              isModified: _isModified((final p) => p.creditType),
                               onEdit: () => _editDropdown(
                                 context,
                                 title: 'نوع الائتمان',
@@ -442,6 +465,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           FieldRow(
                             label: 'نوع الاستخدام',
                             value: _parcel.usageType,
+                            isModified: _isModified((final p) => p.usageType),
                             onEdit: () => _editDropdown(
                               context,
                               title: 'نوع الاستخدام',
@@ -456,6 +480,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           ToggleFieldRow(
                             label: 'وراثة',
                             value: _parcel.isInheritance,
+                            isModified: _isModified((final p) => p.isInheritance),
                             onChanged: (final bool v) => setState(
                               () =>
                                   _parcel = _parcel.copyWith(isInheritance: v),
@@ -464,6 +489,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           ToggleFieldRow(
                             label: 'مفوض',
                             value: _parcel.isDelegate,
+                            isModified: _isModified((final p) => p.isDelegate),
                             onChanged: (final bool v) => setState(
                               () => _parcel = _parcel.copyWith(isDelegate: v),
                             ),
