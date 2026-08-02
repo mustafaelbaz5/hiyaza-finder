@@ -7,7 +7,8 @@ import '../../holdings/domain/entities/parcel.dart';
 /// and `APP_PLAN.md` § "Sample Excel structure" for where each one
 /// originally comes from.
 Parcel holdingRowToParcel(final Map<String, dynamic> row) {
-  double? asDouble(final dynamic value) => value == null ? null : (value as num).toDouble();
+  double? asDouble(final dynamic value) =>
+      value == null ? null : (value as num).toDouble();
 
   return Parcel(
     id: row['id'] as String,
@@ -39,7 +40,8 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
 /// `usage_type`, `is_inheritance`, `is_delegate`). See
 /// `supabase/migrations/20260731000007_added_holdings.sql`.
 Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
-  double? asDouble(final dynamic value) => value == null ? null : (value as num).toDouble();
+  double? asDouble(final dynamic value) =>
+      value == null ? null : (value as num).toDouble();
 
   return Parcel(
     id: row['id'] as String,

@@ -11,7 +11,8 @@ import '../services/holding_search_service.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository, this._cityRepository) : super(HomeState.initial());
+  HomeCubit(this._repository, this._cityRepository)
+      : super(HomeState.initial());
 
   final HoldingsRepository _repository;
   final CityRepository _cityRepository;
@@ -35,12 +36,14 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<CitySnapshot?> _tryLoadCachedCity() async {
     try {
-      final CitySnapshot? snapshot = await _cityRepository.loadActiveCachedSnapshot();
+      final CitySnapshot? snapshot =
+          await _cityRepository.loadActiveCachedSnapshot();
       if (snapshot == null) return null;
       await _repository.loadParcelsForCity(
         snapshot.cityId,
         snapshot.parcels,
-        cityType: snapshot.cityType,
+        associationType: snapshot.associationType,
+        associationSubtype: snapshot.associationSubtype,
       );
       return snapshot;
     } catch (_) {
@@ -63,7 +66,8 @@ class HomeCubit extends Cubit<HomeState> {
     final CitySnapshot? snapshot = _activeCitySnapshot;
     if (snapshot == null) return;
     try {
-      final int remoteVersion = await _cityRepository.remoteDataVersion(snapshot.cityId);
+      final int remoteVersion =
+          await _cityRepository.remoteDataVersion(snapshot.cityId);
       if (remoteVersion > snapshot.dataVersion) {
         emit(state.copyWith(isCityDataStale: true));
       }
@@ -85,19 +89,30 @@ class HomeCubit extends Cubit<HomeState> {
     final CitySnapshot? current = _activeCitySnapshot;
     if (current == null) return;
 
-    final int remoteVersion = await _cityRepository.remoteDataVersion(current.cityId);
+    final int remoteVersion =
+        await _cityRepository.remoteDataVersion(current.cityId);
     final CitySnapshot fresh = await _cityRepository.downloadCity(
       City(
         id: current.cityId,
         name: current.cityName,
         status: CityStatus.published,
         dataVersion: remoteVersion,
+        // `CityRepositoryImpl.downloadCity` copies these straight from the
+        // `City` passed in — it does NOT re-fetch the `cities` row itself
+        // (only `downloadHoldings` for parcels) — so without carrying them
+        // forward from the cached snapshot here, a refresh would silently
+        // wipe them from the new snapshot.
+        directorate: current.directorate,
+        administration: current.administration,
+        associationType: current.associationType,
+        associationSubtype: current.associationSubtype,
       ),
     );
     await _repository.loadParcelsForCity(
       fresh.cityId,
       fresh.parcels,
-      cityType: fresh.cityType,
+      associationType: fresh.associationType,
+      associationSubtype: fresh.associationSubtype,
     );
     _activeCitySnapshot = fresh;
     emit(state.copyWith(isCityDataStale: false));

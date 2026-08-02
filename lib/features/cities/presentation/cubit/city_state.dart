@@ -11,7 +11,8 @@ class CityPickerState extends Equatable {
     this.errorMessage,
   });
 
-  factory CityPickerState.initial() => const CityPickerState(status: CityPickerStatus.loading);
+  factory CityPickerState.initial() =>
+      const CityPickerState(status: CityPickerStatus.loading);
 
   final CityPickerStatus status;
   final List<City> cities;

@@ -57,13 +57,15 @@ class CityPickerCubit extends Cubit<CityPickerState> {
       await _holdingsRepository.loadParcelsForCity(
         snapshot.cityId,
         snapshot.parcels,
-        cityType: snapshot.cityType,
+        associationType: snapshot.associationType,
+        associationSubtype: snapshot.associationSubtype,
       );
       return snapshot;
     } on AppException catch (e) {
       if (isClosed) return null;
       emit(
-        state.copyWith(status: CityPickerStatus.loaded, errorMessage: e.message),
+        state.copyWith(
+            status: CityPickerStatus.loaded, errorMessage: e.message),
       );
       return null;
     } catch (e) {

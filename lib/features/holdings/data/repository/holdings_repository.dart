@@ -1,7 +1,7 @@
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
-import '../../../cities/domain/entities/city_type.dart';
+import '../../../cities/domain/entities/association_type.dart';
 import '../../../sync/data/sync_runner.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
@@ -46,7 +46,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// only enqueued once a city (and therefore a server to sync to) exists.
   final SyncQueue? syncQueue;
   String? _activeCityId;
-  CityType _activeCityType = CityType.unspecified;
+  AssociationType? _activeAssociationType;
+  String? _activeAssociationSubtype;
 
   List<Parcel> _parcels = <Parcel>[];
 
@@ -74,18 +75,21 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
   /// dataset, keyed by [cityId] for local edit persistence. Local edits
-  /// made after this call reapply on the next load from cache. [cityType]
-  /// is the detection already cached on the `CitySnapshot` — this never
-  /// recomputes it from [parcels].
+  /// made after this call reapply on the next load from cache.
+  /// [associationType]/[associationSubtype] come straight from the
+  /// `CitySnapshot` (itself read from `cities.association_type`/
+  /// `association_subtype`) — never re-derived from [parcels].
   Future<List<Parcel>> loadParcelsForCity(
     final String cityId,
     final List<Parcel> parcels, {
-    final CityType cityType = CityType.unspecified,
+    final AssociationType? associationType,
+    final String? associationSubtype,
   }) async {
     final String key = 'city::$cityId';
     _activeEditsKey = key;
     _activeCityId = cityId;
-    _activeCityType = cityType;
+    _activeAssociationType = associationType;
+    _activeAssociationSubtype = associationSubtype;
     _originalById = <String, Parcel>{
       for (final Parcel p in parcels) p.id: p,
     };
@@ -94,15 +98,22 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     return _parcels;
   }
 
-  /// The active city's detected agricultural system — `unspecified` until
-  /// a city is loaded or if detection couldn't determine one.
-  CityType get activeCityType => _activeCityType;
+  /// The active city's جمعية system, read from `cities.association_type` —
+  /// `null` until a city is loaded or if the dashboard hasn't set it yet.
+  AssociationType? get activeAssociationType => _activeAssociationType;
 
-  /// Whether نوع الائتمان should be hidden everywhere in the UI — true
-  /// only for a confirmed الإصلاح الزراعي city. An `unspecified` result
-  /// (detection miss) shows the field rather than risk hiding one that
-  /// might matter.
-  bool get hideCreditType => _activeCityType == CityType.agriculturalReform;
+  /// The active city's free-text association_subtype (e.g. ملك/أوقاف or one
+  /// of the three إصلاح variants) — `null` until a city is loaded or if
+  /// unset in the database.
+  String? get activeAssociationSubtype => _activeAssociationSubtype;
+
+  /// Whether نوع الائتمان should be hidden everywhere in the UI — true only
+  /// for a confirmed الإصلاح الزراعي city. `null` (type not set in the DB
+  /// yet) shows the field rather than risk hiding one that might matter —
+  /// same "never hide on an unknown" philosophy the old detection-miss
+  /// fallback used.
+  bool get hideCreditType =>
+      _activeAssociationType == AssociationType.agriculturalReform;
 
   /// The default association name (اسم الجمعية) from the active city's
   /// dataset — used to auto-populate this field for new records so they're
@@ -153,13 +164,16 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     // this holding — the new parcel's count already reflects the total
     // (set by the caller), so every sibling parcel is bumped to match it.
     if (parentHoldingId != null) {
-      final Parcel? parent = _parcels
-          .cast<Parcel?>()
-          .firstWhere((final Parcel? p) => p?.id == parentHoldingId, orElse: () => null);
+      final Parcel? parent = _parcels.cast<Parcel?>().firstWhere(
+          (final Parcel? p) => p?.id == parentHoldingId,
+          orElse: () => null);
       if (parent != null) {
         _parcels = <Parcel>[
           for (final Parcel p in _parcels)
-            if (p.groupKey == parent.groupKey) p.copyWith(holdingsCount: withId.holdingsCount) else p,
+            if (p.groupKey == parent.groupKey)
+              p.copyWith(holdingsCount: withId.holdingsCount)
+            else
+              p,
         ];
       }
     }
@@ -245,7 +259,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Distinct-holding count per اسم الحوض — how many holdings sit in each
   /// basin, shown beside the basin filter/status views.
   @override
-  Map<String, int> get basinHoldingCounts => _queryService.basinHoldingCounts(_parcels);
+  Map<String, int> get basinHoldingCounts =>
+      _queryService.basinHoldingCounts(_parcels);
 
   @override
   List<Parcel> parcelsForHolding(final String holdingId) =>

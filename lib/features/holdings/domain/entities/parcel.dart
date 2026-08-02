@@ -54,17 +54,20 @@ class Parcel {
   final double? qirat; // قيراط
   final double? sahm; // سهم
   final double? totalSqm; // إجمالي المساحة (م²)
-  final int? holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
+  final int?
+      holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
 
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
   final String? associationName; // اسم الجمعية — derived from the file name
   final String? cropType; // نوع الزرع
   final String? notes; // ملاحظات
-  final String creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
+  final String
+      creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
   final String reformType; // نوع الإصلاح: for agricultural reform cities
   final bool isInheritance; // وراثة
-  final bool isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
+  final bool
+      isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
 
   /// Whether رقم الحيازة hasn't been officially assigned yet — true for a

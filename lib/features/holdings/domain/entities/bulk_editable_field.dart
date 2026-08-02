@@ -37,5 +37,6 @@ extension BulkEditableFieldX on BulkEditableField {
       };
 
   /// Whether the picker offers a "—" (clear/unset) option.
-  bool get allowClear => this == BulkEditableField.cropType || this == BulkEditableField.notes;
+  bool get allowClear =>
+      this == BulkEditableField.cropType || this == BulkEditableField.notes;
 }

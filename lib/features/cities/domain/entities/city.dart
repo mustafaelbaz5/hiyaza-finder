@@ -1,3 +1,5 @@
+import 'association_type.dart';
+
 /// Mirrors the `city_status` Postgres enum
 /// (`supabase/migrations/20260731000001_enums.sql`).
 enum CityStatus { draft, published, archived }
@@ -19,6 +21,8 @@ class City {
     required this.dataVersion,
     this.directorate,
     this.administration,
+    this.associationType,
+    this.associationSubtype,
   });
 
   final String id;
@@ -32,4 +36,17 @@ class City {
   /// staleness. See `bump_city_version*` triggers in
   /// `supabase/migrations/20260731000008_triggers.sql`.
   final int dataVersion;
+
+  /// The city's جمعية system — read directly from `cities.association_type`.
+  /// `null` means the dashboard hasn't set it yet for this city; the UI
+  /// must degrade gracefully (see `HoldingsRepository.hideCreditType`),
+  /// not guess.
+  final AssociationType? associationType;
+
+  /// Free-text subtype (e.g. ملك/أوقاف for credit cities, one of the three
+  /// إصلاح variants for reform cities) — plain `text` in the DB with no
+  /// CHECK constraint, so this can in principle hold any string. Options
+  /// shown to the user come from `Parcel.creditTypeOptions`/
+  /// `Parcel.reformTypeOptions`, not from this field directly.
+  final String? associationSubtype;
 }

@@ -4,6 +4,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../domain/entities/association_type.dart';
 import '../../domain/entities/city.dart';
 
 class CityTile extends StatelessWidget {
@@ -18,9 +19,19 @@ class CityTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool isDownloading;
 
+  /// Short badge label for [city.associationType] — `null` when the
+  /// dashboard hasn't set a type for this city yet, in which case no
+  /// badge is shown at all rather than guessing.
+  String? _associationTypeLabel() => switch (city.associationType) {
+        AssociationType.agriculturalCredit => 'الائتمان الزراعي',
+        AssociationType.agriculturalReform => 'الإصلاح الزراعي',
+        null => null,
+      };
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
+    final String? typeLabel = _associationTypeLabel();
 
     return InkWell(
       onTap: isDownloading ? null : onTap,
@@ -60,19 +71,46 @@ class CityTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (city.directorate != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      city.directorate!,
-                      style: AppTextStyles.font12Regular.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                      textAlign: TextAlign.right,
+                  if (city.directorate != null || typeLabel != null) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (typeLabel != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primary200.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              typeLabel,
+                              style: AppTextStyles.font12Bold.copyWith(
+                                color: AppColors.primary200,
+                              ),
+                            ),
+                          ),
+                        if (city.directorate != null)
+                          Text(
+                            city.directorate!,
+                            style: AppTextStyles.font12Regular.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                      ],
                     ),
                   ],
                 ],
               ),
             ),
+            horizontalSpacing(8),
             if (isDownloading)
               const SizedBox(
                 width: 18,

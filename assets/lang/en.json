@@ -26,7 +26,8 @@
     "service_unavailable": "Service temporarily unavailable. Please try again.",
     "file_too_large": "File is too large.",
     "user_disabled": "This account has been disabled.",
-    "operation_not_allowed": "This operation is not allowed."
+    "operation_not_allowed": "This operation is not allowed.",
+    "retry": "Retry"
   },
   "app_dialogs": {
     "info": "Info",
@@ -70,7 +71,11 @@
   "cities": {
     "picker": {
       "title": "Choose a city",
-      "empty": "No cities available yet"
+      "empty": "No cities available yet",
+      "search_hint": "Search by city or association name …",
+      "no_results": "No results for \"{query}\"",
+      "no_results_hint": "Try a different search term",
+      "results_count": "{count} cities"
     },
     "stale_banner": {
       "message": "Newer data is available on the server",

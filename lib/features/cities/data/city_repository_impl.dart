@@ -3,7 +3,6 @@ import '../domain/entities/cached_city_meta.dart';
 import '../domain/entities/city.dart';
 import '../domain/entities/city_snapshot.dart';
 import '../domain/repositories/city_repository.dart';
-import '../domain/services/city_type_detector.dart';
 import 'city_snapshot_cache.dart';
 import 'supabase_city_data_source.dart';
 
@@ -34,10 +33,13 @@ class CityRepositoryImpl implements CityRepository {
       dataVersion: city.dataVersion,
       downloadedAt: DateTime.now(),
       parcels: parcels,
-      // Detected once here, at download time, and cached on the snapshot
-      // — every other read (offline load, UI) uses the stored value
-      // instead of re-scanning the parcel list.
-      cityType: CityTypeDetector.detect(parcels),
+      directorate: city.directorate,
+      administration: city.administration,
+      // Copied straight from `City` (itself read from `cities.association_type`
+      // / `association_subtype`) — the DB is the single source of truth, no
+      // per-parcel detection.
+      associationType: city.associationType,
+      associationSubtype: city.associationSubtype,
     );
     await _cache.save(snapshot);
     await _keyValueStore.setString(_activeCityIdKey, city.id);
@@ -52,7 +54,8 @@ class CityRepositoryImpl implements CityRepository {
   }
 
   @override
-  Future<int> remoteDataVersion(final String cityId) => _dataSource.remoteDataVersion(cityId);
+  Future<int> remoteDataVersion(final String cityId) =>
+      _dataSource.remoteDataVersion(cityId);
 
   @override
   Future<List<CachedCityMeta>> listCachedCities() async {
@@ -68,7 +71,8 @@ class CityRepositoryImpl implements CityRepository {
   @override
   Future<void> deleteCachedCity(final String cityId) async {
     await _cache.delete(cityId);
-    final String? activeCityId = await _keyValueStore.getString(_activeCityIdKey);
+    final String? activeCityId =
+        await _keyValueStore.getString(_activeCityIdKey);
     if (activeCityId == cityId) {
       await _keyValueStore.remove(_activeCityIdKey);
     }

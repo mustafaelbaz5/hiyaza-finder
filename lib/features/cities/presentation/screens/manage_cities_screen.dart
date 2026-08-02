@@ -40,7 +40,8 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   Future<void> _load() async {
     setState(() => _isLoading = true);
     final List<CachedCityMeta> cities = await _repository.listCachedCities();
-    final String? activeCityId = (await _repository.loadActiveCachedSnapshot())?.cityId;
+    final String? activeCityId =
+        (await _repository.loadActiveCachedSnapshot())?.cityId;
     if (!mounted) return;
     setState(() {
       _cities = cities;
@@ -69,7 +70,9 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
     await _repository.deleteCachedCity(city.cityId);
     if (!mounted) return;
     setState(() {
-      _cities = _cities.where((final CachedCityMeta c) => c.cityId != city.cityId).toList();
+      _cities = _cities
+          .where((final CachedCityMeta c) => c.cityId != city.cityId)
+          .toList();
       _deletingCityIds.remove(city.cityId);
       if (_activeCityId == city.cityId) _activeCityId = null;
     });
@@ -145,7 +148,8 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(bottom: rh(24)),
+      padding:
+          EdgeInsets.symmetric(horizontal: rw(16)).copyWith(bottom: rh(24)),
       itemCount: _cities.length,
       itemBuilder: (final BuildContext context, final int i) {
         final CachedCityMeta city = _cities[i];
@@ -190,7 +194,8 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primary200.withValues(alpha: 0.15),
+                              color:
+                                  AppColors.primary200.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(

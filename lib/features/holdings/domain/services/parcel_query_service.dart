@@ -20,8 +20,9 @@ class ParcelQueryService {
     final String query, {
     final String? basin,
   }) {
-    final List<Parcel> scope =
-        basin == null ? parcels : parcels.where((final Parcel p) => p.basinName == basin).toList();
+    final List<Parcel> scope = basin == null
+        ? parcels
+        : parcels.where((final Parcel p) => p.basinName == basin).toList();
     return _searchService.search(scope, query);
   }
 
@@ -49,7 +50,8 @@ class ParcelQueryService {
       holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.groupKey);
     }
     return <String, int>{
-      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries) e.key: e.value.length,
+      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
+        e.key: e.value.length,
     };
   }
 
@@ -87,9 +89,13 @@ class ParcelQueryService {
 
     for (final Parcel p in parcels) {
       final String? holder = p.holderName;
-      if (holder != null && ArabicNormalizer.normalize(holder) == normalized) return p;
+      if (holder != null && ArabicNormalizer.normalize(holder) == normalized) {
+        return p;
+      }
       final String? owner = p.ownerName;
-      if (owner != null && ArabicNormalizer.normalize(owner) == normalized) return p;
+      if (owner != null && ArabicNormalizer.normalize(owner) == normalized) {
+        return p;
+      }
     }
     return null;
   }
@@ -115,7 +121,10 @@ class ParcelQueryService {
     if (trimmed == null || trimmed.isEmpty || trimmed == '-') return null;
 
     final String normalized = ArabicNormalizer.normalize(trimmed);
-    if (_nonPersonBorderTerms.any((final String term) => normalized.contains(term))) return null;
+    if (_nonPersonBorderTerms
+        .any((final String term) => normalized.contains(term))) {
+      return null;
+    }
 
     return normalized;
   }

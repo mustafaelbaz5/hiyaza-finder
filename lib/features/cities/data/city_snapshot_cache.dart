@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../../holdings/domain/entities/parcel.dart';
+import '../domain/entities/association_type.dart';
 import '../domain/entities/cached_city_meta.dart';
 import '../domain/entities/city_snapshot.dart';
-import '../domain/entities/city_type.dart';
 
 /// Persists a downloaded [CitySnapshot] to a JSON file in app storage —
 /// a city's holdings (thousands of rows) are too big for
@@ -32,7 +32,12 @@ class CitySnapshotCache {
       'dataVersion': snapshot.dataVersion,
       'downloadedAt': snapshot.downloadedAt.toIso8601String(),
       'parcels': snapshot.parcels.map((final Parcel p) => p.toJson()).toList(),
-      'cityType': snapshot.cityType.name,
+      'directorate': snapshot.directorate,
+      'administration': snapshot.administration,
+      'associationType': snapshot.associationType == null
+          ? null
+          : associationTypeToString(snapshot.associationType!),
+      'associationSubtype': snapshot.associationSubtype,
     };
     await file.writeAsString(jsonEncode(json), flush: true);
   }
@@ -41,7 +46,8 @@ class CitySnapshotCache {
     final File file = await _fileFor(cityId);
     if (!file.existsSync()) return null;
 
-    final Map<String, dynamic> json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final Map<String, dynamic> json =
+        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
     return CitySnapshot(
       cityId: json['cityId'] as String,
       cityName: json['cityName'] as String,
@@ -50,10 +56,15 @@ class CitySnapshotCache {
       parcels: (json['parcels'] as List<dynamic>)
           .map((final dynamic e) => Parcel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      // `json['cityType']` is absent in snapshots cached before this field
-      // existed — `cityTypeFromString(null)` falls back to `unspecified`,
-      // same as a fresh detection miss.
-      cityType: cityTypeFromString(json['cityType'] as String?),
+      directorate: json['directorate'] as String?,
+      administration: json['administration'] as String?,
+      // Absent in snapshots cached before this field existed (including the
+      // old `cityType`-based ones) — `associationTypeFromString(null)`
+      // gracefully falls back to `null` (type not known), same as the old
+      // detection-miss fallback did.
+      associationType:
+          associationTypeFromString(json['associationType'] as String?),
+      associationSubtype: json['associationSubtype'] as String?,
     );
   }
 
@@ -81,7 +92,8 @@ class CitySnapshotCache {
     if (!file.existsSync()) return null;
 
     final int sizeBytes = file.statSync().size;
-    final Map<String, dynamic> json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final Map<String, dynamic> json =
+        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
     return CachedCityMeta(
       cityId: json['cityId'] as String,
       cityName: json['cityName'] as String,

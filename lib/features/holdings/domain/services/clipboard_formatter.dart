@@ -1,4 +1,4 @@
-import '../../../cities/domain/entities/city_type.dart';
+import '../../../cities/domain/entities/association_type.dart';
 import '../entities/parcel.dart';
 
 /// Builds the "copy all" clipboard text for a parcel, and the shared
@@ -24,15 +24,17 @@ class ClipboardFormatter {
   /// One "label: value," field per line (blank slots kept, never skipped)
   /// so the pasted text both reads clearly on its own and lines up
   /// row-for-row when pasted into an external spreadsheet template.
-  /// [cityType] determines whether to show نوع الائتمان (agricultural credit)
-  /// or نوع الإصلاح (agricultural reform). For compatibility, [hideCreditType]
-  /// is deprecated in favor of passing [cityType], but still supported.
+  /// [associationType] determines whether to show نوع الائتمان (agricultural
+  /// credit) or نوع الإصلاح (agricultural reform). For compatibility,
+  /// [hideCreditType] is deprecated in favor of passing [associationType],
+  /// but still supported.
   String format(
     final Parcel p, {
     final bool hideCreditType = false,
-    final CityType cityType = CityType.unspecified,
+    final AssociationType? associationType,
   }) {
-    String slot(final String? v) => (v == null || v.trim().isEmpty) ? emptyPlaceholder : v.trim();
+    String slot(final String? v) =>
+        (v == null || v.trim().isEmpty) ? emptyPlaceholder : v.trim();
 
     // اسم المالك only ever gets "(ورثة)" (مفوض doesn't touch it). اسم الحائز
     // gets "(مفوض عنه)" whenever مفوض is on — overriding "(ورثة)" there
@@ -43,20 +45,24 @@ class ClipboardFormatter {
     }
 
     final String holderName = p.holderName?.trim() ?? '';
-    final String? holderPrefix = p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
-    final String holderSlot =
-        holderPrefix == null ? slot(p.holderName) : withPrefix(holderPrefix, holderName);
+    final String? holderPrefix =
+        p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
+    final String holderSlot = holderPrefix == null
+        ? slot(p.holderName)
+        : withPrefix(holderPrefix, holderName);
 
     final String ownerName = effectiveOwnerName(p) ?? '';
     final String? ownerPrefix = p.isInheritance ? '(ورثة)' : null;
     final String ownerSlot = ownerPrefix == null
         ? slot(ownerName.isEmpty ? null : ownerName)
         : withPrefix(ownerPrefix, ownerName);
-    final String nationalIdSlot = (p.nationalId == null || p.nationalId!.trim().isEmpty)
-        ? '11111111111111'
-        : p.nationalId!.trim();
-    final bool isReformCity = cityType == CityType.agriculturalReform ||
-        (hideCreditType && cityType == CityType.unspecified);
+    final String nationalIdSlot =
+        (p.nationalId == null || p.nationalId!.trim().isEmpty)
+            ? '11111111111111'
+            : p.nationalId!.trim();
+    final bool isReformCity =
+        associationType == AssociationType.agriculturalReform ||
+            (hideCreditType && associationType == null);
 
     final String creditSentence =
         p.creditType == 'أوقاف' ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية' : '';

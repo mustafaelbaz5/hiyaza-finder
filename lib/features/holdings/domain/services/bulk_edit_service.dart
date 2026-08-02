@@ -47,6 +47,7 @@ class BulkEditService {
         BulkEditableField.creditType => p.copyWith(creditType: value as String),
         BulkEditableField.reformType => p.copyWith(reformType: value as String),
         BulkEditableField.usageType => p.copyWith(usageType: value as String),
-        BulkEditableField.isInheritance => p.copyWith(isInheritance: value as bool),
+        BulkEditableField.isInheritance =>
+          p.copyWith(isInheritance: value as bool),
       };
 }

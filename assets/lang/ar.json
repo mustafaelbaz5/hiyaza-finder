@@ -26,7 +26,8 @@
     "service_unavailable": "الخدمة غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى.",
     "file_too_large": "الملف كبير جداً.",
     "user_disabled": "تم تعطيل هذا الحساب.",
-    "operation_not_allowed": "هذه العملية غير مسموح بها."
+    "operation_not_allowed": "هذه العملية غير مسموح بها.",
+    "retry": "إعادة المحاولة"
   },
   "app_dialogs": {
     "info": "معلومة",
@@ -70,7 +71,11 @@
   "cities": {
     "picker": {
       "title": "اختيار مدينة",
-      "empty": "لا توجد مدن متاحة حاليًا"
+      "empty": "لا توجد مدن متاحة حاليًا",
+      "search_hint": "ابحث باسم المدينة أو الجمعية …",
+      "no_results": "لا توجد نتائج لـ \"{query}\"",
+      "no_results_hint": "جرّب كلمة بحث مختلفة",
+      "results_count": "{count} مدينة"
     },
     "stale_banner": {
       "message": "توجد بيانات أحدث على الخادم",

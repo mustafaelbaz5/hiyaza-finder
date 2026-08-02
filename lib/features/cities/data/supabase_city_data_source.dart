@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/error_handler.dart';
 import '../../holdings/domain/entities/parcel.dart';
 import '../../holdings/domain/services/parcel_edit_overlay.dart';
+import '../domain/entities/association_type.dart';
 import '../domain/entities/city.dart';
 import 'holding_row_mapper.dart';
 
@@ -34,7 +35,8 @@ class SupabaseCityDataSource {
     final List<Map<String, dynamic>> all = <Map<String, dynamic>>[];
     int from = 0;
     while (true) {
-      final List<Map<String, dynamic>> page = await query.range(from, from + _pageSize - 1);
+      final List<Map<String, dynamic>> page =
+          await query.range(from, from + _pageSize - 1);
       all.addAll(page);
       if (page.length < _pageSize) break;
       from += _pageSize;
@@ -44,8 +46,11 @@ class SupabaseCityDataSource {
 
   Future<List<City>> listPublishedCities() async {
     try {
-      final List<Map<String, dynamic>> rows =
-          await _client.from('cities').select().eq('status', 'published').order('name');
+      final List<Map<String, dynamic>> rows = await _client
+          .from('cities')
+          .select()
+          .eq('status', 'published')
+          .order('name');
       return rows.map(_cityFromRow).toList();
     } catch (error) {
       ErrorHandler.handleException(error);
@@ -54,8 +59,11 @@ class SupabaseCityDataSource {
 
   Future<int> remoteDataVersion(final String cityId) async {
     try {
-      final Map<String, dynamic> row =
-          await _client.from('cities').select('data_version').eq('id', cityId).single();
+      final Map<String, dynamic> row = await _client
+          .from('cities')
+          .select('data_version')
+          .eq('id', cityId)
+          .single();
       return row['data_version'] as int;
     } catch (error) {
       ErrorHandler.handleException(error);
@@ -83,11 +91,18 @@ class SupabaseCityDataSource {
   Future<List<Parcel>> downloadHoldings(final String cityId) async {
     try {
       final List<Map<String, dynamic>> holdingRows = await _fetchAllPages(
-        _client.from('holdings').select().eq('city_id', cityId).eq('is_stale', false),
+        _client
+            .from('holdings')
+            .select()
+            .eq('city_id', cityId)
+            .eq('is_stale', false),
       );
 
       final List<Map<String, dynamic>> editRows = await _fetchAllPages(
-        _client.from('holding_edits_latest').select('holding_id, payload').eq('city_id', cityId),
+        _client
+            .from('holding_edits_latest')
+            .select('holding_id, payload')
+            .eq('city_id', cityId),
       );
 
       final List<Map<String, dynamic>> addedRows = await _fetchAllPages(
@@ -100,7 +115,10 @@ class SupabaseCityDataSource {
       );
 
       final List<Map<String, dynamic>> countRows = await _fetchAllPages(
-        _client.from('city_top_holders').select('holding_id_number, holdings_count').eq('city_id', cityId),
+        _client
+            .from('city_top_holders')
+            .select('holding_id_number, holdings_count')
+            .eq('city_id', cityId),
       );
 
       final Map<String, int> countByHoldingId = <String, int>{
@@ -114,7 +132,8 @@ class SupabaseCityDataSource {
           row['holding_id'] as String: row['payload'] as Map<String, dynamic>,
       };
 
-      final List<Parcel> holdings = holdingRows.map((final Map<String, dynamic> row) {
+      final List<Parcel> holdings =
+          holdingRows.map((final Map<String, dynamic> row) {
         final Parcel base = holdingRowToParcel(row);
         final Parcel withCount = base.copyWith(
           holdingsCount: countByHoldingId[base.holdingId],
@@ -122,7 +141,8 @@ class SupabaseCityDataSource {
         return _editOverlay.apply(withCount, latestEditByHoldingId[base.id]);
       }).toList();
 
-      final List<Parcel> added = addedRows.map(addedHoldingRowToParcel).toList();
+      final List<Parcel> added =
+          addedRows.map(addedHoldingRowToParcel).toList();
 
       return <Parcel>[...holdings, ...added];
     } catch (error) {
@@ -139,5 +159,8 @@ class SupabaseCityDataSource {
         administration: row['administration'] as String?,
         status: cityStatusFromString(row['status'] as String),
         dataVersion: row['data_version'] as int,
+        associationType:
+            associationTypeFromString(row['association_type'] as String?),
+        associationSubtype: row['association_subtype'] as String?,
       );
 }
