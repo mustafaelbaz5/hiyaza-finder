@@ -91,6 +91,17 @@ class Parcel {
   /// pending records group by their own unique [id] instead.
   String get groupKey => isHoldingIdPending ? 'pending:$id' : holdingId;
 
+  /// Whether a required text/choice field actually has a value — blank,
+  /// whitespace-only, and the literal `"-"` placeholder (used elsewhere for
+  /// "not yet corrected", e.g. رقم الأرض) all count as "not filled". Shared
+  /// by every place that enforces a field must be explicitly chosen —
+  /// `AddRecordScreen`'s save validation and `ParcelDetailCard`'s copy-all
+  /// guard — so the "empty" definition can't drift between them.
+  static bool isValueFilled(final String? value) {
+    final String trimmed = value?.trim() ?? '';
+    return trimmed.isNotEmpty && trimmed != '-';
+  }
+
   static const String defaultCreditType = 'ملك';
   static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';

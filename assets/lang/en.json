@@ -168,6 +168,7 @@
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
       "copied": "Copied",
+      "crop_type_required_to_copy": "Please select نوع الزرع before copying data",
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
       "holdings_count": "Number of parcels in holding",

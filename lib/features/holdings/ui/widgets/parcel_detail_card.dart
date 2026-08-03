@@ -421,6 +421,15 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
+    // نوع الزرع must have a real value before copy-all is allowed — same
+    // "not blank / not '-'" rule as the add-record form's required fields
+    // (`Parcel.isValueFilled`), so a record missing it doesn't get copied
+    // out with a meaningless placeholder.
+    if (!Parcel.isValueFilled(parcel.cropType)) {
+      context.showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
+      return;
+    }
+
     final String text = _formatter.format(
       parcel,
       hideCreditType: hideCreditType,

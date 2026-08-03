@@ -67,14 +67,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _parcel = widget.initialParcel;
   }
 
-  /// A required text/choice field counts as filled only if it has real
-  /// content — blank, whitespace-only, and the literal "-" placeholder
-  /// (used elsewhere in this form for "not yet corrected", e.g. رقم
-  /// الأرض) all count as "not actually chosen".
-  bool _isFilled(final String? value) {
-    final String trimmed = value?.trim() ?? '';
-    return trimmed.isNotEmpty && trimmed != '-';
-  }
+  /// See `Parcel.isValueFilled` — blank, whitespace-only, and the literal
+  /// "-" placeholder all count as "not actually chosen".
+  bool _isFilled(final String? value) => Parcel.isValueFilled(value);
 
   /// اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly filled/
   /// chosen before saving — the last two default to empty (see

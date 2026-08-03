@@ -168,6 +168,7 @@
       "empty": "لا توجد بيانات لهذه الحيازة",
       "copy_all": "نسخ كل البيانات",
       "copied": "تم النسخ",
+      "crop_type_required_to_copy": "اختر نوع الزرع قبل نسخ البيانات",
       "holding_id": "رقم الحيازة",
       "holding_id_pending": "بدون رقم — جديد",
       "holdings_count": "عدد القطع في الحيازة",
