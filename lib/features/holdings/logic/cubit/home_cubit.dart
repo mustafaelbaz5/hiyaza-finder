@@ -14,10 +14,19 @@ import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   HomeCubit(this._repository, this._cityRepository)
-      : super(HomeState.initial());
+      : super(HomeState.initial()) {
+    // `_repository` is a singleton and outlives any single `HomeCubit`
+    // instance (this cubit is recreated per navigation, see
+    // `app_router.dart`) — a Realtime event applied via
+    // `HoldingsRepository.applyRemoteChange` while this screen is on
+    // screen wouldn't otherwise be noticed, since it mutates the
+    // repository's list in place without going through this cubit.
+    _remoteChangesSub = _repository.onRemoteChange.listen((final _) => refreshData());
+  }
 
   final HoldingsRepository _repository;
   final CityRepository _cityRepository;
+  late final StreamSubscription<void> _remoteChangesSub;
 
   /// Metadata for the active city — `null` until one has been loaded.
   CitySnapshot? _activeCitySnapshot;
@@ -172,5 +181,11 @@ class HomeCubit extends Cubit<HomeState> {
         ? const <SearchResult>[]
         : _repository.search(state.query, basin: basin);
     emit(state.copyWith(selectedBasin: basin, results: results));
+  }
+
+  @override
+  Future<void> close() {
+    _remoteChangesSub.cancel();
+    return super.close();
   }
 }

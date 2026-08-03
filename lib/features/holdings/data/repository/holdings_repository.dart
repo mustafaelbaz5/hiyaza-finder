@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
+import '../../../sync/data/realtime_sync_service.dart';
 import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
@@ -30,6 +33,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
     final BulkEditService bulkEditService = const BulkEditService(),
     this.syncQueue,
+    this.realtimeSyncService,
     final Uuid uuid = const Uuid(),
   })  : _editsStore = editsStore,
         _queryService = queryService,
@@ -46,6 +50,12 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// `null` until a city has been downloaded/loaded — outbox entries are
   /// only enqueued once a city (and therefore a server to sync to) exists.
   final SyncQueue? syncQueue;
+
+  /// `null` in tests that construct this repository directly without a
+  /// Realtime service — [loadParcelsForCity] simply skips the subscribe
+  /// call in that case, same "optional dependency, no-op if absent"
+  /// pattern as [syncQueue].
+  final RealtimeSyncService? realtimeSyncService;
   String? _activeCityId;
   AssociationType? _activeAssociationType;
   String? _activeAssociationSubtype;
@@ -74,6 +84,21 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// this marker even though it may still be sitting in the outbox.
   final Set<String> _locallyAddedIds = <String>{};
 
+  /// Fires whenever [_parcels] changes for a reason the currently-visible
+  /// UI wouldn't otherwise notice on its own — specifically, a Supabase
+  /// Realtime event applied via [applyRemoteChange]. Every local write in
+  /// this class already updates its own caller's state directly (e.g.
+  /// `updateParcel`'s caller sets its own `_parcels[idx]`), so this stream
+  /// only needs to exist for changes that originate *outside* any specific
+  /// screen's direct call. Mirrors `SyncQueue.pendingCountChanges`
+  /// (`sync_outbox_impl.dart`) — same "a repository-level event, several
+  /// possibly-nonexistent listeners" shape, since `HomeCubit` isn't a
+  /// singleton and may not even be alive when a remote change arrives.
+  final StreamController<void> _remoteChangesController =
+      StreamController<void>.broadcast();
+
+  Stream<void> get onRemoteChange => _remoteChangesController.stream;
+
   @override
   List<Parcel> get parcels => _parcels;
 
@@ -100,6 +125,11 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _edits = await _editsStore.load(key);
     _parcels = parcels.map(_applyEdit).toList();
     _rebuildBorderIndex();
+    // Realtime tracks exactly one active city, same as this repository —
+    // re-subscribing here (rather than at the CityPickerCubit call site)
+    // means it also fires for a cache-loaded city at app start, not just a
+    // fresh download.
+    realtimeSyncService?.subscribeToCity(cityId);
     return _parcels;
   }
 
@@ -303,6 +333,73 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     if (_activeEditsKey != null) {
       await _editsStore.save(_activeEditsKey!, _edits);
     }
+  }
+
+  /// Patches a single parcel arriving from a Supabase Realtime `holdings`/
+  /// `added_holdings` INSERT or UPDATE event (already mapped to a [Parcel]
+  /// by `holdingRowToParcel`/`addedHoldingRowToParcel` — this method does no
+  /// parsing of its own). Replaces the parcel by id if it already exists in
+  /// [_parcels], or appends it if this is the first this device has seen of
+  /// it (e.g. another device just added it). [_originalById] is always
+  /// updated to the new server-confirmed value, since it represents "what
+  /// the server has" for [resetParcel] purposes regardless of what's shown.
+  ///
+  /// Does nothing if no city is active or [updated] belongs to a different
+  /// city than the one currently loaded — a stray event from a
+  /// slow-to-unsubscribe previous city's channel should never mutate the
+  /// dataset the user is currently looking at.
+  void applyRemoteChange(final Parcel updated) {
+    if (_activeCityId == null) return;
+
+    _originalById[updated.id] = updated;
+    final Parcel toShow = _applyEdit(updated);
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
+    if (idx >= 0) {
+      _parcels[idx] = toShow;
+    } else {
+      _parcels = <Parcel>[..._parcels, toShow];
+    }
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
+  }
+
+  /// Merges a `holding_edits` INSERT event's payload (a `toEditableJson`-
+  /// shaped map, same as [ParcelEditOverlay.snapshot] produces) onto the
+  /// parcel's current original value. Skipped entirely if this device has
+  /// its own unsynced local edit for [holdingId] (`_edits.containsKey`) —
+  /// the offline-first guarantee is that a local write stays authoritative
+  /// on-screen until it has synced, so a remote correction arriving in the
+  /// meantime must not clobber it.
+  void applyRemoteEdit(final String holdingId, final Map<String, dynamic> payload) {
+    if (_activeCityId == null) return;
+    if (_edits.containsKey(holdingId)) return;
+
+    final Parcel? original = _originalById[holdingId];
+    if (original == null) return;
+
+    final Parcel merged = _editOverlay.apply(original, payload);
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == holdingId);
+    if (idx < 0) return;
+    _parcels[idx] = merged;
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
+  }
+
+  /// Removes a parcel from the active dataset in response to a Supabase
+  /// Realtime DELETE event — a holding marked stale, or an `added_holdings`
+  /// row rejected/deleted server-side. No-op if [id] isn't in the active
+  /// dataset (e.g. a stray event for a different city).
+  void applyRemoteDelete(final String id) {
+    if (_activeCityId == null) return;
+    final int before = _parcels.length;
+    _parcels = <Parcel>[
+      for (final Parcel p in _parcels)
+        if (p.id != id) p,
+    ];
+    if (_parcels.length == before) return;
+    _originalById.remove(id);
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
   }
 
   bool isParcelEdited(final String id) => _edits.containsKey(id);

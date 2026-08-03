@@ -2,6 +2,8 @@ import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../features/auth/domain/repositories/auth_repository.dart';
+import '../../../features/holdings/data/repository/holdings_repository.dart';
+import '../../../features/sync/data/realtime_sync_service.dart';
 import '../../../features/sync/data/sync_outbox_impl.dart';
 import '../../../features/sync/data/sync_runner.dart';
 import '../../../features/sync/data/supabase_sync_api.dart';
@@ -34,5 +36,11 @@ void registerSyncModule(final GetIt getIt) {
       runner: getIt<SyncRunner>(),
       networkInfo: getIt<NetworkInfo>(),
     ),
+  );
+
+  // Singleton — one Realtime channel manager for the whole app, torn down
+  // and re-opened by HoldingsRepository whenever the active city changes.
+  getIt.registerLazySingleton<RealtimeSyncService>(
+    () => RealtimeSyncService(() => getIt<HoldingsRepository>()),
   );
 }
