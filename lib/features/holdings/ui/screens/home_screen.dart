@@ -24,8 +24,8 @@ import '../../domain/entities/parcel.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
+import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../widgets/basin_filter_sheet.dart';
-import '../widgets/city_stale_banner.dart';
 import '../widgets/recommendation_list.dart';
 import 'add_record_screen.dart';
 
@@ -47,6 +47,35 @@ class _HomeScreenState extends State<HomeScreen> {
           ? getIt<VoiceSearchService>()
           : null;
   bool _isListening = false;
+
+  /// Drives the app-bar refresh icon's spinner and blocks re-entrant taps —
+  /// `HomeTopBar` only receives a non-null `onRefresh` once a city is
+  /// loaded (see `build` below), so this only ever runs when `cubit.
+  /// refreshActiveCity()` is actually meaningful.
+  bool _isRefreshing = false;
+
+  /// Re-downloads the active city (gets other users' updates) and, since
+  /// it delegates through the same online-only path as every other sync
+  /// trigger, also gives the outbox a chance to flush first via the app
+  /// bar's refresh action — replaces the old pull-to-refresh gesture,
+  /// which on the home screen's default (no search) state had no visible
+  /// scrollable content to grab onto.
+  Future<void> _refreshCity(final HomeCubit cubit) async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      // Push any still-queued local edits first — same flush every other
+      // sync trigger in the app shares — before pulling the city's latest
+      // server state, so a round-trip here never overwrites a pending
+      // local change with stale data.
+      await getIt<SyncStatusCubit>().flushNow();
+      await cubit.refreshActiveCity();
+    } catch (_) {
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -150,6 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: <Widget>[
                 HomeTopBar(
                   onSettings: () => showSettingsSheet(context),
+                  onRefresh: state.status == HomeStatus.loaded
+                      ? () => _refreshCity(cubit)
+                      : null,
+                  isRefreshing: _isRefreshing,
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -260,18 +293,6 @@ class _LoadedBodyState extends State<_LoadedBody> {
     }
   }
 
-  /// Shared by the stale banner and pull-to-refresh: `HomeCubit.refreshActiveCity`
-  /// keeps the loaded screen on-screen and rethrows on failure rather than
-  /// emitting an error state, so both trigger points surface it the same way
-  /// without wiping out a working (if stale) session.
-  Future<void> _refreshCity(final BuildContext context) async {
-    try {
-      await widget.cubit.refreshActiveCity();
-    } catch (_) {
-      if (context.mounted) context.showErrorSnackBar('errors.unknown'.tr());
-    }
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -316,12 +337,6 @@ class _LoadedBodyState extends State<_LoadedBody> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       verticalSpacing(8),
-                      if (widget.state.isCityDataStale) ...[
-                        CityStaleBanner(
-                          onRefresh: () => _refreshCity(context),
-                        ),
-                        verticalSpacing(8),
-                      ],
                       FileInfoCard(
                         holdingCount: widget.state.holdingCount,
                         selectedBasin: widget.state.selectedBasin,
@@ -350,16 +365,12 @@ class _LoadedBodyState extends State<_LoadedBody> {
                   child: Padding(
                     padding:
                         EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: RefreshIndicator(
-                      color: AppColors.primary200,
-                      onRefresh: () => _refreshCity(context),
-                      child: RecommendationList(
-                        query: widget.state.query,
-                        results: widget.state.results,
-                        onSelect: (final SearchResult result) =>
-                            _openDetail(context, result),
-                        onAddNew: () => _openAddPerson(context),
-                      ),
+                    child: RecommendationList(
+                      query: widget.state.query,
+                      results: widget.state.results,
+                      onSelect: (final SearchResult result) =>
+                          _openDetail(context, result),
+                      onAddNew: () => _openAddPerson(context),
                     ),
                   ),
                 ),

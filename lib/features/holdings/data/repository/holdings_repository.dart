@@ -224,12 +224,25 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _rebuildBorderIndex();
 
     if (syncQueue != null) {
+      // `added_holdings.parent_holding_id` is a foreign key into the
+      // canonical `holdings` table, not into `added_holdings` — it's only
+      // ever valid once a record has been reviewed/promoted server-side. A
+      // parcel added this session (tracked in `_locallyAddedIds`) has a
+      // client-generated id that has never been written to `holdings` and
+      // never will be until promotion, so sending it as `parent_holding_id`
+      // is rejected with a permanent FK violation (the op then retries
+      // forever, and the parcel never actually reaches the server). Send
+      // `null` instead — same as a brand-new person with no known parent.
+      final String? safeParentHoldingId =
+          (parentHoldingId != null && _locallyAddedIds.contains(parentHoldingId))
+              ? null
+              : parentHoldingId;
       await syncQueue!.enqueue(
         AddRecordOperation(
           id: withId.id,
           createdAt: DateTime.now(),
           cityId: cityId,
-          parentHoldingId: parentHoldingId,
+          parentHoldingId: safeParentHoldingId,
           record: parcelToAddedHoldingsRecord(withId),
         ),
       );

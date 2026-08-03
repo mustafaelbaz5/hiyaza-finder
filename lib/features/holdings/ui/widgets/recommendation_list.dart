@@ -28,31 +28,24 @@ class RecommendationList extends StatelessWidget {
   /// hide the CTA without a call-site change.
   final VoidCallback? onAddNew;
 
-  /// `AlwaysScrollableScrollPhysics` on every branch (even the empty ones)
-  /// is what lets `RefreshIndicator` in `home_screen.dart` register a pull
-  /// gesture regardless of search state — a non-scrollable child can never
-  /// trigger it.
-  static const ScrollPhysics _pullToRefreshPhysics =
-      AlwaysScrollableScrollPhysics();
+  static const ScrollPhysics _scrollPhysics = AlwaysScrollableScrollPhysics();
 
   @override
   Widget build(final BuildContext context) {
     if (query.trim().isEmpty) {
-      return ListView(physics: _pullToRefreshPhysics);
+      return ListView(physics: _scrollPhysics);
     }
 
     if (results.isEmpty) {
       // `ListView`'s children stack at their intrinsic height rather than
       // stretching to fill the viewport, so a bare `Center` wouldn't
       // actually center — constrain it to at least the available height
-      // first (needed now that this branch must be scrollable too, for
-      // `RefreshIndicator` to register a pull gesture on the no-results
-      // state).
+      // first.
       return LayoutBuilder(
         builder:
             (final BuildContext context, final BoxConstraints constraints) {
           return ListView(
-            physics: _pullToRefreshPhysics,
+            physics: _scrollPhysics,
             padding: const EdgeInsets.symmetric(vertical: 24),
             children: [
               ConstrainedBox(
@@ -90,7 +83,7 @@ class RecommendationList extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: _pullToRefreshPhysics,
+      physics: _scrollPhysics,
       padding: const EdgeInsets.only(top: 4, bottom: 24),
       itemCount: results.length,
       itemBuilder: (final BuildContext context, final int i) {

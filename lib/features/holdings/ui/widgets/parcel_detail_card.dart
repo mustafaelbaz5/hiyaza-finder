@@ -173,6 +173,14 @@ class ParcelDetailCard extends StatelessWidget {
                 value: parcel.isHoldingIdPending
                     ? 'holdings.detail.holding_id_pending'.tr()
                     : parcel.holdingId,
+                isModified: _isModified((final p) => p.holdingId),
+                onEdit: () => _editText(
+                  context,
+                  title: 'holdings.detail.holding_id'.tr(),
+                  initialValue:
+                      parcel.isHoldingIdPending ? '' : parcel.holdingId,
+                  apply: (final String v) => parcel.copyWith(holdingId: v),
+                ),
               ),
               if (parcel.holdingsCount != null)
                 FieldRow(

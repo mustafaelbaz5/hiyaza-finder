@@ -225,6 +225,7 @@ class Parcel {
   /// when adding a new editable field, instead of hand-listing fields in
   /// multiple places.
   Map<String, dynamic> toEditableJson() => <String, dynamic>{
+        'holdingId': holdingId,
         'directorate': directorate,
         'administration': administration,
         'basinName': basinName,
@@ -247,8 +248,10 @@ class Parcel {
       };
 
   /// Rebuilds a parcel from [original] — which supplies the never-editable
-  /// fields (id, holdingId, pageNumber, borders, associationName) — overlaid
-  /// with a saved [json] snapshot produced by [toEditableJson].
+  /// fields (id, pageNumber, borders, associationName) — overlaid with a
+  /// saved [json] snapshot produced by [toEditableJson]. `holdingId` falls
+  /// back to [original]'s value only for snapshots saved before it became
+  /// editable.
   factory Parcel.fromEditableJson(
     final Parcel original,
     final Map<String, dynamic> json,
@@ -256,7 +259,7 @@ class Parcel {
     double? d(final String key) => (json[key] as num?)?.toDouble();
     return Parcel(
       id: original.id,
-      holdingId: original.holdingId,
+      holdingId: json['holdingId'] as String? ?? original.holdingId,
       pageNumber: original.pageNumber,
       borderEast: original.borderEast,
       borderSouth: original.borderSouth,

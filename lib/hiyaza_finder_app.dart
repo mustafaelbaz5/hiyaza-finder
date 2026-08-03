@@ -9,12 +9,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/config/app_config.dart';
 import 'core/di/dependency_injection.dart';
+import 'core/networking/network_info.dart';
 import 'core/router/app_router.dart';
 import 'core/router/routes.dart';
 import 'core/settings/cubit/app_settings_cubit.dart';
 import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
+import 'core/widgets/ui/dialogs/app_dialogs.dart';
 import 'features/auth/presentation/cubit/session_cubit.dart';
 import 'features/auth/presentation/cubit/session_state.dart';
 import 'features/sync/presentation/cubit/sync_status_cubit.dart';
@@ -88,38 +90,40 @@ class HiyazaFinderApp extends StatelessWidget {
                     (final _) => false,
                   );
                 },
-                child: _AppLifecycleSyncTrigger(
-                  child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-                    builder: (
-                      final BuildContext context,
-                      final AppSettingsState settings,
-                    ) {
-                      return MaterialApp(
-                        navigatorKey: _navigatorKey,
-                        localizationsDelegates: context.localizationDelegates,
-                        supportedLocales: context.supportedLocales,
-                        locale: settings.locale, // driven by cubit
-                        debugShowCheckedModeBanner: false,
-                        scrollBehavior: const _AppScrollBehavior(),
-                        initialRoute: getIt<SessionCubit>().state.isAuthenticated
-                            ? Routes.home
-                            : Routes.login,
-                        onGenerateRoute: AppRouter.generateRoute,
-                        title: AppConfig.appName,
-                        // font family injected into both themes
-                        theme: getLightTheme().copyWith(
-                          textTheme: getLightTheme().textTheme.apply(
-                                fontFamily: settings.fontFamily,
-                              ),
-                        ),
-                        darkTheme: getDarkTheme().copyWith(
-                          textTheme: getDarkTheme().textTheme.apply(
-                                fontFamily: settings.fontFamily,
-                              ),
-                        ),
-                        themeMode: settings.themeMode,
-                      );
-                    },
+                child: _ConnectivityGate(
+                  child: _AppLifecycleSyncTrigger(
+                    child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                      builder: (
+                        final BuildContext context,
+                        final AppSettingsState settings,
+                      ) {
+                        return MaterialApp(
+                          navigatorKey: _navigatorKey,
+                          localizationsDelegates: context.localizationDelegates,
+                          supportedLocales: context.supportedLocales,
+                          locale: settings.locale, // driven by cubit
+                          debugShowCheckedModeBanner: false,
+                          scrollBehavior: const _AppScrollBehavior(),
+                          initialRoute: getIt<SessionCubit>().state.isAuthenticated
+                              ? Routes.home
+                              : Routes.login,
+                          onGenerateRoute: AppRouter.generateRoute,
+                          title: AppConfig.appName,
+                          // font family injected into both themes
+                          theme: getLightTheme().copyWith(
+                            textTheme: getLightTheme().textTheme.apply(
+                                  fontFamily: settings.fontFamily,
+                                ),
+                          ),
+                          darkTheme: getDarkTheme().copyWith(
+                            textTheme: getDarkTheme().textTheme.apply(
+                                  fontFamily: settings.fontFamily,
+                                ),
+                          ),
+                          themeMode: settings.themeMode,
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -129,6 +133,45 @@ class HiyazaFinderApp extends StatelessWidget {
       },
     );
   }
+}
+
+/// Gates the app's first frame behind a one-shot connectivity check — a
+/// field worker opening the app with no signal today just hits whatever
+/// downstream network call fails first (a confusing raw exception),
+/// instead of a clear "no internet" message. Loops the check-and-show cycle
+/// until connected, then never intervenes again — every other trigger
+/// (connectivity-regained, app-resume, sync retries) already handles
+/// connectivity changes after this point.
+class _ConnectivityGate extends StatefulWidget {
+  const _ConnectivityGate({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ConnectivityGate> createState() => _ConnectivityGateState();
+}
+
+class _ConnectivityGateState extends State<_ConnectivityGate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((final _) => _checkConnectivity());
+  }
+
+  Future<void> _checkConnectivity() async {
+    final bool connected = await getIt<NetworkInfo>().isConnected;
+    if (connected || !mounted) return;
+
+    await AppDialogs.showError(
+      context,
+      message: 'errors.no_internet'.tr(),
+      buttonText: 'errors.retry'.tr(),
+      onPressed: _checkConnectivity,
+    );
+  }
+
+  @override
+  Widget build(final BuildContext context) => widget.child;
 }
 
 /// Triggers a sync flush whenever the app comes back to the foreground —

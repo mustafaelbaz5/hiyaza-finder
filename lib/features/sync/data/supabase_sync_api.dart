@@ -14,6 +14,14 @@ class SupabaseSyncApi implements SyncApi {
 
   final SupabaseClient _client;
 
+  /// A single insert that hangs on a flaky connection would otherwise block
+  /// the whole flush (and, for `pushBulkEdit`, every remaining row) with no
+  /// upper bound — bounding it turns a stuck connection into a normal
+  /// retry-next-flush case instead of a long hang, and produces a
+  /// `TimeoutException` rather than a raw `ClientException`/
+  /// `HandshakeException` surfacing verbatim in the sync sheet.
+  static const Duration _requestTimeout = Duration(seconds: 15);
+
   bool _isDuplicate(final Object error) => error is PostgrestException && error.code == '23505';
 
   @override
@@ -29,7 +37,7 @@ class SupabaseSyncApi implements SyncApi {
         'edited_by': editedByUserId,
         'client_edited_at': operation.createdAt.toIso8601String(),
         'client_op_id': operation.id,
-      });
+      }).timeout(_requestTimeout);
     } catch (error) {
       if (_isDuplicate(error)) return;
       ErrorHandler.handleException(error);
@@ -53,7 +61,7 @@ class SupabaseSyncApi implements SyncApi {
           'edited_by': editedByUserId,
           'client_edited_at': operation.createdAt.toIso8601String(),
           'client_op_id': row.opId,
-        });
+        }).timeout(_requestTimeout);
       } catch (error) {
         if (_isDuplicate(error)) continue;
         ErrorHandler.handleException(error);
@@ -73,7 +81,7 @@ class SupabaseSyncApi implements SyncApi {
         'client_id': operation.id,
         'parent_holding_id': operation.parentHoldingId,
         'created_by': createdByUserId,
-      });
+      }).timeout(_requestTimeout);
     } catch (error) {
       if (_isDuplicate(error)) return;
       ErrorHandler.handleException(error);
