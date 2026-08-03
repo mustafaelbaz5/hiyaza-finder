@@ -24,16 +24,25 @@ class SyncStatusBadge extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
+        // Offline only overrides the label when there's actually something
+        // waiting on connectivity to go out — no point announcing "offline"
+        // when nothing is pending (the badge would already be hidden above
+        // in that case anyway, since neither hasFailed nor isSyncing would
+        // be true either).
+        final bool showWaitingForInternet = state.isOffline && state.hasPending;
+
         final Color tint = state.hasFailed ? AppColors.red200 : AppColors.amber300;
-        final String label = state.isSyncing
-            ? 'sync.status.syncing'.tr()
-            : state.hasFailed
-                ? 'sync.status.failed'.tr(
-                    namedArgs: {'count': state.failedCount.toString()},
-                  )
-                : 'sync.status.pending'.tr(
-                    namedArgs: {'count': state.pendingCount.toString()},
-                  );
+        final String label = showWaitingForInternet
+            ? 'sync.status.waiting_for_internet'.tr()
+            : state.isSyncing
+                ? 'sync.status.syncing'.tr()
+                : state.hasFailed
+                    ? 'sync.status.failed'.tr(
+                        namedArgs: {'count': state.failedCount.toString()},
+                      )
+                    : 'sync.status.pending'.tr(
+                        namedArgs: {'count': state.pendingCount.toString()},
+                      );
 
         return Tooltip(
           message: 'sync.status.tap_to_sync'.tr(),
@@ -61,7 +70,11 @@ class SyncStatusBadge extends StatelessWidget {
                     )
                   else
                     Icon(
-                      state.hasFailed ? Icons.sync_problem_rounded : Icons.cloud_sync_rounded,
+                      state.hasFailed
+                          ? Icons.sync_problem_rounded
+                          : showWaitingForInternet
+                              ? Icons.wifi_off_rounded
+                              : Icons.cloud_sync_rounded,
                       size: 14,
                       color: tint,
                     ),

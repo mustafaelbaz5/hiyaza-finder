@@ -45,6 +45,7 @@
       "syncing": "جارِ المزامنة…",
       "pending": "{count} بانتظار المزامنة",
       "failed": "فشلت مزامنة {count}",
+      "waiting_for_internet": "بانتظار الاتصال بالإنترنت",
       "tap_to_sync": "تفاصيل المزامنة"
     },
     "details": {

@@ -2,9 +2,9 @@ import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
 import '../../../cities/domain/entities/association_type.dart';
-import '../../../sync/data/sync_runner.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
+import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/repositories/holdings_reader.dart';
@@ -73,9 +73,6 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// persisted): after an app restart a still-unsynced added record loses
   /// this marker even though it may still be sitting in the outbox.
   final Set<String> _locallyAddedIds = <String>{};
-
-  /// Whether a sync operation is currently in flight.
-  var _isSyncing = false;
 
   @override
   List<Parcel> get parcels => _parcels;
@@ -147,17 +144,13 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// Triggers a synchronization of pending operations.
   /// Used by the RefreshIndicator on the detail screen — same action as the
-  /// "مزامنة الآن" button, but called via pull-to-refresh gesture.
-  Future<void> syncNow() async {
-    if (_isSyncing) return;
-    _isSyncing = true;
-    try {
-      final SyncRunner syncRunner = GetIt.instance<SyncRunner>();
-      await syncRunner.flush();
-    } finally {
-      _isSyncing = false;
-    }
-  }
+  /// "مزامنة الآن" button, but called via pull-to-refresh gesture. Delegates
+  /// to [SyncStatusCubit.flushNow] rather than resolving [SyncRunner]
+  /// directly, so this is not a second, independent "is a sync in flight"
+  /// guard — every trigger in the app (manual, connectivity-regained,
+  /// app-resume, app-start, login, city-selected) shares the one guard
+  /// already on that cubit.
+  Future<void> syncNow() => GetIt.instance<SyncStatusCubit>().flushNow();
 
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person

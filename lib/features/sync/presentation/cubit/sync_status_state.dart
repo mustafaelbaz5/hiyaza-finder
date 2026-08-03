@@ -5,6 +5,7 @@ class SyncStatusState extends Equatable {
     this.pendingCount = 0,
     this.failedCount = 0,
     this.isSyncing = false,
+    this.isOffline = false,
   });
 
   final int pendingCount;
@@ -15,6 +16,12 @@ class SyncStatusState extends Equatable {
   final int failedCount;
   final bool isSyncing;
 
+  /// Whether the device currently has no internet connection, per
+  /// `NetworkInfo.onStatusChange` — tracked so the badge can show "waiting
+  /// for internet" instead of a generic "pending" count while there's
+  /// nothing this device can do about it but wait for connectivity.
+  final bool isOffline;
+
   bool get hasPending => pendingCount > 0;
   bool get hasFailed => failedCount > 0;
 
@@ -22,14 +29,16 @@ class SyncStatusState extends Equatable {
     final int? pendingCount,
     final int? failedCount,
     final bool? isSyncing,
+    final bool? isOffline,
   }) {
     return SyncStatusState(
       pendingCount: pendingCount ?? this.pendingCount,
       failedCount: failedCount ?? this.failedCount,
       isSyncing: isSyncing ?? this.isSyncing,
+      isOffline: isOffline ?? this.isOffline,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[pendingCount, failedCount, isSyncing];
+  List<Object?> get props => <Object?>[pendingCount, failedCount, isSyncing, isOffline];
 }

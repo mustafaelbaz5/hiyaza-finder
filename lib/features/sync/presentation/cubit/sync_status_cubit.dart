@@ -24,8 +24,18 @@ class SyncStatusCubit extends Cubit<SyncStatusState> {
     _countSub = _queue.pendingCountChanges.listen((final int _) => _refresh());
     _connectivitySub = networkInfo.onStatusChange.listen(
       (final InternetConnectionStatus status) {
+        final bool offline = status == InternetConnectionStatus.disconnected;
+        if (!isClosed) emit(state.copyWith(isOffline: offline));
         if (status == InternetConnectionStatus.connected) flushNow();
       },
+    );
+    // Seeds `isOffline` from a one-shot check so the badge reflects reality
+    // immediately at app start, rather than defaulting to "online" (the
+    // state's default) until the first `onStatusChange` event arrives.
+    unawaited(
+      networkInfo.isConnected.then((final bool connected) {
+        if (!isClosed) emit(state.copyWith(isOffline: !connected));
+      }),
     );
     _refresh();
   }

@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../holdings/data/repository/holdings_repository.dart';
+import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../../domain/entities/city.dart';
 import '../../domain/entities/city_snapshot.dart';
 import '../../domain/repositories/city_repository.dart';
@@ -60,6 +64,12 @@ class CityPickerCubit extends Cubit<CityPickerState> {
         associationType: snapshot.associationType,
         associationSubtype: snapshot.associationSubtype,
       );
+      // The user just picked a city and is actively online (the download
+      // above only succeeds if connected) — give any operations still
+      // queued from a previous city/session a chance to go out now.
+      // `_flushSyncSafely` swallows its own errors, so a sync hiccup can
+      // never be mistaken for a failed download by the catch clauses below.
+      unawaited(_flushSyncSafely());
       return snapshot;
     } on AppException catch (e) {
       if (isClosed) return null;
@@ -77,6 +87,15 @@ class CityPickerCubit extends Cubit<CityPickerState> {
         ),
       );
       return null;
+    }
+  }
+
+  Future<void> _flushSyncSafely() async {
+    try {
+      await getIt<SyncStatusCubit>().flushNow();
+    } catch (_) {
+      // Sync is a courtesy trigger here, not part of the download's
+      // contract — never let a sync hiccup surface as a download error.
     }
   }
 }

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../../domain/entities/app_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'session_state.dart';
@@ -19,6 +21,11 @@ class SessionCubit extends Cubit<SessionState> {
       emit(
         user == null ? SessionState.unauthenticated() : SessionState.authenticated(user),
       );
+      // A session becoming valid here (not just the constructor's warm-start
+      // restore, which never reaches this listener) is a real login-adjacent
+      // event — e.g. a token refresh coming back after being invalid — so
+      // give any queued operations a chance to flush.
+      if (user != null) unawaited(_flushSyncSafely());
     });
   }
 
@@ -41,6 +48,9 @@ class SessionCubit extends Cubit<SessionState> {
         password: password,
       );
       emit(SessionState.authenticated(user));
+      // `_flushSyncSafely` swallows its own errors, so a sync hiccup can
+      // never be mistaken for a failed sign-in by the catch clauses below.
+      unawaited(_flushSyncSafely());
     } on AppException catch (e) {
       emit(
         SessionState.unauthenticated().copyWith(errorMessage: e.message),
@@ -49,6 +59,15 @@ class SessionCubit extends Cubit<SessionState> {
       emit(
         SessionState.unauthenticated().copyWith(errorMessage: e.toString()),
       );
+    }
+  }
+
+  Future<void> _flushSyncSafely() async {
+    try {
+      await getIt<SyncStatusCubit>().flushNow();
+    } catch (_) {
+      // Sync is a courtesy trigger here, not part of the sign-in contract —
+      // never let a sync hiccup surface as an auth error.
     }
   }
 

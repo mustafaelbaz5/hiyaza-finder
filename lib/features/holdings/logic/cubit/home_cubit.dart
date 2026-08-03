@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/di/dependency_injection.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/entities/city_snapshot.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../services/holding_search_service.dart';
@@ -22,6 +24,14 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> init() async {
     emit(state.copyWith(status: HomeStatus.loading));
+
+    // App-start sync trigger — gives any operation still sitting in the
+    // outbox from a previous session a chance to flush as soon as the app
+    // is usable again, regardless of whether a cached city load below
+    // succeeds. Fire-and-forget: `SyncStatusCubit.flushNow()` already
+    // guards against overlap with every other trigger, and this screen's
+    // own loading state must not wait on a network round-trip.
+    unawaited(getIt<SyncStatusCubit>().flushNow());
 
     final CitySnapshot? cached = await _tryLoadCachedCity();
     if (cached != null) {
