@@ -166,6 +166,7 @@
       "see_more": "See more",
       "see_less": "See less",
       "title": "Holding #{id}",
+      "parcel_id": "Parcel ID",
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
       "copied": "Copied",

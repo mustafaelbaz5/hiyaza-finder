@@ -198,24 +198,38 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String? cityId = _activeCityId;
     if (cityId == null) return null;
 
-    final Parcel withId = parcel.copyWith(id: _uuid.v4());
+    final Parcel? parent = parentHoldingId == null
+        ? null
+        : _parcels.cast<Parcel?>().firstWhere(
+            (final Parcel? p) => p?.id == parentHoldingId,
+            orElse: () => null);
+
+    // A sibling parcel added under a still-pending person (no real رقم
+    // الحيازة yet) must join the *same* pending group as its parent —
+    // otherwise Parcel.groupKey (keyed on each parcel's own id while
+    // pending) would treat it as an unrelated new person. Not needed once
+    // the parent has a real holdingId: groupKey already equals holdingId
+    // for both in that case.
+    final String? pendingGroupId = (parent != null && parent.isHoldingIdPending)
+        ? (parent.pendingGroupId ?? parent.id)
+        : null;
+
+    final Parcel withId = parcel.copyWith(
+      id: _uuid.v4(),
+      pendingGroupId: pendingGroupId,
+    );
 
     // Keep عدد القطع في الحيازة consistent across every parcel that shares
     // this holding — the new parcel's count already reflects the total
     // (set by the caller), so every sibling parcel is bumped to match it.
-    if (parentHoldingId != null) {
-      final Parcel? parent = _parcels.cast<Parcel?>().firstWhere(
-          (final Parcel? p) => p?.id == parentHoldingId,
-          orElse: () => null);
-      if (parent != null) {
-        _parcels = <Parcel>[
-          for (final Parcel p in _parcels)
-            if (p.groupKey == parent.groupKey)
-              p.copyWith(holdingsCount: withId.holdingsCount)
-            else
-              p,
-        ];
-      }
+    if (parent != null) {
+      _parcels = <Parcel>[
+        for (final Parcel p in _parcels)
+          if (p.groupKey == parent.groupKey)
+            p.copyWith(holdingsCount: withId.holdingsCount)
+          else
+            p,
+      ];
     }
 
     _parcels = <Parcel>[..._parcels, withId];

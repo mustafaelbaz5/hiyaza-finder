@@ -31,10 +31,19 @@ class Parcel {
     this.isDelegate = false,
     this.usageType = defaultUsageType,
     this.holdingsCount,
+    this.pendingGroupId,
   });
 
-  /// Stable identity within a loaded dataset (the parse-order index).
-  /// Used to key persistent edits so corrections re-apply on reload.
+  /// Stable identity — for an imported parcel this is `holdings.id` as
+  /// downloaded; for a field-added parcel it's the client-generated uuid
+  /// assigned in `HoldingsRepository.addLocalParcel`, which is now also
+  /// sent verbatim as `added_holdings.id` on sync (see `pushAddRecord` in
+  /// `supabase_sync_api.dart`), rather than letting Postgres generate a
+  /// separate one. This makes [id] the single value that ties a parcel
+  /// together across the app, `holdings`/`added_holdings`, and
+  /// `holding_edits.holding_id` — the key the dashboard's export can join
+  /// on. Also used locally to key persistent edits so corrections re-apply
+  /// on reload.
   final String id;
 
   final String holdingId; // رقم الحيازة
@@ -56,6 +65,15 @@ class Parcel {
   final double? totalSqm; // إجمالي المساحة (م²)
   final int?
       holdingsCount; // عدد القطع في الحيازة — from city_top_holders, read-only
+
+  /// Only meaningful for a still-[isHoldingIdPending] parcel: when set (by
+  /// `HoldingsRepository.addLocalParcel`, for a parcel added as a sibling of
+  /// an existing pending person), [groupKey] uses this instead of [id] so
+  /// the new parcel groups with its parent instead of appearing as its own
+  /// unrelated person. `null` for every parcel that isn't such a sibling —
+  /// including the pending person it was added to, which keeps grouping by
+  /// its own [id] as before.
+  final String? pendingGroupId;
 
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
@@ -89,7 +107,8 @@ class Parcel {
   /// until given a real number — grouping by it directly would silently
   /// merge unrelated new people into one search result/detail screen, so
   /// pending records group by their own unique [id] instead.
-  String get groupKey => isHoldingIdPending ? 'pending:$id' : holdingId;
+  String get groupKey =>
+      isHoldingIdPending ? 'pending:${pendingGroupId ?? id}' : holdingId;
 
   /// Whether a required text/choice field actually has a value — blank,
   /// whitespace-only, and the literal `"-"` placeholder (used elsewhere for
@@ -183,6 +202,7 @@ class Parcel {
     final Object? isDelegate = _unset,
     final Object? usageType = _unset,
     final Object? holdingsCount = _unset,
+    final Object? pendingGroupId = _unset,
   }) {
     T resolve<T>(final Object? value, final T fallback) =>
         identical(value, _unset) ? fallback : value as T;
@@ -216,6 +236,7 @@ class Parcel {
       isDelegate: resolve(isDelegate, this.isDelegate),
       usageType: resolve(usageType, this.usageType),
       holdingsCount: resolve(holdingsCount, this.holdingsCount),
+      pendingGroupId: resolve(pendingGroupId, this.pendingGroupId),
     );
   }
 
@@ -321,6 +342,7 @@ class Parcel {
         'isDelegate': isDelegate,
         'usageType': usageType,
         'holdingsCount': holdingsCount,
+        'pendingGroupId': pendingGroupId,
       };
 
   factory Parcel.fromJson(final Map<String, dynamic> json) {
@@ -354,6 +376,7 @@ class Parcel {
       isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,
       holdingsCount: json['holdingsCount'] as int?,
+      pendingGroupId: json['pendingGroupId'] as String?,
     );
   }
 }

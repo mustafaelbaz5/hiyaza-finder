@@ -59,9 +59,20 @@ class HoldingSearchService {
     final String query = rawQuery.trim();
     if (query.isEmpty) return const <SearchResult>[];
 
-    final List<_ScoredParcel> scored = _digitsOnly.hasMatch(query)
-        ? _scoreByHoldingId(parcels, query)
-        : _scoreByHolderName(parcels, query);
+    // Parcel-id matching always runs alongside whichever of the two
+    // existing branches applies — a query can't be reliably classified as
+    // "id-shaped" up front (a uuid fragment like "123" is digits-only, and
+    // a fragment like "a3f" is neither digits-only nor a plausible name
+    // token), so instead of a three-way mutually-exclusive dispatch, id
+    // results are simply concatenated in; _groupAndRank already collapses
+    // to the best score per groupKey regardless of which matcher produced
+    // it.
+    final List<_ScoredParcel> scored = <_ScoredParcel>[
+      ...(_digitsOnly.hasMatch(query)
+          ? _scoreByHoldingId(parcels, query)
+          : _scoreByHolderName(parcels, query)),
+      ..._scoreByParcelId(parcels, query),
+    ];
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
@@ -82,6 +93,26 @@ class HoldingSearchService {
       if (id.startsWith(query)) {
         results.add(_ScoredParcel(parcel, 100));
       } else if (id.contains(query)) {
+        results.add(_ScoredParcel(parcel, 50));
+      }
+    }
+    return results;
+  }
+
+  /// Matches [Parcel.id] (the stable cross-system uuid) case-insensitively
+  /// — lets a field worker paste/type a full or partial parcel id (copied
+  /// from the detail card's ID chip) to jump straight to it.
+  List<_ScoredParcel> _scoreByParcelId(
+    final List<Parcel> parcels,
+    final String query,
+  ) {
+    final String q = query.toLowerCase();
+    final List<_ScoredParcel> results = <_ScoredParcel>[];
+    for (final Parcel parcel in parcels) {
+      final String id = parcel.id.toLowerCase();
+      if (id.startsWith(q)) {
+        results.add(_ScoredParcel(parcel, 100));
+      } else if (id.contains(q)) {
         results.add(_ScoredParcel(parcel, 50));
       }
     }

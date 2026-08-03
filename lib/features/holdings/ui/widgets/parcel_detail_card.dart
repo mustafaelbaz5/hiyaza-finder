@@ -148,6 +148,8 @@ class ParcelDetailCard extends StatelessWidget {
             ),
             verticalSpacing(8),
           ],
+          _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
+          verticalSpacing(8),
           BorderCompass(
             holdingId: parcel.holdingId,
             north: parcel.borderNorth,
@@ -428,6 +430,14 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
+  Future<void> _copyId(final BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: parcel.id));
+    if (context.mounted) {
+      HapticFeedback.mediumImpact();
+      context.showSuccessSnackBar('holdings.detail.copied'.tr());
+    }
+  }
+
   Future<void> _copyAll(final BuildContext context) async {
     // نوع الزرع must have a real value before copy-all is allowed — same
     // "not blank / not '-'" rule as the add-record form's required fields
@@ -491,6 +501,62 @@ class _StatusBadge extends StatelessWidget {
             style: AppTextStyles.font12Bold.copyWith(color: color),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The parcel's stable cross-system id ([Parcel.id]) — shown above every
+/// other field, in a dedicated tappable pill rather than a plain [FieldRow],
+/// since it needs to be copied far more often than edited (it's never
+/// editable at all) and is easy to mistake for رقم الحيازة otherwise.
+class _ParcelIdChip extends StatelessWidget {
+  const _ParcelIdChip({required this.id, required this.onCopy});
+
+  final String id;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return Material(
+      color: colors.background,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onCopy,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: <Widget>[
+              const Icon(Icons.fingerprint_rounded, size: 18, color: AppColors.green200),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'holdings.detail.parcel_id'.tr(),
+                      style: AppTextStyles.font12Bold.copyWith(color: colors.textSecondary),
+                    ),
+                    Text(
+                      id,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.font14Bold,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.copy_rounded, size: 18, color: AppColors.green200),
+            ],
+          ),
+        ),
       ),
     );
   }

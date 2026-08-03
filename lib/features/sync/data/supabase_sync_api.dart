@@ -76,6 +76,11 @@ class SupabaseSyncApi implements SyncApi {
   }) async {
     try {
       await _client.from('added_holdings').insert(<String, dynamic>{
+        // The row's primary key is the app's own client-generated id (same
+        // one already used as `Parcel.id` and `client_id`) rather than a
+        // fresh server-generated uuid — keeps the id stable across app,
+        // database, and `holding_edits.holding_id` from creation onward.
+        'id': operation.id,
         ...operation.record,
         'city_id': operation.cityId,
         'client_id': operation.id,
