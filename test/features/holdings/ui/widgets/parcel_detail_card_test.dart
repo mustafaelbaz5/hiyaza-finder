@@ -106,25 +106,36 @@ void main() {
     },
   );
 
-  testWidgets('shows the "edited" badge only when isEdited is true', (
-    final tester,
-  ) async {
-    await _pump(
-      tester,
-      ParcelDetailCard(parcel: parcel, onFieldChanged: (final _) {}),
-    );
-    expect(find.byIcon(Icons.edit_note_rounded), findsNothing);
+  testWidgets(
+    'shows a per-field "معدلة" badge only on fields that changed from the original',
+    (final tester) async {
+      // No originalParcel supplied at all — nothing should ever show as
+      // modified.
+      await _pump(
+        tester,
+        ParcelDetailCard(parcel: parcel, onFieldChanged: (final _) {}),
+      );
+      expect(find.text('تم التعديل'), findsNothing);
 
-    await _pump(
-      tester,
-      ParcelDetailCard(
-        parcel: parcel,
-        isEdited: true,
-        onFieldChanged: (final _) {},
-      ),
-    );
-    expect(find.byIcon(Icons.edit_note_rounded), findsOneWidget);
-  });
+      // holderName differs from the original; every other field matches —
+      // exactly one badge should appear, not one per field on the card.
+      const Parcel original = Parcel(
+        id: 'p1',
+        holdingId: '101',
+        holderName: 'شخص آخر',
+        basinName: 'البشيط',
+      );
+      await _pump(
+        tester,
+        ParcelDetailCard(
+          parcel: parcel,
+          originalParcel: original,
+          onFieldChanged: (final _) {},
+        ),
+      );
+      expect(find.text('تم التعديل'), findsOneWidget);
+    },
+  );
 
   testWidgets('tapping the اسم المالك pencil opens the edit dialog', (
     final tester,

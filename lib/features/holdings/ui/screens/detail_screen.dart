@@ -95,7 +95,10 @@ class _DetailScreenState extends State<DetailScreen> {
 
   /// Pre-fills a new-parcel form from [source] per APP_PLAN.md decision
   /// #8: everything copied except المساحة (blanked — entered fresh for
-  /// the new land) and رقم الأرض (defaults to `-1`, must be corrected).
+  /// the new land), رقم الأرض (defaults to `-1`, must be corrected), and
+  /// اسم الحوض (blanked — required fields must always be actively chosen
+  /// by the user, even for a parcel added under an existing person whose
+  /// other parcels already have one).
   Future<void> _addParcelForPerson(final Parcel source) async {
     final Parcel template = source.copyWith(
       landNumber: '-1',
@@ -103,6 +106,7 @@ class _DetailScreenState extends State<DetailScreen> {
       qirat: null,
       sahm: null,
       totalSqm: null,
+      basinName: null,
       // عدد القطع في الحيازة grows by one for the new parcel being added.
       holdingsCount: (source.holdingsCount ?? 1) + 1,
       // Flags the new parcel as needing a field-survey follow-up, same as
@@ -214,7 +218,8 @@ class _DetailScreenState extends State<DetailScreen> {
                             padding: EdgeInsets.only(bottom: rh(16)),
                             child: ParcelDetailCard(
                               parcel: parcel,
-                              isEdited: _repository.isParcelEdited(parcel.id),
+                              originalParcel:
+                                  _repository.originalParcel(parcel.id),
                               isNew: _repository.isNewLocalRecord(parcel.id),
                               hideCreditType: _repository.hideCreditType,
                               associationType:

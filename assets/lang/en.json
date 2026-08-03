@@ -192,6 +192,8 @@
       "save": "Save",
       "saved": "Saved — will upload once you're online",
       "holder_required": "Holder name is required",
+      "basin_required": "Please select اسم الحوض",
+      "crop_type_required": "Please select نوع الزرع",
       "no_active_city": "Can't add without a loaded city",
       "discard_confirm": "Your changes will be lost. Leave anyway?"
     },

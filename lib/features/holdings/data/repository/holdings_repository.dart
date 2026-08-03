@@ -314,6 +314,14 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   bool isParcelEdited(final String id) => _edits.containsKey(id);
 
+  /// The pre-edit value of the parcel [id] — either the originally
+  /// downloaded row, or (for a field-added record) the value at the moment
+  /// it was created. `null` if [id] isn't in the active dataset. Used to
+  /// drive per-field "معدلة" indicators by comparing each field against
+  /// its own original value, rather than only knowing *that* something on
+  /// the parcel changed (see `isParcelEdited`).
+  Parcel? originalParcel(final String id) => _originalById[id];
+
   /// Whether [id] was added in the field this session and hasn't been
   /// confirmed synced yet — drives the "new / pending sync" badge.
   bool isNewLocalRecord(final String id) => _locallyAddedIds.contains(id);

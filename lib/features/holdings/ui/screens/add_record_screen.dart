@@ -67,7 +67,33 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _parcel = widget.initialParcel;
   }
 
-  bool get _canSave => (_parcel.holderName?.trim().isNotEmpty ?? false);
+  /// A required text/choice field counts as filled only if it has real
+  /// content — blank, whitespace-only, and the literal "-" placeholder
+  /// (used elsewhere in this form for "not yet corrected", e.g. رقم
+  /// الأرض) all count as "not actually chosen".
+  bool _isFilled(final String? value) {
+    final String trimmed = value?.trim() ?? '';
+    return trimmed.isNotEmpty && trimmed != '-';
+  }
+
+  /// اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly filled/
+  /// chosen before saving — the last two default to empty (see
+  /// `HomeScreen._openAddPerson`/`DetailScreen._addParcelForPerson`) so the
+  /// user is forced to pick a real value rather than leaving whatever was
+  /// last selected or nothing at all.
+  bool get _canSave =>
+      _isFilled(_parcel.holderName) &&
+      _isFilled(_parcel.basinName) &&
+      _isFilled(_parcel.cropType);
+
+  /// One line per still-missing required field, in the same order as
+  /// [_canSave]'s checks — shown below the Save button while any are
+  /// missing so the user knows exactly which ones to fix.
+  List<String> get _missingFieldMessages => <String>[
+        if (!_isFilled(_parcel.holderName)) 'holdings.add.holder_required'.tr(),
+        if (!_isFilled(_parcel.basinName)) 'holdings.add.basin_required'.tr(),
+        if (!_isFilled(_parcel.cropType)) 'holdings.add.crop_type_required'.tr(),
+      ];
 
   /// Whether the field read via [current] from `_parcel` differs from
   /// `widget.initialParcel`'s value for the same field — drives every
@@ -503,10 +529,10 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                         isLoading: _isSaving,
                         size: CustomButtonSize.large,
                       ),
-                      if (!_canSave) ...[
+                      for (final String message in _missingFieldMessages) ...[
                         verticalSpacing(8),
                         Text(
-                          'holdings.add.holder_required'.tr(),
+                          message,
                           style: AppTextStyles.font12Regular.copyWith(
                             color: colors.textHint,
                           ),

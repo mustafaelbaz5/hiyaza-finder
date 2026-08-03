@@ -18,6 +18,7 @@ import '../../../cities/domain/entities/association_type.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/clipboard_formatter.dart';
+import '../../domain/services/field_change_tracker.dart';
 import '../../logic/services/area_calculator.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
@@ -34,7 +35,7 @@ class ParcelDetailCard extends StatelessWidget {
     super.key,
     required this.parcel,
     required this.onFieldChanged,
-    this.isEdited = false,
+    this.originalParcel,
     this.isNew = false,
     this.hideCreditType = false,
     this.associationType,
@@ -48,10 +49,17 @@ class ParcelDetailCard extends StatelessWidget {
   /// Called with a fully-updated [Parcel] whenever a single field is saved
   /// via its inline pencil-icon editor — the only way fields are edited.
   final void Function(Parcel updated) onFieldChanged;
-  final bool isEdited;
 
-  /// Added in the field this session and not yet confirmed synced — shown
-  /// independently of [isEdited] (a record can be both).
+  /// [parcel]'s pre-edit value (`HoldingsRepository.originalParcel`) — each
+  /// field below compares itself against the matching field here to decide
+  /// whether to show its own "معدلة" badge. `null` means "no original to
+  /// compare against" (e.g. a widget test with no repository), in which
+  /// case no field shows as modified. Deliberately per-field rather than
+  /// one whole-card "edited" flag, so a card with many fields only flags
+  /// the ones that actually changed.
+  final Parcel? originalParcel;
+
+  /// Added in the field this session and not yet confirmed synced.
   final bool isNew;
 
   /// Shows a delete (trash) icon when non-null and removes this parcel on
@@ -87,6 +95,17 @@ class ParcelDetailCard extends StatelessWidget {
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
+  /// Whether the field read via [current] from [parcel] differs from
+  /// [originalParcel]'s value for the same field — `false` (never modified)
+  /// when [originalParcel] is `null`. Mirrors `AddRecordScreen._isModified`,
+  /// just comparing against the saved original instead of a form's
+  /// in-session initial value.
+  bool _isModified<T>(final T Function(Parcel p) current) {
+    final Parcel? original = originalParcel;
+    if (original == null) return false;
+    return FieldChangeTracker.isModified(current(parcel), current(original));
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -101,7 +120,7 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isEdited || isNew || onDelete != null) ...<Widget>[
+          if (isNew || onDelete != null) ...<Widget>[
             Row(
               children: [
                 Expanded(
@@ -114,12 +133,6 @@ class ParcelDetailCard extends StatelessWidget {
                           icon: Icons.fiber_new_rounded,
                           label: 'holdings.detail.new_badge'.tr(),
                           color: AppColors.blue200,
-                        ),
-                      if (isEdited)
-                        _StatusBadge(
-                          icon: Icons.edit_note_rounded,
-                          label: 'holdings.edit.edited_badge'.tr(),
-                          color: AppColors.amber300,
                         ),
                     ],
                   ),
@@ -169,6 +182,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'اسم المالك',
                 value: _formatter.effectiveOwnerName(parcel),
+                isModified: _isModified((final p) => p.ownerName),
                 onEdit: () => _editText(
                   context,
                   title: 'اسم المالك',
@@ -180,6 +194,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'اسم الحائز',
                 value: parcel.holderName,
+                isModified: _isModified((final p) => p.holderName),
                 onEdit: () => _editText(
                   context,
                   title: 'اسم الحائز',
@@ -191,6 +206,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'الرقم القومي',
                 value: parcel.nationalId,
+                isModified: _isModified((final p) => p.nationalId),
                 onEdit: () => _editText(
                   context,
                   title: 'الرقم القومي',
@@ -203,6 +219,7 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'اسم الجمعية',
                 value: parcel.associationName,
+                isModified: _isModified((final p) => p.associationName),
                 onEdit: () => _editText(
                   context,
                   title: 'اسم الجمعية',
@@ -214,11 +231,13 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'اسم الحوض',
                 value: parcel.basinName,
+                isModified: _isModified((final p) => p.basinName),
                 onEdit: () => _editBasin(context),
               ),
               FieldRow(
                 label: 'رقم الأرض',
                 value: parcel.landNumber,
+                isModified: _isModified((final p) => p.landNumber),
                 onEdit: () => _editText(
                   context,
                   title: 'رقم الأرض',
@@ -230,21 +249,27 @@ class ParcelDetailCard extends StatelessWidget {
               FieldRow(
                 label: 'المساحة',
                 value: _formatter.areaFraction(parcel),
+                isModified: _isModified((final p) => p.feddan) ||
+                    _isModified((final p) => p.qirat) ||
+                    _isModified((final p) => p.sahm),
                 onEdit: () => _editArea(context),
               ),
               FieldRow(
                 label: 'المساحة بالمتر',
                 value: _formatter.formatNumber(parcel.totalSqm),
+                isModified: _isModified((final p) => p.totalSqm),
                 onEdit: () => _editArea(context),
               ),
               FieldRow(
                 label: 'نوع الزرع',
                 value: parcel.cropType,
+                isModified: _isModified((final p) => p.cropType),
                 onEdit: () => _editCropType(context),
               ),
               FieldRow(
                 label: 'ملاحظات',
                 value: parcel.notes,
+                isModified: _isModified((final p) => p.notes),
                 onEdit: () => _editDropdown(
                   context,
                   title: 'ملاحظات',
@@ -259,6 +284,7 @@ class ParcelDetailCard extends StatelessWidget {
           SeeMoreSection(
             parcel: parcel,
             onFieldChanged: onFieldChanged,
+            originalParcel: originalParcel,
             hideCreditType: hideCreditType,
             associationType: associationType,
           ),
