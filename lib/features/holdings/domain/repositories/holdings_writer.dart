@@ -1,3 +1,4 @@
+import '../entities/bulk_edit_outcome.dart';
 import '../entities/bulk_editable_field.dart';
 import '../entities/parcel.dart';
 
@@ -9,7 +10,7 @@ abstract class HoldingsWriter {
 
   Future<void> resetParcel(final String id);
 
-  Future<int> bulkApplyField({
+  Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,

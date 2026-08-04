@@ -24,7 +24,6 @@ import '../../domain/entities/parcel.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
-import '../../../sync/presentation/cubit/sync_status_cubit.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/recommendation_list.dart';
 import 'add_record_screen.dart';
@@ -54,21 +53,14 @@ class _HomeScreenState extends State<HomeScreen> {
   /// refreshActiveCity()` is actually meaningful.
   bool _isRefreshing = false;
 
-  /// Re-downloads the active city (gets other users' updates) and, since
-  /// it delegates through the same online-only path as every other sync
-  /// trigger, also gives the outbox a chance to flush first via the app
-  /// bar's refresh action — replaces the old pull-to-refresh gesture,
-  /// which on the home screen's default (no search) state had no visible
+  /// Re-downloads the active city (gets other users' updates) — the app
+  /// bar's refresh action, replacing the old pull-to-refresh gesture, which
+  /// on the home screen's default (no search) state had no visible
   /// scrollable content to grab onto.
   Future<void> _refreshCity(final HomeCubit cubit) async {
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
     try {
-      // Push any still-queued local edits first — same flush every other
-      // sync trigger in the app shares — before pulling the city's latest
-      // server state, so a round-trip here never overwrites a pending
-      // local change with stale data.
-      await getIt<SyncStatusCubit>().flushNow();
       await cubit.refreshActiveCity();
     } catch (_) {
       if (mounted) context.showErrorSnackBar('errors.unknown'.tr());

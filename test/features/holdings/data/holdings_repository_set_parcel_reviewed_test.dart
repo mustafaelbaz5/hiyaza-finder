@@ -6,8 +6,7 @@ import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/sync/domain/entities/sync_operation.dart';
-import 'package:hiyaza_finder/features/sync/domain/repositories/sync_queue.dart';
+import 'package:hiyaza_finder/features/sync/data/holdings_api.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -24,27 +23,77 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-class _FakeSyncQueue implements SyncQueue {
-  final List<SyncOperation> enqueued = <SyncOperation>[];
+class _MarkReviewedCall {
+  _MarkReviewedCall({
+    required this.parcelId,
+    required this.isFieldAdded,
+    required this.reviewed,
+    required this.reviewedAt,
+    required this.reviewedByUserId,
+  });
+
+  final String parcelId;
+  final bool isFieldAdded;
+  final bool reviewed;
+  final DateTime? reviewedAt;
+  final String reviewedByUserId;
+}
+
+/// A hand-written fake standing in for the real Supabase-backed
+/// [HoldingsApi] — records every `markReviewed` call and can be configured
+/// to throw, so tests assert against direct-call success/failure instead
+/// of enqueued outbox operations.
+class _FakeHoldingsApi implements HoldingsApi {
+  final List<_MarkReviewedCall> markReviewedCalls = <_MarkReviewedCall>[];
+  Object? markReviewedError;
 
   @override
-  Future<void> enqueue(final SyncOperation operation) async {
-    enqueued.add(operation);
+  Future<void> markReviewed({
+    required final String parcelId,
+    required final bool isFieldAdded,
+    required final bool reviewed,
+    required final DateTime? reviewedAt,
+    required final String reviewedByUserId,
+  }) async {
+    if (markReviewedError != null) throw markReviewedError!;
+    markReviewedCalls.add(
+      _MarkReviewedCall(
+        parcelId: parcelId,
+        isFieldAdded: isFieldAdded,
+        reviewed: reviewed,
+        reviewedAt: reviewedAt,
+        reviewedByUserId: reviewedByUserId,
+      ),
+    );
   }
 
   @override
-  Future<List<SyncOperation>> pending() async => enqueued;
+  Future<void> addRecord({
+    required final String id,
+    required final String cityId,
+    required final Map<String, dynamic> record,
+    required final String? parentHoldingId,
+    required final String createdByUserId,
+  }) async {}
 
   @override
-  Future<void> remove(final String operationId) async {
-    enqueued.removeWhere((final SyncOperation o) => o.id == operationId);
-  }
+  Future<void> deleteAddedHolding(final String id) async {}
 
   @override
-  Future<void> update(final SyncOperation operation) async {}
+  Future<void> editHolding({
+    required final String holdingId,
+    required final String cityId,
+    required final Map<String, dynamic> payload,
+    required final String editedByUserId,
+  }) async {}
 
   @override
-  Stream<int> get pendingCountChanges => const Stream<int>.empty();
+  Future<List<String>> bulkEditHoldings({
+    required final String cityId,
+    required final Map<String, Map<String, dynamic>> payloadsByHoldingId,
+    required final String editedByUserId,
+  }) async =>
+      const <String>[];
 }
 
 class _FakeAuthRepository implements AuthRepository {
@@ -79,7 +128,7 @@ class _FakeAuthRepository implements AuthRepository {
 }
 
 void main() {
-  late _FakeSyncQueue syncQueue;
+  late _FakeHoldingsApi holdingsApi;
   late HoldingsRepository repository;
 
   setUp(() async {
@@ -87,10 +136,10 @@ void main() {
     getIt.registerLazySingleton<AuthRepository>(() => _FakeAuthRepository('user-1'));
 
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    syncQueue = _FakeSyncQueue();
+    holdingsApi = _FakeHoldingsApi();
     repository = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
-      syncQueue: syncQueue,
+      holdingsApi: holdingsApi,
     );
   });
 
@@ -103,10 +152,10 @@ void main() {
     final Parcel? result =
         await repository.setParcelReviewed('missing-id', reviewed: true);
     expect(result, isNull);
-    expect(syncQueue.enqueued, isEmpty);
+    expect(holdingsApi.markReviewedCalls, isEmpty);
   });
 
-  test('marks a holdings-origin (isFieldAdded: false) parcel reviewed locally and enqueues', () async {
+  test('marks a holdings-origin (isFieldAdded: false) parcel reviewed locally and calls the API', () async {
     const Parcel parcel = Parcel(id: 'p-1', holdingId: '101');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
@@ -118,37 +167,34 @@ void main() {
     expect(updated.reviewedBy, 'user-1');
     expect(repository.parcels.single.reviewed, isTrue);
 
-    expect(syncQueue.enqueued, hasLength(1));
-    final MarkParcelReviewedOperation op =
-        syncQueue.enqueued.single as MarkParcelReviewedOperation;
-    expect(op.cityId, 'city-1');
-    expect(op.parcelId, 'p-1');
-    expect(op.isFieldAdded, isFalse);
-    expect(op.reviewed, isTrue);
-    expect(op.reviewedAt, isNotNull);
+    expect(holdingsApi.markReviewedCalls, hasLength(1));
+    final _MarkReviewedCall call = holdingsApi.markReviewedCalls.single;
+    expect(call.parcelId, 'p-1');
+    expect(call.isFieldAdded, isFalse);
+    expect(call.reviewed, isTrue);
+    expect(call.reviewedAt, isNotNull);
   });
 
-  test('marks an added_holdings-origin (isFieldAdded: true) parcel reviewed and enqueues with isFieldAdded true', () async {
+  test('marks an added_holdings-origin (isFieldAdded: true) parcel reviewed and calls the API with isFieldAdded true', () async {
     const Parcel parcel = Parcel(id: 'p-2', holdingId: '102', isFieldAdded: true);
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
     await repository.setParcelReviewed('p-2', reviewed: true);
 
-    final MarkParcelReviewedOperation op =
-        syncQueue.enqueued.single as MarkParcelReviewedOperation;
-    expect(op.isFieldAdded, isTrue);
+    final _MarkReviewedCall call = holdingsApi.markReviewedCalls.single;
+    expect(call.isFieldAdded, isTrue);
   });
 
-  test('finish then un-finish enqueues two ops in order, final local state is reviewed: false', () async {
+  test('finish then un-finish calls the API twice in order, final local state is reviewed: false', () async {
     const Parcel parcel = Parcel(id: 'p-3', holdingId: '103');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
     await repository.setParcelReviewed('p-3', reviewed: true);
     await repository.setParcelReviewed('p-3', reviewed: false);
 
-    expect(syncQueue.enqueued, hasLength(2));
-    expect((syncQueue.enqueued[0] as MarkParcelReviewedOperation).reviewed, isTrue);
-    expect((syncQueue.enqueued[1] as MarkParcelReviewedOperation).reviewed, isFalse);
+    expect(holdingsApi.markReviewedCalls, hasLength(2));
+    expect(holdingsApi.markReviewedCalls[0].reviewed, isTrue);
+    expect(holdingsApi.markReviewedCalls[1].reviewed, isFalse);
 
     final Parcel finalState = repository.parcels.single;
     expect(finalState.reviewed, isFalse);
@@ -156,35 +202,32 @@ void main() {
     expect(finalState.reviewedBy, isNull);
   });
 
-  group('applyRemoteChange race guard', () {
-    test('a stale remote row (older reviewedAt) does not clobber a pending local write', () async {
-      const Parcel parcel = Parcel(id: 'p-4', holdingId: '104');
-      await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
+  test('a failed API call leaves the local parcel unchanged and rethrows', () async {
+    const Parcel parcel = Parcel(id: 'p-4', holdingId: '104');
+    await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
+    holdingsApi.markReviewedError = Exception('network down');
 
-      final Parcel? updated = await repository.setParcelReviewed('p-4', reviewed: true);
-      final DateTime localReviewedAt = updated!.reviewedAt!;
+    await expectLater(
+      repository.setParcelReviewed('p-4', reviewed: true),
+      throwsA(isA<Exception>()),
+    );
+    expect(repository.parcels.single.reviewed, isFalse);
+  });
 
-      // A stale/racing remote row — reviewedAt earlier than the local write
-      // (or null, e.g. an echo of the pre-write row).
-      final Parcel staleRemote = parcel.copyWith(reviewed: false, reviewedAt: null);
-      repository.applyRemoteChange(staleRemote);
-
-      final Parcel afterStale = repository.parcels.single;
-      expect(afterStale.reviewed, isTrue);
-      expect(afterStale.reviewedAt, localReviewedAt);
-    });
-
-    test('a fresh remote row is adopted and clears the pending guard', () async {
+  group('applyRemoteChange', () {
+    test('adopts a remote row even immediately after a local confirmed write '
+        '(no more "ahead of the server" window to guard, since the local '
+        'write only happens after the server already confirmed it)', () async {
       const Parcel parcel = Parcel(id: 'p-5', holdingId: '105');
       await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
       final Parcel? updated = await repository.setParcelReviewed('p-5', reviewed: true);
       final DateTime localReviewedAt = updated!.reviewedAt!;
 
-      // A fresh remote row confirming the same (or later) reviewed state.
+      // A fresh remote row confirming the same reviewed state.
       final Parcel freshRemote = parcel.copyWith(
         reviewed: true,
-        reviewedAt: localReviewedAt.add(const Duration(seconds: 1)),
+        reviewedAt: localReviewedAt,
         reviewedBy: 'user-1',
       );
       repository.applyRemoteChange(freshRemote);
@@ -192,11 +235,6 @@ void main() {
       final Parcel afterFresh = repository.parcels.single;
       expect(afterFresh.reviewed, isTrue);
       expect(afterFresh.reviewedAt, freshRemote.reviewedAt);
-
-      // Guard cleared — a subsequent stale-looking event no longer protected.
-      final Parcel laterStale = parcel.copyWith(reviewed: false, reviewedAt: null);
-      repository.applyRemoteChange(laterStale);
-      expect(repository.parcels.single.reviewed, isFalse);
     });
   });
 }

@@ -13,6 +13,7 @@ import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../data/repository/holdings_repository.dart';
 
@@ -141,18 +142,41 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
 
   Future<void> _applyBulkEdit() async {
     setState(() => _isApplying = true);
-    final int changed = await _repository.bulkApplyField(
-      field: _bulkField,
-      value: _bulkValue,
-      basin: _bulkBasin,
-    );
-    if (!mounted) return;
-    setState(() => _isApplying = false);
-    context.showSuccessSnackBar(
-      'holdings.bulk_edit.applied_message'.tr(
-        namedArgs: {'count': changed.toString()},
-      ),
-    );
+    try {
+      final BulkEditOutcome outcome = await _repository.bulkApplyField(
+        field: _bulkField,
+        value: _bulkValue,
+        basin: _bulkBasin,
+      );
+      if (!mounted) return;
+      setState(() => _isApplying = false);
+      if (outcome.failed == 0) {
+        context.showSuccessSnackBar(
+          'holdings.bulk_edit.applied_message'.tr(
+            namedArgs: {'count': outcome.succeeded.toString()},
+          ),
+        );
+      } else if (outcome.succeeded == 0) {
+        context.showErrorSnackBar(
+          'holdings.bulk_edit.applied_failed_message'.tr(
+            namedArgs: {'failed': outcome.failed.toString()},
+          ),
+        );
+      } else {
+        context.showErrorSnackBar(
+          'holdings.bulk_edit.applied_partial_message'.tr(
+            namedArgs: {
+              'succeeded': outcome.succeeded.toString(),
+              'failed': outcome.failed.toString(),
+            },
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isApplying = false);
+      context.showErrorSnackBar('errors.unknown'.tr());
+    }
   }
 
   String _valueLabel(final Object? value) {

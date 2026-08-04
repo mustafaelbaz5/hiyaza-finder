@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -32,40 +30,39 @@ class _DetailScreenState extends State<DetailScreen> {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
-  /// Ids of the currently-shown parcels that are still-unsynced field-added
-  /// records — the only ones deletable (see
-  /// `HoldingsRepository.canDeleteLocalParcel`). Computed once per load
-  /// (not per `build()`, since the underlying check reads the async sync
-  /// outbox) and refreshed after any add/delete on this screen.
-  Set<String> _deletableIds = <String>{};
+  /// Guards each write action against a concurrent second tap while its own
+  /// request is in flight — a single flag is enough since this screen's
+  /// actions (delete/finish/reopen/field-edit) are never meant to run two
+  /// at once. Drives no visible spinner of its own (the per-card widgets
+  /// already show their own tap-affordance state); it exists purely to
+  /// reject a re-entrant call while the first is still awaiting Supabase.
+  bool _isBusy = false;
 
   @override
   void initState() {
     super.initState();
     _parcels = List<Parcel>.of(widget.parcels);
-    unawaited(_refreshDeletableIds());
-  }
-
-  Future<void> _refreshDeletableIds() async {
-    final Set<String> deletable = <String>{};
-    for (final Parcel p in _parcels) {
-      if (await _repository.canDeleteLocalParcel(p.id)) deletable.add(p.id);
-    }
-    if (mounted) setState(() => _deletableIds = deletable);
   }
 
   Future<void> _deleteParcel(final Parcel parcel) async {
-    final bool deleted = await _repository.deleteLocalParcel(parcel.id);
-    if (!mounted) return;
-    if (!deleted) {
-      context.showErrorSnackBar('holdings.detail.delete_failed'.tr());
-      return;
+    if (_isBusy) return;
+    _isBusy = true;
+    try {
+      final bool deleted = await _repository.deleteLocalParcel(parcel.id);
+      if (!mounted) return;
+      if (!deleted) {
+        context.showErrorSnackBar('holdings.detail.delete_failed'.tr());
+        return;
+      }
+      setState(() {
+        _parcels = _parcels.where((final Parcel p) => p.id != parcel.id).toList();
+      });
+      context.showSuccessSnackBar('holdings.detail.deleted'.tr());
+    } catch (_) {
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+    } finally {
+      _isBusy = false;
     }
-    setState(() {
-      _parcels = _parcels.where((final Parcel p) => p.id != parcel.id).toList();
-      _deletableIds.remove(parcel.id);
-    });
-    context.showSuccessSnackBar('holdings.detail.deleted'.tr());
   }
 
   /// Marks [parcel] reviewed, shows a 5s undo snackbar via the app-level
@@ -73,7 +70,16 @@ class _DetailScreenState extends State<DetailScreen> {
   /// `HiyazaFinderApp.scaffoldMessengerKey`), and pops back to search
   /// immediately per the requirement that Finish returns to search.
   Future<void> _finishParcel(final Parcel parcel) async {
-    await _repository.setParcelReviewed(parcel.id, reviewed: true);
+    if (_isBusy) return;
+    _isBusy = true;
+    try {
+      await _repository.setParcelReviewed(parcel.id, reviewed: true);
+    } catch (_) {
+      _isBusy = false;
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+      return;
+    }
+    _isBusy = false;
     if (!mounted) return;
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
     if (idx >= 0) {
@@ -90,9 +96,22 @@ class _DetailScreenState extends State<DetailScreen> {
           label: 'holdings.detail.undo'.tr(),
           // May fire after this screen has been popped — must not touch
           // this.context/setState, only the repository (a GetIt singleton
-          // independent of any screen's lifecycle). Search screen re-reads
-          // repository state on its own next rebuild.
-          onPressed: () => _repository.setParcelReviewed(parcel.id, reviewed: false),
+          // independent of any screen's lifecycle) and the app-level
+          // scaffold messenger key, both outliving this screen. A failed
+          // undo surfaces its own snackbar via that same app-level key
+          // rather than this.context, which may already be unmounted.
+          // Search screen re-reads repository state on its own next
+          // rebuild regardless of outcome.
+          onPressed: () {
+            _repository.setParcelReviewed(parcel.id, reviewed: false).catchError(
+              (final Object _) {
+                HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(content: Text('errors.unknown'.tr())),
+                );
+                return null;
+              },
+            );
+          },
         ),
       ),
     );
@@ -103,13 +122,21 @@ class _DetailScreenState extends State<DetailScreen> {
   /// Un-marks [parcel] reviewed — user-initiated, no confirmation dialog,
   /// no snackbar (decision #2: deliberate user-initiated undo).
   Future<void> _reopenParcel(final Parcel parcel) async {
-    await _repository.setParcelReviewed(parcel.id, reviewed: false);
-    if (!mounted) return;
-    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
-    if (idx >= 0) {
-      setState(() {
-        _parcels[idx] = _parcels[idx].copyWith(reviewed: false);
-      });
+    if (_isBusy) return;
+    _isBusy = true;
+    try {
+      await _repository.setParcelReviewed(parcel.id, reviewed: false);
+      if (!mounted) return;
+      final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+      if (idx >= 0) {
+        setState(() {
+          _parcels[idx] = _parcels[idx].copyWith(reviewed: false);
+        });
+      }
+    } catch (_) {
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+    } finally {
+      _isBusy = false;
     }
   }
 
@@ -120,23 +147,31 @@ class _DetailScreenState extends State<DetailScreen> {
   static const String _needsSurveyNote = 'نقص بيانات الحصر';
 
   Future<void> _updateField(final Parcel updated) async {
-    final int idx = _parcels.indexWhere(
-      (final Parcel p) => p.id == updated.id,
-    );
-    // Force الملاحظات to the "needs survey" default on every field edit —
-    // unless this save is itself the user explicitly changing الملاحظات
-    // (detected by comparing against the pre-edit value), in which case
-    // their choice wins instead of being overwritten.
-    final Parcel? before = idx >= 0 ? _parcels[idx] : null;
-    final Parcel toSave = (before != null && updated.notes == before.notes)
-        ? updated.copyWith(notes: _needsSurveyNote)
-        : updated;
+    if (_isBusy) return;
+    _isBusy = true;
+    try {
+      final int idx = _parcels.indexWhere(
+        (final Parcel p) => p.id == updated.id,
+      );
+      // Force الملاحظات to the "needs survey" default on every field edit —
+      // unless this save is itself the user explicitly changing الملاحظات
+      // (detected by comparing against the pre-edit value), in which case
+      // their choice wins instead of being overwritten.
+      final Parcel? before = idx >= 0 ? _parcels[idx] : null;
+      final Parcel toSave = (before != null && updated.notes == before.notes)
+          ? updated.copyWith(notes: _needsSurveyNote)
+          : updated;
 
-    await _repository.updateParcel(toSave);
-    if (idx >= 0) {
-      setState(() => _parcels[idx] = toSave);
+      await _repository.updateParcel(toSave);
+      if (idx >= 0) {
+        setState(() => _parcels[idx] = toSave);
+      }
+      if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
+    } catch (_) {
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+    } finally {
+      _isBusy = false;
     }
-    if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
   }
 
   /// Pre-fills a new-parcel form from [source] per APP_PLAN.md decision
@@ -252,7 +287,14 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: () => _repository.syncNow(),
+                      onRefresh: () async {
+                        try {
+                          await _repository.syncNow();
+                        } catch (_) {
+                          if (!mounted) return;
+                          context.showErrorSnackBar('errors.unknown'.tr());
+                        }
+                      },
                       child: ListView.builder(
                         padding: EdgeInsets.symmetric(
                           horizontal: rw(16),
@@ -266,14 +308,19 @@ class _DetailScreenState extends State<DetailScreen> {
                               parcel: parcel,
                               originalParcel:
                                   _repository.originalParcel(parcel.id),
-                              isNew: _repository.isNewLocalRecord(parcel.id),
+                              // "New / unsynced" no longer applies once
+                              // every write is confirmed-or-failed
+                              // synchronously — there is no more window
+                              // where a record is visible but not yet on
+                              // the server.
+                              isNew: false,
                               hideCreditType: _repository.hideCreditType,
                               associationType:
                                   _repository.activeAssociationType,
                               onFieldChanged: _updateField,
                               animationDelay: Duration(milliseconds: i * 80),
                               resolveBorderMatch: _repository.findByBorderText,
-                              onDelete: _deletableIds.contains(parcel.id)
+                              onDelete: parcel.isFieldAdded
                                   ? () => _deleteParcel(parcel)
                                   : null,
                               onFinish: () => _finishParcel(parcel),

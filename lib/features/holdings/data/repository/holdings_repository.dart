@@ -5,10 +5,11 @@ import 'package:uuid/uuid.dart';
 
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../cities/domain/entities/association_type.dart';
-import '../../../sync/domain/entities/sync_operation.dart';
-import '../../../sync/domain/repositories/sync_queue.dart';
+import '../../../cities/domain/entities/city.dart';
+import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../sync/data/holdings_api.dart';
 import '../../../sync/data/realtime_sync_service.dart';
-import '../../../sync/presentation/cubit/sync_status_cubit.dart';
+import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/repositories/holdings_reader.dart';
@@ -27,13 +28,20 @@ import 'parcel_edits_store.dart';
 /// to also support was retired in APP_PLAN.md Phase 5; a city download is
 /// the only way data gets in now (see `CityPickerCubit.downloadAndActivate`
 /// / `loadParcelsForCity`).
+///
+/// Every write method (`addLocalParcel`, `deleteLocalParcel`, `updateParcel`,
+/// `setParcelReviewed`, `bulkApplyField`) awaits the Supabase call FIRST and
+/// only mutates [_parcels]/[_edits] once the server has confirmed the
+/// write — there is no local-first deferral/outbox: a failed write throws
+/// and leaves the in-memory dataset exactly as it was, for the caller to
+/// catch and show an error.
 class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   HoldingsRepository({
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
     final ParcelQueryService queryService = const ParcelQueryService(),
     final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
     final BulkEditService bulkEditService = const BulkEditService(),
-    this.syncQueue,
+    this.holdingsApi,
     this.realtimeSyncService,
     final Uuid uuid = const Uuid(),
   })  : _editsStore = editsStore,
@@ -48,16 +56,22 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   final BulkEditService _bulkEditService;
   final Uuid _uuid;
 
-  /// `null` until a city has been downloaded/loaded — outbox entries are
-  /// only enqueued once a city (and therefore a server to sync to) exists.
-  final SyncQueue? syncQueue;
+  /// `null` in tests that construct this repository directly without a
+  /// Supabase-backed API — every write method treats a `null` [holdingsApi]
+  /// as a no-op network call (mutates local state as if the write
+  /// succeeded), which is what lets the existing add/delete/reviewed tests
+  /// construct a repository with no network dependency at all.
+  final HoldingsApi? holdingsApi;
 
   /// `null` in tests that construct this repository directly without a
   /// Realtime service — [loadParcelsForCity] simply skips the subscribe
   /// call in that case, same "optional dependency, no-op if absent"
-  /// pattern as [syncQueue].
+  /// pattern as [holdingsApi].
   final RealtimeSyncService? realtimeSyncService;
   String? _activeCityId;
+  String? _activeCityName;
+  String? _activeDirectorate;
+  String? _activeAdministration;
   AssociationType? _activeAssociationType;
   String? _activeAssociationSubtype;
 
@@ -76,20 +90,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Original (unedited) parcels by id, so edits can be reset.
   Map<String, Parcel> _originalById = <String, Parcel>{};
 
-  /// Per-parcel edit snapshots for the active city.
+  /// Per-parcel edit snapshots for the active city — unrelated to the write
+  /// strategy above, this is the overlay [resetParcel] reverts against and
+  /// that reapplies corrections on top of freshly-loaded server rows.
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
-
-  /// Ids of parcels added this session via [addLocalParcel] — drives the
-  /// "new / pending sync" badge on the detail card. Session-scoped (not
-  /// persisted): after an app restart a still-unsynced added record loses
-  /// this marker even though it may still be sitting in the outbox.
-  final Set<String> _locallyAddedIds = <String>{};
-
-  /// Guards a just-set local `reviewed*` state against being clobbered by a
-  /// stale/racing Realtime echo — see [applyRemoteChange]. Populated the
-  /// moment [setParcelReviewed] fires, self-clears once the server value
-  /// catches up.
-  final Map<String, DateTime> _pendingReviewedAt = <String, DateTime>{};
 
   /// Fires whenever [_parcels] changes for a reason the currently-visible
   /// UI wouldn't otherwise notice on its own — specifically, a Supabase
@@ -97,10 +101,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// this class already updates its own caller's state directly (e.g.
   /// `updateParcel`'s caller sets its own `_parcels[idx]`), so this stream
   /// only needs to exist for changes that originate *outside* any specific
-  /// screen's direct call. Mirrors `SyncQueue.pendingCountChanges`
-  /// (`sync_outbox_impl.dart`) — same "a repository-level event, several
-  /// possibly-nonexistent listeners" shape, since `HomeCubit` isn't a
-  /// singleton and may not even be alive when a remote change arrives.
+  /// screen's direct call, since `HomeCubit` isn't a singleton and may not
+  /// even be alive when a remote change arrives.
   final StreamController<void> _remoteChangesController =
       StreamController<void>.broadcast();
 
@@ -118,12 +120,18 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   Future<List<Parcel>> loadParcelsForCity(
     final String cityId,
     final List<Parcel> parcels, {
+    final String? cityName,
+    final String? directorate,
+    final String? administration,
     final AssociationType? associationType,
     final String? associationSubtype,
   }) async {
     final String key = 'city::$cityId';
     _activeEditsKey = key;
     _activeCityId = cityId;
+    _activeCityName = cityName ?? _activeCityName;
+    _activeDirectorate = directorate ?? _activeDirectorate;
+    _activeAdministration = administration ?? _activeAdministration;
     _activeAssociationType = associationType;
     _activeAssociationSubtype = associationSubtype;
     _originalById = <String, Parcel>{
@@ -179,23 +187,46 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     return null;
   }
 
-  /// Triggers a synchronization of pending operations.
-  /// Used by the RefreshIndicator on the detail screen — same action as the
-  /// "مزامنة الآن" button, but called via pull-to-refresh gesture. Delegates
-  /// to [SyncStatusCubit.flushNow] rather than resolving [SyncRunner]
-  /// directly, so this is not a second, independent "is a sync in flight"
-  /// guard — every trigger in the app (manual, connectivity-regained,
-  /// app-resume, app-start, login, city-selected) shares the one guard
-  /// already on that cubit.
-  Future<void> syncNow() => GetIt.instance<SyncStatusCubit>().flushNow();
+  /// Re-downloads the active city and adopts the fresh data — the detail
+  /// screen's pull-to-refresh. Under online-first there is no pending-write
+  /// queue to flush; this simply re-syncs the local cache with the server,
+  /// same "re-fetch, then adopt" shape as `HomeCubit.refreshActiveCity`.
+  /// No-op if no city is active.
+  Future<void> syncNow() async {
+    final String? cityId = _activeCityId;
+    final String? cityName = _activeCityName;
+    if (cityId == null || cityName == null) return;
+
+    final CityRepository cityRepository = GetIt.instance<CityRepository>();
+    final int remoteVersion = await cityRepository.remoteDataVersion(cityId);
+    final City city = City(
+      id: cityId,
+      name: cityName,
+      status: CityStatus.published,
+      dataVersion: remoteVersion,
+      directorate: _activeDirectorate,
+      administration: _activeAdministration,
+      associationType: _activeAssociationType,
+      associationSubtype: _activeAssociationSubtype,
+    );
+    final fresh = await cityRepository.downloadCity(city);
+    await loadParcelsForCity(
+      fresh.cityId,
+      fresh.parcels,
+      cityName: fresh.cityName,
+      directorate: fresh.directorate,
+      administration: fresh.administration,
+      associationType: fresh.associationType,
+      associationSubtype: fresh.associationSubtype,
+    );
+  }
 
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person
-  /// ([parentHoldingId] set to that person's `Parcel.id`). Writes are
-  /// local-first: [parcel] is assigned a fresh client id and appended to
-  /// the in-memory dataset immediately (so it's searchable/visible right
-  /// away, even offline), and an [AddRecordOperation] is enqueued in the
-  /// same call — this never waits on the network.
+  /// ([parentHoldingId] set to that person's `Parcel.id`). Awaits the
+  /// Supabase insert first; [_parcels] is only mutated once the server has
+  /// confirmed the write, so a failed write leaves the in-memory dataset
+  /// untouched and propagates the exception to the caller.
   ///
   /// Does nothing (returns `null`) if no city is active.
   Future<Parcel?> addLocalParcel(
@@ -227,6 +258,31 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       isFieldAdded: true,
     );
 
+    // `added_holdings.parent_holding_id` is a foreign key into the
+    // canonical `holdings` table, not into `added_holdings` — it's only
+    // ever valid once a record has been reviewed/promoted server-side.
+    // `parent.isFieldAdded` (durable, persisted on every parcel — set here
+    // and in the row mappers) is true for exactly the parcels whose `id`
+    // lives in `added_holdings`, not `holdings`: `downloadHoldings` only
+    // ever fetches unpromoted `added_holdings` rows (`promoted_holding_id
+    // is null`), so a promoted record is never re-delivered as
+    // `isFieldAdded: true` — it arrives as an ordinary `holdings` row
+    // instead. Sending an `added_holdings.id` as `parent_holding_id` would
+    // be rejected with a permanent FK violation, so it's sent as `null`
+    // instead — same as a brand-new person with no known parent.
+    final String? safeParentHoldingId =
+        (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
+
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+    await holdingsApi?.addRecord(
+      id: withId.id,
+      cityId: cityId,
+      record: parcelToAddedHoldingsRecord(withId),
+      parentHoldingId: safeParentHoldingId,
+      createdByUserId: currentUserId,
+    );
+
     // Keep عدد القطع في الحيازة consistent across every parcel that shares
     // this holding — the new parcel's count already reflects the total
     // (set by the caller), so every sibling parcel is bumped to match it.
@@ -242,72 +298,24 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
     _parcels = <Parcel>[..._parcels, withId];
     _originalById[withId.id] = withId;
-    _locallyAddedIds.add(withId.id);
     _rebuildBorderIndex();
-
-    if (syncQueue != null) {
-      // `added_holdings.parent_holding_id` is a foreign key into the
-      // canonical `holdings` table, not into `added_holdings` — it's only
-      // ever valid once a record has been reviewed/promoted server-side.
-      // `parent.isFieldAdded` (durable, persisted on every parcel — set here
-      // and in the row mappers) is true for exactly the parcels whose `id`
-      // lives in `added_holdings`, not `holdings`: `downloadHoldings` only
-      // ever fetches unpromoted `added_holdings` rows (`promoted_holding_id
-      // is null`), so a promoted record is never re-delivered as
-      // `isFieldAdded: true` — it arrives as an ordinary `holdings` row
-      // instead. Unlike the previous `_locallyAddedIds` (in-memory,
-      // session-scoped) check, this is correct across app restarts and
-      // devices: sending an `added_holdings.id` as `parent_holding_id` is
-      // rejected with a permanent FK violation (the op then retries forever
-      // and the parcel never actually reaches the server) regardless of
-      // which session/device created the parent. Send `null` instead — same
-      // as a brand-new person with no known parent.
-      final String? safeParentHoldingId =
-          (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
-      await syncQueue!.enqueue(
-        AddRecordOperation(
-          id: withId.id,
-          createdAt: DateTime.now(),
-          cityId: cityId,
-          parentHoldingId: safeParentHoldingId,
-          record: parcelToAddedHoldingsRecord(withId),
-        ),
-      );
-    }
     return withId;
   }
 
-  /// Whether [id] can be deleted via [deleteLocalParcel] — only records
-  /// created in the field ([addLocalParcel]) that haven't synced to the
-  /// server yet. Once a field-added record reaches `added_holdings` it
-  /// enters the dashboard's pending/approved/rejected review workflow —
-  /// there is no client-side delete for it beyond this point (staff review
-  /// it instead; see APP_PLAN.md § "added_holdings"). Checks the live
-  /// outbox — not [_locallyAddedIds], which is session-scoped and would
-  /// wrongly say "no" for a still-unsynced record after an app restart.
-  Future<bool> canDeleteLocalParcel(final String id) async {
-    final SyncQueue? queue = syncQueue;
-    if (queue == null) return false;
-    final List<SyncOperation> pending = await queue.pending();
-    return pending.any(
-      (final SyncOperation op) => op is AddRecordOperation && op.id == id,
-    );
-  }
-
-  /// Deletes a still-unsynced field-added record — removes its queued
-  /// [AddRecordOperation] (so it's never pushed to the server at all) and
-  /// drops it from the in-memory dataset. Does nothing and returns `false`
-  /// if [id] isn't eligible (see [canDeleteLocalParcel]): already synced,
-  /// or was never a locally-added record to begin with (e.g. part of the
-  /// authoritative `holdings` import, which this app never deletes).
+  /// Deletes a field-created record from the server (`added_holdings`) and
+  /// drops it from the in-memory dataset once the delete is confirmed.
+  /// Returns `false` without touching the server if [id] isn't in the
+  /// active dataset or isn't a field-added record — part of the
+  /// authoritative `holdings` import, which this app never deletes.
+  /// Propagates the exception on a failed server delete rather than
+  /// mutating local state.
   Future<bool> deleteLocalParcel(final String id) async {
-    if (!await canDeleteLocalParcel(id)) return false;
-
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == id);
     if (idx < 0) return false;
     final Parcel removed = _parcels[idx];
+    if (!removed.isFieldAdded) return false;
 
-    await syncQueue!.remove(id);
+    await holdingsApi?.deleteAddedHolding(id);
 
     _parcels = <Parcel>[
       for (final Parcel p in _parcels)
@@ -319,7 +327,6 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
               : p,
     ];
     _originalById.remove(id);
-    _locallyAddedIds.remove(id);
     _edits.remove(id);
     if (_activeEditsKey != null) {
       await _editsStore.save(_activeEditsKey!, _edits);
@@ -330,40 +337,40 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   Parcel _applyEdit(final Parcel p) => _editOverlay.apply(p, _edits[p.id]);
 
-  /// Persists an edited parcel and reflects it in the in-memory dataset so
-  /// search, detail, and border navigation immediately use the new values.
-  /// Writes are local-first: this returns as soon as the local cache is
-  /// updated — [syncQueue] enqueueing never waits on the network.
+  /// Persists an edited parcel — awaits the Supabase `holding_edits` insert
+  /// first, and only reflects the change in [_parcels]/[_edits] once the
+  /// server has confirmed it, so search/detail/border navigation never show
+  /// a state the server hasn't accepted.
   @override
   Future<void> updateParcel(final Parcel edited) async {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
     if (idx < 0) return;
+    final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
+
+    final String? cityId = _activeCityId;
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+    if (cityId != null) {
+      await holdingsApi?.editHolding(
+        holdingId: edited.id,
+        cityId: cityId,
+        payload: snapshot,
+        editedByUserId: currentUserId,
+      );
+    }
+
     _parcels[idx] = edited;
     // A single-field edit can change حائز/مالك name — rebuild so a fresh
     // الحدود lookup elsewhere in the city sees the update immediately.
     _rebuildBorderIndex();
-    final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
     _edits[edited.id] = snapshot;
     if (_activeEditsKey != null) {
       await _editsStore.save(_activeEditsKey!, _edits);
     }
-
-    final String? cityId = _activeCityId;
-    if (cityId != null && syncQueue != null) {
-      await syncQueue!.enqueue(
-        EditHoldingOperation(
-          id: _uuid.v4(),
-          createdAt: DateTime.now(),
-          cityId: cityId,
-          holdingId: edited.id,
-          payload: snapshot,
-        ),
-      );
-    }
   }
 
-  /// Marks [parcelId] reviewed/un-reviewed — local-first (updates [_parcels]
-  /// immediately) then enqueues a [MarkParcelReviewedOperation]. Unlike
+  /// Marks [parcelId] reviewed/un-reviewed — awaits the Supabase column
+  /// UPDATE first, only reflecting it in [_parcels] once confirmed. Unlike
   /// [updateParcel] this never touches [_edits]/[ParcelEditsStore]: reviewed
   /// status is not part of the editable-field overlay.
   Future<Parcel?> setParcelReviewed(
@@ -373,9 +380,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcelId);
     if (idx < 0) return null;
 
-    final String? cityId = _activeCityId;
     final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
     final String? currentUserId = GetIt.instance<AuthRepository>().currentUser?.id;
+    final bool isFieldAdded = _parcels[idx].isFieldAdded;
+
+    await holdingsApi?.markReviewed(
+      parcelId: parcelId,
+      isFieldAdded: isFieldAdded,
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedByUserId: currentUserId ?? '',
+    );
 
     final Parcel updated = _parcels[idx].copyWith(
       reviewed: reviewed,
@@ -388,21 +403,6 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       reviewedAt: reviewedAt,
       reviewedBy: reviewed ? currentUserId : null,
     );
-    _pendingReviewedAt[parcelId] = reviewedAt ?? DateTime.now();
-
-    if (cityId != null && syncQueue != null) {
-      await syncQueue!.enqueue(
-        MarkParcelReviewedOperation(
-          id: _uuid.v4(),
-          createdAt: DateTime.now(),
-          cityId: cityId,
-          parcelId: parcelId,
-          isFieldAdded: updated.isFieldAdded,
-          reviewed: reviewed,
-          reviewedAt: reviewedAt,
-        ),
-      );
-    }
     return updated;
   }
 
@@ -432,33 +432,19 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// city than the one currently loaded — a stray event from a
   /// slow-to-unsubscribe previous city's channel should never mutate the
   /// dataset the user is currently looking at.
+  ///
+  /// No longer guards against a stale/racing Realtime echo clobbering a
+  /// fresher local `reviewed*` write (the previous `_pendingReviewedAt`
+  /// mechanism): under online-first every local write only reaches
+  /// [_parcels] after the server has already confirmed it (see
+  /// [setParcelReviewed]), so there is no more "ahead of the server" window
+  /// for an out-of-order echo to race against — by the time this device's
+  /// own write lands locally, the server already has that exact value.
   void applyRemoteChange(final Parcel updated) {
     if (_activeCityId == null) return;
 
-    // Guard against a stale/racing Realtime echo clobbering a fresher local
-    // `reviewed*` write — see [_pendingReviewedAt]. reviewed* fields are
-    // deliberately not part of the `_edits` overlay, so without this an
-    // unguarded overwrite could blindly replace a fresh local `reviewed:
-    // true` with an out-of-order/stale remote row.
-    final DateTime? pendingAt = _pendingReviewedAt[updated.id];
-    final bool remoteIsStale = pendingAt != null &&
-        (updated.reviewedAt == null || updated.reviewedAt!.isBefore(pendingAt));
-
-    final Parcel currentLocal = _originalById[updated.id] ?? updated;
-    final Parcel incoming = remoteIsStale
-        ? updated.copyWith(
-            reviewed: currentLocal.reviewed,
-            reviewedAt: currentLocal.reviewedAt,
-            reviewedBy: currentLocal.reviewedBy,
-          )
-        : updated;
-
-    if (pendingAt != null && !remoteIsStale) {
-      _pendingReviewedAt.remove(updated.id); // remote has caught up
-    }
-
-    _originalById[updated.id] = incoming;
-    final Parcel toShow = _applyEdit(incoming);
+    _originalById[updated.id] = updated;
+    final Parcel toShow = _applyEdit(updated);
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
     if (idx >= 0) {
       _parcels[idx] = toShow;
@@ -471,11 +457,26 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// Merges a `holding_edits` INSERT event's payload (a `toEditableJson`-
   /// shaped map, same as [ParcelEditOverlay.snapshot] produces) onto the
-  /// parcel's current original value. Skipped entirely if this device has
-  /// its own unsynced local edit for [holdingId] (`_edits.containsKey`) —
-  /// the offline-first guarantee is that a local write stays authoritative
-  /// on-screen until it has synced, so a remote correction arriving in the
-  /// meantime must not clobber it.
+  /// parcel's current original value.
+  ///
+  /// Still skips applying the event if this device has its own edit for
+  /// [holdingId] in [_edits] (`_edits.containsKey`) — kept deliberately
+  /// rather than removed, even though the specific race it was written for
+  /// (an offline-first local write staying authoritative until it synced)
+  /// no longer exists. The remaining reason: `updateParcel` writes to
+  /// [_edits] and awaits the Supabase insert in the same call, but the
+  /// Realtime echo of that exact insert can still arrive back at this
+  /// device (via [applyRemoteEdit]) essentially concurrently with
+  /// `updateParcel`'s own local mutation completing — both derive from
+  /// [_originalById], and re-merging the echo on top of an [_edits] entry
+  /// that already reflects the *newer* full snapshot risks re-deriving a
+  /// value that's momentarily stale relative to what's already on screen
+  /// (e.g. if a second edit landed between the first insert and its echo
+  /// arriving). Skipping when [_edits] already has an entry for this
+  /// holding is a safe, cheap guard against that same-device echo
+  /// clobbering newer local state — it does not skip a genuine remote
+  /// correction from another device for a holding this device has never
+  /// edited, since [_edits] would be empty for that holding.
   void applyRemoteEdit(final String holdingId, final Map<String, dynamic> payload) {
     if (_activeCityId == null) return;
     if (_edits.containsKey(holdingId)) return;
@@ -518,10 +519,6 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// the parcel changed (see `isParcelEdited`).
   Parcel? originalParcel(final String id) => _originalById[id];
 
-  /// Whether [id] was added in the field this session and hasn't been
-  /// confirmed synced yet — drives the "new / pending sync" badge.
-  bool isNewLocalRecord(final String id) => _locallyAddedIds.contains(id);
-
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole
   /// dataset — narrowing the scope keeps matching fast on large cities.
   @override
@@ -547,10 +544,14 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       _queryService.findByBorderText(_borderIndex, borderText);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
-  /// [basin] (only parcels whose اسم الحوض matches). Returns how many
-  /// parcels were changed, for user feedback.
+  /// [basin] (only parcels whose اسم الحوض matches). Awaits each row's
+  /// Supabase insert directly (no outbox), continuing past a per-row
+  /// failure rather than aborting the whole batch — a bulk edit spans many
+  /// independent holdings, so one failure shouldn't silently discard
+  /// progress on the rest. Returns how many rows succeeded and how many
+  /// failed, for the caller to report a mixed result.
   @override
-  Future<int> bulkApplyField({
+  Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
@@ -561,39 +562,54 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       value: value,
       basin: basin,
     );
-    _parcels = result.parcels;
+
+    if (result.changedCount == 0) {
+      return const BulkEditOutcome(succeeded: 0, failed: 0);
+    }
+
+    final String? cityId = _activeCityId;
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+
+    final List<Parcel> nextParcels = <Parcel>[];
+    int succeeded = 0;
+    int failed = 0;
+    for (final Parcel p in result.parcels) {
+      final bool inScope = basin == null || p.basinName == basin;
+      if (!inScope) {
+        nextParcels.add(p);
+        continue;
+      }
+      final Map<String, dynamic> snapshot = _editOverlay.snapshot(p);
+      try {
+        if (cityId != null) {
+          await holdingsApi?.editHolding(
+            holdingId: p.id,
+            cityId: cityId,
+            payload: snapshot,
+            editedByUserId: currentUserId,
+          );
+        }
+        _edits[p.id] = snapshot;
+        nextParcels.add(p);
+        succeeded++;
+      } catch (_) {
+        // Row failed — keep its pre-bulk-edit value both on screen and in
+        // [_edits] rather than a value the server never confirmed.
+        nextParcels.add(_originalById[p.id] != null ? _applyEdit(p) : p);
+        failed++;
+      }
+    }
+
+    _parcels = nextParcels;
     // Defensive: no `BulkEditableField` touches حائز/مالك today, but
     // rebuilding here is O(n) same as the reassignment above and keeps
     // this repository from silently drifting out of sync if that ever
     // changes, without needing every future field to remember this rule.
     _rebuildBorderIndex();
-    if (result.changedCount > 0) {
-      final List<BulkEditRow> syncRows = <BulkEditRow>[];
-      for (final Parcel p in _parcels) {
-        if (basin == null || p.basinName == basin) {
-          final Map<String, dynamic> snapshot = _editOverlay.snapshot(p);
-          _edits[p.id] = snapshot;
-          syncRows.add(
-            BulkEditRow(holdingId: p.id, opId: _uuid.v4(), payload: snapshot),
-          );
-        }
-      }
-      if (_activeEditsKey != null) {
-        await _editsStore.save(_activeEditsKey!, _edits);
-      }
-
-      final String? cityId = _activeCityId;
-      if (cityId != null && syncQueue != null) {
-        await syncQueue!.enqueue(
-          BulkEditOperation(
-            id: _uuid.v4(),
-            createdAt: DateTime.now(),
-            cityId: cityId,
-            rows: syncRows,
-          ),
-        );
-      }
+    if (succeeded > 0 && _activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
     }
-    return result.changedCount;
+    return BulkEditOutcome(succeeded: succeeded, failed: failed);
   }
 }

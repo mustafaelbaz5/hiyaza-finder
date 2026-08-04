@@ -236,7 +236,9 @@
       "inheritance_false": "Not inheritance",
       "apply": "Apply",
       "confirm_message": "This will set \"{field}\" to \"{value}\" for {scope}. Continue?",
-      "applied_message": "{count} records updated"
+      "applied_message": "{count} records updated",
+      "applied_partial_message": "{succeeded} records updated, {failed} failed",
+      "applied_failed_message": "All {failed} record(s) failed to update"
     },
     "basin": {
       "title": "Focus on a basin",

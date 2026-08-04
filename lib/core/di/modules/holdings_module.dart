@@ -7,8 +7,8 @@ import '../../../features/holdings/domain/repositories/holdings_writer.dart';
 import '../../../features/holdings/domain/services/bulk_edit_service.dart';
 import '../../../features/holdings/domain/services/parcel_edit_overlay.dart';
 import '../../../features/holdings/domain/services/parcel_query_service.dart';
+import '../../../features/sync/data/holdings_api.dart';
 import '../../../features/sync/data/realtime_sync_service.dart';
-import '../../../features/sync/domain/repositories/sync_queue.dart';
 import '../../storage/key_value_store.dart';
 
 /// The holdings feature's data layer: the domain services `HoldingsRepository`
@@ -30,7 +30,7 @@ void registerHoldingsModule(final GetIt getIt) {
       queryService: getIt(),
       editOverlay: getIt(),
       bulkEditService: getIt(),
-      syncQueue: getIt<SyncQueue>(),
+      holdingsApi: getIt<HoldingsApi>(),
       realtimeSyncService: getIt<RealtimeSyncService>(),
     ),
   );

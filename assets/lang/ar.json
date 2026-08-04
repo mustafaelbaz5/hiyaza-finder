@@ -236,7 +236,9 @@
       "inheritance_false": "ليست وراثة",
       "apply": "تطبيق",
       "confirm_message": "سيتم تطبيق \"{field}\" = \"{value}\" على {scope}. متابعة؟",
-      "applied_message": "تم تحديث {count} سجل"
+      "applied_message": "تم تحديث {count} سجل",
+      "applied_partial_message": "تم تحديث {succeeded} سجل، وفشل {failed}",
+      "applied_failed_message": "فشل تحديث كل السجلات ({failed})"
     },
     "basin": {
       "title": "التركيز على حوض معيّن",
