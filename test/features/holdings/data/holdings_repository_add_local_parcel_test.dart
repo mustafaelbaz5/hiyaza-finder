@@ -47,8 +47,14 @@ class _FakeHoldingsApi implements HoldingsApi {
   final List<_AddRecordCall> addRecordCalls = <_AddRecordCall>[];
   Object? addRecordError;
 
+  /// Configurable return value for [addRecord], mirroring
+  /// `added_holdings.promoted_holding_id` — `null` (the default) means "not
+  /// promoted yet", matching most test scenarios; set this to exercise the
+  /// immediate-promotion path.
+  String? promotedHoldingId;
+
   @override
-  Future<void> addRecord({
+  Future<String?> addRecord({
     required final String id,
     required final String cityId,
     required final Map<String, dynamic> record,
@@ -65,6 +71,7 @@ class _FakeHoldingsApi implements HoldingsApi {
         createdByUserId: createdByUserId,
       ),
     );
+    return promotedHoldingId;
   }
 
   @override
@@ -163,6 +170,27 @@ void main() {
     expect(added!.id, isNotEmpty);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.holderName, 'محمد');
+  });
+
+  test(
+      'adopts the promoted holdings.id immediately when the server reports '
+      'this add_holdings row was already promoted (added_holdings_auto_approve '
+      'trigger) — regression test: the record must never be shown, even '
+      'briefly, under its pre-promotion id, since that id gets superseded '
+      'and removed as soon as the corresponding Realtime event arrives, '
+      "which previously made a single new person look like it 'moved' or "
+      'duplicated on screen', () async {
+    holdingsApi.promotedHoldingId = 'promoted-holdings-id';
+
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '', holderName: 'محمد'),
+    );
+
+    expect(added, isNotNull);
+    expect(added!.id, 'promoted-holdings-id');
+    expect(added.isFieldAdded, isFalse);
+    expect(repository.parcels, hasLength(1));
+    expect(repository.parcels.single.id, 'promoted-holdings-id');
   });
 
   test('calls addRecord with a null parentHoldingId for a new person', () async {

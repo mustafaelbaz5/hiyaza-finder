@@ -68,7 +68,21 @@ class HoldingsApi {
     return failedIds;
   }
 
-  Future<void> addRecord({
+  /// Returns the `added_holdings.promoted_holding_id` of the row just
+  /// inserted, if the DB trigger `added_holdings_auto_approve` already
+  /// promoted it into `holdings` by the time this INSERT returns — `null`
+  /// if it hasn't been promoted (shouldn't happen given the trigger fires
+  /// unconditionally on insert today, but callers must not assume it).
+  ///
+  /// Selecting the row back in the same round-trip (rather than just
+  /// awaiting a bare insert) is what lets the caller learn about the
+  /// promotion immediately, instead of waiting on separate Realtime events
+  /// for the `added_holdings` INSERT, the trigger's `holdings` INSERT, and
+  /// the trigger's `added_holdings` UPDATE to all arrive and reconcile —
+  /// three independent async round-trips that previously left the newly
+  /// added record visible under its pre-promotion id for a window before
+  /// disappearing and reappearing under its promoted id.
+  Future<String?> addRecord({
     required final String id,
     required final String cityId,
     required final Map<String, dynamic> record,
@@ -76,7 +90,8 @@ class HoldingsApi {
     required final String createdByUserId,
   }) async {
     try {
-      await _client.from('added_holdings').insert(<String, dynamic>{
+      final List<Map<String, dynamic>> rows =
+          await _client.from('added_holdings').insert(<String, dynamic>{
         // The row's primary key is the app's own client-generated id (same
         // one already used as `Parcel.id` and `client_id`) rather than a
         // fresh server-generated uuid — keeps the id stable across app,
@@ -87,7 +102,8 @@ class HoldingsApi {
         'client_id': id,
         'parent_holding_id': parentHoldingId,
         'created_by': createdByUserId,
-      }).timeout(_requestTimeout);
+      }).select('promoted_holding_id').timeout(_requestTimeout);
+      return rows.isEmpty ? null : rows.first['promoted_holding_id'] as String?;
     } catch (error) {
       ErrorHandler.handleException(error);
     }

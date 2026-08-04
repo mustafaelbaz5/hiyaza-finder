@@ -275,13 +275,28 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
     final String currentUserId =
         GetIt.instance<AuthRepository>().currentUser?.id ?? '';
-    await holdingsApi?.addRecord(
+    final String? promotedHoldingId = await holdingsApi?.addRecord(
       id: withId.id,
       cityId: cityId,
       record: parcelToAddedHoldingsRecord(withId),
       parentHoldingId: safeParentHoldingId,
       createdByUserId: currentUserId,
     );
+
+    // `added_holdings_auto_approve` (a DB trigger) promotes every new
+    // record into `holdings` synchronously, in the same transaction as the
+    // insert above — so by the time `addRecord` returns, the row this
+    // client just created has *already* been superseded by a `holdings`
+    // row. Reflecting that immediately (rather than waiting on Realtime to
+    // deliver the trigger's own INSERT/UPDATE events and reconcile them)
+    // is what avoids the person briefly appearing under its pre-promotion
+    // id before "moving" to a different-looking entry once Realtime
+    // catches up. Every field is already known client-side (it's exactly
+    // what was just submitted) — no extra round-trip fetch needed, just
+    // swap the id and flip `isFieldAdded` to match a `holdings`-origin row.
+    final Parcel finalParcel = promotedHoldingId == null
+        ? withId
+        : withId.copyWith(id: promotedHoldingId, isFieldAdded: false);
 
     // Keep عدد القطع في الحيازة consistent across every parcel that shares
     // this holding — the new parcel's count already reflects the total
@@ -290,16 +305,16 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       _parcels = <Parcel>[
         for (final Parcel p in _parcels)
           if (p.groupKey == parent.groupKey)
-            p.copyWith(holdingsCount: withId.holdingsCount)
+            p.copyWith(holdingsCount: finalParcel.holdingsCount)
           else
             p,
       ];
     }
 
-    _parcels = <Parcel>[..._parcels, withId];
-    _originalById[withId.id] = withId;
+    _parcels = <Parcel>[..._parcels, finalParcel];
+    _originalById[finalParcel.id] = finalParcel;
     _rebuildBorderIndex();
-    return withId;
+    return finalParcel;
   }
 
   /// Deletes a field-created record from the server (`added_holdings`) and

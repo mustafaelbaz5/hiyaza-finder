@@ -38,13 +38,14 @@ class _FakeHoldingsApi implements HoldingsApi {
   }
 
   @override
-  Future<void> addRecord({
+  Future<String?> addRecord({
     required final String id,
     required final String cityId,
     required final Map<String, dynamic> record,
     required final String? parentHoldingId,
     required final String createdByUserId,
-  }) async {}
+  }) async =>
+      null;
 
   @override
   Future<void> editHolding({
