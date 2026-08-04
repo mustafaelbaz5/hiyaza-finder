@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 
 /// The نوع الزرع option that unlocks the free-text follow-up.
 const String cropTypeOtherOption = 'اخرى';

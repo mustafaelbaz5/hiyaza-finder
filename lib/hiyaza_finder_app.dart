@@ -8,15 +8,29 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/config/app_config.dart';
+import 'core/di/dependency_injection.dart';
+import 'core/networking/network_info.dart';
 import 'core/router/app_router.dart';
 import 'core/router/routes.dart';
 import 'core/settings/cubit/app_settings_cubit.dart';
 import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
+import 'core/widgets/ui/dialogs/app_dialogs.dart';
+import 'features/auth/presentation/cubit/session_cubit.dart';
+import 'features/auth/presentation/cubit/session_state.dart';
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
+
+  static final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  /// Root-level `ScaffoldMessenger` key — lets a snackbar be shown/kept
+  /// alive independent of whichever `Scaffold`/route is currently on
+  /// screen. Needed for the parcel "Finish" undo snackbar (5s window),
+  /// which must survive `DetailScreen` popping back to search.
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   /// Width of the centred app column on desktop. Kept phone-like so the
   /// phone-first (375dp) layout and its ScreenUtil scaling stay natural
@@ -27,15 +41,13 @@ class HiyazaFinderApp extends StatelessWidget {
   /// phone layout (also covers narrow/resized desktop windows).
   static const double _frameBreakpoint = 640;
 
-  bool get _isDesktop =>
-      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   @override
   Widget build(final BuildContext context) {
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
-        final bool useFrame =
-            _isDesktop && constraints.maxWidth > _frameBreakpoint;
+        final bool useFrame = _isDesktop && constraints.maxWidth > _frameBreakpoint;
 
         if (!useFrame) return _buildApp();
 
@@ -66,37 +78,102 @@ class HiyazaFinderApp extends StatelessWidget {
       builder: (final BuildContext context, final Widget? child) {
         return BlocProvider(
           create: (final _) => AppSettingsCubit(),
-          child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-            builder:
-                (final BuildContext context, final AppSettingsState settings) {
-              return MaterialApp(
-                localizationsDelegates: context.localizationDelegates,
-                supportedLocales: context.supportedLocales,
-                locale: settings.locale, // driven by cubit
-                debugShowCheckedModeBanner: false,
-                scrollBehavior: const _AppScrollBehavior(),
-                initialRoute: Routes.home,
-                onGenerateRoute: AppRouter.generateRoute,
-                title: AppConfig.appName,
-                // font family injected into both themes
-                theme: getLightTheme().copyWith(
-                  textTheme: getLightTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
+          child: BlocProvider<SessionCubit>.value(
+            value: getIt<SessionCubit>(),
+            child: BlocListener<SessionCubit, SessionState>(
+              listenWhen: (final SessionState previous, final SessionState current) =>
+                  previous.status != SessionStatus.unauthenticated &&
+                  current.status == SessionStatus.unauthenticated,
+              // Catches a session that becomes invalid while the user is
+              // already past login (e.g. an expired/revoked refresh
+              // token) and bounces them back rather than leaving screens
+              // silently calling an API that will now reject them.
+              listener: (final BuildContext context, final SessionState _) {
+                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  Routes.login,
+                  (final _) => false,
+                );
+              },
+              child: _ConnectivityGate(
+                child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                  builder: (
+                    final BuildContext context,
+                    final AppSettingsState settings,
+                  ) {
+                    return MaterialApp(
+                      navigatorKey: _navigatorKey,
+                      scaffoldMessengerKey: scaffoldMessengerKey,
+                      localizationsDelegates: context.localizationDelegates,
+                      supportedLocales: context.supportedLocales,
+                      locale: settings.locale, // driven by cubit
+                      debugShowCheckedModeBanner: false,
+                      scrollBehavior: const _AppScrollBehavior(),
+                      initialRoute: getIt<SessionCubit>().state.isAuthenticated
+                          ? Routes.home
+                          : Routes.login,
+                      onGenerateRoute: AppRouter.generateRoute,
+                      title: AppConfig.appName,
+                      // font family injected into both themes
+                      theme: getLightTheme().copyWith(
+                        textTheme: getLightTheme().textTheme.apply(
+                              fontFamily: settings.fontFamily,
+                            ),
                       ),
-                ),
-                darkTheme: getDarkTheme().copyWith(
-                  textTheme: getDarkTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
+                      darkTheme: getDarkTheme().copyWith(
+                        textTheme: getDarkTheme().textTheme.apply(
+                              fontFamily: settings.fontFamily,
+                            ),
                       ),
+                      themeMode: settings.themeMode,
+                    );
+                  },
                 ),
-                themeMode: settings.themeMode,
-              );
-            },
+              ),
+            ),
           ),
         );
       },
     );
   }
+}
+
+/// Gates the app's first frame behind a one-shot connectivity check — a
+/// field worker opening the app with no signal today just hits whatever
+/// downstream network call fails first (a confusing raw exception),
+/// instead of a clear "no internet" message. Loops the check-and-show cycle
+/// until connected, then never intervenes again — every other trigger
+/// (connectivity-regained, app-resume, sync retries) already handles
+/// connectivity changes after this point.
+class _ConnectivityGate extends StatefulWidget {
+  const _ConnectivityGate({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_ConnectivityGate> createState() => _ConnectivityGateState();
+}
+
+class _ConnectivityGateState extends State<_ConnectivityGate> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((final _) => _checkConnectivity());
+  }
+
+  Future<void> _checkConnectivity() async {
+    final bool connected = await getIt<NetworkInfo>().isConnected;
+    if (connected || !mounted) return;
+
+    await AppDialogs.showError(
+      context,
+      message: 'errors.no_internet'.tr(),
+      buttonText: 'errors.retry'.tr(),
+      onPressed: _checkConnectivity,
+    );
+  }
+
+  @override
+  Widget build(final BuildContext context) => widget.child;
 }
 
 /// Overrides the ambient [MediaQuery] width so descendants (ScreenUtil,

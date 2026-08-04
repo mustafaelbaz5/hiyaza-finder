@@ -14,18 +14,14 @@ class SupabaseHandler {
     final msg = e.message.toLowerCase();
     final code = int.tryParse(e.statusCode ?? '');
 
-    if (msg.contains('invalid') &&
-        (msg.contains('credentials') || msg.contains('password'))) {
+    if (msg.contains('invalid') && (msg.contains('credentials') || msg.contains('password'))) {
       return UnauthorizedException(message: 'Invalid email or password.');
     }
     if (msg.contains('email') && msg.contains('already')) {
       return ConflictException(message: 'Email already registered.');
     }
-    if (msg.contains('session') ||
-        msg.contains('token') ||
-        msg.contains('expired')) {
-      return UnauthorizedException(
-          message: 'Session expired. Please login again.');
+    if (msg.contains('session') || msg.contains('token') || msg.contains('expired')) {
+      return UnauthorizedException(message: 'Session expired. Please login again.');
     }
     if (msg.contains('too many') || msg.contains('rate limit')) {
       return TooManyRequestsException();

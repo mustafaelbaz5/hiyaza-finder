@@ -26,7 +26,86 @@
     "service_unavailable": "الخدمة غير متاحة مؤقتاً. يرجى المحاولة مرة أخرى.",
     "file_too_large": "الملف كبير جداً.",
     "user_disabled": "تم تعطيل هذا الحساب.",
-    "operation_not_allowed": "هذه العملية غير مسموح بها."
+    "operation_not_allowed": "هذه العملية غير مسموح بها.",
+    "retry": "إعادة المحاولة"
+  },
+  "app_dialogs": {
+    "info": "معلومة",
+    "success": "تم بنجاح",
+    "error": "خطأ",
+    "warning": "تنبيه",
+    "confirm": "تأكيد",
+    "ok": "حسنًا",
+    "close": "إغلاق",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  "sync": {
+    "status": {
+      "syncing": "جارِ المزامنة…",
+      "pending": "{count} بانتظار المزامنة",
+      "failed": "فشلت مزامنة {count}",
+      "waiting_for_internet": "بانتظار الاتصال بالإنترنت",
+      "tap_to_sync": "تفاصيل المزامنة"
+    },
+    "details": {
+      "title": "المزامنة",
+      "explainer": "بياناتك محفوظة على جهازك وسيتم رفعها عند توفر الاتصال",
+      "retry_all": "إعادة محاولة الكل",
+      "sync_now": "مزامنة الآن",
+      "empty": "لا يوجد شيء بانتظار المزامنة",
+      "result_all_synced": "تمت مزامنة كل البيانات بنجاح",
+      "result_partial": "تمت مزامنة {synced}، لا يزال {remaining} بانتظار المزامنة",
+      "result_none": "تعذّرت المزامنة — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "discard": "تجاهل",
+      "discard_confirm": "سيتم حذف هذا العنصر من قائمة الانتظار دون رفعه للخادم. هذا الإجراء لا يمكن التراجع عنه. متابعة؟",
+      "discarded": "تم تجاهل العنصر"
+    },
+    "operation": {
+      "edit_holding": "تعديل بيانات حيازة",
+      "bulk_edit": "تعديل جماعي ({count} سجل)",
+      "add_person": "شخص جديد: {name}",
+      "add_parcel": "قطعة أرض جديدة",
+      "unnamed": "بدون اسم",
+      "mark_reviewed": "تحديث حالة المراجعة"
+    }
+  },
+  "cities": {
+    "picker": {
+      "title": "اختيار مدينة",
+      "empty": "لا توجد مدن متاحة حاليًا",
+      "search_hint": "ابحث باسم المدينة أو الجمعية …",
+      "no_results": "لا توجد نتائج لـ \"{query}\"",
+      "no_results_hint": "جرّب كلمة بحث مختلفة",
+      "results_count": "{count} مدينة"
+    },
+    "stale_banner": {
+      "message": "توجد بيانات أحدث على الخادم",
+      "refresh": "تحديث البيانات"
+    },
+    "manage": {
+      "entry": "إدارة المدن المحملة",
+      "title": "المدن المحملة",
+      "empty": "لا توجد مدن محمّلة على الجهاز",
+      "current_badge": "الحالية",
+      "summary": "{count} قطعة — {size}",
+      "delete": "حذف",
+      "delete_confirm": "سيتم حذف بيانات \"{name}\" من هذا الجهاز فقط. يمكنك تحميلها مرة أخرى لاحقًا. متابعة؟",
+      "delete_confirm_active": "\"{name}\" هي المدينة الحالية. سيتم حذف بياناتها من هذا الجهاز فقط (تبقى على الخادم)، لكنها ستختفي من الشاشة الرئيسية حتى يتم تحميلها مرة أخرى. متابعة؟",
+      "deleted": "تم حذف بيانات المدينة من الجهاز"
+    }
+  },
+  "auth": {
+    "sign_out": "تسجيل الخروج",
+    "login": {
+      "subtitle": "تسجيل الدخول للمتابعة",
+      "email_hint": "البريد الإلكتروني",
+      "password_hint": "كلمة المرور",
+      "submit": "تسجيل الدخول",
+      "email_required": "البريد الإلكتروني مطلوب",
+      "email_invalid": "صيغة البريد الإلكتروني غير صحيحة",
+      "password_required": "كلمة المرور مطلوبة"
+    }
   },
     "about": {
     "sections": {
@@ -58,10 +137,15 @@
     }
   },
   "holdings": {
+    "reform_types": {
+      "owned": "إصلاح مُملك",
+      "cooperative": "إصلاح اشتراكي",
+      "law_three": "إصلاح قانون ثلاثة"
+    },
     "empty": {
-      "title": "لا يوجد ملف",
-      "desc": "اختر ملف إكسل الناتج من البرنامج.",
-      "pick_file": "اختيار ملف"
+      "title": "لا توجد بيانات محمّلة",
+      "desc": "اختر المدينة (الجمعية) لتحميل بياناتها.",
+      "pick_file": "اختيار مدينة"
     },
     "error": {
       "invalid_file": "الملف غير صالح. الأعمدة الناقصة: {columns}",
@@ -71,8 +155,7 @@
     "home": {
       "brand": "حيازة",
       "holdings_loaded": "{count} حيازة محمّلة",
-      "change_file": "تغيير الملف",
-      "history": "السجل"
+      "change_file": "تغيير المدينة"
     },
     "search": {
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
@@ -80,24 +163,47 @@
       "voice": "بحث صوتي",
       "mic_permission_denied": "يجب السماح بالوصول إلى الميكروفون لاستخدام البحث الصوتي"
     },
-    "association": {
-      "title": "اسم الجمعية",
-      "subtitle": "تم استنتاج الاسم من اسم الملف، يمكنك تعديله إذا لم يكن صحيحًا",
-      "hint": "اسم الجمعية",
-      "confirm": "تأكيد"
-    },
     "detail": {
       "see_more": "شاهد المزيد",
       "see_less": "شاهد أقل",
       "title": "حيازة رقم {id}",
+      "parcel_id": "معرّف القطعة",
       "empty": "لا توجد بيانات لهذه الحيازة",
       "copy_all": "نسخ كل البيانات",
       "copied": "تم النسخ",
+      "crop_type_required_to_copy": "اختر نوع الزرع قبل نسخ البيانات",
       "holding_id": "رقم الحيازة",
+      "holding_id_pending": "بدون رقم — جديد",
+      "holdings_count": "عدد القطع في الحيازة",
+      "border_no_data": "لا توجد بيانات لهذا الشخص",
+      "new_badge": "جديد — بانتظار المزامنة",
+      "parcel_count": "{count} قطعة",
       "feddan": "فدان",
       "qirat": "قيراط",
       "sahm": "سهم",
-      "total_sqm": "إجمالي المساحة (م²)"
+      "total_sqm": "إجمالي المساحة (م²)",
+      "delete": "حذف",
+      "delete_confirm": "سيتم حذف هذا السجل نهائيًا قبل رفعه إلى الخادم. هل تريد المتابعة؟",
+      "deleted": "تم حذف السجل",
+      "delete_failed": "لا يمكن حذف هذا السجل — تم رفعه بالفعل",
+      "finished": "تم",
+      "undo": "تراجع",
+      "reviewed_badge": "تم المراجعة",
+      "reopen": "إعادة فتح"
+    },
+    "add": {
+      "new_person_cta": "إضافة",
+      "new_person_title": "إضافة شخص جديد",
+      "new_parcel_title": "إضافة قطعة أرض جديدة",
+      "for_person": "إضافة قطعة أرض جديدة لـ {name}",
+      "land_number_hint": "يجب إدخال رقم الأرض الصحيح",
+      "save": "حفظ",
+      "saved": "تم الحفظ، سيتم رفعها عند توفر الاتصال",
+      "holder_required": "اسم الحائز مطلوب",
+      "basin_required": "اختر اسم الحوض",
+      "crop_type_required": "اختر نوع الزرع",
+      "no_active_city": "لا يمكن الإضافة بدون مدينة محمّلة",
+      "discard_confirm": "سيتم فقدان التغييرات، هل تريد الخروج؟"
     },
     "edit": {
       "title": "تعديل حيازة {id}",
@@ -111,11 +217,28 @@
       "save": "حفظ التعديلات",
       "saved": "تم حفظ التعديلات"
     },
-    "history": {
-      "title": "سجل الملفات",
-      "empty": "لا يوجد سجل ملفات بعد",
-      "holdings_count": "{count} حيازة",
-      "file_missing": "الملف لم يعد موجودًا على الجهاز."
+    "bulk_edit": {
+      "entry_pill": "أدوات المدينة",
+      "title": "أدوات المدينة",
+      "basins_title": "الأحواض",
+      "basins_subtitle": "عدد الحيازات في كل حوض",
+      "basins_empty": "لا توجد أحواض في هذه المدينة",
+      "section_title": "تعديل جماعي لحقل",
+      "section_subtitle": "يطبَّق على كل حيازات الحوض المختار (أو المدينة بأكملها)",
+      "scope_label": "النطاق",
+      "field_label": "الحقل",
+      "value_label": "القيمة",
+      "scope_all": "كل الأحواض",
+      "pick_basin_title": "اختر الحوض",
+      "pick_field_title": "اختر الحقل",
+      "value_placeholder": "—",
+      "inheritance_true": "وراثة",
+      "inheritance_false": "ليست وراثة",
+      "apply": "تطبيق",
+      "confirm_message": "سيتم تطبيق \"{field}\" = \"{value}\" على {scope}. متابعة؟",
+      "applied_message": "تم تحديث {count} سجل",
+      "applied_partial_message": "تم تحديث {succeeded} سجل، وفشل {failed}",
+      "applied_failed_message": "فشل تحديث كل السجلات ({failed})"
     },
     "basin": {
       "title": "التركيز على حوض معيّن",

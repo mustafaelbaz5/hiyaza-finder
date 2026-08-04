@@ -38,8 +38,8 @@ class ForbiddenFailure extends Failure {
   });
 }
 
-class NotFoundException extends Failure {
-  const NotFoundException({
+class NotFoundFailure extends Failure {
+  const NotFoundFailure({
     super.message = 'Resource not found.',
     super.code = 404,
   });

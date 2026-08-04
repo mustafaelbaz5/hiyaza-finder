@@ -1,83 +1,137 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/excel/holdings_excel_parser.dart';
-import '../../data/models/cached_file_entry.dart';
-import '../../data/models/parcel.dart';
+import '../../../cities/domain/entities/city.dart';
+import '../../../cities/domain/entities/city_snapshot.dart';
+import '../../../cities/domain/repositories/city_repository.dart';
 import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import '../services/holding_search_service.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository) : super(HomeState.initial());
+  HomeCubit(this._repository, this._cityRepository)
+      : super(HomeState.initial()) {
+    // `_repository` is a singleton and outlives any single `HomeCubit`
+    // instance (this cubit is recreated per navigation, see
+    // `app_router.dart`) — a Realtime event applied via
+    // `HoldingsRepository.applyRemoteChange` while this screen is on
+    // screen wouldn't otherwise be noticed, since it mutates the
+    // repository's list in place without going through this cubit.
+    _remoteChangesSub = _repository.onRemoteChange.listen((final _) => refreshData());
+  }
 
   final HoldingsRepository _repository;
+  final CityRepository _cityRepository;
+  late final StreamSubscription<void> _remoteChangesSub;
+
+  /// Metadata for the active city — `null` until one has been loaded.
+  CitySnapshot? _activeCitySnapshot;
 
   Future<void> init() async {
     emit(state.copyWith(status: HomeStatus.loading));
+
+    final CitySnapshot? cached = await _tryLoadCachedCity();
+    if (cached != null) {
+      _activeCitySnapshot = cached;
+      emit(_loadedState(_repository.parcels));
+      unawaited(_checkStaleness());
+      return;
+    }
+
+    emit(state.copyWith(status: HomeStatus.noFile));
+  }
+
+  Future<CitySnapshot?> _tryLoadCachedCity() async {
     try {
-      final List<Parcel>? parcels = await _repository.loadCachedFileIfAny();
-      if (parcels == null) {
-        emit(state.copyWith(status: HomeStatus.noFile));
-        return;
-      }
-      emit(_loadedState(parcels));
-    } on HoldingsParseException catch (e) {
-      emit(_parseErrorState(e));
+      final CitySnapshot? snapshot =
+          await _cityRepository.loadActiveCachedSnapshot();
+      if (snapshot == null) return null;
+      await _repository.loadParcelsForCity(
+        snapshot.cityId,
+        snapshot.parcels,
+        cityName: snapshot.cityName,
+        directorate: snapshot.directorate,
+        administration: snapshot.administration,
+        associationType: snapshot.associationType,
+        associationSubtype: snapshot.associationSubtype,
+      );
+      return snapshot;
     } catch (_) {
-      emit(state.copyWith(status: HomeStatus.noFile));
+      // A corrupt/unreadable cache file should look like "nothing loaded
+      // yet", not an error — the city picker is always available to
+      // re-download from.
+      return null;
     }
   }
 
-  Future<void> pickFile() async {
-    emit(state.copyWith(status: HomeStatus.loading));
+  /// Adopts whatever `HoldingsRepository` currently holds as the loaded
+  /// dataset — called after returning from the city picker, which
+  /// downloads straight into the repository via `loadParcelsForCity`.
+  void loadFromDownloadedCity(final CitySnapshot snapshot) {
+    _activeCitySnapshot = snapshot;
+    emit(_loadedState(_repository.parcels));
+  }
+
+  Future<void> _checkStaleness() async {
+    final CitySnapshot? snapshot = _activeCitySnapshot;
+    if (snapshot == null) return;
     try {
-      final List<Parcel> parcels = await _repository.loadFromPickedFile();
-      emit(_loadedState(parcels));
-    } on HoldingsFilePickCancelled {
-      // User dismissed the picker — return to whatever state we were in.
-      emit(
-        state.copyWith(
-          status: state.parcels.isEmpty ? HomeStatus.noFile : HomeStatus.loaded,
-        ),
-      );
-    } on HoldingsParseException catch (e) {
-      emit(_parseErrorState(e));
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: HomeStatus.error,
-          errorMessage: e.toString(),
-        ),
-      );
+      final int remoteVersion =
+          await _cityRepository.remoteDataVersion(snapshot.cityId);
+      if (remoteVersion > snapshot.dataVersion) {
+        emit(state.copyWith(isCityDataStale: true));
+      }
+    } catch (_) {
+      // Offline, or the request failed — staleness is a courtesy notice,
+      // not worth surfacing an error for.
     }
   }
 
-  /// Same as [pickFile] — kept as a distinct, semantically named entry
-  /// point for the "change file" action in the UI.
-  Future<void> changeFile() => pickFile();
+  /// Re-downloads the active city and adopts the fresh data — the
+  /// staleness banner's "تحديث البيانات" action and pull-to-refresh.
+  /// Deliberately keeps `status: loaded` throughout and rethrows on
+  /// failure instead of switching to `HomeStatus.loading`/`error`: those
+  /// would swap out the entire loaded screen (fighting a pull gesture's
+  /// own spinner, or discarding a perfectly working offline session over
+  /// a transient refresh failure). Callers decide how to surface the
+  /// error (e.g. a snackbar) while the current data stays on screen.
+  Future<void> refreshActiveCity() async {
+    final CitySnapshot? current = _activeCitySnapshot;
+    if (current == null) return;
 
-  /// Switches the active dataset to a previously-loaded file from history.
-  Future<void> openHistoryEntry(final CachedFileEntry entry) async {
-    emit(state.copyWith(status: HomeStatus.loading));
-    try {
-      final List<Parcel> parcels = await _repository.loadFromHistoryEntry(
-        entry,
-      );
-      emit(_loadedState(parcels));
-    } on HoldingsFilePickCancelled {
-      emit(
-        state.copyWith(
-          status: HomeStatus.error,
-          errorMessage: 'الملف لم يعد موجودًا على الجهاز.',
-        ),
-      );
-    } on HoldingsParseException catch (e) {
-      emit(_parseErrorState(e));
-    } catch (e) {
-      emit(
-        state.copyWith(status: HomeStatus.error, errorMessage: e.toString()),
-      );
-    }
+    final int remoteVersion =
+        await _cityRepository.remoteDataVersion(current.cityId);
+    final CitySnapshot fresh = await _cityRepository.downloadCity(
+      City(
+        id: current.cityId,
+        name: current.cityName,
+        status: CityStatus.published,
+        dataVersion: remoteVersion,
+        // `CityRepositoryImpl.downloadCity` copies these straight from the
+        // `City` passed in — it does NOT re-fetch the `cities` row itself
+        // (only `downloadHoldings` for parcels) — so without carrying them
+        // forward from the cached snapshot here, a refresh would silently
+        // wipe them from the new snapshot.
+        directorate: current.directorate,
+        administration: current.administration,
+        associationType: current.associationType,
+        associationSubtype: current.associationSubtype,
+      ),
+    );
+    await _repository.loadParcelsForCity(
+      fresh.cityId,
+      fresh.parcels,
+      cityName: fresh.cityName,
+      directorate: fresh.directorate,
+      administration: fresh.administration,
+      associationType: fresh.associationType,
+      associationSubtype: fresh.associationSubtype,
+    );
+    _activeCitySnapshot = fresh;
+    emit(state.copyWith(isCityDataStale: false));
+    refreshData();
   }
 
   HomeState _loadedState(final List<Parcel> parcels) {
@@ -88,21 +142,7 @@ class HomeCubit extends Cubit<HomeState> {
       results: const <SearchResult>[],
       availableBasins: _repository.availableBasins,
       selectedBasin: null,
-      needsAssociationConfirm: _repository.associationNameNeedsConfirmation,
-      associationNameDraft: _repository.activeAssociationName,
-    );
-  }
-
-  /// Confirms (or corrects) the loaded file's اسم الجمعية, stamping it onto
-  /// every parcel and persisting it so this file won't need re-confirming.
-  Future<void> confirmAssociationName(final String name) async {
-    await _repository.confirmAssociationName(name);
-    emit(
-      state.copyWith(
-        parcels: _repository.parcels,
-        needsAssociationConfirm: false,
-        associationNameDraft: _repository.activeAssociationName,
-      ),
+      isCityDataStale: false,
     );
   }
 
@@ -139,11 +179,9 @@ class HomeCubit extends Cubit<HomeState> {
     emit(state.copyWith(selectedBasin: basin, results: results));
   }
 
-  HomeState _parseErrorState(final HoldingsParseException e) {
-    return state.copyWith(
-      status: HomeStatus.error,
-      errorMessage: e.toString(),
-      missingColumns: e.missingColumns,
-    );
+  @override
+  Future<void> close() {
+    _remoteChangesSub.cancel();
+    return super.close();
   }
 }

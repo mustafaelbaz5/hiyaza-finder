@@ -18,13 +18,15 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
+import '../../../cities/domain/entities/city_snapshot.dart';
 import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../../logic/services/holding_search_service.dart';
-import '../widgets/association_name_sheet.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/recommendation_list.dart';
+import 'add_record_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +46,28 @@ class _HomeScreenState extends State<HomeScreen> {
           ? getIt<VoiceSearchService>()
           : null;
   bool _isListening = false;
+
+  /// Drives the app-bar refresh icon's spinner and blocks re-entrant taps —
+  /// `HomeTopBar` only receives a non-null `onRefresh` once a city is
+  /// loaded (see `build` below), so this only ever runs when `cubit.
+  /// refreshActiveCity()` is actually meaningful.
+  bool _isRefreshing = false;
+
+  /// Re-downloads the active city (gets other users' updates) — the app
+  /// bar's refresh action, replacing the old pull-to-refresh gesture, which
+  /// on the home screen's default (no search) state had no visible
+  /// scrollable content to grab onto.
+  Future<void> _refreshCity(final HomeCubit cubit) async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      await cubit.refreshActiveCity();
+    } catch (_) {
+      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -93,8 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isListening = true);
   }
 
-  void _openHistory() => context.pushNamed(Routes.fileHistory);
-
   Future<void> _openBasinFilter(final HomeCubit cubit) async {
     final HomeState state = cubit.state;
     final String? selected = await showBasinFilterSheet(
@@ -113,18 +135,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) cubit.refreshData();
   }
 
-  /// Runs once right after a file finishes loading: confirms اسم الجمعية
-  /// first (if needed), then opens the basin filter (if there's more than
-  /// one basin) — sequential, never both sheets at once.
-  Future<void> _onFileLoaded(final HomeCubit cubit) async {
-    if (cubit.state.needsAssociationConfirm) {
-      final String confirmed = await showAssociationNameSheet(
-        context,
-        derivedName: cubit.state.associationNameDraft ?? '',
-      );
-      if (mounted) await cubit.confirmAssociationName(confirmed);
+  Future<void> _openCityPicker(final HomeCubit cubit) async {
+    final CitySnapshot? snapshot =
+        await context.pushNamed<CitySnapshot>(Routes.cityPicker);
+    if (snapshot != null && mounted) {
+      cubit.loadFromDownloadedCity(snapshot);
     }
-    if (!mounted) return;
+  }
+
+  /// Runs once right after a city finishes loading: opens the basin
+  /// filter automatically if there's more than one basin to choose from.
+  Future<void> _onCityLoaded(final HomeCubit cubit) async {
     if (cubit.state.availableBasins.length > 1) {
       await _openBasinFilter(cubit);
     }
@@ -143,14 +164,17 @@ class _HomeScreenState extends State<HomeScreen> {
               current.status == HomeStatus.loaded &&
               previous.status != HomeStatus.loaded,
           listener: (final BuildContext context, final HomeState state) {
-            _onFileLoaded(cubit);
+            _onCityLoaded(cubit);
           },
           builder: (final BuildContext context, final HomeState state) {
             return Column(
               children: <Widget>[
                 HomeTopBar(
                   onSettings: () => showSettingsSheet(context),
-                  onHistory: _openHistory,
+                  onRefresh: state.status == HomeStatus.loaded
+                      ? () => _refreshCity(cubit)
+                      : null,
+                  isRefreshing: _isRefreshing,
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -160,11 +184,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: switch (state.status) {
                         HomeStatus.loading => const _LoadingBody(),
                         HomeStatus.noFile => EmptyBody(
-                            onPickFile: cubit.pickFile,
+                            onPickFile: () => _openCityPicker(cubit),
                           ),
                         HomeStatus.error => ErrorBody(
                             state: state,
-                            onPickFile: cubit.pickFile,
+                            onPickFile: () => _openCityPicker(cubit),
                           ),
                         HomeStatus.loaded => _LoadedBody(
                             state: state,
@@ -174,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _onQueryChanged(q, cubit),
                             onOpenBasinFilter: () => _openBasinFilter(cubit),
                             onOpenFileStatus: () => _openFileStatus(cubit),
+                            onChangeCity: () => _openCityPicker(cubit),
                             onToggleVoice: _voiceService == null
                                 ? null
                                 : () => _toggleVoiceSearch(cubit),
@@ -214,6 +239,7 @@ class _LoadedBody extends StatefulWidget {
     required this.onQueryChanged,
     required this.onOpenBasinFilter,
     required this.onOpenFileStatus,
+    required this.onChangeCity,
     required this.onToggleVoice,
     required this.isListening,
   });
@@ -224,6 +250,7 @@ class _LoadedBody extends StatefulWidget {
   final void Function(String query) onQueryChanged;
   final VoidCallback onOpenBasinFilter;
   final VoidCallback onOpenFileStatus;
+  final VoidCallback onChangeCity;
   final VoidCallback? onToggleVoice;
   final bool isListening;
 
@@ -236,8 +263,26 @@ class _LoadedBodyState extends State<_LoadedBody> {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
     context.pushNamed(
       Routes.holdingDetail,
-      arguments: repository.parcelsForHolding(result.holdingId),
+      arguments: repository.parcelsForHolding(result.groupKey),
     );
+  }
+
+  Future<void> _openAddPerson(final BuildContext context) async {
+    final bool? added = await context.pushNamed<bool>(
+      Routes.addRecord,
+      arguments: const AddRecordArgs(
+        initialParcel: Parcel(
+          holdingId: '-1', // default; editable in the form below
+          nationalId: '11111111111111',
+          landNumber: '-1',
+          notes: 'غير محيز',
+          holdingsCount: 1, // a brand-new person starts with one قطعة
+        ),
+      ),
+    );
+    if (added == true && context.mounted) {
+      widget.cubit.refreshData();
+    }
   }
 
   @override
@@ -274,47 +319,68 @@ class _LoadedBodyState extends State<_LoadedBody> {
         final bool isTablet = constraints.maxWidth >= 600;
         final double horizontalPadding = isTablet ? rw(64) : rw(16);
 
-        return Column(
+        return Stack(
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  verticalSpacing(8),
-                  FileInfoCard(
-                    holdingCount: widget.state.holdingCount,
-                    selectedBasin: widget.state.selectedBasin,
-                    hasBasins: widget.state.availableBasins.isNotEmpty,
-                    onChangeFile: widget.cubit.changeFile,
-                    onOpenBasinFilter: widget.onOpenBasinFilter,
-                    onOpenFileStatus: widget.onOpenFileStatus,
+            Column(
+              children: <Widget>[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      verticalSpacing(8),
+                      FileInfoCard(
+                        holdingCount: widget.state.holdingCount,
+                        selectedBasin: widget.state.selectedBasin,
+                        hasBasins: widget.state.availableBasins.isNotEmpty,
+                        onChangeFile: widget.onChangeCity,
+                        onOpenBasinFilter: widget.onOpenBasinFilter,
+                        onOpenFileStatus: widget.onOpenFileStatus,
+                      ),
+                      verticalSpacing(16),
+                      CustomTextForm(
+                        hintText: 'holdings.search.hint'.tr(),
+                        controller: widget.controller,
+                        isRTL: true,
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: colors.iconSecondary,
+                        ),
+                        suffixIcon: suffixIcon,
+                        onChanged: widget.onQueryChanged,
+                      ),
+                      verticalSpacing(8),
+                    ],
                   ),
-                  verticalSpacing(16),
-                  CustomTextForm(
-                    hintText: 'holdings.search.hint'.tr(),
-                    controller: widget.controller,
-                    isRTL: true,
-                    prefixIcon: Icon(
-                      Icons.search_rounded,
-                      color: colors.iconSecondary,
-                    ),
-                    suffixIcon: suffixIcon,
-                    onChanged: widget.onQueryChanged,
-                  ),
-                  verticalSpacing(8),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: RecommendationList(
-                  query: widget.state.query,
-                  results: widget.state.results,
-                  onSelect: (final SearchResult result) =>
-                      _openDetail(context, result),
                 ),
+                Expanded(
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: RecommendationList(
+                      query: widget.state.query,
+                      results: widget.state.results,
+                      onSelect: (final SearchResult result) =>
+                          _openDetail(context, result),
+                      onAddNew: () => _openAddPerson(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // Always-visible add-person entry point — previously only
+            // reachable after typing a search that returned no results,
+            // which meant a brand-new person could only be added by first
+            // proving they weren't already in the data.
+            PositionedDirectional(
+              bottom: rh(20),
+              end: rw(20),
+              child: FloatingActionButton.extended(
+                onPressed: () => _openAddPerson(context),
+                backgroundColor: AppColors.primary200,
+                foregroundColor: AppColors.white,
+                icon: const Icon(Icons.person_add_alt_1_rounded),
+                label: Text('holdings.add.new_person_cta'.tr()),
               ),
             ),
           ],

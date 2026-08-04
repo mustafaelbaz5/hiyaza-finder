@@ -26,7 +26,86 @@
     "service_unavailable": "Service temporarily unavailable. Please try again.",
     "file_too_large": "File is too large.",
     "user_disabled": "This account has been disabled.",
-    "operation_not_allowed": "This operation is not allowed."
+    "operation_not_allowed": "This operation is not allowed.",
+    "retry": "Retry"
+  },
+  "app_dialogs": {
+    "info": "Info",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "confirm": "Confirm",
+    "ok": "OK",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "sync": {
+    "status": {
+      "syncing": "Syncing…",
+      "pending": "{count} pending sync",
+      "failed": "{count} failed to sync",
+      "waiting_for_internet": "Waiting for internet",
+      "tap_to_sync": "Sync details"
+    },
+    "details": {
+      "title": "Sync",
+      "explainer": "Your data is saved on this device and will upload once you're online",
+      "retry_all": "Retry all",
+      "sync_now": "Sync now",
+      "empty": "Nothing waiting to sync",
+      "result_all_synced": "Everything synced successfully",
+      "result_partial": "{synced} synced, {remaining} still pending",
+      "result_none": "Sync failed — check your internet connection and try again",
+      "discard": "Discard",
+      "discard_confirm": "This removes the item from the queue without uploading it. This can't be undone. Continue?",
+      "discarded": "Item discarded"
+    },
+    "operation": {
+      "edit_holding": "Holding edit",
+      "bulk_edit": "Bulk edit ({count} records)",
+      "add_person": "New person: {name}",
+      "add_parcel": "New parcel",
+      "unnamed": "Unnamed",
+      "mark_reviewed": "Reviewed status update"
+    }
+  },
+  "cities": {
+    "picker": {
+      "title": "Choose a city",
+      "empty": "No cities available yet",
+      "search_hint": "Search by city or association name …",
+      "no_results": "No results for \"{query}\"",
+      "no_results_hint": "Try a different search term",
+      "results_count": "{count} cities"
+    },
+    "stale_banner": {
+      "message": "Newer data is available on the server",
+      "refresh": "Update data"
+    },
+    "manage": {
+      "entry": "Manage downloaded cities",
+      "title": "Downloaded cities",
+      "empty": "No cities downloaded on this device",
+      "current_badge": "Current",
+      "summary": "{count} parcels — {size}",
+      "delete": "Delete",
+      "delete_confirm": "This deletes \"{name}\"'s data from this device only. You can download it again later. Continue?",
+      "delete_confirm_active": "\"{name}\" is the current city. Its data will be deleted from this device only (it stays on the server), but it will disappear from the home screen until downloaded again. Continue?",
+      "deleted": "City data deleted from this device"
+    }
+  },
+  "auth": {
+    "sign_out": "Sign out",
+    "login": {
+      "subtitle": "Sign in to continue",
+      "email_hint": "Email",
+      "password_hint": "Password",
+      "submit": "Sign in",
+      "email_required": "Email is required",
+      "email_invalid": "Invalid email format",
+      "password_required": "Password is required"
+    }
   },
   "about": {
     "sections": {
@@ -58,10 +137,15 @@
     }
   },
   "holdings": {
+    "reform_types": {
+      "owned": "Owned Reform",
+      "cooperative": "Cooperative Reform",
+      "law_three": "Law Three Reform"
+    },
     "empty": {
-      "title": "No file loaded",
-      "desc": "Choose the Excel file produced by the desktop app.",
-      "pick_file": "Choose file"
+      "title": "No data loaded",
+      "desc": "Choose a city to download its data.",
+      "pick_file": "Choose a city"
     },
     "error": {
       "invalid_file": "Invalid file. Missing columns: {columns}",
@@ -71,8 +155,7 @@
     "home": {
       "brand": "Hiyaza",
       "holdings_loaded": "{count} holdings loaded",
-      "change_file": "Change file",
-      "history": "History"
+      "change_file": "Change city"
     },
     "search": {
       "hint": "Search by holder name or holding number …",
@@ -80,24 +163,47 @@
       "voice": "Voice search",
       "mic_permission_denied": "Microphone access is required for voice search"
     },
-    "association": {
-      "title": "Association name",
-      "subtitle": "Derived from the file name — edit it if it isn't right",
-      "hint": "Association name",
-      "confirm": "Confirm"
-    },
     "detail": {
       "see_more": "See more",
       "see_less": "See less",
       "title": "Holding #{id}",
+      "parcel_id": "Parcel ID",
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
       "copied": "Copied",
+      "crop_type_required_to_copy": "Please select نوع الزرع before copying data",
       "holding_id": "Holding number",
+      "holding_id_pending": "No number yet — new",
+      "holdings_count": "Number of parcels in holding",
+      "border_no_data": "No data exists for this person",
+      "new_badge": "New — pending sync",
+      "parcel_count": "{count} parcels",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
-      "total_sqm": "Total area (m²)"
+      "total_sqm": "Total area (m²)",
+      "delete": "Delete",
+      "delete_confirm": "This record will be permanently deleted before it's uploaded to the server. Continue?",
+      "deleted": "Record deleted",
+      "delete_failed": "This record can't be deleted — it has already been uploaded",
+      "finished": "Done",
+      "undo": "Undo",
+      "reviewed_badge": "Reviewed",
+      "reopen": "Reopen"
+    },
+    "add": {
+      "new_person_cta": "Add",
+      "new_person_title": "Add new person",
+      "new_parcel_title": "Add a new parcel",
+      "for_person": "Add a new parcel for {name}",
+      "land_number_hint": "Enter the correct land number",
+      "save": "Save",
+      "saved": "Saved — will upload once you're online",
+      "holder_required": "Holder name is required",
+      "basin_required": "Please select اسم الحوض",
+      "crop_type_required": "Please select نوع الزرع",
+      "no_active_city": "Can't add without a loaded city",
+      "discard_confirm": "Your changes will be lost. Leave anyway?"
     },
     "edit": {
       "title": "Edit holding {id}",
@@ -111,11 +217,28 @@
       "save": "Save changes",
       "saved": "Changes saved"
     },
-    "history": {
-      "title": "File history",
-      "empty": "No file history yet",
-      "holdings_count": "{count} holdings",
-      "file_missing": "The file no longer exists on this device."
+    "bulk_edit": {
+      "entry_pill": "City tools",
+      "title": "City tools",
+      "basins_title": "Basins",
+      "basins_subtitle": "Holding count per basin",
+      "basins_empty": "No basins in this city",
+      "section_title": "Bulk edit a field",
+      "section_subtitle": "Applies to every holding in the chosen basin (or the whole city)",
+      "scope_label": "Scope",
+      "field_label": "Field",
+      "value_label": "Value",
+      "scope_all": "All basins",
+      "pick_basin_title": "Choose a basin",
+      "pick_field_title": "Choose a field",
+      "value_placeholder": "—",
+      "inheritance_true": "Inheritance",
+      "inheritance_false": "Not inheritance",
+      "apply": "Apply",
+      "confirm_message": "This will set \"{field}\" to \"{value}\" for {scope}. Continue?",
+      "applied_message": "{count} records updated",
+      "applied_partial_message": "{succeeded} records updated, {failed} failed",
+      "applied_failed_message": "All {failed} record(s) failed to update"
     },
     "basin": {
       "title": "Focus on a basin",

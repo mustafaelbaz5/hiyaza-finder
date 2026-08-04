@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/core/utils/spacing.dart';
 
 class InlineAction extends StatelessWidget {
   const InlineAction({
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,

@@ -1,7 +1,7 @@
 import 'package:hiyaza_finder/core/errors/failure.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'exceptions.dart' hide NotFoundException;
+import 'exceptions.dart';
 import 'handlers/supabase_handler.dart';
 
 class ErrorHandler {
@@ -9,14 +9,9 @@ class ErrorHandler {
   static Never handleException(final dynamic error) {
     if (error is AppException) throw error;
 
-    if (error is AuthException ||
-        error is PostgrestException ||
-        error is StorageException) {
+    if (error is AuthException || error is PostgrestException || error is StorageException) {
       throw SupabaseHandler.handle(error);
     }
-
-    // Future: FirebaseHandler.handle(error)
-    // Future: ApiHandler.handle(error)
 
     throw ServerException(message: error?.toString() ?? 'Unknown error.');
   }
@@ -28,9 +23,7 @@ class ErrorHandler {
   }
 
   static AppException _toException(final dynamic error) {
-    if (error is AuthException ||
-        error is PostgrestException ||
-        error is StorageException) {
+    if (error is AuthException || error is PostgrestException || error is StorageException) {
       return SupabaseHandler.handle(error);
     }
     return ServerException(message: error?.toString() ?? 'Unknown error.');
@@ -41,7 +34,7 @@ class ErrorHandler {
       return UnauthorizedFailure(message: e.message);
     }
     if (e is ForbiddenException) return ForbiddenFailure(message: e.message);
-    if (e is NotFoundException) return NotFoundException(message: e.message);
+    if (e is NotFoundException) return NotFoundFailure(message: e.message);
     if (e is ValidationException) {
       return ValidationFailure(message: e.message, errors: e.errors);
     }

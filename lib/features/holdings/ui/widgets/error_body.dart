@@ -17,12 +17,7 @@ class ErrorBody extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final bool isColumnsError = state.missingColumns.isNotEmpty;
-    final String message = isColumnsError
-        ? 'holdings.error.invalid_file'.tr(
-            namedArgs: {'columns': state.missingColumns.join('، ')},
-          )
-        : (state.errorMessage ?? 'holdings.error.generic'.tr());
+    final String message = state.errorMessage ?? 'holdings.error.generic'.tr();
 
     return Center(
       child: Padding(

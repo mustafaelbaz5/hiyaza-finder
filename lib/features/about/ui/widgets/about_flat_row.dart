@@ -49,8 +49,7 @@ class AboutFlatRow extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color:
-                      _isTappable ? AppColors.primary200 : colors.iconSecondary,
+                  color: _isTappable ? AppColors.primary200 : colors.iconSecondary,
                 ),
                 const SizedBox(width: 14),
                 Expanded(

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 import '../services/holding_search_service.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
@@ -17,11 +17,9 @@ class HomeState extends Equatable {
     this.query = '',
     this.results = const <SearchResult>[],
     this.errorMessage,
-    this.missingColumns = const <String>[],
     this.availableBasins = const <String>[],
     this.selectedBasin,
-    this.needsAssociationConfirm = false,
-    this.associationNameDraft,
+    this.isCityDataStale = false,
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -31,7 +29,6 @@ class HomeState extends Equatable {
   final String query;
   final List<SearchResult> results;
   final String? errorMessage;
-  final List<String> missingColumns;
 
   /// Distinct اسم الحوض values found in the loaded dataset, sorted.
   final List<String> availableBasins;
@@ -39,16 +36,14 @@ class HomeState extends Equatable {
   /// The basin currently focused for search, or `null` for "all basins".
   final String? selectedBasin;
 
-  /// Whether the just-loaded file's اسم الجمعية hasn't been confirmed yet
-  /// and the UI should prompt for it.
-  final bool needsAssociationConfirm;
+  /// Whether the server has newer data for the active city than what's
+  /// cached locally — drives a non-blocking "تحديث البيانات" banner.
+  final bool isCityDataStale;
 
-  /// The derived (or previously confirmed) اسم الجمعية to pre-fill the
-  /// confirmation sheet with.
-  final String? associationNameDraft;
-
-  int get holdingCount =>
-      parcels.map((final Parcel p) => p.holdingId).toSet().length;
+  /// Raw parcel row count for the loaded dataset — a single حيازة can span
+  /// several قطع, so this counts every parcel row, not distinct holdings
+  /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
+  int get holdingCount => parcels.length;
 
   HomeState copyWith({
     final HomeStatus? status,
@@ -56,11 +51,9 @@ class HomeState extends Equatable {
     final String? query,
     final List<SearchResult>? results,
     final String? errorMessage,
-    final List<String>? missingColumns,
     final List<String>? availableBasins,
     final Object? selectedBasin = _unset,
-    final bool? needsAssociationConfirm,
-    final Object? associationNameDraft = _unset,
+    final bool? isCityDataStale,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -68,16 +61,11 @@ class HomeState extends Equatable {
       query: query ?? this.query,
       results: results ?? this.results,
       errorMessage: errorMessage,
-      missingColumns: missingColumns ?? this.missingColumns,
       availableBasins: availableBasins ?? this.availableBasins,
       selectedBasin: identical(selectedBasin, _unset)
           ? this.selectedBasin
           : selectedBasin as String?,
-      needsAssociationConfirm:
-          needsAssociationConfirm ?? this.needsAssociationConfirm,
-      associationNameDraft: identical(associationNameDraft, _unset)
-          ? this.associationNameDraft
-          : associationNameDraft as String?,
+      isCityDataStale: isCityDataStale ?? this.isCityDataStale,
     );
   }
 
@@ -88,10 +76,8 @@ class HomeState extends Equatable {
         query,
         results,
         errorMessage,
-        missingColumns,
         availableBasins,
         selectedBasin,
-        needsAssociationConfirm,
-        associationNameDraft,
+        isCityDataStale,
       ];
 }

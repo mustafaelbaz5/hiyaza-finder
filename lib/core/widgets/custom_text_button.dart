@@ -114,9 +114,8 @@ class CustomTextButton extends StatelessWidget {
   /// `textTheme` here pulls in the live font family while keeping this
   /// button's own size/weight.
   TextStyle _defaultTextStyle(final BuildContext context) {
-    final TextStyle base = size == CustomButtonSize.small
-        ? AppTextStyles.font14Bold
-        : AppTextStyles.font16Bold;
+    final TextStyle base =
+        size == CustomButtonSize.small ? AppTextStyles.font14Bold : AppTextStyles.font16Bold;
     return Theme.of(context).textTheme.bodyMedium?.merge(base) ?? base;
   }
 
@@ -142,9 +141,7 @@ class CustomTextButton extends StatelessWidget {
   BorderSide _resolveBorder(final Color foreground) {
     if (style != CustomButtonStyle.outlined) return BorderSide.none;
     return BorderSide(
-      color: _isEnabled
-          ? (borderColor ?? AppColors.primary200)
-          : AppColors.grey200,
+      color: _isEnabled ? (borderColor ?? AppColors.primary200) : AppColors.grey200,
       width: 1.5,
     );
   }

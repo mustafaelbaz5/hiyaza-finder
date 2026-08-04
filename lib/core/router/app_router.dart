@@ -5,12 +5,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/ui/about_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
+import 'package:hiyaza_finder/features/auth/presentation/screens/login_screen.dart';
+import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
+import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
+import 'package:hiyaza_finder/features/cities/presentation/cubit/city_picker_cubit.dart';
+import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_screen.dart';
+import 'package:hiyaza_finder/features/cities/presentation/screens/manage_cities_screen.dart';
+import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/ui/screens/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/detail_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/file_status_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/history_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/screens/home_screen.dart';
 
 class AppRouter {
@@ -20,35 +26,54 @@ class AppRouter {
     switch (settings.name) {
       case Routes.aboutScreen:
         return _buildRoute(const AboutScreen(), settings);
+      case Routes.login:
+        return _buildRoute(const LoginScreen(), settings);
+      case Routes.cityPicker:
+        return _buildRoute<CitySnapshot>(
+          BlocProvider<CityPickerCubit>(
+            create: (final _) => getIt<CityPickerCubit>(),
+            child: const CityPickerScreen(),
+          ),
+          settings,
+        );
       case Routes.home:
         return _buildRoute(
           BlocProvider<HomeCubit>(
-            create: (final _) => HomeCubit(getIt<HoldingsRepository>())..init(),
+            create: (final _) =>
+                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepository>())..init(),
             child: const HomeScreen(),
           ),
           settings,
         );
       case Routes.holdingDetail:
-        final List<Parcel> parcels =
-            (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
+        final List<Parcel> parcels = (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
         return _buildRoute(DetailScreen(parcels: parcels), settings);
-      case Routes.fileHistory:
-        return _buildRoute(const HistoryScreen(), settings);
+      case Routes.addRecord:
+        final AddRecordArgs args = (settings.arguments as AddRecordArgs?) ??
+            const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
+        return _buildRoute<bool>(
+          AddRecordScreen(
+            initialParcel: args.initialParcel,
+            parentHoldingId: args.parentHoldingId,
+          ),
+          settings,
+        );
       case Routes.fileStatus:
         return _buildRoute(const FileStatusScreen(), settings);
+      case Routes.manageCities:
+        return _buildRoute(const ManageCitiesScreen(), settings);
       default:
         return null;
     }
   }
 
-  static PageRouteBuilder _buildRoute(
+  static PageRouteBuilder<T> _buildRoute<T>(
     final Widget page,
     final RouteSettings settings,
   ) {
-    return PageRouteBuilder(
+    return PageRouteBuilder<T>(
       settings: settings,
-      pageBuilder: (final context, final animation, final secondaryAnimation) =>
-          page,
+      pageBuilder: (final context, final animation, final secondaryAnimation) => page,
       transitionsBuilder: (
         final context,
         final animation,

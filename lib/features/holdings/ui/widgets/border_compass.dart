@@ -6,7 +6,16 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
 /// A 3×3 "compass" — the holding ID sits in the center, its four borders
-/// (north/south/east/west) surround it as plain, non-navigable text.
+/// (north/south/east/west) surround it. Each border cell is tappable via
+/// [onTapBorder] — the border text is free-form (APP_PLAN.md § 4), so
+/// whether a tap resolves to another holding's data (vs. a "no data for
+/// this person" snackbar) is decided by the caller, not this widget.
+///
+/// [isBorderNavigable] lets the caller mark, per cell, whether its text
+/// resolves to another loaded holding — those cells get a highlighted
+/// tinted/bordered style and a small link icon so it's visually obvious
+/// *before* tapping which names are actually navigable, instead of every
+/// cell looking equally (non-)interactive.
 ///
 /// The middle row is forced to LTR so west/east always render on the
 /// geographically correct side regardless of the app's RTL layout.
@@ -18,6 +27,8 @@ class BorderCompass extends StatelessWidget {
     required this.south,
     required this.east,
     required this.west,
+    this.onTapBorder,
+    this.isBorderNavigable,
   });
 
   final String holdingId;
@@ -26,24 +37,59 @@ class BorderCompass extends StatelessWidget {
   final String? east;
   final String? west;
 
+  /// Called with the tapped cell's raw border text (شمال/جنوب/شرق/غرب).
+  final void Function(String? borderText)? onTapBorder;
+
+  /// Whether [borderText] resolves to a holding the user can jump to —
+  /// drives the highlighted styling. `null` (not provided) falls back to
+  /// the plain, non-highlighted look for every cell.
+  final bool Function(String? borderText)? isBorderNavigable;
+
   @override
   Widget build(final BuildContext context) {
+    bool navigable(final String? text) =>
+        isBorderNavigable?.call(text) ?? false;
+
     return Column(
       children: [
-        _BorderCell(label: 'شمال (البحري)', text: north),
+        _BorderCell(
+          label: 'شمال (البحري)',
+          text: north,
+          isNavigable: navigable(north),
+          onTap: onTapBorder == null ? null : () => onTapBorder!(north),
+        ),
         const SizedBox(height: 5),
         Row(
           textDirection: TextDirection.ltr,
           children: [
-            Expanded(child: _BorderCell(label: 'غرب (الغربي)', text: west)),
+            Expanded(
+              child: _BorderCell(
+                label: 'غرب (الغربي)',
+                text: west,
+                isNavigable: navigable(west),
+                onTap: onTapBorder == null ? null : () => onTapBorder!(west),
+              ),
+            ),
             const SizedBox(width: 5),
             Expanded(child: _CenterCell(holdingId: holdingId)),
             const SizedBox(width: 5),
-            Expanded(child: _BorderCell(label: 'شرق (الشرقي)', text: east)),
+            Expanded(
+              child: _BorderCell(
+                label: 'شرق (الشرقي)',
+                text: east,
+                isNavigable: navigable(east),
+                onTap: onTapBorder == null ? null : () => onTapBorder!(east),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 5),
-        _BorderCell(label: 'جنوب (القبلي)', text: south),
+        _BorderCell(
+          label: 'جنوب (القبلي)',
+          text: south,
+          isNavigable: navigable(south),
+          onTap: onTapBorder == null ? null : () => onTapBorder!(south),
+        ),
       ],
     );
   }
@@ -92,10 +138,21 @@ class _CenterCell extends StatelessWidget {
 }
 
 class _BorderCell extends StatelessWidget {
-  const _BorderCell({required this.label, required this.text});
+  const _BorderCell({
+    required this.label,
+    required this.text,
+    this.onTap,
+    this.isNavigable = false,
+  });
 
   final String label;
   final String? text;
+  final VoidCallback? onTap;
+
+  /// Highlights this cell (tinted background, primary-colored border, small
+  /// link icon) so a navigable name is visually distinct from plain
+  /// boundary text before the user taps it.
+  final bool isNavigable;
 
   @override
   Widget build(final BuildContext context) {
@@ -103,39 +160,66 @@ class _BorderCell extends StatelessWidget {
     final String displayText =
         (text == null || text!.trim().isEmpty) ? '—' : text!;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.font12Regular.copyWith(
-              color: colors.textHint,
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return InkWell(
+      onTap: isNavigable ? onTap : null,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
+        decoration: BoxDecoration(
+          color: isNavigable
+              ? AppColors.primary50.withValues(alpha: 0.25)
+              : colors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isNavigable ? AppColors.primary200 : colors.border,
+            width: isNavigable ? 1.5 : 1,
           ),
-          const SizedBox(height: 1),
-          Text(
-            displayText,
-            style: AppTextStyles.font14SemiBold.copyWith(
-              color: colors.textPrimary,
-              fontSize: 12,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.font12Regular.copyWith(
+                    color: colors.textHint,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (isNavigable) ...[
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.touch_app_rounded,
+                    size: 11,
+                    color: AppColors.primary200,
+                  ),
+                ],
+              ],
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 1),
+            Text(
+              displayText,
+              style: AppTextStyles.font14SemiBold.copyWith(
+                color: isNavigable ? AppColors.primary300 : colors.textPrimary,
+                fontSize: 12,
+                decoration: isNavigable
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
+                decorationColor: AppColors.primary200,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,411 +1,646 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get_it/get_it.dart' show GetIt;
+import 'package:uuid/uuid.dart';
 
+import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../cities/domain/entities/association_type.dart';
+import '../../../cities/domain/entities/city.dart';
+import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../sync/data/holdings_api.dart';
+import '../../../sync/data/realtime_sync_service.dart';
+import '../../domain/entities/bulk_edit_outcome.dart';
+import '../../domain/entities/bulk_editable_field.dart';
+import '../../domain/entities/parcel.dart';
+import '../../domain/repositories/holdings_reader.dart';
+import '../../domain/repositories/holdings_writer.dart';
+import '../../domain/services/border_name_index.dart';
+import '../../domain/services/bulk_edit_service.dart';
+import '../../domain/services/parcel_edit_overlay.dart';
+import '../../domain/services/parcel_query_service.dart';
 import '../../logic/services/holding_search_service.dart';
-import '../excel/holdings_excel_parser.dart';
-import '../models/bulk_editable_field.dart';
-import '../models/cached_file_entry.dart';
-import '../models/parcel.dart';
+import '../added_holdings_mapper.dart';
 import 'parcel_edits_store.dart';
 
-/// Runs the (potentially heavy) Excel parse in a background isolate via
-/// [compute] so the UI thread never freezes while reading a large workbook.
-/// Must be a top-level function — [compute] cannot capture closures.
-List<Parcel> _parseHoldingsBytes(final Uint8List bytes) =>
-    const HoldingsExcelParser().parse(bytes);
-
-/// Owns the in-memory dataset and the on-device cache of picked workbooks,
-/// so the app can reload any of them offline without re-prompting the file
-/// picker (SAF/URI permissions on the original pick can expire, so each
-/// file is copied into app storage instead of just remembering its path).
+/// Owns the in-memory dataset for the active city, and the local overlay
+/// of corrections/additions made to it — search, detail, and the bulk-edit
+/// screen all read from here. The Excel-file-picker path this class used
+/// to also support was retired in APP_PLAN.md Phase 5; a city download is
+/// the only way data gets in now (see `CityPickerCubit.downloadAndActivate`
+/// / `loadParcelsForCity`).
 ///
-/// Keeps a small history of every distinct file that has been loaded, so
-/// the user can switch back to a previous one from the History screen.
-class HoldingsRepository {
+/// Every write method (`addLocalParcel`, `deleteLocalParcel`, `updateParcel`,
+/// `setParcelReviewed`, `bulkApplyField`) awaits the Supabase call FIRST and
+/// only mutates [_parcels]/[_edits] once the server has confirmed the
+/// write — there is no local-first deferral/outbox: a failed write throws
+/// and leaves the in-memory dataset exactly as it was, for the caller to
+/// catch and show an error.
+class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   HoldingsRepository({
-    final HoldingSearchService searchService = const HoldingSearchService(),
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
-  })  : _searchService = searchService,
-        _editsStore = editsStore;
+    final ParcelQueryService queryService = const ParcelQueryService(),
+    final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
+    final BulkEditService bulkEditService = const BulkEditService(),
+    this.holdingsApi,
+    this.realtimeSyncService,
+    final Uuid uuid = const Uuid(),
+  })  : _editsStore = editsStore,
+        _queryService = queryService,
+        _editOverlay = editOverlay,
+        _bulkEditService = bulkEditService,
+        _uuid = uuid;
 
-  static const String _activeFilePathKey = 'holdings_active_file_path';
-  static const String _historyKey = 'holdings_file_history';
-  static const String _cacheDirName = 'holdings_cache';
-  static const int _maxHistoryEntries = 15;
-
-  static String _associationNameKey(final String filePath) =>
-      'association_name::$filePath';
-
-  final HoldingSearchService _searchService;
   final ParcelEditsStore _editsStore;
+  final ParcelQueryService _queryService;
+  final ParcelEditOverlay _editOverlay;
+  final BulkEditService _bulkEditService;
+  final Uuid _uuid;
+
+  /// `null` in tests that construct this repository directly without a
+  /// Supabase-backed API — every write method treats a `null` [holdingsApi]
+  /// as a no-op network call (mutates local state as if the write
+  /// succeeded), which is what lets the existing add/delete/reviewed tests
+  /// construct a repository with no network dependency at all.
+  final HoldingsApi? holdingsApi;
+
+  /// `null` in tests that construct this repository directly without a
+  /// Realtime service — [loadParcelsForCity] simply skips the subscribe
+  /// call in that case, same "optional dependency, no-op if absent"
+  /// pattern as [holdingsApi].
+  final RealtimeSyncService? realtimeSyncService;
+  String? _activeCityId;
+  String? _activeCityName;
+  String? _activeDirectorate;
+  String? _activeAdministration;
+  AssociationType? _activeAssociationType;
+  String? _activeAssociationSubtype;
 
   List<Parcel> _parcels = <Parcel>[];
 
-  /// Path of the file whose edits are currently loaded — the key under
-  /// which corrections are persisted.
-  String? _activeFilePath;
+  /// Precomputed حائز/مالك name → holding lookup for الحدود navigation —
+  /// rebuilt (see [_rebuildBorderIndex]) every time [_parcels] changes so
+  /// [findByBorderText] never scans the dataset itself. See
+  /// [BorderNameIndex] for why this exists and how ambiguous names resolve.
+  BorderNameIndex _borderIndex = BorderNameIndex.empty();
 
-  /// Whether the active file's اسم الجمعية has already been confirmed by
-  /// the user (either just now, or on a previous load of the same file).
-  bool _associationNameConfirmed = false;
-
-  bool get associationNameNeedsConfirmation => !_associationNameConfirmed;
-
-  String? get activeAssociationName =>
-      _parcels.isNotEmpty ? _parcels.first.associationName : null;
-
-  /// Derives a default اسم الجمعية from a workbook file name, e.g.
-  /// `"شنشا_كامل.xlsx"` → `"شنشا"`, `"منشاه_الاخوه_كامل.xlsx"` →
-  /// `"منشاه الاخوه"`. Strips the extension and a trailing "كامل" segment.
-  static String deriveAssociationName(final String fileName) {
-    String name = fileName;
-    final int dot = name.lastIndexOf('.');
-    if (dot > 0) name = name.substring(0, dot);
-
-    final List<String> parts = name
-        .split('_')
-        .map((final String s) => s.trim())
-        .where((final String s) => s.isNotEmpty)
-        .toList();
-    if (parts.isNotEmpty && parts.last == 'كامل') {
-      parts.removeLast();
-    }
-    return parts.join(' ').trim();
-  }
+  /// Key under which the active city's local edit overlay is persisted —
+  /// `null` until a city has been loaded.
+  String? _activeEditsKey;
 
   /// Original (unedited) parcels by id, so edits can be reset.
   Map<String, Parcel> _originalById = <String, Parcel>{};
 
-  /// Per-parcel edit snapshots for the active file.
+  /// Per-parcel edit snapshots for the active city — unrelated to the write
+  /// strategy above, this is the overlay [resetParcel] reverts against and
+  /// that reapplies corrections on top of freshly-loaded server rows.
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
 
+  /// Fires whenever [_parcels] changes for a reason the currently-visible
+  /// UI wouldn't otherwise notice on its own — specifically, a Supabase
+  /// Realtime event applied via [applyRemoteChange]. Every local write in
+  /// this class already updates its own caller's state directly (e.g.
+  /// `updateParcel`'s caller sets its own `_parcels[idx]`), so this stream
+  /// only needs to exist for changes that originate *outside* any specific
+  /// screen's direct call, since `HomeCubit` isn't a singleton and may not
+  /// even be alive when a remote change arrives.
+  final StreamController<void> _remoteChangesController =
+      StreamController<void>.broadcast();
+
+  Stream<void> get onRemoteChange => _remoteChangesController.stream;
+
+  @override
   List<Parcel> get parcels => _parcels;
 
-  /// Picks a `.xlsx` file, copies it into app storage under a unique name,
-  /// records it in the file history, parses it (off the UI thread), and
-  /// makes it the active dataset.
-  Future<List<Parcel>> loadFromPickedFile() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: <String>['xlsx'],
-      withData: true,
-    );
-    final PlatformFile? picked = result?.files.single;
-    if (picked == null) {
-      throw const HoldingsFilePickCancelled();
-    }
-
-    final Uint8List bytes =
-        picked.bytes ?? await File(picked.path!).readAsBytes();
-    final List<Parcel> parsed = await compute(_parseHoldingsBytes, bytes);
-
-    final String fileName = picked.name;
-    final String cachedPath = await _cacheBytes(bytes, fileName);
-    await _rememberInHistory(
-      CachedFileEntry(
-        fileName: fileName,
-        filePath: cachedPath,
-        cachedAt: DateTime.now(),
-        holdingCount:
-            parsed.map((final Parcel p) => p.holdingId).toSet().length,
-      ),
-    );
-    await _setActivePath(cachedPath);
-
-    return _finalizeLoad(parsed, cachedPath, fileName);
-  }
-
-  /// Loads the previously active file, if any. Returns `null` when nothing
-  /// has been cached yet (caller should show the Empty state).
-  Future<List<Parcel>?> loadCachedFileIfAny() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? path = prefs.getString(_activeFilePathKey);
-    if (path == null) return null;
-    return _loadFromPath(path);
-  }
-
-  /// Switches the active dataset to a previously-loaded file from history.
-  Future<List<Parcel>> loadFromHistoryEntry(
-    final CachedFileEntry entry,
-  ) async {
-    final List<Parcel>? parsed = await _loadFromPath(entry.filePath);
-    if (parsed == null) {
-      throw const HoldingsFilePickCancelled();
-    }
-    await _setActivePath(entry.filePath);
-    return parsed;
-  }
-
-  Future<List<Parcel>?> _loadFromPath(final String path) async {
-    final File file = File(path);
-    if (!file.existsSync()) return null;
-
-    final Uint8List bytes = await file.readAsBytes();
-    final List<Parcel> parsed = await compute(_parseHoldingsBytes, bytes);
-    final String fileName = await _fileNameForPath(path);
-    return _finalizeLoad(parsed, path, fileName);
-  }
-
-  /// Looks up the original picked file name for a cached [path] from the
-  /// file history, falling back to the cache file's own basename.
-  Future<String> _fileNameForPath(final String path) async {
-    final List<CachedFileEntry> history = await getHistory();
-    for (final CachedFileEntry entry in history) {
-      if (entry.filePath == path) return entry.fileName;
-    }
-    return path.split(Platform.pathSeparator).last;
-  }
-
-  /// Assigns stable ids, resolves اسم الجمعية (a saved override, or derived
-  /// from [fileName]), remembers the originals, and overlays any saved
-  /// edits for [filePath] before exposing the dataset.
-  Future<List<Parcel>> _finalizeLoad(
-    final List<Parcel> parsed,
-    final String filePath,
-    final String fileName,
-  ) async {
-    _activeFilePath = filePath;
-
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? override = prefs.getString(_associationNameKey(filePath));
-    _associationNameConfirmed = override != null;
-    final String associationName = override ?? deriveAssociationName(fileName);
-
-    final List<Parcel> withIds = <Parcel>[
-      for (var i = 0; i < parsed.length; i++)
-        parsed[i].copyWith(id: i.toString(), associationName: associationName),
-    ];
+  /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
+  /// dataset, keyed by [cityId] for local edit persistence. Local edits
+  /// made after this call reapply on the next load from cache.
+  /// [associationType]/[associationSubtype] come straight from the
+  /// `CitySnapshot` (itself read from `cities.association_type`/
+  /// `association_subtype`) — never re-derived from [parcels].
+  Future<List<Parcel>> loadParcelsForCity(
+    final String cityId,
+    final List<Parcel> parcels, {
+    final String? cityName,
+    final String? directorate,
+    final String? administration,
+    final AssociationType? associationType,
+    final String? associationSubtype,
+  }) async {
+    final String key = 'city::$cityId';
+    _activeEditsKey = key;
+    _activeCityId = cityId;
+    _activeCityName = cityName ?? _activeCityName;
+    _activeDirectorate = directorate ?? _activeDirectorate;
+    _activeAdministration = administration ?? _activeAdministration;
+    _activeAssociationType = associationType;
+    _activeAssociationSubtype = associationSubtype;
     _originalById = <String, Parcel>{
-      for (final Parcel p in withIds) p.id: p,
+      for (final Parcel p in parcels) p.id: p,
     };
-    _edits = await _editsStore.load(filePath);
-    _parcels = withIds.map(_applyEdit).toList();
+    _edits = await _editsStore.load(key);
+    _parcels = parcels.map(_applyEdit).toList();
+    _rebuildBorderIndex();
+    // Realtime tracks exactly one active city, same as this repository —
+    // re-subscribing here (rather than at the CityPickerCubit call site)
+    // means it also fires for a cache-loaded city at app start, not just a
+    // fresh download.
+    realtimeSyncService?.subscribeToCity(cityId);
     return _parcels;
   }
 
-  /// Confirms (or corrects) the active file's اسم الجمعية, persists it so
-  /// this file won't need re-confirming next time it's loaded, and stamps
-  /// it onto every currently-loaded parcel.
-  Future<void> confirmAssociationName(final String name) async {
-    final String trimmed = name.trim();
-    if (trimmed.isEmpty) return;
+  /// Rebuilds [_borderIndex] from the current [_parcels] — called any time
+  /// [_parcels] is reassigned (city load, add/edit/bulk-edit) so الحدود
+  /// navigation always reflects the latest حائز/مالك names without ever
+  /// scanning the dataset at lookup time. O(n) like the reassignment itself
+  /// it accompanies, so it adds no new order-of-growth cost to those calls.
+  void _rebuildBorderIndex() {
+    _borderIndex = BorderNameIndex.build(_parcels);
+  }
 
-    if (_activeFilePath != null) {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_associationNameKey(_activeFilePath!), trimmed);
+  /// The active city's جمعية system, read from `cities.association_type` —
+  /// `null` until a city is loaded or if the dashboard hasn't set it yet.
+  AssociationType? get activeAssociationType => _activeAssociationType;
+
+  /// The active city's free-text association_subtype (e.g. ملك/أوقاف or one
+  /// of the three إصلاح variants) — `null` until a city is loaded or if
+  /// unset in the database.
+  String? get activeAssociationSubtype => _activeAssociationSubtype;
+
+  /// Whether نوع الائتمان should be hidden everywhere in the UI — true only
+  /// for a confirmed الإصلاح الزراعي city. `null` (type not set in the DB
+  /// yet) shows the field rather than risk hiding one that might matter —
+  /// same "never hide on an unknown" philosophy the old detection-miss
+  /// fallback used.
+  bool get hideCreditType =>
+      _activeAssociationType == AssociationType.agriculturalReform;
+
+  /// The default association name (اسم الجمعية) from the active city's
+  /// dataset — used to auto-populate this field for new records so they're
+  /// consistent. Returns the first non-empty association name found, or
+  /// `null` if none exist in the active dataset.
+  String? get defaultAssociationName {
+    for (final Parcel p in _parcels) {
+      if (p.associationName?.trim().isNotEmpty ?? false) {
+        return p.associationName;
+      }
     }
-    _associationNameConfirmed = true;
+    return null;
+  }
+
+  /// Re-downloads the active city and adopts the fresh data — the detail
+  /// screen's pull-to-refresh. Under online-first there is no pending-write
+  /// queue to flush; this simply re-syncs the local cache with the server,
+  /// same "re-fetch, then adopt" shape as `HomeCubit.refreshActiveCity`.
+  /// No-op if no city is active.
+  Future<void> syncNow() async {
+    final String? cityId = _activeCityId;
+    final String? cityName = _activeCityName;
+    if (cityId == null || cityName == null) return;
+
+    final CityRepository cityRepository = GetIt.instance<CityRepository>();
+    final int remoteVersion = await cityRepository.remoteDataVersion(cityId);
+    final City city = City(
+      id: cityId,
+      name: cityName,
+      status: CityStatus.published,
+      dataVersion: remoteVersion,
+      directorate: _activeDirectorate,
+      administration: _activeAdministration,
+      associationType: _activeAssociationType,
+      associationSubtype: _activeAssociationSubtype,
+    );
+    final fresh = await cityRepository.downloadCity(city);
+    await loadParcelsForCity(
+      fresh.cityId,
+      fresh.parcels,
+      cityName: fresh.cityName,
+      directorate: fresh.directorate,
+      administration: fresh.administration,
+      associationType: fresh.associationType,
+      associationSubtype: fresh.associationSubtype,
+    );
+  }
+
+  /// Adds a brand-new record created in the field — either a new person
+  /// ([parentHoldingId] `null`) or a new parcel for an existing person
+  /// ([parentHoldingId] set to that person's `Parcel.id`). Awaits the
+  /// Supabase insert first; [_parcels] is only mutated once the server has
+  /// confirmed the write, so a failed write leaves the in-memory dataset
+  /// untouched and propagates the exception to the caller.
+  ///
+  /// Does nothing (returns `null`) if no city is active.
+  Future<Parcel?> addLocalParcel(
+    final Parcel parcel, {
+    final String? parentHoldingId,
+  }) async {
+    final String? cityId = _activeCityId;
+    if (cityId == null) return null;
+
+    final Parcel? parent = parentHoldingId == null
+        ? null
+        : _parcels.cast<Parcel?>().firstWhere(
+            (final Parcel? p) => p?.id == parentHoldingId,
+            orElse: () => null);
+
+    // A sibling parcel added under a still-pending person (no real رقم
+    // الحيازة yet) must join the *same* pending group as its parent —
+    // otherwise Parcel.groupKey (keyed on each parcel's own id while
+    // pending) would treat it as an unrelated new person. Not needed once
+    // the parent has a real holdingId: groupKey already equals holdingId
+    // for both in that case.
+    final String? pendingGroupId = (parent != null && parent.isHoldingIdPending)
+        ? (parent.pendingGroupId ?? parent.id)
+        : null;
+
+    final Parcel withId = parcel.copyWith(
+      id: _uuid.v4(),
+      pendingGroupId: pendingGroupId,
+      isFieldAdded: true,
+    );
+
+    // `added_holdings.parent_holding_id` is a foreign key into the
+    // canonical `holdings` table, not into `added_holdings` — it's only
+    // ever valid once a record has been reviewed/promoted server-side.
+    // `parent.isFieldAdded` (durable, persisted on every parcel — set here
+    // and in the row mappers) is true for exactly the parcels whose `id`
+    // lives in `added_holdings`, not `holdings`: `downloadHoldings` only
+    // ever fetches unpromoted `added_holdings` rows (`promoted_holding_id
+    // is null`), so a promoted record is never re-delivered as
+    // `isFieldAdded: true` — it arrives as an ordinary `holdings` row
+    // instead. Sending an `added_holdings.id` as `parent_holding_id` would
+    // be rejected with a permanent FK violation, so it's sent as `null`
+    // instead — same as a brand-new person with no known parent.
+    final String? safeParentHoldingId =
+        (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
+
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+    final String? promotedHoldingId = await holdingsApi?.addRecord(
+      id: withId.id,
+      cityId: cityId,
+      record: parcelToAddedHoldingsRecord(withId),
+      parentHoldingId: safeParentHoldingId,
+      createdByUserId: currentUserId,
+    );
+
+    // `added_holdings_auto_approve` (a DB trigger) promotes every new
+    // record into `holdings` synchronously, in the same transaction as the
+    // insert above — so by the time `addRecord` returns, the row this
+    // client just created has *already* been superseded by a `holdings`
+    // row. Reflecting that immediately (rather than waiting on Realtime to
+    // deliver the trigger's own INSERT/UPDATE events and reconcile them)
+    // is what avoids the person briefly appearing under its pre-promotion
+    // id before "moving" to a different-looking entry once Realtime
+    // catches up. Every field is already known client-side (it's exactly
+    // what was just submitted) — no extra round-trip fetch needed, just
+    // swap the id and flip `isFieldAdded` to match a `holdings`-origin row.
+    final Parcel finalParcel = promotedHoldingId == null
+        ? withId
+        : withId.copyWith(id: promotedHoldingId, isFieldAdded: false);
+
+    // Keep عدد القطع في الحيازة consistent across every parcel that shares
+    // this holding — the new parcel's count already reflects the total
+    // (set by the caller), so every sibling parcel is bumped to match it.
+    if (parent != null) {
+      _parcels = <Parcel>[
+        for (final Parcel p in _parcels)
+          if (p.groupKey == parent.groupKey)
+            p.copyWith(holdingsCount: finalParcel.holdingsCount)
+          else
+            p,
+      ];
+    }
+
+    _parcels = <Parcel>[..._parcels, finalParcel];
+    _originalById[finalParcel.id] = finalParcel;
+    _rebuildBorderIndex();
+    return finalParcel;
+  }
+
+  /// Deletes a field-created record from the server (`added_holdings`) and
+  /// drops it from the in-memory dataset once the delete is confirmed.
+  /// Returns `false` without touching the server if [id] isn't in the
+  /// active dataset or isn't a field-added record — part of the
+  /// authoritative `holdings` import, which this app never deletes.
+  /// Propagates the exception on a failed server delete rather than
+  /// mutating local state.
+  Future<bool> deleteLocalParcel(final String id) async {
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == id);
+    if (idx < 0) return false;
+    final Parcel removed = _parcels[idx];
+    if (!removed.isFieldAdded) return false;
+
+    await holdingsApi?.deleteAddedHolding(id);
+
     _parcels = <Parcel>[
-      for (final Parcel p in _parcels) p.copyWith(associationName: trimmed),
+      for (final Parcel p in _parcels)
+        if (p.id != id)
+          // Mirrors addLocalParcel's bump: undo it for any sibling parcel
+          // still sharing this holding.
+          (p.groupKey == removed.groupKey && p.holdingsCount != null)
+              ? p.copyWith(holdingsCount: p.holdingsCount! - 1)
+              : p,
     ];
-    _originalById = <String, Parcel>{
-      for (final MapEntry<String, Parcel> e in _originalById.entries)
-        e.key: e.value.copyWith(associationName: trimmed),
-    };
+    _originalById.remove(id);
+    _edits.remove(id);
+    if (_activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
+    }
+    _rebuildBorderIndex();
+    return true;
   }
 
-  Parcel _applyEdit(final Parcel p) {
-    final Map<String, dynamic>? e = _edits[p.id];
-    if (e == null) return p;
-    return Parcel.fromEditableJson(p, e);
-  }
+  Parcel _applyEdit(final Parcel p) => _editOverlay.apply(p, _edits[p.id]);
 
-  Map<String, dynamic> _snapshot(final Parcel p) => p.toEditableJson();
-
-  /// Persists an edited parcel and reflects it in the in-memory dataset so
-  /// search, detail, and border navigation immediately use the new values.
+  /// Persists an edited parcel — awaits the Supabase `holding_edits` insert
+  /// first, and only reflects the change in [_parcels]/[_edits] once the
+  /// server has confirmed it, so search/detail/border navigation never show
+  /// a state the server hasn't accepted.
+  @override
   Future<void> updateParcel(final Parcel edited) async {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == edited.id);
     if (idx < 0) return;
+    final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
+
+    final String? cityId = _activeCityId;
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+    if (cityId != null) {
+      await holdingsApi?.editHolding(
+        holdingId: edited.id,
+        cityId: cityId,
+        payload: snapshot,
+        editedByUserId: currentUserId,
+      );
+    }
+
     _parcels[idx] = edited;
-    _edits[edited.id] = _snapshot(edited);
-    if (_activeFilePath != null) {
-      await _editsStore.save(_activeFilePath!, _edits);
+    // A single-field edit can change حائز/مالك name — rebuild so a fresh
+    // الحدود lookup elsewhere in the city sees the update immediately.
+    _rebuildBorderIndex();
+    _edits[edited.id] = snapshot;
+    if (_activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
     }
   }
 
+  /// Marks [parcelId] reviewed/un-reviewed — awaits the Supabase column
+  /// UPDATE first, only reflecting it in [_parcels] once confirmed. Unlike
+  /// [updateParcel] this never touches [_edits]/[ParcelEditsStore]: reviewed
+  /// status is not part of the editable-field overlay.
+  Future<Parcel?> setParcelReviewed(
+    final String parcelId, {
+    required final bool reviewed,
+  }) async {
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcelId);
+    if (idx < 0) return null;
+
+    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
+    final String? currentUserId = GetIt.instance<AuthRepository>().currentUser?.id;
+    final bool isFieldAdded = _parcels[idx].isFieldAdded;
+
+    await holdingsApi?.markReviewed(
+      parcelId: parcelId,
+      isFieldAdded: isFieldAdded,
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedByUserId: currentUserId ?? '',
+    );
+
+    final Parcel updated = _parcels[idx].copyWith(
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedBy: reviewed ? currentUserId : null,
+    );
+    _parcels[idx] = updated;
+    _originalById[parcelId] = (_originalById[parcelId] ?? updated).copyWith(
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedBy: reviewed ? currentUserId : null,
+    );
+    return updated;
+  }
+
   /// Reverts a parcel to its original parsed values.
+  @override
   Future<void> resetParcel(final String id) async {
     final Parcel? original = _originalById[id];
     if (original == null) return;
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == id);
     if (idx >= 0) _parcels[idx] = original;
     _edits.remove(id);
-    if (_activeFilePath != null) {
-      await _editsStore.save(_activeFilePath!, _edits);
+    if (_activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
     }
+  }
+
+  /// Patches a single parcel arriving from a Supabase Realtime `holdings`/
+  /// `added_holdings` INSERT or UPDATE event (already mapped to a [Parcel]
+  /// by `holdingRowToParcel`/`addedHoldingRowToParcel` — this method does no
+  /// parsing of its own). Replaces the parcel by id if it already exists in
+  /// [_parcels], or appends it if this is the first this device has seen of
+  /// it (e.g. another device just added it). [_originalById] is always
+  /// updated to the new server-confirmed value, since it represents "what
+  /// the server has" for [resetParcel] purposes regardless of what's shown.
+  ///
+  /// Does nothing if no city is active or [updated] belongs to a different
+  /// city than the one currently loaded — a stray event from a
+  /// slow-to-unsubscribe previous city's channel should never mutate the
+  /// dataset the user is currently looking at.
+  ///
+  /// No longer guards against a stale/racing Realtime echo clobbering a
+  /// fresher local `reviewed*` write (the previous `_pendingReviewedAt`
+  /// mechanism): under online-first every local write only reaches
+  /// [_parcels] after the server has already confirmed it (see
+  /// [setParcelReviewed]), so there is no more "ahead of the server" window
+  /// for an out-of-order echo to race against — by the time this device's
+  /// own write lands locally, the server already has that exact value.
+  ///
+  /// [Parcel.pendingGroupId] IS still a case that needs guarding, though —
+  /// unlike `reviewed*`, it has no column anywhere in `holdings`/
+  /// `added_holdings`, so `holdingRowToParcel`/`addedHoldingRowToParcel`
+  /// (and therefore [updated], which always comes from one of those two
+  /// mappers) can never carry it; it only ever exists as client-side
+  /// bookkeeping set once by [addLocalParcel]. Blindly replacing the
+  /// existing entry with [updated] would silently null out a sibling
+  /// parcel's `pendingGroupId` the moment this device's own INSERT/UPDATE
+  /// echoes back over Realtime, un-grouping it from the pending person it
+  /// was just correctly grouped with. Preserving the existing local value
+  /// here is what keeps that grouping intact across the echo.
+  void applyRemoteChange(final Parcel updated) {
+    if (_activeCityId == null) return;
+
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
+    final Parcel updatedWithGroup = idx >= 0
+        ? updated.copyWith(pendingGroupId: _parcels[idx].pendingGroupId)
+        : updated;
+
+    _originalById[updated.id] = updatedWithGroup;
+    final Parcel toShow = _applyEdit(updatedWithGroup);
+    if (idx >= 0) {
+      _parcels[idx] = toShow;
+    } else {
+      _parcels = <Parcel>[..._parcels, toShow];
+    }
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
+  }
+
+  /// Merges a `holding_edits` INSERT event's payload (a `toEditableJson`-
+  /// shaped map, same as [ParcelEditOverlay.snapshot] produces) onto the
+  /// parcel's current original value.
+  ///
+  /// Still skips applying the event if this device has its own edit for
+  /// [holdingId] in [_edits] (`_edits.containsKey`) — kept deliberately
+  /// rather than removed, even though the specific race it was written for
+  /// (an offline-first local write staying authoritative until it synced)
+  /// no longer exists. The remaining reason: `updateParcel` writes to
+  /// [_edits] and awaits the Supabase insert in the same call, but the
+  /// Realtime echo of that exact insert can still arrive back at this
+  /// device (via [applyRemoteEdit]) essentially concurrently with
+  /// `updateParcel`'s own local mutation completing — both derive from
+  /// [_originalById], and re-merging the echo on top of an [_edits] entry
+  /// that already reflects the *newer* full snapshot risks re-deriving a
+  /// value that's momentarily stale relative to what's already on screen
+  /// (e.g. if a second edit landed between the first insert and its echo
+  /// arriving). Skipping when [_edits] already has an entry for this
+  /// holding is a safe, cheap guard against that same-device echo
+  /// clobbering newer local state — it does not skip a genuine remote
+  /// correction from another device for a holding this device has never
+  /// edited, since [_edits] would be empty for that holding.
+  void applyRemoteEdit(final String holdingId, final Map<String, dynamic> payload) {
+    if (_activeCityId == null) return;
+    if (_edits.containsKey(holdingId)) return;
+
+    final Parcel? original = _originalById[holdingId];
+    if (original == null) return;
+
+    final Parcel merged = _editOverlay.apply(original, payload);
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == holdingId);
+    if (idx < 0) return;
+    _parcels[idx] = merged;
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
+  }
+
+  /// Removes a parcel from the active dataset in response to a Supabase
+  /// Realtime DELETE event — a holding marked stale, or an `added_holdings`
+  /// row rejected/deleted server-side. No-op if [id] isn't in the active
+  /// dataset (e.g. a stray event for a different city).
+  void applyRemoteDelete(final String id) {
+    if (_activeCityId == null) return;
+    final int before = _parcels.length;
+    _parcels = <Parcel>[
+      for (final Parcel p in _parcels)
+        if (p.id != id) p,
+    ];
+    if (_parcels.length == before) return;
+    _originalById.remove(id);
+    _rebuildBorderIndex();
+    _remoteChangesController.add(null);
   }
 
   bool isParcelEdited(final String id) => _edits.containsKey(id);
 
-  Future<String> _cacheBytes(
-    final Uint8List bytes,
-    final String originalFileName,
-  ) async {
-    final Directory docsDir = await getApplicationDocumentsDirectory();
-    final Directory cacheDir = Directory(
-      '${docsDir.path}/$_cacheDirName',
-    );
-    if (!cacheDir.existsSync()) {
-      cacheDir.createSync(recursive: true);
-    }
-
-    final String safeName = originalFileName.replaceAll(
-      RegExp(r'[^\w.\-؀-ۿ]'),
-      '_',
-    );
-    final String uniqueName =
-        '${DateTime.now().millisecondsSinceEpoch}_$safeName';
-    final File cached = File('${cacheDir.path}/$uniqueName');
-    await cached.writeAsBytes(bytes, flush: true);
-    return cached.path;
-  }
-
-  Future<void> _setActivePath(final String path) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_activeFilePathKey, path);
-  }
-
-  Future<void> _rememberInHistory(final CachedFileEntry entry) async {
-    final List<CachedFileEntry> history = await getHistory();
-
-    // Replace any earlier entry for the same file name so re-picking the
-    // same workbook doesn't accumulate duplicate cached copies.
-    CachedFileEntry? previous;
-    for (final CachedFileEntry e in history) {
-      if (e.fileName == entry.fileName) {
-        previous = e;
-        break;
-      }
-    }
-    if (previous != null) {
-      history.remove(previous);
-      final File oldFile = File(previous.filePath);
-      if (oldFile.existsSync() && previous.filePath != entry.filePath) {
-        await oldFile.delete();
-      }
-    }
-
-    history.insert(0, entry);
-    while (history.length > _maxHistoryEntries) {
-      final CachedFileEntry removed = history.removeLast();
-      final File removedFile = File(removed.filePath);
-      if (removedFile.existsSync()) {
-        await removedFile.delete();
-      }
-    }
-
-    await _saveHistory(history);
-  }
-
-  /// All previously loaded files, most recently added first.
-  Future<List<CachedFileEntry>> getHistory() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? raw = prefs.getString(_historyKey);
-    if (raw == null || raw.isEmpty) return <CachedFileEntry>[];
-
-    final List<dynamic> decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map(
-          (final dynamic e) =>
-              CachedFileEntry.fromJson(e as Map<String, dynamic>),
-        )
-        .toList();
-  }
-
-  /// Removes a stale history entry (e.g. its cached file was deleted
-  /// outside the app) without touching the currently active dataset.
-  Future<void> removeHistoryEntry(final CachedFileEntry entry) async {
-    final List<CachedFileEntry> history = await getHistory();
-    history.removeWhere(
-      (final CachedFileEntry e) => e.filePath == entry.filePath,
-    );
-    await _saveHistory(history);
-  }
-
-  Future<void> _saveHistory(final List<CachedFileEntry> history) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String encoded = jsonEncode(
-      history.map((final CachedFileEntry e) => e.toJson()).toList(),
-    );
-    await prefs.setString(_historyKey, encoded);
-  }
+  /// The pre-edit value of the parcel [id] — either the originally
+  /// downloaded row, or (for a field-added record) the value at the moment
+  /// it was created. `null` if [id] isn't in the active dataset. Used to
+  /// drive per-field "معدلة" indicators by comparing each field against
+  /// its own original value, rather than only knowing *that* something on
+  /// the parcel changed (see `isParcelEdited`).
+  Parcel? originalParcel(final String id) => _originalById[id];
 
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole
-  /// dataset — narrowing the scope keeps fuzzy matching fast on large files.
-  List<SearchResult> search(final String query, {final String? basin}) {
-    final List<Parcel> scope = basin == null
-        ? _parcels
-        : _parcels.where((final Parcel p) => p.basinName == basin).toList();
-    return _searchService.search(scope, query);
-  }
+  /// dataset — narrowing the scope keeps matching fast on large cities.
+  @override
+  List<SearchResult> search(final String query, {final String? basin}) =>
+      _queryService.search(_parcels, query, basin: basin);
 
   /// Distinct اسم الحوض values in the active dataset, sorted.
-  List<String> get availableBasins {
-    final Set<String> basins = <String>{};
-    for (final Parcel p in _parcels) {
-      final String? name = p.basinName?.trim();
-      if (name != null && name.isNotEmpty) basins.add(name);
-    }
-    final List<String> sorted = basins.toList()..sort();
-    return sorted;
-  }
+  @override
+  List<String> get availableBasins => _queryService.availableBasins(_parcels);
 
   /// Distinct-holding count per اسم الحوض — how many holdings sit in each
   /// basin, shown beside the basin filter/status views.
-  Map<String, int> get basinHoldingCounts {
-    final Map<String, Set<String>> holdingsByBasin = <String, Set<String>>{};
-    for (final Parcel p in _parcels) {
-      final String? name = p.basinName?.trim();
-      if (name == null || name.isEmpty) continue;
-      holdingsByBasin.putIfAbsent(name, () => <String>{}).add(p.holdingId);
-    }
-    return <String, int>{
-      for (final MapEntry<String, Set<String>> e in holdingsByBasin.entries)
-        e.key: e.value.length,
-    };
-  }
+  @override
+  Map<String, int> get basinHoldingCounts =>
+      _queryService.basinHoldingCounts(_parcels);
 
+  @override
   List<Parcel> parcelsForHolding(final String holdingId) =>
-      _parcels.where((final Parcel p) => p.holdingId == holdingId).toList();
+      _queryService.parcelsForHolding(_parcels, holdingId);
+
+  @override
+  Parcel? findByBorderText(final String? borderText) =>
+      _queryService.findByBorderText(_borderIndex, borderText);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
-  /// [basin] (only parcels whose اسم الحوض matches). Returns how many
-  /// parcels were changed, for user feedback.
-  Future<int> bulkApplyField({
+  /// [basin] (only parcels whose اسم الحوض matches). Awaits each row's
+  /// Supabase insert directly (no outbox), continuing past a per-row
+  /// failure rather than aborting the whole batch — a bulk edit spans many
+  /// independent holdings, so one failure shouldn't silently discard
+  /// progress on the rest. Returns how many rows succeeded and how many
+  /// failed, for the caller to report a mixed result.
+  @override
+  Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
   }) async {
-    int changed = 0;
-    for (var i = 0; i < _parcels.length; i++) {
-      final Parcel p = _parcels[i];
-      if (basin != null && p.basinName != basin) continue;
+    final BulkEditResult result = _bulkEditService.apply(
+      _parcels,
+      field: field,
+      value: value,
+      basin: basin,
+    );
 
-      final Parcel updated = switch (field) {
-        BulkEditableField.cropType => p.copyWith(cropType: value as String?),
-        BulkEditableField.notes => p.copyWith(notes: value as String?),
-        BulkEditableField.creditType => p.copyWith(creditType: value as String),
-        BulkEditableField.usageType => p.copyWith(usageType: value as String),
-        BulkEditableField.isInheritance =>
-          p.copyWith(isInheritance: value as bool),
-      };
-      _parcels[i] = updated;
-      _edits[updated.id] = updated.toEditableJson();
-      changed++;
+    if (result.changedCount == 0) {
+      return const BulkEditOutcome(succeeded: 0, failed: 0);
     }
-    if (changed > 0 && _activeFilePath != null) {
-      await _editsStore.save(_activeFilePath!, _edits);
+
+    final String? cityId = _activeCityId;
+    final String currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
+
+    final List<Parcel> nextParcels = <Parcel>[];
+    int succeeded = 0;
+    int failed = 0;
+    for (final Parcel p in result.parcels) {
+      final bool inScope = basin == null || p.basinName == basin;
+      if (!inScope) {
+        nextParcels.add(p);
+        continue;
+      }
+      final Map<String, dynamic> snapshot = _editOverlay.snapshot(p);
+      try {
+        if (cityId != null) {
+          await holdingsApi?.editHolding(
+            holdingId: p.id,
+            cityId: cityId,
+            payload: snapshot,
+            editedByUserId: currentUserId,
+          );
+        }
+        _edits[p.id] = snapshot;
+        nextParcels.add(p);
+        succeeded++;
+      } catch (_) {
+        // Row failed — keep its pre-bulk-edit value both on screen and in
+        // [_edits] rather than a value the server never confirmed.
+        nextParcels.add(_originalById[p.id] != null ? _applyEdit(p) : p);
+        failed++;
+      }
     }
-    return changed;
+
+    _parcels = nextParcels;
+    // Defensive: no `BulkEditableField` touches حائز/مالك today, but
+    // rebuilding here is O(n) same as the reassignment above and keeps
+    // this repository from silently drifting out of sync if that ever
+    // changes, without needing every future field to remember this rule.
+    _rebuildBorderIndex();
+    if (succeeded > 0 && _activeEditsKey != null) {
+      await _editsStore.save(_activeEditsKey!, _edits);
+    }
+    return BulkEditOutcome(succeeded: succeeded, failed: failed);
   }
-}
-
-class HoldingsFilePickCancelled implements Exception {
-  const HoldingsFilePickCancelled();
 }

@@ -1,7 +1,7 @@
 name: hiyaza_finder
 description: "A new Flutter project."
 publish_to: "none"
-version: 1.0.3+4
+version: 1.0.9+9
 
 # ----------------------------------------------------------------
 # ENVIRONMENT
@@ -16,55 +16,47 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # --- Firebase ---
-  firebase_core: any
-  firebase_auth: any
-  cloud_firestore: any
-  firebase_storage: any
-
   # --- Supabase ---
-  supabase_flutter: any
+  supabase_flutter: ^2.16.0
 
   # --- State Management ---
-  bloc: any
-  flutter_bloc: any
-  hydrated_bloc: any
+  bloc: ^9.2.1
+  flutter_bloc: ^9.1.1
+  hydrated_bloc: ^11.0.0
 
   # --- Networking ---
-  dio: any
+  dio: ^5.10.0
 
   # --- Storage & Preferences ---
-  flutter_secure_storage: any
-  shared_preferences: any
-  path_provider: any
+  flutter_secure_storage: ^10.3.1
+  shared_preferences: ^2.5.5
+  path_provider: ^2.1.6
 
   # --- Dependency Injection ---
-  get_it: any
+  get_it: ^9.2.1
 
   # --- Localization ---
-  easy_localization: any
+  easy_localization: ^3.0.8
 
   # --- UI & Design ---
-  cupertino_icons: any
-  google_fonts: any
-  flutter_screenutil: any
-  flutter_native_splash: any
+  cupertino_icons: ^1.0.9
+  google_fonts: ^8.1.0
+  flutter_screenutil: ^5.9.3
+  flutter_native_splash: ^2.4.4
   flutter_animate: ^4.5.2
 
   # --- Utilities ---
-  rename: any
-  internet_connection_checker: any
-  equatable: any
+  rename: ^3.1.0
+  internet_connection_checker: ^3.0.1
+  equatable: ^2.1.0
   url_launcher: ^6.3.2
   flutter_svg: ^2.2.4
-
-  # --- Excel / Search ---
-  file_picker: ^8.1.4
-  spreadsheet_decoder: ^2.3.0
+  uuid: ^4.5.1
 
   # --- Voice Search (Android only) ---
-  speech_to_text: any
-  permission_handler: any
+  speech_to_text: ^7.4.0
+  permission_handler: ^12.0.3
+  flutter_dotenv: ^6.0.1
 
 # ----------------------------------------------------------------
 # DEV DEPENDENCIES
@@ -72,13 +64,13 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: any
-  test: any
-  mockito: any
-  build_runner: any
+  flutter_lints: ^6.0.0
+  test: ^1.31.0
+  mockito: ^5.6.4
+  build_runner: ^2.15.1
   flutter_launcher_icons: ^0.14.4
-  # Used only by tests to synthesize sample .xlsx fixtures.
-  excel: any
+  path_provider_platform_interface: ^2.1.2
+  plugin_platform_interface: ^2.1.8
 
 # ----------------------------------------------------------------
 # FLUTTER SETTINGS
@@ -91,7 +83,7 @@ flutter:
     - assets/images/
     - assets/svgs/
     - assets/lang/
-
+    - .env
   # --- Fonts ---
   fonts:
     - family: Manrope

@@ -21,17 +21,13 @@ class AppConfig {
     'APP_NAME',
     defaultValue: 'HiyazaFinder Dev',
   );
-  static const String appVersion = '1.0.5';
-  static const String buildNumber = '5';
+  static const String appVersion = '1.0.9';
+  static const String buildNumber = '9';
 
   // Developer Info
   static const String developerName = 'Mustafa Elbaz';
   static const String developerGithub = 'https://github.com/mustafaelbaz5';
-  static const String developerProfile =
-      'https://mustafa-portfolio-eight.vercel.app/';
-  static const String developerLinkedIn =
-      'https://www.linkedin.com/in/mustafa-elbaz-725a6631a';
+  static const String developerProfile = 'https://mustafa-portfolio-eight.vercel.app/';
+  static const String developerLinkedIn = 'https://www.linkedin.com/in/mustafa-elbaz-725a6631a';
   static const String developerEmail = 'm9stafa05@gmail.com';
-
-
 }

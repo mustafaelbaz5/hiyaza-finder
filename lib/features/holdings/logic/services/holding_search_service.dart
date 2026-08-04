@@ -1,18 +1,31 @@
-import '../../data/models/parcel.dart';
+import '../../domain/entities/parcel.dart';
 import 'arabic_normalizer.dart';
 
 class SearchResult {
   const SearchResult({
     required this.holdingId,
+    required this.groupKey,
     required this.holderName,
     required this.parcelCount,
     required this.score,
+    this.reviewedCount = 0,
   });
 
+  /// رقم الحيازة as shown to the user — may be a shared placeholder
+  /// ("" or "-") for a pending record. Display only; use [groupKey] to
+  /// look up this holding's parcels.
   final String holdingId;
+
+  /// What actually identifies this result — see `Parcel.groupKey`.
+  final String groupKey;
   final String? holderName;
   final int parcelCount;
   final int score;
+
+  /// How many of this group's parcels are reviewed. `parcelCount ==
+  /// reviewedCount` means "fully done", `0` means "not started", anything
+  /// between is "partial".
+  final int reviewedCount;
 }
 
 /// Numeric queries rank by holding-ID prefix/contains match. Text queries
@@ -52,29 +65,69 @@ class HoldingSearchService {
     final String query = rawQuery.trim();
     if (query.isEmpty) return const <SearchResult>[];
 
-    final List<_ScoredParcel> scored = _digitsOnly.hasMatch(query)
-        ? _scoreByHoldingId(parcels, query)
-        : _scoreByHolderName(parcels, query);
+    // Parcel-id matching always runs alongside whichever of the two
+    // existing branches applies — a query can't be reliably classified as
+    // "id-shaped" up front (a uuid fragment like "123" is digits-only, and
+    // a fragment like "a3f" is neither digits-only nor a plausible name
+    // token), so instead of a three-way mutually-exclusive dispatch, id
+    // results are simply concatenated in; _groupAndRank already collapses
+    // to the best score per groupKey regardless of which matcher produced
+    // it.
+    final List<_ScoredParcel> scored = <_ScoredParcel>[
+      ...(_digitsOnly.hasMatch(query)
+          ? _scoreByHoldingId(parcels, query)
+          : _scoreByHolderName(parcels, query)),
+      ..._scoreByParcelId(parcels, query),
+    ];
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
+    final Map<String, int> reviewedCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
-      parcelCountsByHolding[parcel.holdingId] =
-          (parcelCountsByHolding[parcel.holdingId] ?? 0) + 1;
+      parcelCountsByHolding[parcel.groupKey] =
+          (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      if (parcel.reviewed) {
+        reviewedCountsByHolding[parcel.groupKey] =
+            (reviewedCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      }
     }
 
-    return _groupAndRank(scored, parcelCountsByHolding);
+    return _groupAndRank(scored, parcelCountsByHolding, reviewedCountsByHolding);
   }
 
+  /// Exact match only — a digits-only query must equal رقم الحيازة exactly,
+  /// not merely contain/start with it (searching "2" must not return every
+  /// holding whose number happens to contain a "2"). [Parcel.holdingId] is
+  /// trimmed defensively before comparing, mirroring the same precedent in
+  /// [Parcel.isHoldingIdPending] — it's never guaranteed pre-trimmed at
+  /// storage time. No leading-zero stripping on either side: holding
+  /// numbers like "001117" are opaque strings, not parsed integers.
   List<_ScoredParcel> _scoreByHoldingId(
     final List<Parcel> parcels,
     final String query,
   ) {
     final List<_ScoredParcel> results = <_ScoredParcel>[];
     for (final Parcel parcel in parcels) {
-      final String id = parcel.holdingId;
-      if (id.startsWith(query)) {
+      if (parcel.holdingId.trim() == query) {
         results.add(_ScoredParcel(parcel, 100));
-      } else if (id.contains(query)) {
+      }
+    }
+    return results;
+  }
+
+  /// Matches [Parcel.id] (the stable cross-system uuid) case-insensitively
+  /// — lets a field worker paste/type a full or partial parcel id (copied
+  /// from the detail card's ID chip) to jump straight to it.
+  List<_ScoredParcel> _scoreByParcelId(
+    final List<Parcel> parcels,
+    final String query,
+  ) {
+    final String q = query.toLowerCase();
+    final List<_ScoredParcel> results = <_ScoredParcel>[];
+    for (final Parcel parcel in parcels) {
+      final String id = parcel.id.toLowerCase();
+      if (id.startsWith(q)) {
+        results.add(_ScoredParcel(parcel, 100));
+      } else if (id.contains(q)) {
         results.add(_ScoredParcel(parcel, 50));
       }
     }
@@ -122,13 +175,14 @@ class HoldingSearchService {
   List<SearchResult> _groupAndRank(
     final List<_ScoredParcel> scored,
     final Map<String, int> parcelCountsByHolding,
+    final Map<String, int> reviewedCountsByHolding,
   ) {
     final Map<String, _ScoredParcel> bestByHolding = <String, _ScoredParcel>{};
     for (final _ScoredParcel entry in scored) {
-      final String id = entry.parcel.holdingId;
-      final _ScoredParcel? existing = bestByHolding[id];
+      final String key = entry.parcel.groupKey;
+      final _ScoredParcel? existing = bestByHolding[key];
       if (existing == null || entry.score > existing.score) {
-        bestByHolding[id] = entry;
+        bestByHolding[key] = entry;
       }
     }
 
@@ -136,9 +190,11 @@ class HoldingSearchService {
         .map(
           (final _ScoredParcel entry) => SearchResult(
             holdingId: entry.parcel.holdingId,
+            groupKey: entry.parcel.groupKey,
             holderName: entry.parcel.holderName,
-            parcelCount: parcelCountsByHolding[entry.parcel.holdingId] ?? 1,
+            parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
+            reviewedCount: reviewedCountsByHolding[entry.parcel.groupKey] ?? 0,
           ),
         )
         .toList()

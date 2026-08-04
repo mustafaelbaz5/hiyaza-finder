@@ -4,7 +4,9 @@ import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/choice_dialog.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/holdings/data/models/parcel.dart';
+import 'package:hiyaza_finder/features/cities/domain/entities/association_type.dart';
+import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/domain/services/field_change_tracker.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
@@ -14,11 +16,33 @@ import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart
 /// card so stacking many cards on the detail screen doesn't overwhelm the
 /// view by default.
 class SeeMoreSection extends StatefulWidget {
-  const SeeMoreSection(
-      {super.key, required this.parcel, required this.onFieldChanged});
+  const SeeMoreSection({
+    super.key,
+    required this.parcel,
+    required this.onFieldChanged,
+    this.originalParcel,
+    this.hideCreditType = false,
+    this.associationType,
+  });
 
   final Parcel parcel;
   final void Function(Parcel updated) onFieldChanged;
+
+  /// [parcel]'s pre-edit value — see `ParcelDetailCard.originalParcel` for
+  /// the full rationale; each field here compares itself the same way.
+  final Parcel? originalParcel;
+
+  /// Omits نوع الائتمان entirely (no row, no reserved space) for
+  /// الإصلاح الزراعي cities, where the field has no meaning.
+  final bool hideCreditType;
+
+  /// The active city's association type, read from
+  /// `cities.association_type` — determines whether to display نوع الائتمان
+  /// (agricultural credit) or نوع الإصلاح (reform). `null` when the
+  /// dashboard hasn't set it for this city; treated like
+  /// `agriculturalCredit` (shows نوع الائتمان) so an unset value never
+  /// silently hides a field that might matter.
+  final AssociationType? associationType;
 
   @override
   State<SeeMoreSection> createState() => SeeMoreSectionState();
@@ -26,6 +50,17 @@ class SeeMoreSection extends StatefulWidget {
 
 class SeeMoreSectionState extends State<SeeMoreSection> {
   bool _expanded = false;
+
+  /// See `ParcelDetailCard._isModified` — same comparison, against
+  /// [SeeMoreSection.originalParcel] instead.
+  bool _isModified<T>(final T Function(Parcel p) current) {
+    final Parcel? original = widget.originalParcel;
+    if (original == null) return false;
+    return FieldChangeTracker.isModified(
+      current(widget.parcel),
+      current(original),
+    );
+  }
 
   Future<void> _editText(
     final BuildContext context, {
@@ -109,6 +144,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       value: widget.parcel.isInheritance,
                       activeLabel: 'وراثة',
                       inactiveLabel: 'ليست وراثة',
+                      isModified: _isModified((final p) => p.isInheritance),
                       onChanged: (final bool v) => widget.onFieldChanged(
                         widget.parcel.copyWith(isInheritance: v),
                       ),
@@ -118,27 +154,48 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       value: widget.parcel.isDelegate,
                       activeLabel: 'مفوض',
                       inactiveLabel: 'غير مفوض',
+                      isModified: _isModified((final p) => p.isDelegate),
                       onChanged: (final bool v) => widget.onFieldChanged(
                         widget.parcel.copyWith(isDelegate: v),
                       ),
                     ),
-                    FieldRow(
-                      label: 'نوع الائتمان',
-                      value: widget.parcel.creditType,
-                      onEdit: () => _editDropdown(
-                        context,
-                        title: 'نوع الائتمان',
-                        initialValue: widget.parcel.creditType,
-                        options: Parcel.creditTypeOptions,
-                        allowClear: false,
-                        apply: (final String? v) => widget.parcel.copyWith(
-                          creditType: v ?? Parcel.defaultCreditType,
+                    if (widget.associationType ==
+                        AssociationType.agriculturalReform)
+                      FieldRow(
+                        label: 'نوع الإصلاح',
+                        value: widget.parcel.reformType,
+                        isModified: _isModified((final p) => p.reformType),
+                        onEdit: () => _editDropdown(
+                          context,
+                          title: 'نوع الإصلاح',
+                          initialValue: widget.parcel.reformType,
+                          options: Parcel.reformTypeOptions,
+                          allowClear: false,
+                          apply: (final String? v) => widget.parcel.copyWith(
+                            reformType: v ?? Parcel.defaultReformType,
+                          ),
+                        ),
+                      )
+                    else if (!widget.hideCreditType)
+                      FieldRow(
+                        label: 'نوع الائتمان',
+                        value: widget.parcel.creditType,
+                        isModified: _isModified((final p) => p.creditType),
+                        onEdit: () => _editDropdown(
+                          context,
+                          title: 'نوع الائتمان',
+                          initialValue: widget.parcel.creditType,
+                          options: Parcel.creditTypeOptions,
+                          allowClear: false,
+                          apply: (final String? v) => widget.parcel.copyWith(
+                            creditType: v ?? Parcel.defaultCreditType,
+                          ),
                         ),
                       ),
-                    ),
                     FieldRow(
                       label: 'نوع الاستخدام',
                       value: widget.parcel.usageType,
+                      isModified: _isModified((final p) => p.usageType),
                       onEdit: () => _editDropdown(
                         context,
                         title: 'نوع الاستخدام',
@@ -154,6 +211,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       label: 'كود الحوض',
                       value: widget.parcel.basinCode,
                       placeholder: '-1',
+                      isModified: _isModified((final p) => p.basinCode),
                       onEdit: () => _editText(
                         context,
                         title: 'كود الحوض',

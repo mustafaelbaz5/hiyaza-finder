@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
@@ -14,6 +15,7 @@ class ToggleFieldRow extends StatelessWidget {
     required this.onChanged,
     this.activeLabel,
     this.inactiveLabel,
+    this.isModified = false,
   });
 
   final String label;
@@ -22,19 +24,25 @@ class ToggleFieldRow extends StatelessWidget {
   final String? activeLabel;
   final String? inactiveLabel;
 
+  /// See [FieldRow.isModified] — same meaning, same badge.
+  final bool isModified;
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String stateText = value
-        ? (activeLabel ?? 'نعم')
-        : (inactiveLabel ?? 'لا');
+    final String stateText =
+        value ? (activeLabel ?? 'نعم') : (inactiveLabel ?? 'لا');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color:
+            isModified ? AppColors.amber300.withValues(alpha: 0.08) : colors.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.border),
+        border: Border.all(
+          color: isModified ? AppColors.amber300 : colors.border,
+          width: isModified ? 1.5 : 1,
+        ),
       ),
       child: Row(
         children: [
@@ -43,14 +51,37 @@ class ToggleFieldRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyles.font12Regular.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.font12Regular.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (isModified) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.amber300.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'تم التعديل',
+                          style: AppTextStyles.font12Bold.copyWith(
+                            color: AppColors.amber300,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
