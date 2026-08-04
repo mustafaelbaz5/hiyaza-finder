@@ -81,6 +81,12 @@ class _FakeSyncApi implements SyncApi {
     final AddRecordOperation operation, {
     required final String createdByUserId,
   }) async {}
+
+  @override
+  Future<void> pushMarkReviewed(
+    final MarkParcelReviewedOperation operation, {
+    required final String reviewedByUserId,
+  }) async {}
 }
 
 EditHoldingOperation _op(final String id, {final int attempts = 0}) => EditHoldingOperation(

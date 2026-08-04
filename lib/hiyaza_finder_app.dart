@@ -26,6 +26,13 @@ class HiyazaFinderApp extends StatelessWidget {
 
   static final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
+  /// Root-level `ScaffoldMessenger` key — lets a snackbar be shown/kept
+  /// alive independent of whichever `Scaffold`/route is currently on
+  /// screen. Needed for the parcel "Finish" undo snackbar (5s window),
+  /// which must survive `DetailScreen` popping back to search.
+  static final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
   /// Width of the centred app column on desktop. Kept phone-like so the
   /// phone-first (375dp) layout and its ScreenUtil scaling stay natural
   /// instead of stretching across a wide monitor.
@@ -99,6 +106,7 @@ class HiyazaFinderApp extends StatelessWidget {
                       ) {
                         return MaterialApp(
                           navigatorKey: _navigatorKey,
+                          scaffoldMessengerKey: scaffoldMessengerKey,
                           localizationsDelegates: context.localizationDelegates,
                           supportedLocales: context.supportedLocales,
                           locale: settings.locale, // driven by cubit

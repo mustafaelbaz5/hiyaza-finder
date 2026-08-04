@@ -44,6 +44,7 @@ sealed class SyncOperation {
       'editHolding' => EditHoldingOperation.fromJson(json),
       'bulkEdit' => BulkEditOperation.fromJson(json),
       'addRecord' => AddRecordOperation.fromJson(json),
+      'markParcelReviewed' => MarkParcelReviewedOperation.fromJson(json),
       final String other => throw ArgumentError('Unknown sync op type: $other'),
     };
   }
@@ -297,5 +298,86 @@ final class AddRecordOperation extends SyncOperation {
         cityId: json['cityId'] as String,
         parentHoldingId: json['parentHoldingId'] as String?,
         record: json['record'] as Map<String, dynamic>,
+      );
+}
+
+/// Marks a single parcel reviewed/un-reviewed — a direct column UPDATE on
+/// whichever of holdings/added_holdings the parcel belongs to, not routed
+/// through holding_edits: UPDATEs of a boolean+timestamp are naturally
+/// idempotent by value, so no append-only payload log or client_op_id
+/// dance is needed here.
+final class MarkParcelReviewedOperation extends SyncOperation {
+  const MarkParcelReviewedOperation({
+    required super.id,
+    required super.createdAt,
+    super.attempts,
+    super.lastAttemptAt,
+    super.lastError,
+    required this.cityId,
+    required this.parcelId,
+    required this.isFieldAdded,
+    required this.reviewed,
+    required this.reviewedAt,
+  });
+
+  final String cityId;
+  final String parcelId; // Parcel.id — stable cross-table key
+  final bool isFieldAdded; // which table to UPDATE — see Parcel.isFieldAdded
+  final bool reviewed;
+  final DateTime? reviewedAt; // null when reviewed == false (un-review)
+
+  @override
+  MarkParcelReviewedOperation withIncrementedAttempts(
+    final DateTime attemptedAt, {
+    final String? error,
+  }) =>
+      MarkParcelReviewedOperation(
+        id: id,
+        createdAt: createdAt,
+        attempts: attempts + 1,
+        lastAttemptAt: attemptedAt,
+        lastError: error,
+        cityId: cityId,
+        parcelId: parcelId,
+        isFieldAdded: isFieldAdded,
+        reviewed: reviewed,
+        reviewedAt: reviewedAt,
+      );
+
+  @override
+  MarkParcelReviewedOperation resetAttempts() => MarkParcelReviewedOperation(
+        id: id,
+        createdAt: createdAt,
+        cityId: cityId,
+        parcelId: parcelId,
+        isFieldAdded: isFieldAdded,
+        reviewed: reviewed,
+        reviewedAt: reviewedAt,
+      );
+
+  @override
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        ..._baseJson(this, 'markParcelReviewed'),
+        'cityId': cityId,
+        'parcelId': parcelId,
+        'isFieldAdded': isFieldAdded,
+        'reviewed': reviewed,
+        'reviewedAt': reviewedAt?.toIso8601String(),
+      };
+
+  factory MarkParcelReviewedOperation.fromJson(final Map<String, dynamic> json) =>
+      MarkParcelReviewedOperation(
+        id: json['id'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        attempts: _attemptsOf(json),
+        lastAttemptAt: _lastAttemptAtOf(json),
+        lastError: _lastErrorOf(json),
+        cityId: json['cityId'] as String,
+        parcelId: json['parcelId'] as String,
+        isFieldAdded: json['isFieldAdded'] as bool,
+        reviewed: json['reviewed'] as bool,
+        reviewedAt: json['reviewedAt'] == null
+            ? null
+            : DateTime.parse(json['reviewedAt'] as String),
       );
 }

@@ -23,4 +23,9 @@ abstract class SyncApi {
     final AddRecordOperation operation, {
     required final String createdByUserId,
   });
+
+  Future<void> pushMarkReviewed(
+    final MarkParcelReviewedOperation operation, {
+    required final String reviewedByUserId,
+  });
 }

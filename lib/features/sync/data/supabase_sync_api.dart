@@ -92,4 +92,23 @@ class SupabaseSyncApi implements SyncApi {
       ErrorHandler.handleException(error);
     }
   }
+
+  @override
+  Future<void> pushMarkReviewed(
+    final MarkParcelReviewedOperation operation, {
+    required final String reviewedByUserId,
+  }) async {
+    final String table = operation.isFieldAdded ? 'added_holdings' : 'holdings';
+    try {
+      await _client.from(table).update(<String, dynamic>{
+        'reviewed': operation.reviewed,
+        'reviewed_at': operation.reviewedAt?.toIso8601String(),
+        'reviewed_by': operation.reviewed ? reviewedByUserId : null,
+      }).eq('id', operation.parcelId).timeout(_requestTimeout);
+    } catch (error) {
+      // No 23505 special-case needed — UPDATE by value is naturally
+      // idempotent; a retry just re-writes the same values.
+      ErrorHandler.handleException(error);
+    }
+  }
 }

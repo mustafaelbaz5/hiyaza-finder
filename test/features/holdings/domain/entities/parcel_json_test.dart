@@ -3,7 +3,7 @@ import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 
 void main() {
   test('toJson -> fromJson round-trips every field', () {
-    const Parcel original = Parcel(
+    final Parcel original = Parcel(
       id: 'uuid-1',
       holdingId: '101',
       pageNumber: '2',
@@ -30,6 +30,10 @@ void main() {
       isInheritance: true,
       isDelegate: true,
       usageType: 'مباني',
+      reviewed: true,
+      reviewedAt: DateTime(2026, 1, 2, 9, 30),
+      reviewedBy: 'user-uuid-1',
+      isFieldAdded: true,
     );
 
     final Parcel roundTripped = Parcel.fromJson(original.toJson());
@@ -58,6 +62,10 @@ void main() {
     expect(roundTripped.isInheritance, original.isInheritance);
     expect(roundTripped.isDelegate, original.isDelegate);
     expect(roundTripped.usageType, original.usageType);
+    expect(roundTripped.reviewed, original.reviewed);
+    expect(roundTripped.reviewedAt, original.reviewedAt);
+    expect(roundTripped.reviewedBy, original.reviewedBy);
+    expect(roundTripped.isFieldAdded, original.isFieldAdded);
   });
 
   test('fromJson defaults missing optional fields correctly', () {
@@ -70,5 +78,50 @@ void main() {
     expect(p.usageType, Parcel.defaultUsageType);
     expect(p.isInheritance, isFalse);
     expect(p.isDelegate, isFalse);
+    expect(p.reviewed, isFalse);
+    expect(p.reviewedAt, isNull);
+    expect(p.reviewedBy, isNull);
+    expect(p.isFieldAdded, isFalse);
+  });
+
+  group('copyWith for reviewed*/isFieldAdded', () {
+    const Parcel base = Parcel(
+      holdingId: '101',
+      id: 'p-1',
+      reviewed: true,
+      reviewedAt: null, // set below via copyWith in each test as needed
+      reviewedBy: 'user-1',
+    );
+
+    test('reviewed/isFieldAdded resolve via ?? when omitted (plain bool params)', () {
+      final Parcel copy = base.copyWith();
+      expect(copy.reviewed, base.reviewed);
+      expect(copy.isFieldAdded, base.isFieldAdded);
+    });
+
+    test('the _unset sentinel lets reviewedAt/reviewedBy be explicitly cleared to null', () {
+      final Parcel withDate = base.copyWith(reviewedAt: DateTime(2026, 1, 1));
+      expect(withDate.reviewedAt, DateTime(2026, 1, 1));
+
+      final Parcel cleared = withDate.copyWith(reviewedAt: null, reviewedBy: null);
+      expect(cleared.reviewedAt, isNull);
+      expect(cleared.reviewedBy, isNull);
+    });
+
+    test('omitting reviewedAt/reviewedBy from copyWith leaves them unchanged', () {
+      final Parcel withDate = base.copyWith(reviewedAt: DateTime(2026, 1, 1));
+      final Parcel untouched = withDate.copyWith(holdingId: '202');
+      expect(untouched.reviewedAt, DateTime(2026, 1, 1));
+      expect(untouched.reviewedBy, base.reviewedBy);
+      expect(untouched.holdingId, '202');
+    });
+
+    test('reviewed/isFieldAdded can be flipped explicitly', () {
+      final Parcel unreviewed = base.copyWith(reviewed: false);
+      expect(unreviewed.reviewed, isFalse);
+
+      final Parcel fieldAdded = base.copyWith(isFieldAdded: true);
+      expect(fieldAdded.isFieldAdded, isTrue);
+    });
   });
 }

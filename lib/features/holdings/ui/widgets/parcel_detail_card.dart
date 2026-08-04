@@ -25,6 +25,7 @@ import 'copy_all_button.dart';
 import 'crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
+import 'status_badge.dart';
 
 /// One parcel's full record: border compass + field tiles + copy-all.
 /// Detail screens stack one of these per parcel belonging to a holding.
@@ -42,6 +43,8 @@ class ParcelDetailCard extends StatelessWidget {
     this.animationDelay = Duration.zero,
     this.resolveBorderMatch,
     this.onDelete,
+    this.onFinish,
+    this.onReopen,
   });
 
   final Parcel parcel;
@@ -93,6 +96,15 @@ class ParcelDetailCard extends StatelessWidget {
   /// means "no border navigation available" — every cell renders plain.
   final Parcel? Function(String? borderText)? resolveBorderMatch;
 
+  /// Non-null enables the "تم" (Finish) button, shown when `!parcel.reviewed`
+  /// — marks this specific parcel reviewed. `null` hides the control (e.g.
+  /// no repository wired, as in some tests).
+  final VoidCallback? onFinish;
+
+  /// Non-null enables the "إعادة فتح" (Reopen) button, shown when
+  /// `parcel.reviewed` — un-marks this specific parcel, no confirmation.
+  final VoidCallback? onReopen;
+
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
   /// Whether the field read via [current] from [parcel] differs from
@@ -120,34 +132,53 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isNew || onDelete != null) ...<Widget>[
-            Row(
-              children: [
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: <Widget>[
-                      if (isNew)
-                        _StatusBadge(
-                          icon: Icons.fiber_new_rounded,
-                          label: 'holdings.detail.new_badge'.tr(),
-                          color: AppColors.blue200,
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    if (isNew)
+                      StatusBadge(
+                        icon: Icons.fiber_new_rounded,
+                        label: 'holdings.detail.new_badge'.tr(),
+                        color: AppColors.blue200,
+                      ),
+                    if (parcel.reviewed) ...<Widget>[
+                      StatusBadge(
+                        icon: Icons.check_circle_rounded,
+                        label: 'holdings.detail.reviewed_badge'.tr(),
+                        color: colors.success,
+                      ),
+                      if (onReopen != null)
+                        TextButton(
+                          onPressed: onReopen,
+                          child: Text('holdings.detail.reopen'.tr()),
                         ),
-                    ],
-                  ),
+                    ] else if (onFinish != null)
+                      FilledButton.tonalIcon(
+                        onPressed: onFinish,
+                        icon: const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 18,
+                        ),
+                        label: Text('holdings.detail.finished'.tr()),
+                      ),
+                  ],
                 ),
-                if (onDelete != null)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: AppColors.red200),
-                    tooltip: 'holdings.detail.delete'.tr(),
-                    onPressed: () => _confirmDelete(context),
-                  ),
-              ],
-            ),
-            verticalSpacing(8),
-          ],
+              ),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppColors.red200),
+                  tooltip: 'holdings.detail.delete'.tr(),
+                  onPressed: () => _confirmDelete(context),
+                ),
+            ],
+          ),
+          verticalSpacing(8),
           _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
           verticalSpacing(8),
           BorderCompass(
@@ -466,42 +497,6 @@ class ParcelDetailCard extends StatelessWidget {
       message: 'holdings.detail.delete_confirm'.tr(),
       confirmText: 'holdings.detail.delete'.tr(),
       onConfirm: onDelete!,
-    );
-  }
-}
-
-/// A small tinted pill used for the "edited" and "new / pending sync"
-/// markers above a [ParcelDetailCard]'s fields.
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: AppTextStyles.font12Bold.copyWith(color: color),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -84,6 +84,16 @@ class _FakeSyncApi implements SyncApi {
     }
     pushedAddIds.add(operation.id);
   }
+
+  @override
+  Future<void> pushMarkReviewed(
+    final MarkParcelReviewedOperation operation, {
+    required final String reviewedByUserId,
+  }) async {
+    if (failingIds.contains(operation.id)) {
+      throw Exception('simulated network failure');
+    }
+  }
 }
 
 EditHoldingOperation _op(final String id, {final int attempts = 0}) => EditHoldingOperation(

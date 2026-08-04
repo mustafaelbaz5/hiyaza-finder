@@ -30,6 +30,12 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
     sahm: asDouble(row['sahm']),
     totalSqm: asDouble(row['total_sqm']),
     associationName: row['association_name'] as String?,
+    reviewed: row['reviewed'] as bool? ?? false,
+    reviewedAt: row['reviewed_at'] == null
+        ? null
+        : DateTime.parse(row['reviewed_at'] as String),
+    reviewedBy: row['reviewed_by'] as String?,
+    isFieldAdded: false,
   );
 }
 
@@ -70,5 +76,11 @@ Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
     usageType: row['usage_type'] as String? ?? Parcel.defaultUsageType,
     isInheritance: row['is_inheritance'] as bool? ?? false,
     isDelegate: row['is_delegate'] as bool? ?? false,
+    reviewed: row['reviewed'] as bool? ?? false,
+    reviewedAt: row['reviewed_at'] == null
+        ? null
+        : DateTime.parse(row['reviewed_at'] as String),
+    reviewedBy: row['reviewed_by'] as String?,
+    isFieldAdded: true,
   );
 }

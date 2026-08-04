@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
+import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/repositories/sync_queue.dart';
@@ -83,6 +84,12 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// persisted): after an app restart a still-unsynced added record loses
   /// this marker even though it may still be sitting in the outbox.
   final Set<String> _locallyAddedIds = <String>{};
+
+  /// Guards a just-set local `reviewed*` state against being clobbered by a
+  /// stale/racing Realtime echo — see [applyRemoteChange]. Populated the
+  /// moment [setParcelReviewed] fires, self-clears once the server value
+  /// catches up.
+  final Map<String, DateTime> _pendingReviewedAt = <String, DateTime>{};
 
   /// Fires whenever [_parcels] changes for a reason the currently-visible
   /// UI wouldn't otherwise notice on its own — specifically, a Supabase
@@ -217,6 +224,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final Parcel withId = parcel.copyWith(
       id: _uuid.v4(),
       pendingGroupId: pendingGroupId,
+      isFieldAdded: true,
     );
 
     // Keep عدد القطع في الحيازة consistent across every parcel that shares
@@ -349,6 +357,50 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     }
   }
 
+  /// Marks [parcelId] reviewed/un-reviewed — local-first (updates [_parcels]
+  /// immediately) then enqueues a [MarkParcelReviewedOperation]. Unlike
+  /// [updateParcel] this never touches [_edits]/[ParcelEditsStore]: reviewed
+  /// status is not part of the editable-field overlay.
+  Future<Parcel?> setParcelReviewed(
+    final String parcelId, {
+    required final bool reviewed,
+  }) async {
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcelId);
+    if (idx < 0) return null;
+
+    final String? cityId = _activeCityId;
+    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
+    final String? currentUserId = GetIt.instance<AuthRepository>().currentUser?.id;
+
+    final Parcel updated = _parcels[idx].copyWith(
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedBy: reviewed ? currentUserId : null,
+    );
+    _parcels[idx] = updated;
+    _originalById[parcelId] = (_originalById[parcelId] ?? updated).copyWith(
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedBy: reviewed ? currentUserId : null,
+    );
+    _pendingReviewedAt[parcelId] = reviewedAt ?? DateTime.now();
+
+    if (cityId != null && syncQueue != null) {
+      await syncQueue!.enqueue(
+        MarkParcelReviewedOperation(
+          id: _uuid.v4(),
+          createdAt: DateTime.now(),
+          cityId: cityId,
+          parcelId: parcelId,
+          isFieldAdded: updated.isFieldAdded,
+          reviewed: reviewed,
+          reviewedAt: reviewedAt,
+        ),
+      );
+    }
+    return updated;
+  }
+
   /// Reverts a parcel to its original parsed values.
   @override
   Future<void> resetParcel(final String id) async {
@@ -378,8 +430,30 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   void applyRemoteChange(final Parcel updated) {
     if (_activeCityId == null) return;
 
-    _originalById[updated.id] = updated;
-    final Parcel toShow = _applyEdit(updated);
+    // Guard against a stale/racing Realtime echo clobbering a fresher local
+    // `reviewed*` write — see [_pendingReviewedAt]. reviewed* fields are
+    // deliberately not part of the `_edits` overlay, so without this an
+    // unguarded overwrite could blindly replace a fresh local `reviewed:
+    // true` with an out-of-order/stale remote row.
+    final DateTime? pendingAt = _pendingReviewedAt[updated.id];
+    final bool remoteIsStale = pendingAt != null &&
+        (updated.reviewedAt == null || updated.reviewedAt!.isBefore(pendingAt));
+
+    final Parcel currentLocal = _originalById[updated.id] ?? updated;
+    final Parcel incoming = remoteIsStale
+        ? updated.copyWith(
+            reviewed: currentLocal.reviewed,
+            reviewedAt: currentLocal.reviewedAt,
+            reviewedBy: currentLocal.reviewedBy,
+          )
+        : updated;
+
+    if (pendingAt != null && !remoteIsStale) {
+      _pendingReviewedAt.remove(updated.id); // remote has caught up
+    }
+
+    _originalById[updated.id] = incoming;
+    final Parcel toShow = _applyEdit(incoming);
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
     if (idx >= 0) {
       _parcels[idx] = toShow;

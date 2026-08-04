@@ -66,5 +66,6 @@ class SyncRunner {
         final EditHoldingOperation o => _api.pushEditHolding(o, editedByUserId: userId),
         final BulkEditOperation o => _api.pushBulkEdit(o, editedByUserId: userId),
         final AddRecordOperation o => _api.pushAddRecord(o, createdByUserId: userId),
+        final MarkParcelReviewedOperation o => _api.pushMarkReviewed(o, reviewedByUserId: userId),
       };
 }

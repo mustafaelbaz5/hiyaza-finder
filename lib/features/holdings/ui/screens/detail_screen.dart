@@ -10,6 +10,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../hiyaza_finder_app.dart';
 import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../widgets/parcel_detail_card.dart';
@@ -65,6 +66,51 @@ class _DetailScreenState extends State<DetailScreen> {
       _deletableIds.remove(parcel.id);
     });
     context.showSuccessSnackBar('holdings.detail.deleted'.tr());
+  }
+
+  /// Marks [parcel] reviewed, shows a 5s undo snackbar via the app-level
+  /// `scaffoldMessengerKey` (so it survives this screen popping — see
+  /// `HiyazaFinderApp.scaffoldMessengerKey`), and pops back to search
+  /// immediately per the requirement that Finish returns to search.
+  Future<void> _finishParcel(final Parcel parcel) async {
+    await _repository.setParcelReviewed(parcel.id, reviewed: true);
+    if (!mounted) return;
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+    if (idx >= 0) {
+      setState(() {
+        _parcels[idx] = _parcels[idx].copyWith(reviewed: true);
+      });
+    }
+
+    HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text('holdings.detail.finished'.tr()),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'holdings.detail.undo'.tr(),
+          // May fire after this screen has been popped — must not touch
+          // this.context/setState, only the repository (a GetIt singleton
+          // independent of any screen's lifecycle). Search screen re-reads
+          // repository state on its own next rebuild.
+          onPressed: () => _repository.setParcelReviewed(parcel.id, reviewed: false),
+        ),
+      ),
+    );
+
+    if (mounted) context.pop();
+  }
+
+  /// Un-marks [parcel] reviewed — user-initiated, no confirmation dialog,
+  /// no snackbar (decision #2: deliberate user-initiated undo).
+  Future<void> _reopenParcel(final Parcel parcel) async {
+    await _repository.setParcelReviewed(parcel.id, reviewed: false);
+    if (!mounted) return;
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+    if (idx >= 0) {
+      setState(() {
+        _parcels[idx] = _parcels[idx].copyWith(reviewed: false);
+      });
+    }
   }
 
   /// Default الملاحظات value applied automatically whenever an existing
@@ -230,6 +276,8 @@ class _DetailScreenState extends State<DetailScreen> {
                               onDelete: _deletableIds.contains(parcel.id)
                                   ? () => _deleteParcel(parcel)
                                   : null,
+                              onFinish: () => _finishParcel(parcel),
+                              onReopen: () => _reopenParcel(parcel),
                             ),
                           );
                         },

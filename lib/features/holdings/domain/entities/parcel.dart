@@ -32,6 +32,10 @@ class Parcel {
     this.usageType = defaultUsageType,
     this.holdingsCount,
     this.pendingGroupId,
+    this.reviewed = false,
+    this.reviewedAt,
+    this.reviewedBy,
+    this.isFieldAdded = false,
   });
 
   /// Stable identity — for an imported parcel this is `holdings.id` as
@@ -74,6 +78,20 @@ class Parcel {
   /// including the pending person it was added to, which keeps grouping by
   /// its own [id] as before.
   final String? pendingGroupId;
+
+  /// Completed/reviewed status — a field worker marks a parcel reviewed once
+  /// its data has been copied out (see `HoldingsRepository.setParcelReviewed`).
+  /// A direct-column field synced via `MarkParcelReviewedOperation`, never
+  /// part of the `holding_edits`/[toEditableJson] overlay.
+  final bool reviewed;
+  final DateTime? reviewedAt;
+  final String? reviewedBy; // profiles.id (uuid), null if never reviewed
+
+  /// Discriminates which table this parcel lives in — `false` for an
+  /// imported `holdings` row, `true` for a field-created `added_holdings`
+  /// row. Structural/origin metadata, never user-edited; needed so
+  /// `setParcelReviewed`/`pushMarkReviewed` know which table to UPDATE.
+  final bool isFieldAdded;
 
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
@@ -203,6 +221,10 @@ class Parcel {
     final Object? usageType = _unset,
     final Object? holdingsCount = _unset,
     final Object? pendingGroupId = _unset,
+    final bool? reviewed,
+    final Object? reviewedAt = _unset,
+    final Object? reviewedBy = _unset,
+    final bool? isFieldAdded,
   }) {
     T resolve<T>(final Object? value, final T fallback) =>
         identical(value, _unset) ? fallback : value as T;
@@ -237,6 +259,10 @@ class Parcel {
       usageType: resolve(usageType, this.usageType),
       holdingsCount: resolve(holdingsCount, this.holdingsCount),
       pendingGroupId: resolve(pendingGroupId, this.pendingGroupId),
+      reviewed: reviewed ?? this.reviewed,
+      reviewedAt: resolve(reviewedAt, this.reviewedAt),
+      reviewedBy: resolve(reviewedBy, this.reviewedBy),
+      isFieldAdded: isFieldAdded ?? this.isFieldAdded,
     );
   }
 
@@ -343,6 +369,10 @@ class Parcel {
         'usageType': usageType,
         'holdingsCount': holdingsCount,
         'pendingGroupId': pendingGroupId,
+        'reviewed': reviewed,
+        'reviewedAt': reviewedAt?.toIso8601String(),
+        'reviewedBy': reviewedBy,
+        'isFieldAdded': isFieldAdded,
       };
 
   factory Parcel.fromJson(final Map<String, dynamic> json) {
@@ -377,6 +407,12 @@ class Parcel {
       usageType: json['usageType'] as String? ?? defaultUsageType,
       holdingsCount: json['holdingsCount'] as int?,
       pendingGroupId: json['pendingGroupId'] as String?,
+      reviewed: json['reviewed'] as bool? ?? false,
+      reviewedAt: json['reviewedAt'] == null
+          ? null
+          : DateTime.parse(json['reviewedAt'] as String),
+      reviewedBy: json['reviewedBy'] as String?,
+      isFieldAdded: json['isFieldAdded'] as bool? ?? false,
     );
   }
 }

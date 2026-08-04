@@ -8,6 +8,7 @@ class SearchResult {
     required this.holderName,
     required this.parcelCount,
     required this.score,
+    this.reviewedCount = 0,
   });
 
   /// رقم الحيازة as shown to the user — may be a shared placeholder
@@ -20,6 +21,11 @@ class SearchResult {
   final String? holderName;
   final int parcelCount;
   final int score;
+
+  /// How many of this group's parcels are reviewed. `parcelCount ==
+  /// reviewedCount` means "fully done", `0` means "not started", anything
+  /// between is "partial".
+  final int reviewedCount;
 }
 
 /// Numeric queries rank by holding-ID prefix/contains match. Text queries
@@ -75,12 +81,17 @@ class HoldingSearchService {
     ];
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
+    final Map<String, int> reviewedCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
       parcelCountsByHolding[parcel.groupKey] =
           (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      if (parcel.reviewed) {
+        reviewedCountsByHolding[parcel.groupKey] =
+            (reviewedCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      }
     }
 
-    return _groupAndRank(scored, parcelCountsByHolding);
+    return _groupAndRank(scored, parcelCountsByHolding, reviewedCountsByHolding);
   }
 
   List<_ScoredParcel> _scoreByHoldingId(
@@ -160,6 +171,7 @@ class HoldingSearchService {
   List<SearchResult> _groupAndRank(
     final List<_ScoredParcel> scored,
     final Map<String, int> parcelCountsByHolding,
+    final Map<String, int> reviewedCountsByHolding,
   ) {
     final Map<String, _ScoredParcel> bestByHolding = <String, _ScoredParcel>{};
     for (final _ScoredParcel entry in scored) {
@@ -178,6 +190,7 @@ class HoldingSearchService {
             holderName: entry.parcel.holderName,
             parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
+            reviewedCount: reviewedCountsByHolding[entry.parcel.groupKey] ?? 0,
           ),
         )
         .toList()

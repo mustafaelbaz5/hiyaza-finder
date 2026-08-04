@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -5,6 +6,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../logic/services/holding_search_service.dart';
+import 'status_badge.dart';
 
 class RecommendationTile extends StatelessWidget {
   const RecommendationTile({
@@ -42,12 +44,35 @@ class RecommendationTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '$holderName$suffix',
-                    style: AppTextStyles.font16SemiBold.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                    textAlign: TextAlign.right,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Flexible(
+                        child: Text(
+                          '$holderName$suffix',
+                          style: AppTextStyles.font16SemiBold.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (result.reviewedCount > 0) ...<Widget>[
+                        const SizedBox(width: 6),
+                        if (result.reviewedCount >= result.parcelCount)
+                          StatusBadge(
+                            icon: Icons.check_circle_rounded,
+                            label: 'holdings.detail.reviewed_badge'.tr(),
+                            color: colors.success,
+                          )
+                        else
+                          StatusBadge(
+                            icon: Icons.hourglass_bottom_rounded,
+                            label: '${result.reviewedCount}/${result.parcelCount}',
+                            color: AppColors.amber200,
+                          ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(

@@ -20,5 +20,6 @@ String syncOperationSummary(final SyncOperation operation) {
             },
           )
         : 'sync.operation.add_parcel'.tr(),
+    MarkParcelReviewedOperation() => 'sync.operation.mark_reviewed'.tr(),
   };
 }
