@@ -47,11 +47,13 @@ class _FakeHoldingsApi implements HoldingsApi {
   final List<_AddRecordCall> addRecordCalls = <_AddRecordCall>[];
   Object? addRecordError;
 
-  /// Configurable return value for [addRecord], mirroring
-  /// `added_holdings.promoted_holding_id` — `null` (the default) means "not
-  /// promoted yet", matching most test scenarios; set this to exercise the
-  /// immediate-promotion path.
-  String? promotedHoldingId;
+  /// Configurable return values for [addRecord], mirroring
+  /// `added_holdings.promoted_holding_id` — mimics the real
+  /// `added_holdings_auto_approve` trigger returning a *fresh* promoted
+  /// `holdings.id` on every insert. Empty (the default) means "not
+  /// promoted", matching most test scenarios; queue one value per expected
+  /// call to exercise the immediate-promotion path across multiple adds.
+  final List<String?> promotedHoldingIds = <String?>[];
 
   @override
   Future<String?> addRecord({
@@ -71,7 +73,7 @@ class _FakeHoldingsApi implements HoldingsApi {
         createdByUserId: createdByUserId,
       ),
     );
-    return promotedHoldingId;
+    return promotedHoldingIds.isEmpty ? null : promotedHoldingIds.removeAt(0);
   }
 
   @override
@@ -180,7 +182,7 @@ void main() {
       'and removed as soon as the corresponding Realtime event arrives, '
       "which previously made a single new person look like it 'moved' or "
       'duplicated on screen', () async {
-    holdingsApi.promotedHoldingId = 'promoted-holdings-id';
+    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
 
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
@@ -191,6 +193,39 @@ void main() {
     expect(added.isFieldAdded, isFalse);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.id, 'promoted-holdings-id');
+  });
+
+  test(
+      'REGRESSION: two parcels added for the same new person, both '
+      'immediately promoted (as the real added_holdings_auto_approve '
+      'trigger does), must share the same groupKey — reproduces the '
+      "'appears as two separate people in search' bug report", () async {
+    // First add: brand-new person "Ahmed", no parentHoldingId yet.
+    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-1');
+    final Parcel? parcelA = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+    );
+    expect(parcelA, isNotNull);
+
+    // Second add: "add another parcel for Ahmed" — parentHoldingId is
+    // Ahmed's current (already-promoted) id, exactly as
+    // DetailScreen._addParcelForPerson passes `source.id` after opening
+    // via a freshly re-fetched `parcelsForHolding(result.groupKey)`.
+    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-2');
+    final Parcel? parcelB = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+      parentHoldingId: parcelA!.id,
+    );
+    expect(parcelB, isNotNull);
+
+    expect(
+      parcelB!.groupKey,
+      parcelA.groupKey,
+      reason: 'Both parcels belong to the same person and must group '
+          'together in search/detail, regardless of each having received '
+          'its own distinct promoted holdings.id from the server.',
+    );
+    expect(repository.parcels, hasLength(2));
   });
 
   test('calls addRecord with a null parentHoldingId for a new person', () async {

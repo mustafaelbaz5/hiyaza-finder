@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
@@ -30,6 +32,17 @@ class _DetailScreenState extends State<DetailScreen> {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
+  /// The identifying [Parcel.groupKey] shared by every parcel on this
+  /// screen — captured once at [initState] so [_refreshFromRepository] and
+  /// [_remoteChangesSub] can always re-derive the current, complete set of
+  /// this person's parcels from the repository (the source of truth),
+  /// rather than growing/patching [_parcels] by hand at each call site.
+  /// Every parcel passed into this screen shares one groupKey by
+  /// construction (`HomeScreen._openDetail` builds the list via
+  /// `parcelsForHolding(result.groupKey)`), so reading the first entry's is
+  /// safe even for the (rare) empty-list case elsewhere in this file.
+  String? _groupKey;
+
   /// Guards each write action against a concurrent second tap while its own
   /// request is in flight — a single flag is enough since this screen's
   /// actions (delete/finish/reopen/field-edit) are never meant to run two
@@ -38,10 +51,39 @@ class _DetailScreenState extends State<DetailScreen> {
   /// reject a re-entrant call while the first is still awaiting Supabase.
   bool _isBusy = false;
 
+  late final StreamSubscription<void> _remoteChangesSub;
+
   @override
   void initState() {
     super.initState();
     _parcels = List<Parcel>.of(widget.parcels);
+    _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
+    // A Realtime event (e.g. this exact person's newly-added parcel being
+    // promoted server-side, or an edit from another device) mutates
+    // `HoldingsRepository`'s own list directly — without this subscription
+    // this screen would only reflect such a change on its own successful
+    // writes, never on one that originated elsewhere while this screen is
+    // already open.
+    _remoteChangesSub = _repository.onRemoteChange.listen((final _) => _refreshFromRepository());
+  }
+
+  @override
+  void dispose() {
+    _remoteChangesSub.cancel();
+    super.dispose();
+  }
+
+  /// Re-reads every parcel sharing [_groupKey] from the repository — the
+  /// single source of truth — and reflects it on screen. Called after every
+  /// successful write this screen makes (so the new/changed state is
+  /// visible immediately, without requiring the user to leave and return)
+  /// and on every incoming Realtime event.
+  void _refreshFromRepository() {
+    final String? groupKey = _groupKey;
+    if (groupKey == null || !mounted) return;
+    setState(() {
+      _parcels = _repository.parcelsForHolding(groupKey);
+    });
   }
 
   Future<void> _deleteParcel(final Parcel parcel) async {
@@ -202,9 +244,19 @@ class _DetailScreenState extends State<DetailScreen> {
         parentHoldingId: source.id,
       ),
     );
-    if (added == true && mounted) {
-      context.showSuccessSnackBar('holdings.add.saved'.tr());
-    }
+    if (added != true || !mounted) return;
+    // The new parcel already exists in the repository (addLocalParcel only
+    // returns after the server confirms the write) — re-reading by
+    // groupKey here is what makes it appear on this screen immediately,
+    // without requiring the user to leave and come back. Previously this
+    // only showed a success snackbar and never touched `_parcels`, so the
+    // screen looked unchanged; a user who (reasonably) assumed the add had
+    // failed and left without noticing would find the correctly-grouped
+    // person already showing 2 parcels in search — easy to misread as "the
+    // new parcel became a separate person" when it was actually this
+    // screen simply never having displayed it in the first place.
+    _refreshFromRepository();
+    context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
   @override
