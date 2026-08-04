@@ -455,12 +455,28 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// [setParcelReviewed]), so there is no more "ahead of the server" window
   /// for an out-of-order echo to race against — by the time this device's
   /// own write lands locally, the server already has that exact value.
+  ///
+  /// [Parcel.pendingGroupId] IS still a case that needs guarding, though —
+  /// unlike `reviewed*`, it has no column anywhere in `holdings`/
+  /// `added_holdings`, so `holdingRowToParcel`/`addedHoldingRowToParcel`
+  /// (and therefore [updated], which always comes from one of those two
+  /// mappers) can never carry it; it only ever exists as client-side
+  /// bookkeeping set once by [addLocalParcel]. Blindly replacing the
+  /// existing entry with [updated] would silently null out a sibling
+  /// parcel's `pendingGroupId` the moment this device's own INSERT/UPDATE
+  /// echoes back over Realtime, un-grouping it from the pending person it
+  /// was just correctly grouped with. Preserving the existing local value
+  /// here is what keeps that grouping intact across the echo.
   void applyRemoteChange(final Parcel updated) {
     if (_activeCityId == null) return;
 
-    _originalById[updated.id] = updated;
-    final Parcel toShow = _applyEdit(updated);
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
+    final Parcel updatedWithGroup = idx >= 0
+        ? updated.copyWith(pendingGroupId: _parcels[idx].pendingGroupId)
+        : updated;
+
+    _originalById[updated.id] = updatedWithGroup;
+    final Parcel toShow = _applyEdit(updatedWithGroup);
     if (idx >= 0) {
       _parcels[idx] = toShow;
     } else {

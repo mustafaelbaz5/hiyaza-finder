@@ -228,6 +228,53 @@ void main() {
     expect(repository.parcels, hasLength(2));
   });
 
+  test(
+      'REGRESSION: a Realtime echo of this device\'s own write '
+      '(applyRemoteChange) must not clobber pendingGroupId on a sibling '
+      'parcel — this is the actual mechanism behind the '
+      "'appears as two separate people' report: pendingGroupId has no "
+      'column in holdings/added_holdings, so any row built by '
+      'holdingRowToParcel/addedHoldingRowToParcel always has it null, and '
+      'applyRemoteChange previously replaced the whole Parcel object '
+      'wholesale on every Realtime event for this city — including the '
+      "echo of the parcel's own just-completed insert", () async {
+    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-1');
+    final Parcel? parcelA = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+    );
+    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-2');
+    final Parcel? parcelB = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+      parentHoldingId: parcelA!.id,
+    );
+    expect(parcelB!.groupKey, parcelA.groupKey); // sanity check, same as above
+
+    // Simulate the Realtime channel echoing parcel B's own INSERT back —
+    // exactly what holdingRowToParcel/addedHoldingRowToParcel would build
+    // from the raw Postgres row: every editable/known field present, but
+    // NO pendingGroupId (that column doesn't exist server-side).
+    final Parcel echoedRow = Parcel(
+      id: parcelB.id,
+      holdingId: parcelB.holdingId,
+      holderName: parcelB.holderName,
+      landNumber: parcelB.landNumber,
+      isFieldAdded: false,
+      // pendingGroupId deliberately omitted — defaults to null, matching
+      // what a real row-mapper output always looks like.
+    );
+    repository.applyRemoteChange(echoedRow);
+
+    final Parcel afterEcho =
+        repository.parcels.firstWhere((final Parcel p) => p.id == parcelB.id);
+    expect(
+      afterEcho.groupKey,
+      parcelA.groupKey,
+      reason: 'parcelB must remain grouped with parcelA even after its own '
+          'Realtime echo arrives — the echo must not silently reset '
+          'pendingGroupId to null and un-group it.',
+    );
+  });
+
   test('calls addRecord with a null parentHoldingId for a new person', () async {
     await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
