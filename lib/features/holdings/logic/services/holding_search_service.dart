@@ -94,17 +94,21 @@ class HoldingSearchService {
     return _groupAndRank(scored, parcelCountsByHolding, reviewedCountsByHolding);
   }
 
+  /// Exact match only — a digits-only query must equal رقم الحيازة exactly,
+  /// not merely contain/start with it (searching "2" must not return every
+  /// holding whose number happens to contain a "2"). [Parcel.holdingId] is
+  /// trimmed defensively before comparing, mirroring the same precedent in
+  /// [Parcel.isHoldingIdPending] — it's never guaranteed pre-trimmed at
+  /// storage time. No leading-zero stripping on either side: holding
+  /// numbers like "001117" are opaque strings, not parsed integers.
   List<_ScoredParcel> _scoreByHoldingId(
     final List<Parcel> parcels,
     final String query,
   ) {
     final List<_ScoredParcel> results = <_ScoredParcel>[];
     for (final Parcel parcel in parcels) {
-      final String id = parcel.holdingId;
-      if (id.startsWith(query)) {
+      if (parcel.holdingId.trim() == query) {
         results.add(_ScoredParcel(parcel, 100));
-      } else if (id.contains(query)) {
-        results.add(_ScoredParcel(parcel, 50));
       }
     }
     return results;

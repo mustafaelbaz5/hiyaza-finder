@@ -105,6 +105,47 @@ void main() {
     expect(op.parentHoldingId, 'existing-holding-id');
   });
 
+  test(
+      'sends the real holdings.id as parentHoldingId when the parent parcel '
+      'is an imported (not field-added) holding', () async {
+    await repository.loadParcelsForCity('city-1', const <Parcel>[
+      Parcel(id: 'imported-holding-id', holdingId: '229', holderName: 'محمد', isFieldAdded: false),
+    ]);
+
+    await repository.addLocalParcel(
+      const Parcel(holdingId: '229', holderName: 'محمد', landNumber: '-1'),
+      parentHoldingId: 'imported-holding-id',
+    );
+
+    final AddRecordOperation op = syncQueue.enqueued.single as AddRecordOperation;
+    expect(op.parentHoldingId, 'imported-holding-id');
+  });
+
+  test(
+      'nulls out parentHoldingId when the parent parcel is field-added '
+      '(added_holdings-origin), even across a fresh session where '
+      "_locallyAddedIds wouldn't know about it — regression test for the "
+      'added_holdings_parent_holding_id_fkey violation: an added_holdings.id '
+      'is never a valid holdings.id, so it must never be sent as '
+      'parent_holding_id regardless of when/how the parent parcel was '
+      'loaded', () async {
+    // Simulates a person whose record is a previously-synced, unpromoted
+    // added_holdings row, downloaded fresh this session (so it was never
+    // added via addLocalParcel and is NOT in _locallyAddedIds) — exactly
+    // the scenario from the FK-violation bug report.
+    await repository.loadParcelsForCity('city-1', const <Parcel>[
+      Parcel(id: 'added-holdings-row-id', holdingId: '229', holderName: 'محمد', isFieldAdded: true),
+    ]);
+
+    await repository.addLocalParcel(
+      const Parcel(holdingId: '229', holderName: 'محمد', landNumber: '-1'),
+      parentHoldingId: 'added-holdings-row-id',
+    );
+
+    final AddRecordOperation op = syncQueue.enqueued.single as AddRecordOperation;
+    expect(op.parentHoldingId, isNull);
+  });
+
   test('the operation id matches the new parcel\'s id (doubles as client_id)', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),

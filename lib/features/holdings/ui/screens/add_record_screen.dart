@@ -121,7 +121,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   Future<void> _save() async {
     if (!_canSave || _isSaving) return;
-    setState(() => _isSaving = true);
+    // Set the flag synchronously, before setState, so a second tap arriving
+    // before this frame rebuilds (e.g. a fast double-tap recognized in the
+    // same input batch) already sees _isSaving == true and bails out above —
+    // closes the double-submit race that previously let two taps both pass
+    // the guard and create two separate parcels.
+    _isSaving = true;
+    setState(() {});
     try {
       final Parcel? saved = await getIt<HoldingsRepository>().addLocalParcel(
         _parcelToSave,

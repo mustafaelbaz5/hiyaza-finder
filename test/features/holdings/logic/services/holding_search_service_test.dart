@@ -18,17 +18,16 @@ void main() {
   ];
 
   group('numeric queries', () {
-    test('exact prefix scores 100', () {
-      final results = service.search(parcels, '0011');
+    test('exact match scores 100', () {
+      final results = service.search(parcels, '001117');
       expect(results.first.holdingId, '001117');
       expect(results.first.score, 100);
       expect(results.first.parcelCount, 2);
     });
 
-    test('contains but not prefix scores 50', () {
-      final results = service.search(parcels, '117');
-      expect(results.first.holdingId, '001117');
-      expect(results.first.score, 50);
+    test('partial digits (prefix or substring) do not match', () {
+      expect(service.search(parcels, '0011'), isEmpty);
+      expect(service.search(parcels, '117'), isEmpty);
     });
 
     test('no digit match returns empty', () {

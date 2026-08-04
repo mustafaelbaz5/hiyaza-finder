@@ -248,17 +248,22 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     if (syncQueue != null) {
       // `added_holdings.parent_holding_id` is a foreign key into the
       // canonical `holdings` table, not into `added_holdings` — it's only
-      // ever valid once a record has been reviewed/promoted server-side. A
-      // parcel added this session (tracked in `_locallyAddedIds`) has a
-      // client-generated id that has never been written to `holdings` and
-      // never will be until promotion, so sending it as `parent_holding_id`
-      // is rejected with a permanent FK violation (the op then retries
-      // forever, and the parcel never actually reaches the server). Send
-      // `null` instead — same as a brand-new person with no known parent.
+      // ever valid once a record has been reviewed/promoted server-side.
+      // `parent.isFieldAdded` (durable, persisted on every parcel — set here
+      // and in the row mappers) is true for exactly the parcels whose `id`
+      // lives in `added_holdings`, not `holdings`: `downloadHoldings` only
+      // ever fetches unpromoted `added_holdings` rows (`promoted_holding_id
+      // is null`), so a promoted record is never re-delivered as
+      // `isFieldAdded: true` — it arrives as an ordinary `holdings` row
+      // instead. Unlike the previous `_locallyAddedIds` (in-memory,
+      // session-scoped) check, this is correct across app restarts and
+      // devices: sending an `added_holdings.id` as `parent_holding_id` is
+      // rejected with a permanent FK violation (the op then retries forever
+      // and the parcel never actually reaches the server) regardless of
+      // which session/device created the parent. Send `null` instead — same
+      // as a brand-new person with no known parent.
       final String? safeParentHoldingId =
-          (parentHoldingId != null && _locallyAddedIds.contains(parentHoldingId))
-              ? null
-              : parentHoldingId;
+          (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
       await syncQueue!.enqueue(
         AddRecordOperation(
           id: withId.id,
