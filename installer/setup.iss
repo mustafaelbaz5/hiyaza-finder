@@ -1,5 +1,5 @@
 #define MyAppName "Hiyaza"
-#define MyAppVersion "1.0.9"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "Mustafa Elbaz"
 #define MyAppExeName "hiyaza_finder.exe"
 
