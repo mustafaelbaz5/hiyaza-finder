@@ -52,16 +52,18 @@ class ToggleFieldRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(
-                      label,
-                      style: AppTextStyles.font12Regular.copyWith(
-                        color: colors.textSecondary,
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: AppTextStyles.font12Regular.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     if (isModified) ...[
                       const SizedBox(width: 4),

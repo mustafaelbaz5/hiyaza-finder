@@ -189,6 +189,13 @@
       "finished": "Done",
       "undo": "Undo",
       "reviewed_badge": "Reviewed",
+      "reviewed_hint": "This parcel has already been collected in the field.",
+      "added_badge": "Added from app",
+      "added_badge_hint": "This record was created in the app, not imported from the original dataset.",
+      "section_holder": "Core details",
+      "section_holder_subtitle": "The fields most useful while working in the field.",
+      "section_extra": "Additional details",
+      "section_extra_subtitle": "Less frequently used fields that are still available when needed.",
       "reopen": "Reopen"
     },
     "add": {

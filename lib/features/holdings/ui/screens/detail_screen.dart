@@ -372,7 +372,7 @@ class _DetailScreenState extends State<DetailScreen> {
                               onFieldChanged: _updateField,
                               animationDelay: Duration(milliseconds: i * 80),
                               resolveBorderMatch: _repository.findByBorderText,
-                              onDelete: parcel.isFieldAdded
+                              onDelete: parcel.isFieldAdded && !parcel.reviewed
                                   ? () => _deleteParcel(parcel)
                                   : null,
                               onFinish: () => _finishParcel(parcel),

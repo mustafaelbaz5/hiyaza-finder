@@ -27,10 +27,6 @@ import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'status_badge.dart';
 
-/// One parcel's full record: border compass + field tiles + copy-all.
-/// Detail screens stack one of these per parcel belonging to a holding.
-/// Fields are laid out in a responsive wrap (1 column on phones, more on
-/// tablets/laptops) so the card stays compact instead of one long list.
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
     super.key,
@@ -48,70 +44,19 @@ class ParcelDetailCard extends StatelessWidget {
   });
 
   final Parcel parcel;
-
-  /// Called with a fully-updated [Parcel] whenever a single field is saved
-  /// via its inline pencil-icon editor — the only way fields are edited.
   final void Function(Parcel updated) onFieldChanged;
-
-  /// [parcel]'s pre-edit value (`HoldingsRepository.originalParcel`) — each
-  /// field below compares itself against the matching field here to decide
-  /// whether to show its own "معدلة" badge. `null` means "no original to
-  /// compare against" (e.g. a widget test with no repository), in which
-  /// case no field shows as modified. Deliberately per-field rather than
-  /// one whole-card "edited" flag, so a card with many fields only flags
-  /// the ones that actually changed.
   final Parcel? originalParcel;
-
-  /// Added in the field this session and not yet confirmed synced.
   final bool isNew;
-
-  /// Shows a delete (trash) icon when non-null and removes this parcel on
-  /// confirm. Passed in by the caller (`DetailScreen`, gated on
-  /// `HoldingsRepository.canDeleteLocalParcel`) rather than decided here —
-  /// only a still-unsynced, field-added record can be deleted at all (see
-  /// that method's doc for why), and checking eligibility is async, so this
-  /// widget stays a pure function of its props instead of resolving it
-  /// itself during `build()`.
   final VoidCallback? onDelete;
-
-  /// Omits نوع الائتمان from the field list, see-more section, and
-  /// copy-all output for الإصلاح الزراعي cities. Passed in by the caller
-  /// (`HoldingsRepository.hideCreditType`) rather than read via DI here,
-  /// so this reusable/tested widget stays a pure function of its props.
   final bool hideCreditType;
-
-  /// The active city's association type, read from
-  /// `cities.association_type` — determines whether to display نوع الائتمان
-  /// (agricultural credit) or نوع الإصلاح (reform). `null` when unset.
   final AssociationType? associationType;
   final Duration animationDelay;
-
-  /// Resolves a الحدود cell's text to the holding it refers to, for both
-  /// the compass's navigable-cell highlighting and the tap navigation
-  /// itself. Passed in by the caller (`DetailScreen`, via
-  /// `HoldingsRepository.findByBorderText`) — same reasoning as
-  /// [hideCreditType]: this widget stays a pure function of its props and
-  /// never resolves DI during `build()`, so it renders correctly in
-  /// isolation (incl. widget tests) whether or not one is provided. `null`
-  /// means "no border navigation available" — every cell renders plain.
   final Parcel? Function(String? borderText)? resolveBorderMatch;
-
-  /// Non-null enables the "تم" (Finish) button, shown when `!parcel.reviewed`
-  /// — marks this specific parcel reviewed. `null` hides the control (e.g.
-  /// no repository wired, as in some tests).
   final VoidCallback? onFinish;
-
-  /// Non-null enables the "إعادة فتح" (Reopen) button, shown when
-  /// `parcel.reviewed` — un-marks this specific parcel, no confirmation.
   final VoidCallback? onReopen;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
-  /// Whether the field read via [current] from [parcel] differs from
-  /// [originalParcel]'s value for the same field — `false` (never modified)
-  /// when [originalParcel] is `null`. Mirrors `AddRecordScreen._isModified`,
-  /// just comparing against the saved original instead of a form's
-  /// in-session initial value.
   bool _isModified<T>(final T Function(Parcel p) current) {
     final Parcel? original = originalParcel;
     if (original == null) return false;
@@ -121,215 +66,216 @@ class ParcelDetailCard extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-
+    final bool isAdded = parcel.isFieldAdded || isNew;
+    final bool isReviewed = parcel.reviewed;
     return Container(
       padding: EdgeInsets.all(rw(12)),
       decoration: BoxDecoration(
-        color: colors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    if (isNew)
-                      StatusBadge(
-                        icon: Icons.fiber_new_rounded,
-                        label: 'holdings.detail.new_badge'.tr(),
-                        color: AppColors.blue200,
-                      ),
-                    if (parcel.reviewed) ...<Widget>[
-                      StatusBadge(
-                        icon: Icons.check_circle_rounded,
-                        label: 'holdings.detail.reviewed_badge'.tr(),
-                        color: colors.success,
-                      ),
-                      if (onReopen != null)
-                        TextButton(
-                          onPressed: onReopen,
-                          child: Text('holdings.detail.reopen'.tr()),
-                        ),
-                    ] else if (onFinish != null)
-                      FilledButton.tonalIcon(
-                        onPressed: onFinish,
-                        icon: const Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 18,
-                        ),
-                        label: Text('holdings.detail.finished'.tr()),
-                      ),
-                  ],
-                ),
-              ),
-              if (onDelete != null)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: AppColors.red200),
-                  tooltip: 'holdings.detail.delete'.tr(),
-                  onPressed: () => _confirmDelete(context),
-                ),
-            ],
-          ),
-          verticalSpacing(8),
-          _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
-          verticalSpacing(8),
-          BorderCompass(
-            holdingId: parcel.holdingId,
-            north: parcel.borderNorth,
-            south: parcel.borderSouth,
-            east: parcel.borderEast,
-            west: parcel.borderWest,
-            onTapBorder: resolveBorderMatch == null
-                ? null
-                : (final String? borderText) =>
-                    _openBorderPerson(context, borderText),
-            isBorderNavigable: resolveBorderMatch == null
-                ? null
-                : (final String? borderText) =>
-                    resolveBorderMatch!(borderText) != null,
-          ),
-          verticalSpacing(8),
-          CopyAllButton(onTap: () => _copyAll(context)),
-          verticalSpacing(8),
-          ResponsiveFieldsWrap(
-            children: [
-              FieldRow(
-                label: 'holdings.detail.holding_id'.tr(),
-                value: parcel.isHoldingIdPending
-                    ? 'holdings.detail.holding_id_pending'.tr()
-                    : parcel.holdingId,
-                isModified: _isModified((final p) => p.holdingId),
-                onEdit: () => _editText(
-                  context,
-                  title: 'holdings.detail.holding_id'.tr(),
-                  initialValue:
-                      parcel.isHoldingIdPending ? '' : parcel.holdingId,
-                  apply: (final String v) => parcel.copyWith(holdingId: v),
-                ),
-              ),
-              if (parcel.holdingsCount != null)
-                FieldRow(
-                  label: 'holdings.detail.holdings_count'.tr(),
-                  value: parcel.holdingsCount.toString(),
-                ),
-              FieldRow(
-                label: 'اسم المالك',
-                value: _formatter.effectiveOwnerName(parcel),
-                isModified: _isModified((final p) => p.ownerName),
-                onEdit: () => _editText(
-                  context,
-                  title: 'اسم المالك',
-                  initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(ownerName: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'اسم الحائز',
-                value: parcel.holderName,
-                isModified: _isModified((final p) => p.holderName),
-                onEdit: () => _editText(
-                  context,
-                  title: 'اسم الحائز',
-                  initialValue: parcel.holderName ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(holderName: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'الرقم القومي',
-                value: parcel.nationalId,
-                isModified: _isModified((final p) => p.nationalId),
-                onEdit: () => _editText(
-                  context,
-                  title: 'الرقم القومي',
-                  initialValue: parcel.nationalId ?? '',
-                  keyboardType: TextInputType.number,
-                  apply: (final String v) =>
-                      parcel.copyWith(nationalId: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'اسم الجمعية',
-                value: parcel.associationName,
-                isModified: _isModified((final p) => p.associationName),
-                onEdit: () => _editText(
-                  context,
-                  title: 'اسم الجمعية',
-                  initialValue: parcel.associationName ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(associationName: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'اسم الحوض',
-                value: parcel.basinName,
-                isModified: _isModified((final p) => p.basinName),
-                onEdit: () => _editBasin(context),
-              ),
-              FieldRow(
-                label: 'رقم الأرض',
-                value: parcel.landNumber,
-                isModified: _isModified((final p) => p.landNumber),
-                onEdit: () => _editText(
-                  context,
-                  title: 'رقم الأرض',
-                  initialValue: parcel.landNumber ?? '',
-                  apply: (final String v) =>
-                      parcel.copyWith(landNumber: v.isEmpty ? null : v),
-                ),
-              ),
-              FieldRow(
-                label: 'المساحة',
-                value: _formatter.areaFraction(parcel),
-                isModified: _isModified((final p) => p.feddan) ||
-                    _isModified((final p) => p.qirat) ||
-                    _isModified((final p) => p.sahm),
-                onEdit: () => _editArea(context),
-              ),
-              FieldRow(
-                label: 'المساحة بالمتر',
-                value: _formatter.formatNumber(parcel.totalSqm),
-                isModified: _isModified((final p) => p.totalSqm),
-                onEdit: () => _editArea(context),
-              ),
-              FieldRow(
-                label: 'نوع الزرع',
-                value: parcel.cropType,
-                isModified: _isModified((final p) => p.cropType),
-                onEdit: () => _editCropType(context),
-              ),
-              FieldRow(
-                label: 'ملاحظات',
-                value: parcel.notes,
-                isModified: _isModified((final p) => p.notes),
-                onEdit: () => _editDropdown(
-                  context,
-                  title: 'ملاحظات',
-                  initialValue: parcel.notes,
-                  options: Parcel.notesOptions,
-                  apply: (final String? v) => parcel.copyWith(notes: v),
-                ),
-              ),
-            ],
-          ),
-          verticalSpacing(6),
-          SeeMoreSection(
-            parcel: parcel,
-            onFieldChanged: onFieldChanged,
-            originalParcel: originalParcel,
-            hideCreditType: hideCreditType,
-            associationType: associationType,
-          ),
+        color: isReviewed
+            ? colors.surface.withValues(alpha: 0.76)
+            : colors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isReviewed
+              ? AppColors.green200.withValues(alpha: 0.28)
+              : isAdded
+                  ? AppColors.blue200.withValues(alpha: 0.35)
+                  : colors.border,
+          width: isAdded || isReviewed ? 1.2 : 1,
+        ),
+        boxShadow: <BoxShadow>[
+          if (isReviewed)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
         ],
+      ),
+      child: Opacity(
+        opacity: isReviewed ? 0.68 : 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TopStateRow(
+              isAdded: isAdded,
+              isReviewed: isReviewed,
+              onFinish: onFinish,
+              onReopen: onReopen,
+              onDelete: onDelete,
+              onDeleteConfirmed: () => _confirmDelete(context),
+            ),
+            if (isAdded || isReviewed) verticalSpacing(8),
+            if (isAdded)
+              _InfoBanner(
+                icon: Icons.add_box_rounded,
+                label: 'holdings.detail.added_badge'.tr(),
+                subtitle: 'holdings.detail.added_badge_hint'.tr(),
+                color: AppColors.blue200,
+              ),
+            if (isAdded && isReviewed) verticalSpacing(8),
+            if (isReviewed)
+              _InfoBanner(
+                icon: Icons.check_circle_rounded,
+                label: 'holdings.detail.reviewed_badge'.tr(),
+                subtitle: 'holdings.detail.reviewed_hint'.tr(),
+                color: colors.success,
+              ),
+            verticalSpacing(10),
+            _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
+            verticalSpacing(10),
+            BorderCompass(
+              holdingId: parcel.holdingId,
+              north: parcel.borderNorth,
+              south: parcel.borderSouth,
+              east: parcel.borderEast,
+              west: parcel.borderWest,
+              onTapBorder: resolveBorderMatch == null
+                  ? null
+                  : (final String? borderText) =>
+                      _openBorderPerson(context, borderText),
+              isBorderNavigable: resolveBorderMatch == null
+                  ? null
+                  : (final String? borderText) =>
+                      resolveBorderMatch!(borderText) != null,
+            ),
+            verticalSpacing(10),
+            CopyAllButton(onTap: () => _copyAll(context)),
+            verticalSpacing(12),
+            verticalSpacing(8),
+            ResponsiveFieldsWrap(
+              children: [
+                FieldRow(
+                  label: 'holdings.detail.holding_id'.tr(),
+                  value: parcel.isHoldingIdPending
+                      ? 'holdings.detail.holding_id_pending'.tr()
+                      : parcel.holdingId,
+                  isModified: _isModified((final p) => p.holdingId),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'holdings.detail.holding_id'.tr(),
+                    initialValue:
+                        parcel.isHoldingIdPending ? '' : parcel.holdingId,
+                    apply: (final String v) => parcel.copyWith(holdingId: v),
+                  ),
+                ),
+                if (parcel.holdingsCount != null)
+                  FieldRow(
+                    label: 'holdings.detail.holdings_count'.tr(),
+                    value: parcel.holdingsCount.toString(),
+                  ),
+                FieldRow(
+                  label: 'اسم المالك',
+                  value: _formatter.effectiveOwnerName(parcel),
+                  isModified: _isModified((final p) => p.ownerName),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'اسم المالك',
+                    initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
+                    apply: (final String v) =>
+                        parcel.copyWith(ownerName: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'اسم الحائز',
+                  value: parcel.holderName,
+                  isModified: _isModified((final p) => p.holderName),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'اسم الحائز',
+                    initialValue: parcel.holderName ?? '',
+                    apply: (final String v) =>
+                        parcel.copyWith(holderName: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'الرقم القومي',
+                  value: parcel.nationalId,
+                  isModified: _isModified((final p) => p.nationalId),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'الرقم القومي',
+                    initialValue: parcel.nationalId ?? '',
+                    keyboardType: TextInputType.number,
+                    apply: (final String v) =>
+                        parcel.copyWith(nationalId: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'اسم الجمعية',
+                  value: parcel.associationName,
+                  isModified: _isModified((final p) => p.associationName),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'اسم الجمعية',
+                    initialValue: parcel.associationName ?? '',
+                    apply: (final String v) =>
+                        parcel.copyWith(associationName: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'اسم الحوض',
+                  value: parcel.basinName,
+                  isModified: _isModified((final p) => p.basinName),
+                  onEdit: () => _editBasin(context),
+                ),
+                FieldRow(
+                  label: 'رقم الأرض',
+                  value: parcel.landNumber,
+                  isModified: _isModified((final p) => p.landNumber),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'رقم الأرض',
+                    initialValue: parcel.landNumber ?? '',
+                    apply: (final String v) =>
+                        parcel.copyWith(landNumber: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'المساحة',
+                  value: _formatter.areaFraction(parcel),
+                  isModified: _isModified((final p) => p.feddan) ||
+                      _isModified((final p) => p.qirat) ||
+                      _isModified((final p) => p.sahm),
+                  onEdit: () => _editArea(context),
+                ),
+                FieldRow(
+                  label: 'المساحة بالمتر',
+                  value: _formatter.formatNumber(parcel.totalSqm),
+                  isModified: _isModified((final p) => p.totalSqm),
+                  onEdit: () => _editArea(context),
+                ),
+                FieldRow(
+                  label: 'نوع الزرع',
+                  value: parcel.cropType,
+                  isModified: _isModified((final p) => p.cropType),
+                  onEdit: () => _editCropType(context),
+                ),
+                FieldRow(
+                  label: 'ملاحظات',
+                  value: parcel.notes,
+                  isModified: _isModified((final p) => p.notes),
+                  onEdit: () => _editDropdown(
+                    context,
+                    title: 'ملاحظات',
+                    initialValue: parcel.notes,
+                    options: Parcel.notesOptions,
+                    apply: (final String? v) => parcel.copyWith(notes: v),
+                  ),
+                ),
+              ],
+            ),
+            verticalSpacing(12),
+            verticalSpacing(8),
+            SeeMoreSection(
+              parcel: parcel,
+              onFieldChanged: onFieldChanged,
+              originalParcel: originalParcel,
+              hideCreditType: hideCreditType,
+              associationType: associationType,
+            ),
+          ],
+        ),
       ),
     )
         .animate(delay: animationDelay)
@@ -438,11 +384,6 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
-  /// Resolves [borderText] (a الحدود cell) to the holding it refers to and
-  /// navigates there directly, or shows a "no data" snackbar when it can't
-  /// be resolved (blank text, a road/canal/etc., or no matching حائز/مالك
-  /// in the currently loaded city). See `ParcelQueryService.findByBorderText`
-  /// for why the match is exact rather than fuzzy.
   Future<void> _openBorderPerson(
     final BuildContext context,
     final String? borderText,
@@ -470,12 +411,9 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    // نوع الزرع must have a real value before copy-all is allowed — same
-    // "not blank / not '-'" rule as the add-record form's required fields
-    // (`Parcel.isValueFilled`), so a record missing it doesn't get copied
-    // out with a meaningless placeholder.
     if (!Parcel.isValueFilled(parcel.cropType)) {
-      context.showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
+      context
+          .showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
       return;
     }
 
@@ -501,10 +439,129 @@ class ParcelDetailCard extends StatelessWidget {
   }
 }
 
-/// The parcel's stable cross-system id ([Parcel.id]) — shown above every
-/// other field, in a dedicated tappable pill rather than a plain [FieldRow],
-/// since it needs to be copied far more often than edited (it's never
-/// editable at all) and is easy to mistake for رقم الحيازة otherwise.
+class _TopStateRow extends StatelessWidget {
+  const _TopStateRow({
+    required this.isAdded,
+    required this.isReviewed,
+    required this.onFinish,
+    required this.onReopen,
+    required this.onDelete,
+    required this.onDeleteConfirmed,
+  });
+
+  final bool isAdded;
+  final bool isReviewed;
+  final VoidCallback? onFinish;
+  final VoidCallback? onReopen;
+  final VoidCallback? onDelete;
+  final VoidCallback onDeleteConfirmed;
+
+  @override
+  Widget build(final BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              if (isAdded)
+                const StatusBadge(
+                  icon: Icons.add_box_rounded,
+                  label: 'مضافة من التطبيق',
+                  color: AppColors.blue200,
+                ),
+              if (!isReviewed && onFinish != null)
+                const StatusBadge(
+                  icon: Icons.task_alt_rounded,
+                  label: 'قيد المراجعة',
+                  color: AppColors.amber200,
+                ),
+              if (isReviewed)
+                const StatusBadge(
+                  icon: Icons.check_circle_rounded,
+                  label: 'تم المراجعة',
+                  color: AppColors.green200,
+                ),
+            ],
+          ),
+        ),
+        if (onDelete != null)
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded,
+                color: AppColors.red200),
+            tooltip: 'holdings.detail.delete'.tr(),
+            onPressed: onDeleteConfirmed,
+          ),
+        if (isReviewed && onReopen != null)
+          FilledButton.tonalIcon(
+            onPressed: onReopen,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text('holdings.detail.reopen'.tr()),
+          )
+        else if (!isReviewed && onFinish != null)
+          FilledButton.tonalIcon(
+            onPressed: onFinish,
+            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+            label: Text('holdings.detail.finished'.tr()),
+          ),
+      ],
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  const _InfoBanner({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color color;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.font14Bold.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.font12Bold.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ParcelIdChip extends StatelessWidget {
   const _ParcelIdChip({required this.id, required this.onCopy});
 
@@ -524,11 +581,13 @@ class _ParcelIdChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
+            border:
+                Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
           ),
           child: Row(
             children: <Widget>[
-              const Icon(Icons.fingerprint_rounded, size: 18, color: AppColors.green200),
+              const Icon(Icons.fingerprint_rounded,
+                  size: 18, color: AppColors.green200),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -536,7 +595,9 @@ class _ParcelIdChip extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       'holdings.detail.parcel_id'.tr(),
-                      style: AppTextStyles.font12Bold.copyWith(color: colors.textSecondary),
+                      style: AppTextStyles.font12Bold.copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                     Text(
                       id,
@@ -548,7 +609,8 @@ class _ParcelIdChip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded, size: 18, color: AppColors.green200),
+              const Icon(Icons.copy_rounded,
+                  size: 18, color: AppColors.green200),
             ],
           ),
         ),
