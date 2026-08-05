@@ -249,11 +249,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     // the parent has a real holdingId: groupKey already equals holdingId
     // for both in that case.
     final String? pendingGroupId = (parent != null && parent.isHoldingIdPending)
-        ? (parent.pendingGroupId ?? parent.id)
+        ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
         : null;
 
+    final String generatedId = _uuid.v4();
+    final String? personId = parcel.personId ??
+        (parent != null && parent.isHoldingIdPending
+            ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
+            : generatedId);
     final Parcel withId = parcel.copyWith(
-      id: _uuid.v4(),
+      id: generatedId,
+      personId: personId,
       pendingGroupId: pendingGroupId,
       isFieldAdded: true,
     );
@@ -472,7 +478,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
     final Parcel updatedWithGroup = idx >= 0
-        ? updated.copyWith(pendingGroupId: _parcels[idx].pendingGroupId)
+        ? updated.copyWith(
+            pendingGroupId: _parcels[idx].pendingGroupId,
+            personId: _parcels[idx].personId,
+          )
         : updated;
 
     _originalById[updated.id] = updatedWithGroup;

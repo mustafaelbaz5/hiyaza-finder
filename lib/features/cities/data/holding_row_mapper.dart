@@ -12,6 +12,7 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
 
   return Parcel(
     id: row['id'] as String,
+    personId: row['person_id'] as String?,
     holdingId: (row['holding_id_number'] as String?) ?? '',
     pageNumber: row['page_number'] as String?,
     directorate: row['directorate'] as String?,
@@ -51,6 +52,7 @@ Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
 
   return Parcel(
     id: row['id'] as String,
+    personId: row['person_id'] as String?,
     holdingId: (row['holding_id_number'] as String?) ?? '',
     pageNumber: row['page_number'] as String?,
     directorate: row['directorate'] as String?,

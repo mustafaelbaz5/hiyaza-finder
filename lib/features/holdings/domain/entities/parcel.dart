@@ -5,6 +5,7 @@ class Parcel {
   const Parcel({
     required this.holdingId,
     this.id = '',
+    this.personId,
     this.pageNumber,
     this.directorate,
     this.administration,
@@ -49,6 +50,7 @@ class Parcel {
   /// on. Also used locally to key persistent edits so corrections re-apply
   /// on reload.
   final String id;
+  final String? personId;
 
   final String holdingId; // رقم الحيازة
   final String? pageNumber; // رقم الصفحة بالسجل
@@ -126,7 +128,9 @@ class Parcel {
   /// merge unrelated new people into one search result/detail screen, so
   /// pending records group by their own unique [id] instead.
   String get groupKey =>
-      isHoldingIdPending ? 'pending:${pendingGroupId ?? id}' : holdingId;
+      isHoldingIdPending
+          ? 'pending:${personId ?? pendingGroupId ?? id}'
+          : holdingId;
 
   /// Whether a required text/choice field actually has a value — blank,
   /// whitespace-only, and the literal `"-"` placeholder (used elsewhere for
@@ -197,6 +201,7 @@ class Parcel {
   /// inline edits.
   Parcel copyWith({
     final String? id,
+    final String? personId,
     final String? holdingId,
     final Object? pageNumber = _unset,
     final Object? directorate = _unset,
@@ -231,6 +236,7 @@ class Parcel {
 
     return Parcel(
       id: id ?? this.id,
+      personId: personId ?? this.personId,
       holdingId: holdingId ?? this.holdingId,
       pageNumber: resolve(pageNumber, this.pageNumber),
       directorate: resolve(directorate, this.directorate),
@@ -341,6 +347,7 @@ class Parcel {
   /// user-correctable subset for the local edit overlay.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
+        'personId': personId,
         'holdingId': holdingId,
         'pageNumber': pageNumber,
         'directorate': directorate,
@@ -379,6 +386,7 @@ class Parcel {
     double? d(final String key) => (json[key] as num?)?.toDouble();
     return Parcel(
       id: json['id'] as String? ?? '',
+      personId: json['personId'] as String?,
       holdingId: json['holdingId'] as String,
       pageNumber: json['pageNumber'] as String?,
       directorate: json['directorate'] as String?,

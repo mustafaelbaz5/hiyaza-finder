@@ -110,8 +110,7 @@ class SupabaseCityDataSource {
             .from('added_holdings')
             .select()
             .eq('city_id', cityId)
-            .eq('status', 'approved')
-            .isFilter('promoted_holding_id', null),
+            .eq('status', 'approved'),
       );
 
       final List<Map<String, dynamic>> countRows = await _fetchAllPages(
@@ -131,18 +130,30 @@ class SupabaseCityDataSource {
         for (final Map<String, dynamic> row in editRows)
           row['holding_id'] as String: row['payload'] as Map<String, dynamic>,
       };
+      final Map<String, String> personIdByHoldingId =
+          <String, String>{
+        for (final Map<String, dynamic> row in addedRows)
+          if (row['promoted_holding_id'] != null && row['person_id'] != null)
+            row['promoted_holding_id'] as String:
+                row['person_id'] as String,
+      };
 
       final List<Parcel> holdings =
           holdingRows.map((final Map<String, dynamic> row) {
         final Parcel base = holdingRowToParcel(row);
         final Parcel withCount = base.copyWith(
           holdingsCount: countByHoldingId[base.holdingId],
+          personId: base.personId ?? personIdByHoldingId[base.id],
         );
         return _editOverlay.apply(withCount, latestEditByHoldingId[base.id]);
       }).toList();
 
       final List<Parcel> added =
-          addedRows.map(addedHoldingRowToParcel).toList();
+          addedRows
+              .where((final Map<String, dynamic> row) =>
+                  row['promoted_holding_id'] == null)
+              .map(addedHoldingRowToParcel)
+              .toList();
 
       return <Parcel>[...holdings, ...added];
     } catch (error) {

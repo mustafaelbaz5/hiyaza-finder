@@ -11,6 +11,7 @@ Map<String, dynamic> parcelToAddedHoldingsRecord(final Parcel p) {
     // is only for app-side grouping/badge concerns; the server payload
     // reflects exactly what's shown in the form.
     'holding_id_number': p.holdingId.trim().isEmpty ? null : p.holdingId.trim(),
+    'person_id': p.personId,
     'holder_name': p.holderName,
     'owner_name': p.ownerName,
     'national_id': p.nationalId,
