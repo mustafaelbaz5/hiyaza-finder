@@ -30,6 +30,7 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 class _FakeHoldingsApi implements HoldingsApi {
   final List<String> deletedIds = <String>[];
   Object? deleteError;
+  final List<String?> promotedHoldingIds = <String?>[];
 
   @override
   Future<void> deleteAddedHolding(final String id) async {
@@ -45,7 +46,7 @@ class _FakeHoldingsApi implements HoldingsApi {
     required final String? parentHoldingId,
     required final String createdByUserId,
   }) async =>
-      null;
+      promotedHoldingIds.isEmpty ? null : promotedHoldingIds.removeAt(0);
 
   @override
   Future<void> editHolding({
@@ -123,7 +124,22 @@ void main() {
 
     expect(await repository.deleteLocalParcel(added!.id), isTrue);
     expect(repository.parcels, isEmpty);
-    expect(holdingsApi.deletedIds, <String>[added.id]);
+    expect(holdingsApi.deletedIds, <String>[added.sourceAddedHoldingId!]);
+  });
+
+  test('a promoted field-added parcel still deletes using its original added row id', () async {
+    holdingsApi.promotedHoldingIds.add('promoted-holding-id');
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '', holderName: 'محمد'),
+    );
+
+    expect(added, isNotNull);
+    expect(added!.isFieldAdded, isFalse);
+    expect(added.sourceAddedHoldingId, isNotNull);
+
+    expect(await repository.deleteLocalParcel(added.id), isTrue);
+    expect(repository.parcels, isEmpty);
+    expect(holdingsApi.deletedIds, <String>[added.sourceAddedHoldingId!]);
   });
 
   test('an imported (not field-added) holding cannot be deleted', () async {

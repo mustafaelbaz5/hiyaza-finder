@@ -5,6 +5,7 @@ class Parcel {
   const Parcel({
     required this.holdingId,
     this.id = '',
+    this.sourceAddedHoldingId,
     this.personId,
     this.pageNumber,
     this.directorate,
@@ -50,6 +51,7 @@ class Parcel {
   /// on. Also used locally to key persistent edits so corrections re-apply
   /// on reload.
   final String id;
+  final String? sourceAddedHoldingId;
   final String? personId;
 
   final String holdingId; // رقم الحيازة
@@ -201,6 +203,7 @@ class Parcel {
   /// inline edits.
   Parcel copyWith({
     final String? id,
+    final String? sourceAddedHoldingId,
     final String? personId,
     final String? holdingId,
     final Object? pageNumber = _unset,
@@ -210,6 +213,10 @@ class Parcel {
     final Object? basinCode = _unset,
     final Object? holderName = _unset,
     final Object? nationalId = _unset,
+    final Object? borderEast = _unset,
+    final Object? borderSouth = _unset,
+    final Object? borderWest = _unset,
+    final Object? borderNorth = _unset,
     final Object? landNumber = _unset,
     final Object? feddan = _unset,
     final Object? qirat = _unset,
@@ -236,6 +243,8 @@ class Parcel {
 
     return Parcel(
       id: id ?? this.id,
+      sourceAddedHoldingId:
+          sourceAddedHoldingId ?? this.sourceAddedHoldingId,
       personId: personId ?? this.personId,
       holdingId: holdingId ?? this.holdingId,
       pageNumber: resolve(pageNumber, this.pageNumber),
@@ -245,10 +254,10 @@ class Parcel {
       basinCode: resolve(basinCode, this.basinCode),
       holderName: resolve(holderName, this.holderName),
       nationalId: resolve(nationalId, this.nationalId),
-      borderEast: borderEast,
-      borderSouth: borderSouth,
-      borderWest: borderWest,
-      borderNorth: borderNorth,
+      borderEast: resolve(borderEast, this.borderEast),
+      borderSouth: resolve(borderSouth, this.borderSouth),
+      borderWest: resolve(borderWest, this.borderWest),
+      borderNorth: resolve(borderNorth, this.borderNorth),
       landNumber: resolve(landNumber, this.landNumber),
       feddan: resolve(feddan, this.feddan),
       qirat: resolve(qirat, this.qirat),
@@ -312,6 +321,8 @@ class Parcel {
     double? d(final String key) => (json[key] as num?)?.toDouble();
     return Parcel(
       id: original.id,
+      sourceAddedHoldingId: original.sourceAddedHoldingId,
+      personId: original.personId,
       holdingId: json['holdingId'] as String? ?? original.holdingId,
       pageNumber: original.pageNumber,
       borderEast: original.borderEast,
@@ -338,6 +349,12 @@ class Parcel {
       isInheritance: json['isInheritance'] as bool? ?? false,
       isDelegate: json['isDelegate'] as bool? ?? false,
       usageType: json['usageType'] as String? ?? defaultUsageType,
+      holdingsCount: original.holdingsCount,
+      pendingGroupId: original.pendingGroupId,
+      reviewed: original.reviewed,
+      reviewedAt: original.reviewedAt,
+      reviewedBy: original.reviewedBy,
+      isFieldAdded: original.isFieldAdded,
     );
   }
 
@@ -347,6 +364,7 @@ class Parcel {
   /// user-correctable subset for the local edit overlay.
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
+        'sourceAddedHoldingId': sourceAddedHoldingId,
         'personId': personId,
         'holdingId': holdingId,
         'pageNumber': pageNumber,
@@ -386,6 +404,7 @@ class Parcel {
     double? d(final String key) => (json[key] as num?)?.toDouble();
     return Parcel(
       id: json['id'] as String? ?? '',
+      sourceAddedHoldingId: json['sourceAddedHoldingId'] as String?,
       personId: json['personId'] as String?,
       holdingId: json['holdingId'] as String,
       pageNumber: json['pageNumber'] as String?,

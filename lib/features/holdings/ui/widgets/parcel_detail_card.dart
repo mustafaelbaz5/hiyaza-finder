@@ -66,7 +66,8 @@ class ParcelDetailCard extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final bool isAdded = parcel.isFieldAdded || isNew;
+    final bool isAdded =
+        parcel.isFieldAdded || parcel.sourceAddedHoldingId != null || isNew;
     final bool isReviewed = parcel.reviewed;
     return Container(
       padding: EdgeInsets.all(rw(12)),

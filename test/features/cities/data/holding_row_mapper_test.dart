@@ -8,29 +8,37 @@ void main() {
       'id': 'uuid-1',
       'holding_id_number': '101',
       'page_number': '2',
-      'directorate': 'الدقهلية',
+      'directorate': 'الداقهليه',
       'administration': 'اجا',
-      'basin_name': 'البشيط',
+      'basin_name': 'البشيت',
       'basin_code': '-1',
       'holder_name': 'محمد علي',
       'national_id': '27204191202178',
       'border_east': 'مصرف',
       'border_west': 'مروى',
-      'border_south': 'محمد على شبل',
-      'border_north': 'ابراهيم الشبراوى منصور',
+      'border_south': 'محمد علي شبل',
+      'border_north': 'ابراهيم الشبراوي منصور',
       'land_number': '10862326',
       'feddan': 0,
       'qirat': 12,
       'sahm': 16,
       'total_sqm': 2217,
-      'association_name': 'الدير -الائتمان الزراعي',
+      'association_name': 'الديير -الائتمان الزراعي',
+      'owner_name': 'مالك',
+      'crop_type': 'قمح',
+      'notes': 'وضع يد',
+      'credit_type': 'أوقاف',
+      'reform_type': 'إصلاح مُملك',
+      'is_inheritance': true,
+      'is_delegate': false,
+      'usage_type': 'مباني',
     });
 
     expect(p.id, 'uuid-1');
     expect(p.holdingId, '101');
     expect(p.pageNumber, '2');
-    expect(p.directorate, 'الدقهلية');
-    expect(p.basinName, 'البشيط');
+    expect(p.directorate, 'الداقهليه');
+    expect(p.basinName, 'البشيت');
     expect(p.holderName, 'محمد علي');
     expect(p.nationalId, '27204191202178');
     expect(p.borderEast, 'مصرف');
@@ -39,7 +47,16 @@ void main() {
     expect(p.qirat, 12);
     expect(p.sahm, 16);
     expect(p.totalSqm, 2217);
-    expect(p.associationName, 'الدير -الائتمان الزراعي');
+    expect(p.associationName, 'الديير -الائتمان الزراعي');
+    expect(p.ownerName, 'مالك');
+    expect(p.cropType, 'قمح');
+    expect(p.notes, 'وضع يد');
+    expect(p.creditType, 'أوقاف');
+    expect(p.reformType, 'إصلاح مُملك');
+    expect(p.isInheritance, isTrue);
+    expect(p.isDelegate, isFalse);
+    expect(p.usageType, 'مباني');
+    expect(p.sourceAddedHoldingId, isNull);
   });
 
   test('a null holding_id_number becomes an empty string, not null', () {
@@ -77,7 +94,7 @@ void main() {
         'owner_name': 'مالك',
         'national_id': '11111111111111',
         'land_number': '-1',
-        'basin_name': 'البشيط',
+        'basin_name': 'البشيت',
         'feddan': 2,
         'qirat': 5,
         'sahm': 0,
@@ -90,12 +107,13 @@ void main() {
       });
 
       expect(p.id, 'added-uuid-1');
+      expect(p.sourceAddedHoldingId, 'added-uuid-1');
       expect(p.isHoldingIdPending, isTrue);
       expect(p.holderName, 'محمد الجديد');
       expect(p.ownerName, 'مالك');
       expect(p.nationalId, '11111111111111');
       expect(p.landNumber, '-1');
-      expect(p.basinName, 'البشيط');
+      expect(p.basinName, 'البشيت');
       expect(p.feddan, 2);
       expect(p.qirat, 5);
       expect(p.sahm, 0);

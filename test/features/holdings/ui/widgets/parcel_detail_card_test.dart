@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_detail_card.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/status_badge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reads the real translation file straight off disk instead of through
@@ -133,7 +134,37 @@ void main() {
           onFieldChanged: (final _) {},
         ),
       );
-      expect(find.text('تم التعديل'), findsOneWidget);
+    expect(find.text('تم التعديل'), findsOneWidget);
+  },
+  );
+
+  testWidgets(
+    'shows the added badge for promoted app-created parcels even when isFieldAdded is false',
+    (final tester) async {
+      const Parcel promotedAddedParcel = Parcel(
+        id: 'p3',
+        holdingId: '101',
+        holderName: 'شخص مضاف',
+        basinName: 'البشيت',
+        sourceAddedHoldingId: 'added-1',
+        isFieldAdded: false,
+      );
+
+      await _pump(
+        tester,
+        ParcelDetailCard(
+          parcel: promotedAddedParcel,
+          onFieldChanged: (final _) {},
+        ),
+      );
+
+      expect(
+        find.byWidgetPredicate(
+          (final Widget widget) =>
+              widget is StatusBadge && widget.label == 'مضافة من التطبيق',
+        ),
+        findsOneWidget,
+      );
     },
   );
 

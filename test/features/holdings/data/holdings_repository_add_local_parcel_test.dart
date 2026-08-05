@@ -170,6 +170,7 @@ void main() {
 
     expect(added, isNotNull);
     expect(added!.id, isNotEmpty);
+    expect(added.sourceAddedHoldingId, added.id);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.holderName, 'محمد');
   });
@@ -191,8 +192,10 @@ void main() {
     expect(added, isNotNull);
     expect(added!.id, 'promoted-holdings-id');
     expect(added.isFieldAdded, isFalse);
+    expect(added.sourceAddedHoldingId, isNotNull);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.id, 'promoted-holdings-id');
+    expect(repository.parcels.single.sourceAddedHoldingId, added.sourceAddedHoldingId);
   });
 
   test(

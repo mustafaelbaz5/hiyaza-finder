@@ -137,6 +137,12 @@ class SupabaseCityDataSource {
             row['promoted_holding_id'] as String:
                 row['person_id'] as String,
       };
+      final Map<String, String> sourceAddedHoldingIdByHoldingId =
+          <String, String>{
+        for (final Map<String, dynamic> row in addedRows)
+          if (row['promoted_holding_id'] != null && row['id'] != null)
+            row['promoted_holding_id'] as String: row['id'] as String,
+      };
 
       final List<Parcel> holdings =
           holdingRows.map((final Map<String, dynamic> row) {
@@ -144,6 +150,9 @@ class SupabaseCityDataSource {
         final Parcel withCount = base.copyWith(
           holdingsCount: countByHoldingId[base.holdingId],
           personId: base.personId ?? personIdByHoldingId[base.id],
+          sourceAddedHoldingId:
+              base.sourceAddedHoldingId ??
+                  sourceAddedHoldingIdByHoldingId[base.id],
         );
         return _editOverlay.apply(withCount, latestEditByHoldingId[base.id]);
       }).toList();

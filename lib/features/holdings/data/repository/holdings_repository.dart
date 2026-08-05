@@ -259,6 +259,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
             : generatedId);
     final Parcel withId = parcel.copyWith(
       id: generatedId,
+      sourceAddedHoldingId: generatedId,
       personId: personId,
       pendingGroupId: pendingGroupId,
       isFieldAdded: true,
@@ -334,13 +335,15 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == id);
     if (idx < 0) return false;
     final Parcel removed = _parcels[idx];
-    if (!removed.isFieldAdded) return false;
+    final String? addedHoldingId =
+        removed.sourceAddedHoldingId ?? (removed.isFieldAdded ? removed.id : null);
+    if (addedHoldingId == null) return false;
 
-    await holdingsApi?.deleteAddedHolding(id);
+    await holdingsApi?.deleteAddedHolding(addedHoldingId);
 
     _parcels = <Parcel>[
       for (final Parcel p in _parcels)
-        if (p.id != id)
+        if (p.id != id && p.sourceAddedHoldingId != addedHoldingId)
           // Mirrors addLocalParcel's bump: undo it for any sibling parcel
           // still sharing this holding.
           (p.groupKey == removed.groupKey && p.holdingsCount != null)
@@ -479,8 +482,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
     final Parcel updatedWithGroup = idx >= 0
         ? updated.copyWith(
+            sourceAddedHoldingId:
+                _parcels[idx].sourceAddedHoldingId ?? updated.sourceAddedHoldingId,
             pendingGroupId: _parcels[idx].pendingGroupId,
-            personId: _parcels[idx].personId,
+            personId: _parcels[idx].personId ?? updated.personId,
           )
         : updated;
 
@@ -538,13 +543,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// dataset (e.g. a stray event for a different city).
   void applyRemoteDelete(final String id) {
     if (_activeCityId == null) return;
-    final int before = _parcels.length;
+    final Parcel? removed = _parcels.cast<Parcel?>().firstWhere(
+      (final Parcel? p) => p?.id == id || p?.sourceAddedHoldingId == id,
+      orElse: () => null,
+    );
+    if (removed == null) return;
+
     _parcels = <Parcel>[
       for (final Parcel p in _parcels)
-        if (p.id != id) p,
+        if (p.id != id && p.sourceAddedHoldingId != id) p,
     ];
-    if (_parcels.length == before) return;
-    _originalById.remove(id);
+    _originalById.remove(removed.id);
     _rebuildBorderIndex();
     _remoteChangesController.add(null);
   }

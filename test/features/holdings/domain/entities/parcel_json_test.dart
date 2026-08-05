@@ -30,6 +30,8 @@ void main() {
       isInheritance: true,
       isDelegate: true,
       usageType: 'مباني',
+      sourceAddedHoldingId: 'added-uuid-1',
+      personId: 'person-uuid-1',
       reviewed: true,
       reviewedAt: DateTime(2026, 1, 2, 9, 30),
       reviewedBy: 'user-uuid-1',
@@ -62,6 +64,8 @@ void main() {
     expect(roundTripped.isInheritance, original.isInheritance);
     expect(roundTripped.isDelegate, original.isDelegate);
     expect(roundTripped.usageType, original.usageType);
+    expect(roundTripped.sourceAddedHoldingId, original.sourceAddedHoldingId);
+    expect(roundTripped.personId, original.personId);
     expect(roundTripped.reviewed, original.reviewed);
     expect(roundTripped.reviewedAt, original.reviewedAt);
     expect(roundTripped.reviewedBy, original.reviewedBy);
@@ -123,5 +127,34 @@ void main() {
       final Parcel fieldAdded = base.copyWith(isFieldAdded: true);
       expect(fieldAdded.isFieldAdded, isTrue);
     });
+  });
+
+  test('fromEditableJson preserves origin and review metadata', () {
+    final Parcel original = Parcel(
+      id: 'p-1',
+      sourceAddedHoldingId: 'added-1',
+      personId: 'person-1',
+      holdingId: '101',
+      reviewed: true,
+      reviewedAt: DateTime(2026, 1, 1),
+      reviewedBy: 'user-1',
+      isFieldAdded: true,
+      pendingGroupId: 'pending-1',
+      holdingsCount: 3,
+    );
+
+    final Parcel rebuilt = Parcel.fromEditableJson(
+      original,
+      <String, dynamic>{'holderName': 'محمد'},
+    );
+
+    expect(rebuilt.sourceAddedHoldingId, original.sourceAddedHoldingId);
+    expect(rebuilt.personId, original.personId);
+    expect(rebuilt.reviewed, original.reviewed);
+    expect(rebuilt.reviewedAt, original.reviewedAt);
+    expect(rebuilt.reviewedBy, original.reviewedBy);
+    expect(rebuilt.isFieldAdded, original.isFieldAdded);
+    expect(rebuilt.pendingGroupId, original.pendingGroupId);
+    expect(rebuilt.holdingsCount, original.holdingsCount);
   });
 }

@@ -31,6 +31,14 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
     sahm: asDouble(row['sahm']),
     totalSqm: asDouble(row['total_sqm']),
     associationName: row['association_name'] as String?,
+    ownerName: row['owner_name'] as String?,
+    cropType: row['crop_type'] as String?,
+    notes: row['notes'] as String?,
+    creditType: row['credit_type'] as String? ?? Parcel.defaultCreditType,
+    reformType: row['reform_type'] as String? ?? Parcel.defaultReformType,
+    isInheritance: row['is_inheritance'] as bool? ?? false,
+    isDelegate: row['is_delegate'] as bool? ?? false,
+    usageType: row['usage_type'] as String? ?? Parcel.defaultUsageType,
     reviewed: row['reviewed'] as bool? ?? false,
     reviewedAt: row['reviewed_at'] == null
         ? null
@@ -52,6 +60,7 @@ Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
 
   return Parcel(
     id: row['id'] as String,
+    sourceAddedHoldingId: row['id'] as String?,
     personId: row['person_id'] as String?,
     holdingId: (row['holding_id_number'] as String?) ?? '',
     pageNumber: row['page_number'] as String?,
