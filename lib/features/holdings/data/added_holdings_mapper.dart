@@ -40,5 +40,8 @@ Map<String, dynamic> parcelToAddedHoldingsRecord(final Parcel p) {
     'usage_type': p.usageType,
     'is_inheritance': p.isInheritance,
     'is_delegate': p.isDelegate,
+    'holder_name_farmer_card': p.holderNameFarmerCard,
+    'owner_name_farmer_card': p.ownerNameFarmerCard,
+    'growth_stages': p.growthStages,
   };
 }

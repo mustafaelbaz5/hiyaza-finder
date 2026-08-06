@@ -38,6 +38,9 @@ class Parcel {
     this.reviewedAt,
     this.reviewedBy,
     this.isFieldAdded = false,
+    this.holderNameFarmerCard,
+    this.ownerNameFarmerCard,
+    this.growthStages,
   });
 
   /// Stable identity — for an imported parcel this is `holdings.id` as
@@ -96,6 +99,20 @@ class Parcel {
   /// row. Structural/origin metadata, never user-edited; needed so
   /// `setParcelReviewed`/`pushMarkReviewed` know which table to UPDATE.
   final bool isFieldAdded;
+
+  /// اسم الحائز كما يظهر في بطاقة الفلاح (farmer-card name) — distinct from
+  /// [holderName], which is the Excel-import/edit-overlay identity field.
+  /// `holdings.holder_name_farmer_card` / `added_holdings.holder_name_farmer_card`.
+  final String? holderNameFarmerCard;
+
+  /// اسم المالك كما يظهر في بطاقة الفلاح — the owner-side counterpart to
+  /// [holderNameFarmerCard]. `holdings.owner_name_farmer_card` /
+  /// `added_holdings.owner_name_farmer_card`.
+  final String? ownerNameFarmerCard;
+
+  /// مراحل النمو — free-text growth-stage note for the current crop.
+  /// `holdings.growth_stages` / `added_holdings.growth_stages`.
+  final String? growthStages;
 
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
@@ -237,6 +254,9 @@ class Parcel {
     final Object? reviewedAt = _unset,
     final Object? reviewedBy = _unset,
     final bool? isFieldAdded,
+    final Object? holderNameFarmerCard = _unset,
+    final Object? ownerNameFarmerCard = _unset,
+    final Object? growthStages = _unset,
   }) {
     T resolve<T>(final Object? value, final T fallback) =>
         identical(value, _unset) ? fallback : value as T;
@@ -278,6 +298,11 @@ class Parcel {
       reviewedAt: resolve(reviewedAt, this.reviewedAt),
       reviewedBy: resolve(reviewedBy, this.reviewedBy),
       isFieldAdded: isFieldAdded ?? this.isFieldAdded,
+      holderNameFarmerCard:
+          resolve(holderNameFarmerCard, this.holderNameFarmerCard),
+      ownerNameFarmerCard:
+          resolve(ownerNameFarmerCard, this.ownerNameFarmerCard),
+      growthStages: resolve(growthStages, this.growthStages),
     );
   }
 
@@ -307,6 +332,9 @@ class Parcel {
         'isInheritance': isInheritance,
         'isDelegate': isDelegate,
         'usageType': usageType,
+        'holderNameFarmerCard': holderNameFarmerCard,
+        'ownerNameFarmerCard': ownerNameFarmerCard,
+        'growthStages': growthStages,
       };
 
   /// Rebuilds a parcel from [original] — which supplies the never-editable
@@ -355,6 +383,9 @@ class Parcel {
       reviewedAt: original.reviewedAt,
       reviewedBy: original.reviewedBy,
       isFieldAdded: original.isFieldAdded,
+      holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
+      ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
+      growthStages: json['growthStages'] as String?,
     );
   }
 
@@ -398,6 +429,9 @@ class Parcel {
         'reviewedAt': reviewedAt?.toIso8601String(),
         'reviewedBy': reviewedBy,
         'isFieldAdded': isFieldAdded,
+        'holderNameFarmerCard': holderNameFarmerCard,
+        'ownerNameFarmerCard': ownerNameFarmerCard,
+        'growthStages': growthStages,
       };
 
   factory Parcel.fromJson(final Map<String, dynamic> json) {
@@ -440,6 +474,9 @@ class Parcel {
           : DateTime.parse(json['reviewedAt'] as String),
       reviewedBy: json['reviewedBy'] as String?,
       isFieldAdded: json['isFieldAdded'] as bool? ?? false,
+      holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
+      ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
+      growthStages: json['growthStages'] as String?,
     );
   }
 }

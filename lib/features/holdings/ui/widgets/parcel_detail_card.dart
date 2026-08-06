@@ -165,36 +165,36 @@ class ParcelDetailCard extends StatelessWidget {
                     value: parcel.holdingsCount.toString(),
                   ),
                 FieldRow(
-                  label: 'اسم المالك',
+                  label: 'holdings.fields.owner_name'.tr(),
                   value: _formatter.effectiveOwnerName(parcel),
                   isModified: _isModified((final p) => p.ownerName),
                   onEdit: () => _editText(
                     context,
-                    title: 'اسم المالك',
+                    title: 'holdings.fields.owner_name'.tr(),
                     initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
                     apply: (final String v) =>
                         parcel.copyWith(ownerName: v.isEmpty ? null : v),
                   ),
                 ),
                 FieldRow(
-                  label: 'اسم الحائز',
+                  label: 'holdings.fields.holder_name'.tr(),
                   value: parcel.holderName,
                   isModified: _isModified((final p) => p.holderName),
                   onEdit: () => _editText(
                     context,
-                    title: 'اسم الحائز',
+                    title: 'holdings.fields.holder_name'.tr(),
                     initialValue: parcel.holderName ?? '',
                     apply: (final String v) =>
                         parcel.copyWith(holderName: v.isEmpty ? null : v),
                   ),
                 ),
                 FieldRow(
-                  label: 'الرقم القومي',
+                  label: 'holdings.fields.national_id'.tr(),
                   value: parcel.nationalId,
                   isModified: _isModified((final p) => p.nationalId),
                   onEdit: () => _editText(
                     context,
-                    title: 'الرقم القومي',
+                    title: 'holdings.fields.national_id'.tr(),
                     initialValue: parcel.nationalId ?? '',
                     keyboardType: TextInputType.number,
                     apply: (final String v) =>
@@ -202,37 +202,37 @@ class ParcelDetailCard extends StatelessWidget {
                   ),
                 ),
                 FieldRow(
-                  label: 'اسم الجمعية',
+                  label: 'holdings.fields.association_name'.tr(),
                   value: parcel.associationName,
                   isModified: _isModified((final p) => p.associationName),
                   onEdit: () => _editText(
                     context,
-                    title: 'اسم الجمعية',
+                    title: 'holdings.fields.association_name'.tr(),
                     initialValue: parcel.associationName ?? '',
                     apply: (final String v) =>
                         parcel.copyWith(associationName: v.isEmpty ? null : v),
                   ),
                 ),
                 FieldRow(
-                  label: 'اسم الحوض',
+                  label: 'holdings.fields.basin_name'.tr(),
                   value: parcel.basinName,
                   isModified: _isModified((final p) => p.basinName),
                   onEdit: () => _editBasin(context),
                 ),
                 FieldRow(
-                  label: 'رقم الأرض',
+                  label: 'holdings.fields.land_number'.tr(),
                   value: parcel.landNumber,
                   isModified: _isModified((final p) => p.landNumber),
                   onEdit: () => _editText(
                     context,
-                    title: 'رقم الأرض',
+                    title: 'holdings.fields.land_number'.tr(),
                     initialValue: parcel.landNumber ?? '',
                     apply: (final String v) =>
                         parcel.copyWith(landNumber: v.isEmpty ? null : v),
                   ),
                 ),
                 FieldRow(
-                  label: 'المساحة',
+                  label: 'holdings.fields.area'.tr(),
                   value: _formatter.areaFraction(parcel),
                   isModified: _isModified((final p) => p.feddan) ||
                       _isModified((final p) => p.qirat) ||
@@ -240,24 +240,24 @@ class ParcelDetailCard extends StatelessWidget {
                   onEdit: () => _editArea(context),
                 ),
                 FieldRow(
-                  label: 'المساحة بالمتر',
+                  label: 'holdings.fields.area_sqm'.tr(),
                   value: _formatter.formatNumber(parcel.totalSqm),
                   isModified: _isModified((final p) => p.totalSqm),
                   onEdit: () => _editArea(context),
                 ),
                 FieldRow(
-                  label: 'نوع الزرع',
+                  label: 'holdings.fields.crop_type'.tr(),
                   value: parcel.cropType,
                   isModified: _isModified((final p) => p.cropType),
                   onEdit: () => _editCropType(context),
                 ),
                 FieldRow(
-                  label: 'ملاحظات',
+                  label: 'holdings.fields.notes'.tr(),
                   value: parcel.notes,
                   isModified: _isModified((final p) => p.notes),
                   onEdit: () => _editDropdown(
                     context,
-                    title: 'ملاحظات',
+                    title: 'holdings.fields.notes'.tr(),
                     initialValue: parcel.notes,
                     options: Parcel.notesOptions,
                     apply: (final String? v) => parcel.copyWith(notes: v),
@@ -360,7 +360,7 @@ class ParcelDetailCard extends StatelessWidget {
     if (basins.isEmpty) {
       await _editText(
         context,
-        title: 'اسم الحوض',
+        title: 'holdings.fields.basin_name'.tr(),
         initialValue: parcel.basinName ?? '',
         apply: (final String v) =>
             parcel.copyWith(basinName: v.isEmpty ? null : v),
@@ -370,7 +370,7 @@ class ParcelDetailCard extends StatelessWidget {
 
     final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
-      title: 'اسم الحوض',
+      title: 'holdings.fields.basin_name'.tr(),
       options: [
         for (final String basin in basins)
           ChoiceOption<String>(value: basin, label: basin),

@@ -137,6 +137,32 @@
     }
   },
   "holdings": {
+    "fields": {
+      "holding_id": "رقم الحيازة",
+      "holder_name": "اسم الحائز",
+      "owner_name": "اسم المالك",
+      "national_id": "الرقم القومي",
+      "association_name": "اسم الجمعية",
+      "basin_name": "اسم الحوض",
+      "basin_code": "كود الحوض",
+      "land_number": "رقم الأرض",
+      "area": "المساحة",
+      "area_sqm": "المساحة بالمتر",
+      "crop_type": "نوع الزرع",
+      "notes": "ملاحظات",
+      "credit_type": "نوع الائتمان",
+      "reform_type": "نوع الإصلاح",
+      "usage_type": "نوع الاستخدام",
+      "directorate": "المديرية",
+      "administration": "الإدارة",
+      "inheritance": "وراثة",
+      "not_inheritance": "ليست وراثة",
+      "delegate": "مفوض",
+      "not_delegate": "غير مفوض",
+      "holder_name_farmer_card": "اسم الحائز (بطاقة الفلاح)",
+      "owner_name_farmer_card": "اسم المالك (بطاقة الفلاح)",
+      "growth_stages": "مراحل النمو"
+    },
     "reform_types": {
       "owned": "إصلاح مُملك",
       "cooperative": "إصلاح اشتراكي",

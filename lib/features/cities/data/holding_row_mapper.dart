@@ -45,6 +45,9 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
         : DateTime.parse(row['reviewed_at'] as String),
     reviewedBy: row['reviewed_by'] as String?,
     isFieldAdded: false,
+    holderNameFarmerCard: row['holder_name_farmer_card'] as String?,
+    ownerNameFarmerCard: row['owner_name_farmer_card'] as String?,
+    growthStages: row['growth_stages'] as String?,
   );
 }
 
@@ -93,5 +96,8 @@ Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
         : DateTime.parse(row['reviewed_at'] as String),
     reviewedBy: row['reviewed_by'] as String?,
     isFieldAdded: true,
+    holderNameFarmerCard: row['holder_name_farmer_card'] as String?,
+    ownerNameFarmerCard: row['owner_name_farmer_card'] as String?,
+    growthStages: row['growth_stages'] as String?,
   );
 }

@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     verticalSpacing(80),
                     Center(
                       child: Text(
-                        'حيازة',
+                        'holdings.home.brand'.tr(),
                         style: AppTextStyles.font24Bold.copyWith(
                           color: AppColors.primary200,
                         ),
