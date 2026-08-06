@@ -8,11 +8,10 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
-import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../hiyaza_finder_app.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
+import '../widgets/detail_screen_header.dart';
 import '../widgets/parcel_detail_card.dart';
 import 'add_record_screen.dart';
 
@@ -285,67 +284,14 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  verticalSpacing(16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      const AppBackButton(),
-                      horizontalSpacing(12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            Text(
-                              'holdings.detail.title'.tr(
-                                namedArgs: {'id': holdingId},
-                              ),
-                              style: AppTextStyles.font20Bold.copyWith(
-                                color: colors.textPrimary,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                            if (_parcels.length > 1) ...<Widget>[
-                              verticalSpacing(2),
-                              Text(
-                                'holdings.detail.parcel_count'.tr(
-                                  namedArgs: {
-                                    'count': _parcels.length.toString(),
-                                  },
-                                ),
-                                style: AppTextStyles.font12Regular.copyWith(
-                                  color: colors.textSecondary,
-                                ),
-                                textAlign: TextAlign.right,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _isBusy ? null : _refreshCityData,
-                        icon: const Icon(Icons.refresh_rounded),
-                        tooltip: 'holdings.detail.refresh'.tr(),
-                      ),
-                    ],
-                  ),
-                  if (_parcels.isNotEmpty) ...<Widget>[
-                    verticalSpacing(12),
-                    CustomTextButton.outlined(
-                      text: 'holdings.add.new_parcel_title'.tr(),
-                      size: CustomButtonSize.small,
-                      isFullWidth: false,
-                      prefixIcon: const Icon(Icons.add_location_alt_rounded),
-                      onPressed: () => _addParcelForPerson(_parcels.first),
-                    ),
-                  ],
-                  verticalSpacing(16),
-                ],
-              ),
+            DetailScreenHeader(
+              holdingId: holdingId,
+              parcelCount: _parcels.length,
+              isBusy: _isBusy,
+              onRefresh: _refreshCityData,
+              onAddParcel: _parcels.isEmpty
+                  ? null
+                  : () => _addParcelForPerson(_parcels.first),
             ),
             Expanded(
               child: _parcels.isEmpty

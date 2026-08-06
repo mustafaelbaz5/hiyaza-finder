@@ -24,9 +24,6 @@ dependencies:
   flutter_bloc: ^9.1.1
   hydrated_bloc: ^11.0.0
 
-  # --- Networking ---
-  dio: ^5.10.0
-
   # --- Storage & Preferences ---
   flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5

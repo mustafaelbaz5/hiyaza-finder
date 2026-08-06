@@ -6,7 +6,6 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
@@ -15,6 +14,7 @@ import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/field_change_tracker.dart';
 import '../../logic/services/area_calculator.dart';
+import '../widgets/add_record_header.dart';
 import '../widgets/crop_type_picker.dart';
 import '../widgets/field_edit_dialogs.dart';
 import '../widgets/field_row.dart';
@@ -241,7 +241,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     if (basins.isEmpty) {
       await _editText(
         context,
-        title: 'اسم الحوض',
+        title: 'holdings.fields.basin_name'.tr(),
         initialValue: _parcel.basinName ?? '',
         apply: (final String v) => _parcel.copyWith(
           basinName: v.isEmpty ? null : v,
@@ -252,7 +252,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
     final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
-      title: 'اسم الحوض',
+      title: 'holdings.fields.basin_name'.tr(),
       options: [
         for (final String basin in basins)
           ChoiceOption<String>(value: basin, label: basin),
@@ -297,55 +297,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              verticalSpacing(16),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                child: Row(
-                  children: [
-                    AppBackButton(
-                      onTap: () => _confirmDiscardAndPop(context),
-                    ),
-                    horizontalSpacing(12),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: AppTextStyles.font20Bold.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    ),
-                  ],
-                ),
+              AddRecordHeader(
+                title: title,
+                onBack: () => _confirmDiscardAndPop(context),
+                forPersonName: widget.parentHoldingId == null
+                    ? null
+                    : widget.initialParcel.holderName ?? '',
               ),
-              if (widget.parentHoldingId != null) ...[
-                verticalSpacing(12),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.blue200.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'holdings.add.for_person'.tr(
-                        namedArgs: {
-                          'name': widget.initialParcel.holderName ?? '',
-                        },
-                      ),
-                      style: AppTextStyles.font12Bold.copyWith(
-                        color: AppColors.blue200,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ),
-              ],
               verticalSpacing(16),
               Expanded(
                 child: SingleChildScrollView(
@@ -358,12 +316,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                       ResponsiveFieldsWrap(
                         children: [
                           FieldRow(
-                            label: 'رقم الحيازة',
+                            label: 'holdings.fields.holding_id'.tr(),
                             value: _parcel.holdingId,
                             isModified: _isModified((final p) => p.holdingId),
                             onEdit: () => _editText(
                               context,
-                              title: 'رقم الحيازة',
+                              title: 'holdings.fields.holding_id'.tr(),
                               initialValue: _parcel.holdingId,
                               apply: (final String v) => _parcel.copyWith(
                                 holdingId: v.isEmpty ? '-1' : v,
@@ -376,12 +334,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               value: _parcel.holdingsCount.toString(),
                             ),
                           FieldRow(
-                            label: 'اسم الحائز *',
+                            label: '${'holdings.fields.holder_name'.tr()} *',
                             value: _parcel.holderName,
                             isModified: _isModified((final p) => p.holderName),
                             onEdit: () => _editText(
                               context,
-                              title: 'اسم الحائز',
+                              title: 'holdings.fields.holder_name'.tr(),
                               initialValue: _parcel.holderName ?? '',
                               apply: (final String v) => _parcel.copyWith(
                                 holderName: v.isEmpty ? null : v,
@@ -389,12 +347,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           FieldRow(
-                            label: 'اسم المالك',
+                            label: 'holdings.fields.owner_name'.tr(),
                             value: _parcel.ownerName,
                             isModified: _isModified((final p) => p.ownerName),
                             onEdit: () => _editText(
                               context,
-                              title: 'اسم المالك',
+                              title: 'holdings.fields.owner_name'.tr(),
                               initialValue: _parcel.ownerName ?? '',
                               apply: (final String v) => _parcel.copyWith(
                                 ownerName: v.isEmpty ? null : v,
@@ -402,12 +360,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           FieldRow(
-                            label: 'الرقم القومي',
+                            label: 'holdings.fields.national_id'.tr(),
                             value: _parcel.nationalId,
                             isModified: _isModified((final p) => p.nationalId),
                             onEdit: () => _editText(
                               context,
-                              title: 'الرقم القومي',
+                              title: 'holdings.fields.national_id'.tr(),
                               initialValue: _parcel.nationalId ?? '',
                               keyboardType: TextInputType.number,
                               apply: (final String v) => _parcel.copyWith(
@@ -416,18 +374,18 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           FieldRow(
-                            label: 'اسم الحوض',
+                            label: 'holdings.fields.basin_name'.tr(),
                             value: _parcel.basinName,
                             isModified: _isModified((final p) => p.basinName),
                             onEdit: () => _editBasin(context),
                           ),
                           FieldRow(
-                            label: 'رقم الأرض',
+                            label: 'holdings.fields.land_number'.tr(),
                             value: _parcel.landNumber,
                             isModified: _isModified((final p) => p.landNumber),
                             onEdit: () => _editText(
                               context,
-                              title: 'رقم الأرض',
+                              title: 'holdings.fields.land_number'.tr(),
                               initialValue: _parcel.landNumber ?? '',
                               apply: (final String v) => _parcel.copyWith(
                                 landNumber: v.isEmpty ? null : v,
@@ -447,7 +405,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               ),
                             ),
                           FieldRow(
-                            label: 'المساحة',
+                            label: 'holdings.fields.area'.tr(),
                             value: _areaFraction(_parcel),
                             isModified: _isModified((final p) => p.feddan) ||
                                 _isModified((final p) => p.qirat) ||
@@ -455,18 +413,18 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             onEdit: () => _editArea(context),
                           ),
                           FieldRow(
-                            label: 'نوع الزرع',
+                            label: 'holdings.fields.crop_type'.tr(),
                             value: _parcel.cropType,
                             isModified: _isModified((final p) => p.cropType),
                             onEdit: () => _editCropType(context),
                           ),
                           FieldRow(
-                            label: 'ملاحظات',
+                            label: 'holdings.fields.notes'.tr(),
                             value: _parcel.notes,
                             isModified: _isModified((final p) => p.notes),
                             onEdit: () => _editDropdown(
                               context,
-                              title: 'ملاحظات',
+                              title: 'holdings.fields.notes'.tr(),
                               initialValue: _parcel.notes,
                               options: Parcel.notesOptions,
                               apply: (final String? v) =>
@@ -475,12 +433,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           ),
                           if (!hideCreditType)
                             FieldRow(
-                              label: 'نوع الائتمان',
+                              label: 'holdings.fields.credit_type'.tr(),
                               value: _parcel.creditType,
                               isModified: _isModified((final p) => p.creditType),
                               onEdit: () => _editDropdown(
                                 context,
-                                title: 'نوع الائتمان',
+                                title: 'holdings.fields.credit_type'.tr(),
                                 initialValue: _parcel.creditType,
                                 options: Parcel.creditTypeOptions,
                                 allowClear: false,
@@ -490,12 +448,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               ),
                             ),
                           FieldRow(
-                            label: 'نوع الاستخدام',
+                            label: 'holdings.fields.usage_type'.tr(),
                             value: _parcel.usageType,
                             isModified: _isModified((final p) => p.usageType),
                             onEdit: () => _editDropdown(
                               context,
-                              title: 'نوع الاستخدام',
+                              title: 'holdings.fields.usage_type'.tr(),
                               initialValue: _parcel.usageType,
                               options: Parcel.usageTypeOptions,
                               allowClear: false,
@@ -505,7 +463,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           ToggleFieldRow(
-                            label: 'وراثة',
+                            label: 'holdings.fields.inheritance'.tr(),
                             value: _parcel.isInheritance,
                             isModified: _isModified((final p) => p.isInheritance),
                             onChanged: (final bool v) => setState(
@@ -514,7 +472,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           ToggleFieldRow(
-                            label: 'مفوض',
+                            label: 'holdings.fields.delegate'.tr(),
                             value: _parcel.isDelegate,
                             isModified: _isModified((final p) => p.isDelegate),
                             onChanged: (final bool v) => setState(
