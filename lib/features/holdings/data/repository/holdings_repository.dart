@@ -8,6 +8,7 @@ import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
 import '../../../sync/data/holdings_api.dart';
 import '../../../sync/data/realtime_sync_service.dart';
+import '../../../sync/domain/parcel_change_handler.dart';
 import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
@@ -34,7 +35,8 @@ import 'parcel_edits_store.dart';
 /// write — there is no local-first deferral/outbox: a failed write throws
 /// and leaves the in-memory dataset exactly as it was, for the caller to
 /// catch and show an error.
-class HoldingsRepository implements HoldingsReader, HoldingsWriter {
+class HoldingsRepository
+    implements HoldingsReader, HoldingsWriter, ParcelChangeHandler {
   HoldingsRepository({
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
     final ParcelQueryService queryService = const ParcelQueryService(),
@@ -463,6 +465,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// echoes back over Realtime, un-grouping it from the pending person it
   /// was just correctly grouped with. Preserving the existing local value
   /// here is what keeps that grouping intact across the echo.
+  @override
   void applyRemoteChange(final Parcel updated) {
     if (_activeCityId == null) return;
 
@@ -509,6 +512,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// clobbering newer local state — it does not skip a genuine remote
   /// correction from another device for a holding this device has never
   /// edited, since [_edits] would be empty for that holding.
+  @override
   void applyRemoteEdit(final String holdingId, final Map<String, dynamic> payload) {
     if (_activeCityId == null) return;
     if (_edits.containsKey(holdingId)) return;
@@ -528,6 +532,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Realtime DELETE event — a holding marked stale, or an `added_holdings`
   /// row rejected/deleted server-side. No-op if [id] isn't in the active
   /// dataset (e.g. a stray event for a different city).
+  @override
   void applyRemoteDelete(final String id) {
     if (_activeCityId == null) return;
     final Parcel? removed = _parcels.cast<Parcel?>().firstWhere(

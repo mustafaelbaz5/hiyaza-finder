@@ -1,31 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../cities/data/holding_row_mapper.dart';
-import '../../holdings/data/repository/holdings_repository.dart';
+import '../domain/parcel_change_handler.dart';
 
 /// Subscribes to Supabase Realtime `postgres_changes` on `holdings`,
 /// `holding_edits`, and `added_holdings` for the currently active city, and
-/// patches incoming rows into [HoldingsRepository] rather than re-downloading
+/// patches incoming rows into [ParcelChangeHandler] rather than re-downloading
 /// the city. See `supabase/migrations/20260804000015_enable_realtime.sql` for
 /// the publication side of this — RLS (unchanged) governs what a
 /// subscription can actually receive, same as a plain `SELECT`.
 ///
-/// Only one city is ever active at a time (mirrors
-/// `HoldingsRepository.loadParcelsForCity`'s one-city model), so
-/// [subscribeToCity] tears down any previous channel before opening the new
-/// one.
+/// Only one city is ever active at a time (mirrors `HoldingsRepository`'s
+/// one-city model — its `loadParcelsForCity` — the concrete
+/// [ParcelChangeHandler] implementation in practice), so [subscribeToCity]
+/// tears down any previous channel before opening the new one.
 class RealtimeSyncService {
-  /// Takes a getter rather than a [HoldingsRepository] directly: both
-  /// classes are GetIt lazy singletons and each needs the other (this one
-  /// to patch incoming rows in, the repository to open a subscription
-  /// whenever the active city changes) — resolving one eagerly during the
-  /// other's construction would recurse. The getter defers that lookup
-  /// until a channel callback actually fires, by which point both
+  /// Takes a getter rather than a [ParcelChangeHandler] directly: both
+  /// the handler and this service are GetIt lazy singletons and each needs
+  /// the other (this one to patch incoming rows in, the handler to open a
+  /// subscription whenever the active city changes) — resolving one eagerly
+  /// during the other's construction would recurse. The getter defers that
+  /// lookup until a channel callback actually fires, by which point both
   /// singletons already exist.
   RealtimeSyncService(this._repositoryGetter, {final SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  final HoldingsRepository Function() _repositoryGetter;
+  final ParcelChangeHandler Function() _repositoryGetter;
   final SupabaseClient _client;
   RealtimeChannel? _channel;
 
