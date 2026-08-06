@@ -336,9 +336,21 @@ off on implementing all four; each is built and gated independently before the n
      storage via `SyncRunner.onQueueChanged`, and fires an initial fire-and-forget flush.
      `HomeScreen`'s existing resume-lifecycle hook (Phase 9 #8) now also calls `SyncRunner.flush()`, so
      app-resume both re-syncs the read side and drains the write queue.
-  3. ⬜ **Failed-syncs UI** — not yet built. `SyncRunner.operations`/`onQueueChanged` already expose
-     everything needed (pending count, per-operation `attempts`/`lastError`, `retry()`/`remove()`) for a
-     surface letting the user see and act on a permanently-failed write; no screen currently reads it.
+  3. ✅ **Pending/failed-syncs UI (2026-08-06).** `home_top_bar.dart`'s empty trailing slot (left by
+     Phase 9 #8's manual-refresh removal) now hosts a sync icon with a live badge
+     (`StreamBuilder` over `SyncRunner.onQueueChanged`) — count when anything is queued, red once any
+     operation has failed at least once. Tapping it opens `pending_syncs_sheet.dart`, listing each
+     operation via `syncOperationSummary()` with retry/discard actions wired directly to
+     `SyncRunner.retry()`/`remove()`. Reused the `sync.status`/`sync.details`/`sync.operation`
+     localization namespace already present in `assets/lang/{ar,en}.json` (a leftover provision from
+     the originally-designed-but-never-built outbox — genuinely a perfect fit, not repurposed) rather
+     than adding a duplicate; added the one missing key (`sync.operation.delete_parcel`) both languages
+     needed. `sync_operation_summary_test.dart` (6 tests, the widget-driven `.tr()` pattern
+     `CLAUDE.md`'s localization section documents) verifies the actual Arabic strings render, not just
+     that a key is returned.
+
+  **Phase 9 #9 complete** — flutter analyze clean, flutter test 263/263 passing (up from 250 before
+  this item).
 - **In-app activity center per city.** Larger in scope than `PROJECT_OBJECTIVES.md` §4's explicit
   "lightweight... not a Dashboard replacement" boundary for in-app stats.
 

@@ -68,6 +68,7 @@
       "bulk_edit": "Bulk edit ({count} records)",
       "add_person": "New person: {name}",
       "add_parcel": "New parcel",
+      "delete_parcel": "Delete record",
       "unnamed": "Unnamed",
       "mark_reviewed": "Reviewed status update"
     }

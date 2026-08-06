@@ -68,6 +68,7 @@
       "bulk_edit": "تعديل جماعي ({count} سجل)",
       "add_person": "شخص جديد: {name}",
       "add_parcel": "قطعة أرض جديدة",
+      "delete_parcel": "حذف سجل",
       "unnamed": "بدون اسم",
       "mark_reviewed": "تحديث حالة المراجعة"
     }
