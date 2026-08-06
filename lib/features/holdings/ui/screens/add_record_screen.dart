@@ -277,7 +277,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
     }
 
-    return '${fmt(p.feddan)} فدان، ${fmt(p.qirat)} قيراط، ${fmt(p.sahm)} سهم';
+    return 'holdings.area_units.fraction'.tr(
+      namedArgs: {
+        'feddan': fmt(p.feddan),
+        'qirat': fmt(p.qirat),
+        'sahm': fmt(p.sahm),
+      },
+    );
   }
 
   @override

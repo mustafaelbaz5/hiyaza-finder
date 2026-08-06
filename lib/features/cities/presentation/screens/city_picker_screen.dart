@@ -134,6 +134,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                             : IconButton(
                                 icon: Icon(Icons.close_rounded,
                                     color: colors.iconSecondary),
+                                tooltip: 'holdings.search.clear'.tr(),
                                 onPressed: () => _searchController.clear(),
                               ),
                       ),

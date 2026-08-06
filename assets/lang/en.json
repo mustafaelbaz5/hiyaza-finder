@@ -165,6 +165,12 @@
       "owner_name_farmer_card": "Owner name (farmer card)",
       "growth_stages": "Growth stages"
     },
+    "area_units": {
+      "feddan": "feddan",
+      "qirat": "qirat",
+      "sahm": "sahm",
+      "fraction": "{feddan} feddan, {qirat} qirat, {sahm} sahm"
+    },
     "borders": {
       "north": "North",
       "south": "South",
@@ -212,7 +218,8 @@
       "hint": "Search by holder name or holding number …",
       "no_results": "No results",
       "voice": "Voice search",
-      "mic_permission_denied": "Microphone access is required for voice search"
+      "mic_permission_denied": "Microphone access is required for voice search",
+      "clear": "Clear search"
     },
     "detail": {
       "see_more": "See more",
@@ -229,6 +236,7 @@
       "border_no_data": "No data exists for this person",
       "new_badge": "New — pending sync",
       "parcel_count": "{count} parcels",
+      "parcel_count_suffix": " ({count} parcels)",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",

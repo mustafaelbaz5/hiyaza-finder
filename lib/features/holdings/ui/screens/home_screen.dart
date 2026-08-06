@@ -304,6 +304,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
       if (widget.controller.text.isNotEmpty)
         IconButton(
           icon: Icon(Icons.close_rounded, color: colors.iconSecondary),
+          tooltip: 'holdings.search.clear'.tr(),
           onPressed: () {
             widget.controller.clear();
             widget.onQueryChanged('');

@@ -1,13 +1,14 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/screen_header.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../domain/entities/cached_city_meta.dart';
 import '../../domain/repositories/city_repository.dart';
@@ -116,31 +117,7 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  verticalSpacing(16),
-                  Row(
-                    children: [
-                      const AppBackButton(),
-                      horizontalSpacing(12),
-                      Expanded(
-                        child: Text(
-                          'cities.manage.title'.tr(),
-                          style: AppTextStyles.font20Bold.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                  verticalSpacing(16),
-                ],
-              ),
-            ),
+            ScreenHeader(title: 'cities.manage.title'.tr()),
             Expanded(child: _buildBody(context)),
           ],
         ),
@@ -164,36 +141,67 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.error_outline_rounded,
-                size: rf(40),
-                color: AppColors.red200,
-              ),
-              verticalSpacing(12),
+              Container(
+                padding: EdgeInsets.all(rw(24)),
+                decoration: BoxDecoration(
+                  color: AppColors.red200.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  size: rf(40),
+                  color: AppColors.red200,
+                ),
+              ).animate().shake(duration: 400.ms, hz: 4),
+              verticalSpacing(20),
               Text(
                 'errors.unknown'.tr(),
-                style: AppTextStyles.font14Regular.copyWith(
-                  color: colors.textHint,
+                style: AppTextStyles.font16SemiBold.copyWith(
+                  color: colors.textPrimary,
                 ),
                 textAlign: TextAlign.center,
               ),
-              verticalSpacing(16),
+              verticalSpacing(20),
               CustomTextButton(
                 text: 'errors.retry'.tr(),
                 onPressed: _load,
                 isFullWidth: false,
               ),
             ],
-          ),
+          ).animate().fadeIn(duration: 300.ms),
         ),
       );
     }
 
     if (_cities.isEmpty) {
       return Center(
-        child: Text(
-          'cities.manage.empty'.tr(),
-          style: AppTextStyles.font14Regular.copyWith(color: colors.textHint),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: rw(32)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(rw(24)),
+                decoration: BoxDecoration(
+                  color: AppColors.primary50.withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.location_city_outlined,
+                  size: rf(56),
+                  color: AppColors.primary200,
+                ),
+              ),
+              verticalSpacing(20),
+              Text(
+                'cities.manage.empty'.tr(),
+                style: AppTextStyles.font16SemiBold.copyWith(
+                  color: colors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ).animate().fadeIn(duration: 300.ms),
         ),
       );
     }
@@ -308,7 +316,16 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
                 ),
             ],
           ),
-        );
+        )
+            .animate(key: ValueKey<String>('${city.cityId}-anim'))
+            .fadeIn(duration: 200.ms, delay: (i * 20).ms)
+            .slideY(
+              begin: 0.06,
+              end: 0,
+              duration: 200.ms,
+              delay: (i * 20).ms,
+              curve: Curves.easeOutCubic,
+            );
       },
     );
   }

@@ -165,6 +165,12 @@
       "owner_name_farmer_card": "اسم المالك (بطاقة الفلاح)",
       "growth_stages": "مراحل النمو"
     },
+    "area_units": {
+      "feddan": "فدان",
+      "qirat": "قيراط",
+      "sahm": "سهم",
+      "fraction": "{feddan} فدان، {qirat} قيراط، {sahm} سهم"
+    },
     "borders": {
       "north": "شمال (البحري)",
       "south": "جنوب (القبلي)",
@@ -212,7 +218,8 @@
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
       "no_results": "لا نتائج",
       "voice": "بحث صوتي",
-      "mic_permission_denied": "يجب السماح بالوصول إلى الميكروفون لاستخدام البحث الصوتي"
+      "mic_permission_denied": "يجب السماح بالوصول إلى الميكروفون لاستخدام البحث الصوتي",
+      "clear": "مسح البحث"
     },
     "detail": {
       "see_more": "شاهد المزيد",
@@ -229,6 +236,7 @@
       "border_no_data": "لا توجد بيانات لهذا الشخص",
       "new_badge": "جديد — بانتظار المزامنة",
       "parcel_count": "{count} قطعة",
+      "parcel_count_suffix": " ({count} قطع)",
       "feddan": "فدان",
       "qirat": "قيراط",
       "sahm": "سهم",

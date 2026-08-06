@@ -6,6 +6,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../data/about_constants.dart';
 import 'widgets/about_app_header.dart';
 import 'widgets/about_flat_row.dart';
@@ -30,18 +31,7 @@ class AboutScreen extends StatelessWidget {
               verticalSpacing(16),
 
               // ── Back ──────────────────────────────────────────────
-              GestureDetector(
-                onTap: () => context.pop(),
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: rr(20),
-                    color: colors.textPrimary,
-                  ),
-                ),
-              ),
+              const AppBackButton(),
               verticalSpacing(24),
 
               // ── App Header ────────────────────────────────────────

@@ -9,8 +9,8 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/screen_header.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../domain/entities/bulk_edit_outcome.dart';
@@ -215,31 +215,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  verticalSpacing(16),
-                  Row(
-                    children: [
-                      const AppBackButton(),
-                      horizontalSpacing(12),
-                      Expanded(
-                        child: Text(
-                          'holdings.bulk_edit.title'.tr(),
-                          style: AppTextStyles.font20Bold.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                  verticalSpacing(16),
-                ],
-              ),
-            ),
+            ScreenHeader(title: 'holdings.bulk_edit.title'.tr()),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
