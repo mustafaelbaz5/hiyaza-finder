@@ -64,13 +64,21 @@ excluded from this phase (see Phase 4).
 
 ---
 
-## Phase 2 — Flutter: architecture rebuild, sync outbox, and sync/realtime decoupling
+## Phase 2 — Flutter: architecture rebuild, online-first sync/realtime decoupling, UI/UX, quality
 
-**Objective:** bring the app's real code in line with the target architecture, and — the
-highest-priority item — build a working, durable offline sync outbox (previously fully designed,
-never implemented), plus the new review/completion and add-person/add-parcel workflows.
+**Status as of 2026-08-06 (verified against the real `lib/` tree, not assumed):** superseded and
+re-scoped. The original objective below — a durable offline sync outbox as the highest-priority item —
+is **abandoned**, per the correction already recorded in `SYSTEM_DESIGN.md` §5: the app is
+intentionally online-first (every write awaits its Supabase call directly; no local queue). This
+roadmap entry was not updated when that correction landed; the paragraph and scope list immediately
+below are the **original, superseded** version, kept for history. See "Current, corrected scope" further
+down for what's actually being executed.
 
-**Scope:**
+**Original objective (superseded):** bring the app's real code in line with the target architecture,
+and — the highest-priority item — build a working, durable offline sync outbox (previously fully
+designed, never implemented), plus the new review/completion and add-person/add-parcel workflows.
+
+**Original scope (superseded):**
 - Split `HoldingsRepository` (646 lines today) into focused services along the lines already specified
   in the app's own prior planning doc (`ParcelQueryService`, `ParcelEditOverlay`, `BulkEditService`,
   `ClipboardFormatter`, plus new sync/completion services).
@@ -88,15 +96,70 @@ never implemented), plus the new review/completion and add-person/add-parcel wor
 - Progressive-disclosure parcel detail UI; active/completed sections in the main list.
 - Soft-delete-aware queries throughout (`deleted_at is null`).
 
-**Dependencies:** Phase 1's `persons`, `completed_at`/`completed_by`, `deleted_at`/`deleted_by`,
-`operation_id`, `target_was_stale` columns.
+**Original dependencies (superseded):** Phase 1's `persons`, `completed_at`/`completed_by`,
+`deleted_at`/`deleted_by`, `operation_id`, `target_was_stale` columns.
 
-**Complexity:** highest in this roadmap — this is the daily-use production tool.
+---
 
-**Risks:** regression risk in a tool people depend on every day. Mitigate with a strict
-"each phase leaves the app working" discipline (no big-bang rewrite) and a parallel-run period before
-full cutover. A meaningful set of presentational widgets are expected to survive this rebuild largely
-untouched (they render a `Parcel`; they don't know how it got there).
+### Current, corrected scope (online-first — this is what's actually being executed)
+
+**Objective:** finish decomposing the two remaining god-classes, decouple Realtime dispatch, close
+confirmed Flutter-side data gaps, and bring the whole app (not just architecture) to production
+quality — UI/UX consistency, full localization, and test coverage.
+
+**Done (commits on `core-refactor`, verified against the real files, not the names/line-counts this
+doc previously assumed):**
+
+- `ParcelSyncService` extracted from `HoldingsRepository` — network-facing writes
+  (add/delete/edit/mark-reviewed/bulk-edit) now live in
+  `lib/features/holdings/data/services/parcel_sync_service.dart`.
+- `ParcelChangeHandler` interface (`lib/features/sync/domain/parcel_change_handler.dart`) — Realtime
+  dispatch depends on this contract instead of the concrete `HoldingsRepository`. Note: this is
+  consumer-side dependency inversion only: `RealtimeSyncService` still maps raw Postgres rows to
+  `Parcel` itself, it does not yet publish a distinct domain-event type separate from `Parcel` mapping.
+  Fine for the current single-consumer reality (`SYSTEM_DESIGN.md` §7's own "don't build for one
+  consumer" note); revisit if a second feature ever needs live updates.
+- `ParcelDetailCard` split — status row/info banners/id chip extracted to
+  `lib/features/holdings/ui/widgets/parcel_detail_header.dart` (621 → 440 lines).
+- `Parcel.holderNameFarmerCard`/`ownerNameFarmerCard`/`growthStages` added and wired end-to-end
+  (entity, row mappers, `added_holdings_mapper`, edit overlay) — closes 2 of 3 confirmed export-gap
+  columns. `owner_national_id` remains unclosed: **no such column exists live** (confirmed via the
+  live schema — only a single `national_id` column exists on both `holdings`/`added_holdings`); this is
+  a database-side item, not a Flutter gap.
+- `holdings.fields.*` localization namespace added; `ParcelDetailCard`'s hardcoded Arabic field labels
+  migrated to it (first slice of the localization gap); `login_screen.dart`'s hardcoded app title fixed.
+
+**Explicitly abandoned (not gaps — confirmed via `SYSTEM_DESIGN.md`'s own correction):** the sync
+outbox (`SyncOperation`/`SyncOperationHandler`/`SyncRunner`, `core/sync/`), the reconnect
+flush→staleness-check→refresh sequence, the `persons` table (real mechanism is `person_id`).
+
+**Blocked on database work (owned by the user, not this session) — confirmed via live schema query,
+not assumed:** `completed_at`/`completed_by`/`deleted_at`/`deleted_by` do not exist on `holdings` or
+`added_holdings` in the live database. The completion-state domain service (distinct from today's
+single `reviewed` flag) and soft-delete-aware queries (`deleted_at is null`) cannot be built until
+these columns land — there is nothing to write to or filter by. Tracked as explicit TODOs, not silently
+dropped.
+
+**Remaining, in-progress (Flutter-only, no DB dependency):**
+
+- Full localization pass — ~114 hardcoded Arabic strings across ~15 UI files (`add_record_screen.dart`,
+  `see_more_section.dart`, `field_edit_dialogs.dart`, `crop_type_picker.dart`, `field_row.dart`,
+  `border_compass.dart`, `basin_filter_sheet.dart`, `toggle_field_row.dart`, `home_screen.dart`,
+  `recommendation_tile/list.dart`, `detail_screen.dart`).
+- `file_status_screen.dart`'s empty-state inconsistency (bespoke inline `Text` instead of the shared
+  `EmptyBody` widget already used on `home_screen.dart`).
+- Widget test coverage — currently exactly one UI widget test file
+  (`test/features/holdings/ui/widgets/parcel_detail_card_test.dart`) against ~28 UI files.
+- Dead-code cleanup flagged by `FLUTTER_ARCHITECTURE_REFERENCE.md` §17/§15 (verify each claim before
+  acting — that doc has its own accuracy issues): unused Firebase deps if actually present in
+  `pubspec.yaml`, the apparently-unused `lib/core/api/` (Dio) path if genuinely dead.
+
+**Complexity:** medium — no longer "highest in this roadmap" now that the outbox rebuild is off the
+table; the remaining scope is decomposition, localization, and polish, not a rewrite of the sync model.
+
+**Risks:** regression risk in a tool people depend on every day, same as originally noted. Mitigate
+with small, independently-committed, analyzer-and-test-gated steps (already the pattern used for the
+three landed commits) rather than a big-bang change.
 
 ---
 
