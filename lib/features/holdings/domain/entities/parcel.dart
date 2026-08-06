@@ -174,6 +174,21 @@ class Parcel {
     return RegExp(r'^\d{14}$').hasMatch(trimmed);
   }
 
+  /// اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly filled/chosen
+  /// (see [isValueFilled]), and [nationalId] must be a valid format if
+  /// present. Shared by `AddRecordScreen`'s save gate and the review-
+  /// completion gate (`ParcelDetailCard`'s Copy ID action, per
+  /// `REFACTOR_ROADMAP.md` Phase 7) so "what counts as a complete record"
+  /// can't drift between the two flows. Per-field message strings live in
+  /// the UI layer (`.tr()` needs `easy_localization`, unavailable to this
+  /// pure-Dart entity) — see `requiredFieldGaps` in
+  /// `ui/widgets/parcel_detail_card.dart`/`add_record_screen.dart`.
+  bool get hasRequiredFieldsFilled =>
+      isValueFilled(holderName) &&
+      isValueFilled(basinName) &&
+      isValueFilled(cropType) &&
+      isNationalIdValid(nationalId);
+
   static const String defaultCreditType = 'ملك';
   static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';

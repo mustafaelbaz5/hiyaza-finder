@@ -25,6 +25,7 @@ import 'crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'parcel_detail_header.dart';
+import 'required_field_gaps.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -104,6 +105,8 @@ class ParcelDetailCard extends StatelessWidget {
               onReopen: onReopen,
               onDelete: onDelete,
               onDeleteConfirmed: () => _confirmDelete(context),
+              isInheritance: parcel.isInheritance,
+              isDelegate: parcel.isDelegate,
             ),
             if (isAdded || isReviewed) verticalSpacing(8),
             if (isAdded)
@@ -402,11 +405,37 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
+  /// Copy ID is the review-completion action (`REFACTOR_ROADMAP.md` Phase
+  /// 7): validates required fields, copies the id, then marks the parcel
+  /// reviewed via the same `setParcelReviewed` path `onFinish` used —
+  /// unless it's already reviewed, in which case this is a plain re-copy
+  /// (re-marking an already-reviewed parcel via Copy ID would be a
+  /// surprising side effect of an action the user takes repeatedly while
+  /// working, e.g. to paste the id elsewhere after review).
   Future<void> _copyId(final BuildContext context) async {
+    if (!isNew && !parcel.reviewed && !parcel.hasRequiredFieldsFilled) {
+      final List<String> gaps = requiredFieldGapMessages(parcel);
+      context.showErrorSnackBar(gaps.first);
+      return;
+    }
+
     await Clipboard.setData(ClipboardData(text: parcel.id));
-    if (context.mounted) {
-      HapticFeedback.mediumImpact();
+    if (!context.mounted) return;
+    HapticFeedback.mediumImpact();
+
+    if (isNew || parcel.reviewed) {
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
+      return;
+    }
+
+    try {
+      await getIt<HoldingsRepository>()
+          .setParcelReviewed(parcel.id, reviewed: true);
+      if (!context.mounted) return;
+      onFieldChanged(parcel.copyWith(reviewed: true));
+      context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
+    } catch (_) {
+      if (context.mounted) context.showErrorSnackBar('errors.unknown'.tr());
     }
   }
 

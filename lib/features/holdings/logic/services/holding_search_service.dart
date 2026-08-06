@@ -9,6 +9,7 @@ class SearchResult {
     required this.parcelCount,
     required this.score,
     this.reviewedCount = 0,
+    this.isFieldAdded = false,
   });
 
   /// رقم الحيازة as shown to the user — may be a shared placeholder
@@ -26,6 +27,13 @@ class SearchResult {
   /// reviewedCount` means "fully done", `0` means "not started", anything
   /// between is "partial".
   final int reviewedCount;
+
+  /// Whether the best-scoring parcel behind this result was field-created
+  /// (`Parcel.isFieldAdded`). Used as a same-score tiebreaker so freshly
+  /// added records surface ahead of imported ones (`REFACTOR_ROADMAP.md`
+  /// Phase 7) — there's no creation timestamp on [Parcel] to sort by
+  /// directly, so this is the closest signal available client-side.
+  final bool isFieldAdded;
 }
 
 /// Numeric queries rank by holding-ID prefix/contains match. Text queries
@@ -195,13 +203,19 @@ class HoldingSearchService {
             parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
             reviewedCount: reviewedCountsByHolding[entry.parcel.groupKey] ?? 0,
+            isFieldAdded: entry.parcel.isFieldAdded,
           ),
         )
         .toList()
-      ..sort(
-        (final SearchResult a, final SearchResult b) =>
-            b.score.compareTo(a.score),
-      );
+      // Field-added parcels break a same-score tie ahead of imported ones —
+      // see [SearchResult.isFieldAdded]'s doc for why this (not a
+      // timestamp) is the sort key.
+      ..sort((final SearchResult a, final SearchResult b) {
+        final int byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        if (a.isFieldAdded == b.isFieldAdded) return 0;
+        return a.isFieldAdded ? -1 : 1;
+      });
 
     return results.take(_maxResults).toList();
   }

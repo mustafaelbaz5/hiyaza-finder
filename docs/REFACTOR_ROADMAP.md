@@ -237,28 +237,30 @@ that are buildable now, one item blocked on Phase 1 DB work, and four items that
 yet approved for implementation** pending the user's sign-off, because building them would reverse an
 already-documented architectural decision.
 
-**Buildable now (unblocked):**
+**Buildable now (unblocked) — all done, 2026-08-06:**
 
-- **Review-workflow redesign — Copy ID becomes the review action.** Today `parcel_detail_card.dart`
-  treats Finish, Copy ID, and Copy All as three independent actions with no code path linking copying
-  to `reviewed`. New flow: Copy ID validates required fields → copies → calls the existing
-  `ParcelSyncService.syncMarkReviewed(reviewed: true)` path (already implemented, already covered by
-  `test/features/holdings/data/parcel_sync_service_test.dart`). Built against the existing
-  `reviewed`/`reviewedAt`/`reviewedBy` fields — **not** blocked on `completed_at`. Migrating this
-  workflow's semantics onto `completed_at` once that column ships live (a more correct
-  field-worker-vs-office distinction than reusing `reviewed`) is a documented follow-up, not a
-  prerequisite.
-- **Snackbar strategy.** 29 call sites across 10 files today (heaviest: `detail_screen.dart`, 10), no
-  stacking-prevention or priority system. Add a small shared snackbar-priority helper so a new message
-  doesn't stack behind/interrupt an in-flight one.
-- **Newly added parcels sort first.** No recency sort/timestamp comparator exists anywhere in
-  search/query services today; add one so field-created parcels surface at the top.
-- **Holder-status UI badge.** `isInheritance`/`isDelegate` are already real, editable, DB-persisted
-  `Parcel` fields (confirmed, not clipboard-only) — the only real gap is a visible status badge in
-  `parcel_detail_header.dart`/`status_badge.dart`, currently absent. Small, scoped UI addition, not a
-  data-model change.
-- **Home screen summary cards.** Today only holding count + basin + staleness are shown; add
-  per-status breakdown cards (pending/modified/added counts) from data already available locally.
+- ✅ **Review-workflow redesign — Copy ID becomes the review action.** `parcel_detail_card.dart`'s
+  `_copyId` now validates required fields (`Parcel.hasRequiredFieldsFilled`, shared with
+  `AddRecordScreen`'s save gate), copies the id, then calls the existing
+  `HoldingsRepository.setParcelReviewed(reviewed: true)` → `ParcelSyncService.syncMarkReviewed` path —
+  unless the parcel is already reviewed, in which case it's a plain re-copy (repeatedly tapping Copy ID
+  on an already-reviewed parcel must not be a surprising side effect). Finish/Reopen remain available
+  as an explicit alternate path. Built against the existing `reviewed`/`reviewedAt`/`reviewedBy`
+  fields — not blocked on `completed_at`. Migrating this workflow's semantics onto `completed_at` once
+  that column ships live is a documented **follow-up**, not a prerequisite. Tests:
+  `test/features/holdings/domain/entities/parcel_national_id_test.dart`'s
+  `Parcel.hasRequiredFieldsFilled` group.
+- ✅ **Snackbar strategy.** `context_ext.dart`'s `showSnackBar`/`showErrorSnackBar`/`showSuccessSnackBar`
+  now call `ScaffoldMessenger.clearSnackBars()` before showing — a new message no longer queues behind
+  a stale one from a fast-preceding action.
+- ✅ **Newly added parcels sort first.** No creation timestamp exists on `Parcel` (still true — this
+  isn't a full recency sort), but `SearchResult.isFieldAdded` now breaks a same-score tie in favor of
+  field-added parcels in `HoldingSearchService._groupAndRank`. Tests: `holding_search_service_test.dart`
+  "isFieldAdded tiebreak" group.
+- ✅ **Holder-status UI badge.** `ParcelDetailTopRow` now shows وراثة/مفوض badges from
+  `parcel.isInheritance`/`isDelegate`, alongside the existing added/reviewed badges.
+- ✅ **Home screen summary cards.** New `StatusSummaryCards` widget (added/pending-review/reviewed
+  parcel-row counts, derived from `HomeState.parcels` — no new state) shown below `FileInfoCard`.
 
 **Blocked on Phase 1 DB work (`completed_at`/`completed_by`, not yet applied live):**
 

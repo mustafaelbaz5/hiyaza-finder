@@ -188,7 +188,9 @@
     "status": {
       "added_from_app": "مضافة من التطبيق",
       "pending_review": "قيد المراجعة",
-      "reviewed": "تم المراجعة"
+      "reviewed": "تم المراجعة",
+      "inheritance": "وراثة",
+      "delegate": "مفوض"
     },
     "association_type": {
       "agricultural_credit": "الائتمان الزراعي",
@@ -212,7 +214,10 @@
     "home": {
       "brand": "حيازة",
       "holdings_loaded": "{count} حيازة محمّلة",
-      "change_file": "تغيير المدينة"
+      "change_file": "تغيير المدينة",
+      "summary_added": "مضافة",
+      "summary_pending_review": "قيد المراجعة",
+      "summary_reviewed": "تمت المراجعة"
     },
     "search": {
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
@@ -229,6 +234,7 @@
       "empty": "لا توجد بيانات لهذه الحيازة",
       "copy_all": "نسخ كل البيانات",
       "copied": "تم النسخ",
+      "copied_and_reviewed": "تم نسخ المعرّف وتحديد الحيازة كمُراجعة",
       "crop_type_required_to_copy": "اختر نوع الزرع قبل نسخ البيانات",
       "holding_id": "رقم الحيازة",
       "holding_id_pending": "بدون رقم — جديد",

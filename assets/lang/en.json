@@ -188,7 +188,9 @@
     "status": {
       "added_from_app": "Added from app",
       "pending_review": "Pending review",
-      "reviewed": "Reviewed"
+      "reviewed": "Reviewed",
+      "inheritance": "Inheritance",
+      "delegate": "Delegate"
     },
     "association_type": {
       "agricultural_credit": "Agricultural credit",
@@ -212,7 +214,10 @@
     "home": {
       "brand": "Hiyaza",
       "holdings_loaded": "{count} holdings loaded",
-      "change_file": "Change city"
+      "change_file": "Change city",
+      "summary_added": "Added",
+      "summary_pending_review": "Pending review",
+      "summary_reviewed": "Reviewed"
     },
     "search": {
       "hint": "Search by holder name or holding number …",
@@ -229,6 +234,7 @@
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
       "copied": "Copied",
+      "copied_and_reviewed": "ID copied and holding marked as reviewed",
       "crop_type_required_to_copy": "Please select the crop type before copying data",
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",

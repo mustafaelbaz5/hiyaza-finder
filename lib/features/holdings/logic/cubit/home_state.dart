@@ -45,6 +45,17 @@ class HomeState extends Equatable {
   /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
   int get holdingCount => parcels.length;
 
+  /// Parcel-row counts by status, for the home screen's lightweight summary
+  /// cards (`REFACTOR_ROADMAP.md` Phase 7, `PROJECT_OBJECTIVES.md` §4's
+  /// "original / modified / added / reviewed counts"). Counts parcel rows,
+  /// matching [holdingCount]'s convention — not distinct holdings.
+  int get addedCount =>
+      parcels.where((final Parcel p) => p.isFieldAdded).length;
+
+  int get reviewedCount => parcels.where((final Parcel p) => p.reviewed).length;
+
+  int get pendingReviewCount => parcels.length - reviewedCount;
+
   HomeState copyWith({
     final HomeStatus? status,
     final List<Parcel>? parcels,

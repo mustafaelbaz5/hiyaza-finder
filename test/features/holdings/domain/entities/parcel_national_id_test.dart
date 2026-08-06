@@ -43,4 +43,61 @@ void main() {
       expect(Parcel.isNationalIdValid('11111111111111'), isTrue);
     });
   });
+
+  group('Parcel.hasRequiredFieldsFilled', () {
+    const Parcel complete = Parcel(
+      holdingId: '101',
+      holderName: 'محمد علي',
+      basinName: 'السرو',
+      cropType: 'قمح',
+      nationalId: '12345678901234',
+    );
+
+    test('true when holderName/basinName/cropType are filled and '
+        'nationalId is valid', () {
+      expect(complete.hasRequiredFieldsFilled, isTrue);
+    });
+
+    test('true when nationalId is null (not required)', () {
+      expect(
+        complete.copyWith(nationalId: null).hasRequiredFieldsFilled,
+        isTrue,
+      );
+    });
+
+    test('false when holderName is missing', () {
+      expect(
+        complete.copyWith(holderName: null).hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when basinName is missing', () {
+      expect(
+        complete.copyWith(basinName: null).hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when cropType is missing', () {
+      expect(
+        complete.copyWith(cropType: null).hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when nationalId is present but invalid', () {
+      expect(
+        complete.copyWith(nationalId: '123').hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when holderName is only the "-" placeholder', () {
+      expect(
+        complete.copyWith(holderName: '-').hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+  });
 }

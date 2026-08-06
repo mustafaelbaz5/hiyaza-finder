@@ -160,4 +160,52 @@ void main() {
       expect(match.reviewedCount, 2);
     });
   });
+
+  group('isFieldAdded tiebreak (REFACTOR_ROADMAP.md Phase 7 — newly added '
+      'parcels sort first)', () {
+    test('field-added result ranks first when scores are tied', () {
+      final tied = <Parcel>[
+        const Parcel(
+          id: 'imported-1',
+          holdingId: '700',
+          holderName: 'كريم محمد',
+        ),
+        const Parcel(
+          id: 'added-1',
+          holdingId: '701',
+          holderName: 'كريم أحمد',
+          isFieldAdded: true,
+        ),
+      ];
+
+      final results = service.search(tied, 'كريم');
+
+      expect(results, hasLength(2));
+      expect(results[0].score, results[1].score); // both tier-1 full-name-start
+      expect(results[0].isFieldAdded, isTrue);
+      expect(results[0].holdingId, '701');
+    });
+
+    test('a higher-scoring imported result still ranks above a '
+        'lower-scoring field-added one', () {
+      final mixed = <Parcel>[
+        const Parcel(
+          id: 'imported-1',
+          holdingId: '702',
+          holderName: 'سعيد كريم', // 'كريم' matches mid-word -> tier 2
+        ),
+        const Parcel(
+          id: 'added-1',
+          holdingId: '703',
+          holderName: 'أحمد آخر', // does not match 'كريم' at all
+          isFieldAdded: true,
+        ),
+      ];
+
+      final results = service.search(mixed, 'كريم');
+
+      expect(results, hasLength(1));
+      expect(results.first.holdingId, '702');
+    });
+  });
 }

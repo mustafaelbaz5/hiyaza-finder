@@ -17,6 +17,8 @@ class ParcelDetailTopRow extends StatelessWidget {
     required this.onReopen,
     required this.onDelete,
     required this.onDeleteConfirmed,
+    this.isInheritance = false,
+    this.isDelegate = false,
   });
 
   final bool isAdded;
@@ -25,6 +27,12 @@ class ParcelDetailTopRow extends StatelessWidget {
   final VoidCallback? onReopen;
   final VoidCallback? onDelete;
   final VoidCallback onDeleteConfirmed;
+
+  /// وراثة / مفوض — real, DB-persisted `Parcel` fields (`REFACTOR_ROADMAP.md`
+  /// Phase 7); previously only shown via the Copy-All clipboard text prefix,
+  /// never as a visible in-app badge.
+  final bool isInheritance;
+  final bool isDelegate;
 
   @override
   Widget build(final BuildContext context) {
@@ -40,6 +48,18 @@ class ParcelDetailTopRow extends StatelessWidget {
                   icon: Icons.add_box_rounded,
                   label: 'holdings.status.added_from_app'.tr(),
                   color: AppColors.blue200,
+                ),
+              if (isInheritance)
+                StatusBadge(
+                  icon: Icons.groups_rounded,
+                  label: 'holdings.status.inheritance'.tr(),
+                  color: AppColors.amber200,
+                ),
+              if (isDelegate)
+                StatusBadge(
+                  icon: Icons.assignment_ind_rounded,
+                  label: 'holdings.status.delegate'.tr(),
+                  color: AppColors.amber200,
                 ),
               if (!isReviewed && onFinish != null)
                 StatusBadge(

@@ -18,6 +18,7 @@ import '../widgets/add_record_header.dart';
 import '../widgets/crop_type_picker.dart';
 import '../widgets/field_edit_dialogs.dart';
 import '../widgets/field_row.dart';
+import '../widgets/required_field_gaps.dart';
 import '../widgets/responsive_fields_wrap.dart';
 import '../widgets/toggle_field_row.dart';
 
@@ -67,31 +68,17 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     _parcel = widget.initialParcel;
   }
 
-  /// See `Parcel.isValueFilled` — blank, whitespace-only, and the literal
-  /// "-" placeholder all count as "not actually chosen".
-  bool _isFilled(final String? value) => Parcel.isValueFilled(value);
-
-  /// اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly filled/
-  /// chosen before saving — the last two default to empty (see
-  /// `HomeScreen._openAddPerson`/`DetailScreen._addParcelForPerson`) so the
-  /// user is forced to pick a real value rather than leaving whatever was
-  /// last selected or nothing at all.
-  bool get _canSave =>
-      _isFilled(_parcel.holderName) &&
-      _isFilled(_parcel.basinName) &&
-      _isFilled(_parcel.cropType) &&
-      Parcel.isNationalIdValid(_parcel.nationalId);
+  /// See `Parcel.hasRequiredFieldsFilled` — the same gate used by
+  /// `ParcelDetailCard`'s Copy ID review-completion action
+  /// (`REFACTOR_ROADMAP.md` Phase 7), so "what counts as a complete record"
+  /// can't drift between the add flow and the review flow.
+  bool get _canSave => _parcel.hasRequiredFieldsFilled;
 
   /// One line per still-missing required field, in the same order as
-  /// [_canSave]'s checks — shown below the Save button while any are
-  /// missing so the user knows exactly which ones to fix.
-  List<String> get _missingFieldMessages => <String>[
-        if (!_isFilled(_parcel.holderName)) 'holdings.add.holder_required'.tr(),
-        if (!_isFilled(_parcel.basinName)) 'holdings.add.basin_required'.tr(),
-        if (!_isFilled(_parcel.cropType)) 'holdings.add.crop_type_required'.tr(),
-        if (!Parcel.isNationalIdValid(_parcel.nationalId))
-          'holdings.add.national_id_invalid'.tr(),
-      ];
+  /// [Parcel.hasRequiredFieldsFilled]'s checks — shown below the Save button
+  /// while any are missing so the user knows exactly which ones to fix.
+  List<String> get _missingFieldMessages =>
+      requiredFieldGapMessages(_parcel);
 
   /// Whether the field read via [current] from `_parcel` differs from
   /// `widget.initialParcel`'s value for the same field — drives every
