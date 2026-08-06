@@ -37,6 +37,8 @@ class Parcel {
     this.reviewed = false,
     this.reviewedAt,
     this.reviewedBy,
+    this.completedAt,
+    this.completedBy,
     this.isFieldAdded = false,
     this.holderNameFarmerCard,
     this.ownerNameFarmerCard,
@@ -86,13 +88,25 @@ class Parcel {
   /// its own [id] as before.
   final String? pendingGroupId;
 
-  /// Completed/reviewed status — a field worker marks a parcel reviewed once
-  /// its data has been copied out (see `HoldingsRepository.setParcelReviewed`).
-  /// A direct-column field synced via `MarkParcelReviewedOperation`, never
-  /// part of the `holding_edits`/[toEditableJson] overlay.
+  /// Staff/Dashboard-only data-quality review flag (`SYSTEM_DESIGN.md` §10)
+  /// — distinct from field-worker completion ([completedAt]/[completedBy]
+  /// below). The Flutter app never reads or writes these three fields (no
+  /// screen shows them, no write path sets them); they exist purely so a
+  /// row fetched from `holdings`/`added_holdings` round-trips its full
+  /// column set without silently dropping data the Dashboard owns.
   final bool reviewed;
   final DateTime? reviewedAt;
-  final String? reviewedBy; // profiles.id (uuid), null if never reviewed
+  final String? reviewedBy;
+
+  /// Field-worker completion — set the moment a field worker copies this
+  /// parcel's ID (`ParcelDetailCard._copyId`) or explicitly taps
+  /// Finish/Reopen (`DetailScreen`), meaning "I've recorded everything I
+  /// need from this record." A direct-column field synced via
+  /// `CompleteParcelOperation`, never part of the `holding_edits`/
+  /// [toEditableJson] overlay — same treatment [reviewed] used to get
+  /// before this field existed (`REFACTOR_ROADMAP.md` Phase 9 #12).
+  final DateTime? completedAt;
+  final String? completedBy; // profiles.id (uuid), null if not completed
 
   /// Discriminates which table this parcel lives in — `false` for an
   /// imported `holdings` row, `true` for a field-created `added_holdings`
@@ -280,6 +294,8 @@ class Parcel {
     final bool? reviewed,
     final Object? reviewedAt = _unset,
     final Object? reviewedBy = _unset,
+    final Object? completedAt = _unset,
+    final Object? completedBy = _unset,
     final bool? isFieldAdded,
     final Object? holderNameFarmerCard = _unset,
     final Object? ownerNameFarmerCard = _unset,
@@ -324,6 +340,8 @@ class Parcel {
       reviewed: reviewed ?? this.reviewed,
       reviewedAt: resolve(reviewedAt, this.reviewedAt),
       reviewedBy: resolve(reviewedBy, this.reviewedBy),
+      completedAt: resolve(completedAt, this.completedAt),
+      completedBy: resolve(completedBy, this.completedBy),
       isFieldAdded: isFieldAdded ?? this.isFieldAdded,
       holderNameFarmerCard:
           resolve(holderNameFarmerCard, this.holderNameFarmerCard),
@@ -409,6 +427,8 @@ class Parcel {
       reviewed: original.reviewed,
       reviewedAt: original.reviewedAt,
       reviewedBy: original.reviewedBy,
+      completedAt: original.completedAt,
+      completedBy: original.completedBy,
       isFieldAdded: original.isFieldAdded,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
@@ -455,6 +475,8 @@ class Parcel {
         'reviewed': reviewed,
         'reviewedAt': reviewedAt?.toIso8601String(),
         'reviewedBy': reviewedBy,
+        'completedAt': completedAt?.toIso8601String(),
+        'completedBy': completedBy,
         'isFieldAdded': isFieldAdded,
         'holderNameFarmerCard': holderNameFarmerCard,
         'ownerNameFarmerCard': ownerNameFarmerCard,
@@ -500,6 +522,10 @@ class Parcel {
           ? null
           : DateTime.parse(json['reviewedAt'] as String),
       reviewedBy: json['reviewedBy'] as String?,
+      completedAt: json['completedAt'] == null
+          ? null
+          : DateTime.parse(json['completedAt'] as String),
+      completedBy: json['completedBy'] as String?,
       isFieldAdded: json['isFieldAdded'] as bool? ?? false,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,

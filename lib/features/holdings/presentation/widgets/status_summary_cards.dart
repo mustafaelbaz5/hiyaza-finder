@@ -19,14 +19,14 @@ class StatusSummaryCards extends StatelessWidget {
     super.key,
     required this.addedCount,
     required this.modifiedCount,
-    required this.pendingReviewCount,
-    required this.reviewedCount,
+    required this.pendingCompletionCount,
+    required this.completedCount,
   });
 
   final int addedCount;
   final int modifiedCount;
-  final int pendingReviewCount;
-  final int reviewedCount;
+  final int pendingCompletionCount;
+  final int completedCount;
 
   @override
   Widget build(final BuildContext context) {
@@ -54,7 +54,7 @@ class StatusSummaryCards extends StatelessWidget {
           child: _StatusSummaryCard(
             icon: Icons.task_alt_rounded,
             label: 'holdings.home.summary_pending_review'.tr(),
-            count: pendingReviewCount,
+            count: pendingCompletionCount,
             color: AppColors.amber200,
           ),
         ),
@@ -63,7 +63,7 @@ class StatusSummaryCards extends StatelessWidget {
           child: _StatusSummaryCard(
             icon: Icons.check_circle_rounded,
             label: 'holdings.home.summary_reviewed'.tr(),
-            count: reviewedCount,
+            count: completedCount,
             color: AppColors.green200,
           ),
         ),

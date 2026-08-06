@@ -92,19 +92,19 @@ void main() {
     expect(find.text('تعديل بيانات حيازة'), findsOneWidget);
   });
 
-  testWidgets('MarkReviewedOperation shows "reviewed status update"',
+  testWidgets('CompleteParcelOperation shows "reviewed status update"',
       (final tester) async {
     await pumpLocalized(
       tester,
       _SummaryProbe(
-        MarkReviewedOperation(
+        CompleteParcelOperation(
           operationId: 'op4',
           createdAt: now,
           parcelId: 'p1',
           isFieldAdded: true,
-          reviewed: true,
-          reviewedAt: now,
-          reviewedByUserId: 'user1',
+          completed: true,
+          completedAt: now,
+          completedByUserId: 'user1',
         ),
       ),
     );

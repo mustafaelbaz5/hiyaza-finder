@@ -70,12 +70,12 @@ class _FakeHoldingsApi implements HoldingsApi {
       const <String>[];
 
   @override
-  Future<void> markReviewed({
+  Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
-    required final DateTime? reviewedAt,
-    required final String reviewedByUserId,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
   }) async {}
 }
 

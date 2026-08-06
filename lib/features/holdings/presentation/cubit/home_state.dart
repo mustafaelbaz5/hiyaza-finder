@@ -56,18 +56,22 @@ class HomeState extends Equatable {
 
   /// Parcel-row counts by status, for the home screen's lightweight summary
   /// cards (`REFACTOR_ROADMAP.md` Phase 7/9, `PROJECT_OBJECTIVES.md` §4's
-  /// "original / modified / added / reviewed counts"). Counts parcel rows,
-  /// matching [holdingCount]'s convention — not distinct holdings. There is
-  /// no separate "original" count: it's just `holdingCount - addedCount`,
-  /// not independently useful enough to a field worker to warrant its own
-  /// card (`REFACTOR_ROADMAP.md` Phase 9 #13 — deliberately kept lightweight,
+  /// "original / modified / added / reviewed counts" — "reviewed" there
+  /// means field-worker completion, now tracked via `Parcel.completedAt`,
+  /// not the staff/Dashboard-only `reviewed` column — see
+  /// `REFACTOR_ROADMAP.md` Phase 9 #12). Counts parcel rows, matching
+  /// [holdingCount]'s convention — not distinct holdings. There is no
+  /// separate "original" count: it's just `holdingCount - addedCount`, not
+  /// independently useful enough to a field worker to warrant its own card
+  /// (`REFACTOR_ROADMAP.md` Phase 9 #13 — deliberately kept lightweight,
   /// not a drill-down/filterable activity center).
   int get addedCount =>
       parcels.where((final Parcel p) => p.isFieldAdded).length;
 
-  int get reviewedCount => parcels.where((final Parcel p) => p.reviewed).length;
+  int get completedCount =>
+      parcels.where((final Parcel p) => p.completedAt != null).length;
 
-  int get pendingReviewCount => parcels.length - reviewedCount;
+  int get pendingCompletionCount => parcels.length - completedCount;
 
   int get modifiedCount =>
       parcels.where((final Parcel p) => modifiedIds.contains(p.id)).length;

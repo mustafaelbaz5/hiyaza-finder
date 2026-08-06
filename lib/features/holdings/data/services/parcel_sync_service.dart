@@ -79,34 +79,36 @@ class ParcelSyncService {
     }
   }
 
-  /// Marks a parcel reviewed or un-reviewed on its `holdings`/`added_holdings`
-  /// row, awaiting server confirmation. Returns the updated parcel on success.
+  /// Marks a parcel completed/reopened on its `holdings`/`added_holdings`
+  /// row, awaiting server confirmation. Returns the updated parcel on
+  /// success. Writes `completed_at`/`completed_by` — the field-worker
+  /// completion signal — never `reviewed`/`reviewed_at`/`reviewed_by`
+  /// (staff/Dashboard-only, `SYSTEM_DESIGN.md` §10).
   ///
   /// Throws on failure; caller catches and propagates to user.
-  Future<Parcel> syncMarkReviewed({
+  Future<Parcel> syncMarkCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
+    required final bool completed,
     required final Parcel parcel,
   }) async {
-    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
+    final DateTime? completedAt = completed ? DateTime.now() : null;
     final String? currentUserId =
         GetIt.instance<AuthRepository>().currentUser?.id;
 
     if (holdingsApi != null) {
-      await holdingsApi!.markReviewed(
+      await holdingsApi!.markCompleted(
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
-        reviewed: reviewed,
-        reviewedAt: reviewedAt,
-        reviewedByUserId: currentUserId ?? '',
+        completed: completed,
+        completedAt: completedAt,
+        completedByUserId: currentUserId ?? '',
       );
     }
 
     return parcel.copyWith(
-      reviewed: reviewed,
-      reviewedAt: reviewedAt,
-      reviewedBy: reviewed ? currentUserId : null,
+      completedAt: completedAt,
+      completedBy: completed ? currentUserId : null,
     );
   }
 

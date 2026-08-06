@@ -127,15 +127,17 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
     }
   }
 
-  /// Marks [parcel] reviewed, shows a 5s undo snackbar via the app-level
-  /// `scaffoldMessengerKey` (so it survives this screen popping — see
-  /// `HiyazaFinderApp.scaffoldMessengerKey`), and pops back to search
-  /// immediately per the requirement that Finish returns to search.
+  /// Marks [parcel] completed (the field-worker signal — `SYSTEM_DESIGN.md`
+  /// §10, `REFACTOR_ROADMAP.md` Phase 9 #12), shows a 5s undo snackbar via
+  /// the app-level `scaffoldMessengerKey` (so it survives this screen
+  /// popping — see `HiyazaFinderApp.scaffoldMessengerKey`), and pops back
+  /// to search immediately per the requirement that Finish returns to
+  /// search.
   Future<void> _finishParcel(final Parcel parcel) async {
     if (_isBusy) return;
     _isBusy = true;
     try {
-      await _repository.setParcelReviewed(parcel.id, reviewed: true);
+      await _repository.setParcelCompleted(parcel.id, completed: true);
     } catch (_) {
       _isBusy = false;
       if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
@@ -146,7 +148,7 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
     if (idx >= 0) {
       setState(() {
-        _parcels[idx] = _parcels[idx].copyWith(reviewed: true);
+        _parcels[idx] = _parcels[idx].copyWith(completedAt: DateTime.now());
       });
     }
 
@@ -166,7 +168,7 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
           // rebuild regardless of outcome.
           onPressed: () {
             _repository
-                .setParcelReviewed(parcel.id, reviewed: false)
+                .setParcelCompleted(parcel.id, completed: false)
                 .catchError(
               (final Object _) {
                 HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
@@ -183,19 +185,19 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
     if (mounted) context.pop();
   }
 
-  /// Un-marks [parcel] reviewed — user-initiated, no confirmation dialog,
+  /// Un-marks [parcel] completed — user-initiated, no confirmation dialog,
   /// no snackbar (decision #2: deliberate user-initiated undo).
   Future<void> _reopenParcel(final Parcel parcel) async {
     if (_isBusy) return;
     _isBusy = true;
     try {
-      await _repository.setParcelReviewed(parcel.id, reviewed: false);
+      await _repository.setParcelCompleted(parcel.id, completed: false);
       if (!mounted) return;
       final int idx =
           _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
       if (idx >= 0) {
         setState(() {
-          _parcels[idx] = _parcels[idx].copyWith(reviewed: false);
+          _parcels[idx] = _parcels[idx].copyWith(completedAt: null);
         });
       }
     } catch (_) {
@@ -337,7 +339,7 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
                             animationDelay: Duration(milliseconds: i * 80),
                             resolveBorderMatch: _repository.findByBorderText,
                             onDelete: parcel.sourceAddedHoldingId != null &&
-                                    !parcel.reviewed
+                                    parcel.completedAt == null
                                 ? () => _deleteParcel(parcel)
                                 : null,
                             onFinish: () => _finishParcel(parcel),

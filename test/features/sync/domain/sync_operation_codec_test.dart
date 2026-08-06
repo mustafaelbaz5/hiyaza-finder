@@ -56,22 +56,44 @@ void main() {
       expect(typed.payload['feddan'], 2.5);
     });
 
-    test('MarkReviewedOperation', () {
-      final MarkReviewedOperation original = MarkReviewedOperation(
+    test('CompleteParcelOperation', () {
+      final CompleteParcelOperation original = CompleteParcelOperation(
         operationId: 'op4',
         createdAt: now,
         parcelId: 'p1',
         isFieldAdded: true,
-        reviewed: true,
-        reviewedAt: now,
-        reviewedByUserId: 'user1',
+        completed: true,
+        completedAt: now,
+        completedByUserId: 'user1',
       );
 
       final SyncOperation? decoded = codec.fromJson(codec.toJson(original));
-      expect(decoded, isA<MarkReviewedOperation>());
-      final MarkReviewedOperation typed = decoded! as MarkReviewedOperation;
+      expect(decoded, isA<CompleteParcelOperation>());
+      final CompleteParcelOperation typed = decoded! as CompleteParcelOperation;
       expect(typed.isFieldAdded, isTrue);
-      expect(typed.reviewed, isTrue);
+      expect(typed.completed, isTrue);
+    });
+
+    test('decodes a legacy mark_reviewed entry onto CompleteParcelOperation '
+        '(backward-compat for a queue persisted before the Phase 9 #12 '
+        'rename)', () {
+      final SyncOperation? decoded = codec.fromJson(<String, dynamic>{
+        'operationId': 'op4b',
+        'createdAt': now.toIso8601String(),
+        'type': 'mark_reviewed',
+        'parcelId': 'p1',
+        'isFieldAdded': true,
+        'reviewed': true,
+        'reviewedAt': now.toIso8601String(),
+        'reviewedByUserId': 'user1',
+      });
+
+      expect(decoded, isA<CompleteParcelOperation>());
+      final CompleteParcelOperation typed = decoded! as CompleteParcelOperation;
+      expect(typed.parcelId, 'p1');
+      expect(typed.completed, isTrue);
+      expect(typed.completedAt, now);
+      expect(typed.completedByUserId, 'user1');
     });
 
     test('BulkEditOperation', () {

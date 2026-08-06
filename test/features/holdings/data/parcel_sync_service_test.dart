@@ -21,7 +21,7 @@ class _FakeHoldingsApi implements HoldingsApi {
   Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
       searchRemote({required final String cityId, required final String query}) async =>
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
-  final List<Map<String, dynamic>> markReviewedCalls = <Map<String, dynamic>>[];
+  final List<Map<String, dynamic>> markCompletedCalls = <Map<String, dynamic>>[];
 
   Object? addRecordError;
   Object? editHoldingError;
@@ -69,16 +69,16 @@ class _FakeHoldingsApi implements HoldingsApi {
       <String>[];
 
   @override
-  Future<void> markReviewed({
+  Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
-    required final DateTime? reviewedAt,
-    required final String reviewedByUserId,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
   }) async {
-    markReviewedCalls.add(<String, dynamic>{
+    markCompletedCalls.add(<String, dynamic>{
       'parcelId': parcelId,
-      'reviewed': reviewed,
+      'completed': completed,
     });
   }
 }
@@ -231,49 +231,47 @@ void main() {
     });
   });
 
-  group('syncMarkReviewed', () {
-    test('returns a parcel with reviewed/reviewedAt/reviewedBy set', () async {
+  group('syncMarkCompleted', () {
+    test('returns a parcel with completedAt/completedBy set', () async {
       const Parcel parcel = Parcel(id: 'p1', holdingId: '101');
 
-      final Parcel result = await service.syncMarkReviewed(
+      final Parcel result = await service.syncMarkCompleted(
         parcelId: 'p1',
         isFieldAdded: false,
-        reviewed: true,
+        completed: true,
         parcel: parcel,
       );
 
-      expect(result.reviewed, isTrue);
-      expect(result.reviewedAt, isNotNull);
-      expect(result.reviewedBy, 'user-1');
+      expect(result.completedAt, isNotNull);
+      expect(result.completedBy, 'user-1');
     });
 
-    test('clears reviewedAt/reviewedBy when un-marking reviewed', () async {
+    test('clears completedAt/completedBy when un-marking completed', () async {
       const Parcel parcel = Parcel(id: 'p1', holdingId: '101');
 
-      final Parcel result = await service.syncMarkReviewed(
+      final Parcel result = await service.syncMarkCompleted(
         parcelId: 'p1',
         isFieldAdded: false,
-        reviewed: false,
+        completed: false,
         parcel: parcel,
       );
 
-      expect(result.reviewed, isFalse);
-      expect(result.reviewedAt, isNull);
-      expect(result.reviewedBy, isNull);
+      expect(result.completedAt, isNull);
+      expect(result.completedBy, isNull);
     });
 
-    test('calls markReviewed with the correct isFieldAdded flag', () async {
+    test('calls markCompleted with the correct isFieldAdded flag', () async {
       const Parcel parcel = Parcel(id: 'p1', holdingId: '101');
 
-      await service.syncMarkReviewed(
+      await service.syncMarkCompleted(
         parcelId: 'p1',
         isFieldAdded: true,
-        reviewed: true,
+        completed: true,
         parcel: parcel,
       );
 
-      expect(api.markReviewedCalls.single['parcelId'], 'p1');
-      expect(api.markReviewedCalls.single['reviewed'], isTrue);
+      expect(api.markCompletedCalls.single['parcelId'], 'p1');
+      expect(api.markCompletedCalls.single['completed'], isTrue);
     });
   });
 

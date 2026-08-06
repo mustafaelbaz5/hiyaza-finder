@@ -130,15 +130,19 @@ class EditParcelOperation extends SyncOperation {
       );
 }
 
-class MarkReviewedOperation extends SyncOperation {
-  const MarkReviewedOperation({
+/// Field-worker completion (`completed_at`/`completed_by`) — never
+/// `reviewed`/`reviewed_at`/`reviewed_by`, which is staff/Dashboard-only
+/// (`SYSTEM_DESIGN.md` §10, `REFACTOR_ROADMAP.md` Phase 9 #12; this class
+/// replaces the earlier `MarkReviewedOperation`, which conflated the two).
+class CompleteParcelOperation extends SyncOperation {
+  const CompleteParcelOperation({
     required super.operationId,
     required super.createdAt,
     required this.parcelId,
     required this.isFieldAdded,
-    required this.reviewed,
-    required this.reviewedAt,
-    required this.reviewedByUserId,
+    required this.completed,
+    required this.completedAt,
+    required this.completedByUserId,
     super.attempts = 0,
     super.lastAttemptAt,
     super.lastError,
@@ -146,25 +150,25 @@ class MarkReviewedOperation extends SyncOperation {
 
   final String parcelId;
   final bool isFieldAdded;
-  final bool reviewed;
+  final bool completed;
 
   /// Captured at enqueue time (not execute time) so the eventual server
   /// write matches exactly the value already applied to the local dataset
   /// optimistically — the two must never drift just because the operation
   /// sat in the queue for a while before actually running.
-  final DateTime? reviewedAt;
-  final String reviewedByUserId;
+  final DateTime? completedAt;
+  final String completedByUserId;
 
   @override
-  MarkReviewedOperation withAttempt({required final String? error}) =>
-      MarkReviewedOperation(
+  CompleteParcelOperation withAttempt({required final String? error}) =>
+      CompleteParcelOperation(
         operationId: operationId,
         createdAt: createdAt,
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
-        reviewed: reviewed,
-        reviewedAt: reviewedAt,
-        reviewedByUserId: reviewedByUserId,
+        completed: completed,
+        completedAt: completedAt,
+        completedByUserId: completedByUserId,
         attempts: attempts + 1,
         lastAttemptAt: DateTime.now(),
         lastError: error,

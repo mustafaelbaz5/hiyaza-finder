@@ -8,7 +8,7 @@ class SearchResult {
     required this.holderName,
     required this.parcelCount,
     required this.score,
-    this.reviewedCount = 0,
+    this.completedCount = 0,
     this.isFieldAdded = false,
   });
 
@@ -23,10 +23,12 @@ class SearchResult {
   final int parcelCount;
   final int score;
 
-  /// How many of this group's parcels are reviewed. `parcelCount ==
-  /// reviewedCount` means "fully done", `0` means "not started", anything
-  /// between is "partial".
-  final int reviewedCount;
+  /// How many of this group's parcels are field-worker-completed
+  /// (`Parcel.completedAt` non-null — `SYSTEM_DESIGN.md` §10,
+  /// `REFACTOR_ROADMAP.md` Phase 9 #12). `parcelCount == completedCount`
+  /// means "fully done", `0` means "not started", anything between is
+  /// "partial".
+  final int completedCount;
 
   /// Whether the best-scoring parcel behind this result was field-created
   /// (`Parcel.isFieldAdded`). Used as a same-score tiebreaker so freshly
@@ -89,17 +91,17 @@ class HoldingSearchService {
     ];
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
-    final Map<String, int> reviewedCountsByHolding = <String, int>{};
+    final Map<String, int> completedCountsByHolding = <String, int>{};
     for (final Parcel parcel in parcels) {
       parcelCountsByHolding[parcel.groupKey] =
           (parcelCountsByHolding[parcel.groupKey] ?? 0) + 1;
-      if (parcel.reviewed) {
-        reviewedCountsByHolding[parcel.groupKey] =
-            (reviewedCountsByHolding[parcel.groupKey] ?? 0) + 1;
+      if (parcel.completedAt != null) {
+        completedCountsByHolding[parcel.groupKey] =
+            (completedCountsByHolding[parcel.groupKey] ?? 0) + 1;
       }
     }
 
-    return _groupAndRank(scored, parcelCountsByHolding, reviewedCountsByHolding);
+    return _groupAndRank(scored, parcelCountsByHolding, completedCountsByHolding);
   }
 
   /// Exact match only — a digits-only query must equal رقم الحيازة exactly,
@@ -183,7 +185,7 @@ class HoldingSearchService {
   List<SearchResult> _groupAndRank(
     final List<_ScoredParcel> scored,
     final Map<String, int> parcelCountsByHolding,
-    final Map<String, int> reviewedCountsByHolding,
+    final Map<String, int> completedCountsByHolding,
   ) {
     final Map<String, _ScoredParcel> bestByHolding = <String, _ScoredParcel>{};
     for (final _ScoredParcel entry in scored) {
@@ -202,7 +204,7 @@ class HoldingSearchService {
             holderName: entry.parcel.holderName,
             parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
-            reviewedCount: reviewedCountsByHolding[entry.parcel.groupKey] ?? 0,
+            completedCount: completedCountsByHolding[entry.parcel.groupKey] ?? 0,
             isFieldAdded: entry.parcel.isFieldAdded,
           ),
         )

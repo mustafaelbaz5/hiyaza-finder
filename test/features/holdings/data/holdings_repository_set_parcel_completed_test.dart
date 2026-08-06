@@ -23,29 +23,29 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-class _MarkReviewedCall {
-  _MarkReviewedCall({
+class _MarkCompletedCall {
+  _MarkCompletedCall({
     required this.parcelId,
     required this.isFieldAdded,
-    required this.reviewed,
-    required this.reviewedAt,
-    required this.reviewedByUserId,
+    required this.completed,
+    required this.completedAt,
+    required this.completedByUserId,
   });
 
   final String parcelId;
   final bool isFieldAdded;
-  final bool reviewed;
-  final DateTime? reviewedAt;
-  final String reviewedByUserId;
+  final bool completed;
+  final DateTime? completedAt;
+  final String completedByUserId;
 }
 
 /// A hand-written fake standing in for the real Supabase-backed
-/// [HoldingsApi] — records every `markReviewed` call and can be configured
+/// [HoldingsApi] — records every `markCompleted` call and can be configured
 /// to throw, so tests assert against direct-call success/failure instead
 /// of enqueued outbox operations.
 class _FakeHoldingsApi implements HoldingsApi {
-  final List<_MarkReviewedCall> markReviewedCalls = <_MarkReviewedCall>[];
-  Object? markReviewedError;
+  final List<_MarkCompletedCall> markCompletedCalls = <_MarkCompletedCall>[];
+  Object? markCompletedError;
 
   @override
   Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
@@ -53,21 +53,21 @@ class _FakeHoldingsApi implements HoldingsApi {
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
 
   @override
-  Future<void> markReviewed({
+  Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
-    required final DateTime? reviewedAt,
-    required final String reviewedByUserId,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
   }) async {
-    if (markReviewedError != null) throw markReviewedError!;
-    markReviewedCalls.add(
-      _MarkReviewedCall(
+    if (markCompletedError != null) throw markCompletedError!;
+    markCompletedCalls.add(
+      _MarkCompletedCall(
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
-        reviewed: reviewed,
-        reviewedAt: reviewedAt,
-        reviewedByUserId: reviewedByUserId,
+        completed: completed,
+        completedAt: completedAt,
+        completedByUserId: completedByUserId,
       ),
     );
   }
@@ -156,68 +156,66 @@ void main() {
   test('returns null when the parcel is not in the active dataset', () async {
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
     final Parcel? result =
-        await repository.setParcelReviewed('missing-id', reviewed: true);
+        await repository.setParcelCompleted('missing-id', completed: true);
     expect(result, isNull);
-    expect(holdingsApi.markReviewedCalls, isEmpty);
+    expect(holdingsApi.markCompletedCalls, isEmpty);
   });
 
-  test('marks a holdings-origin (isFieldAdded: false) parcel reviewed locally and calls the API', () async {
+  test('marks a holdings-origin (isFieldAdded: false) parcel completed locally and calls the API', () async {
     const Parcel parcel = Parcel(id: 'p-1', holdingId: '101');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-    final Parcel? updated = await repository.setParcelReviewed('p-1', reviewed: true);
+    final Parcel? updated = await repository.setParcelCompleted('p-1', completed: true);
 
     expect(updated, isNotNull);
-    expect(updated!.reviewed, isTrue);
-    expect(updated.reviewedAt, isNotNull);
-    expect(updated.reviewedBy, 'user-1');
-    expect(repository.parcels.single.reviewed, isTrue);
+    expect(updated!.completedAt, isNotNull);
+    expect(updated.completedBy, 'user-1');
+    expect(repository.parcels.single.completedAt, isNotNull);
 
-    expect(holdingsApi.markReviewedCalls, hasLength(1));
-    final _MarkReviewedCall call = holdingsApi.markReviewedCalls.single;
+    expect(holdingsApi.markCompletedCalls, hasLength(1));
+    final _MarkCompletedCall call = holdingsApi.markCompletedCalls.single;
     expect(call.parcelId, 'p-1');
     expect(call.isFieldAdded, isFalse);
-    expect(call.reviewed, isTrue);
-    expect(call.reviewedAt, isNotNull);
+    expect(call.completed, isTrue);
+    expect(call.completedAt, isNotNull);
   });
 
-  test('marks an added_holdings-origin (isFieldAdded: true) parcel reviewed and calls the API with isFieldAdded true', () async {
+  test('marks an added_holdings-origin (isFieldAdded: true) parcel completed and calls the API with isFieldAdded true', () async {
     const Parcel parcel = Parcel(id: 'p-2', holdingId: '102', isFieldAdded: true);
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-    await repository.setParcelReviewed('p-2', reviewed: true);
+    await repository.setParcelCompleted('p-2', completed: true);
 
-    final _MarkReviewedCall call = holdingsApi.markReviewedCalls.single;
+    final _MarkCompletedCall call = holdingsApi.markCompletedCalls.single;
     expect(call.isFieldAdded, isTrue);
   });
 
-  test('finish then un-finish calls the API twice in order, final local state is reviewed: false', () async {
+  test('finish then un-finish calls the API twice in order, final local state is not completed', () async {
     const Parcel parcel = Parcel(id: 'p-3', holdingId: '103');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-    await repository.setParcelReviewed('p-3', reviewed: true);
-    await repository.setParcelReviewed('p-3', reviewed: false);
+    await repository.setParcelCompleted('p-3', completed: true);
+    await repository.setParcelCompleted('p-3', completed: false);
 
-    expect(holdingsApi.markReviewedCalls, hasLength(2));
-    expect(holdingsApi.markReviewedCalls[0].reviewed, isTrue);
-    expect(holdingsApi.markReviewedCalls[1].reviewed, isFalse);
+    expect(holdingsApi.markCompletedCalls, hasLength(2));
+    expect(holdingsApi.markCompletedCalls[0].completed, isTrue);
+    expect(holdingsApi.markCompletedCalls[1].completed, isFalse);
 
     final Parcel finalState = repository.parcels.single;
-    expect(finalState.reviewed, isFalse);
-    expect(finalState.reviewedAt, isNull);
-    expect(finalState.reviewedBy, isNull);
+    expect(finalState.completedAt, isNull);
+    expect(finalState.completedBy, isNull);
   });
 
   test('a failed API call leaves the local parcel unchanged and rethrows', () async {
     const Parcel parcel = Parcel(id: 'p-4', holdingId: '104');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
-    holdingsApi.markReviewedError = Exception('network down');
+    holdingsApi.markCompletedError = Exception('network down');
 
     await expectLater(
-      repository.setParcelReviewed('p-4', reviewed: true),
+      repository.setParcelCompleted('p-4', completed: true),
       throwsA(isA<Exception>()),
     );
-    expect(repository.parcels.single.reviewed, isFalse);
+    expect(repository.parcels.single.completedAt, isNull);
   });
 
   group('applyRemoteChange', () {
@@ -227,20 +225,19 @@ void main() {
       const Parcel parcel = Parcel(id: 'p-5', holdingId: '105');
       await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-      final Parcel? updated = await repository.setParcelReviewed('p-5', reviewed: true);
-      final DateTime localReviewedAt = updated!.reviewedAt!;
+      final Parcel? updated = await repository.setParcelCompleted('p-5', completed: true);
+      final DateTime localCompletedAt = updated!.completedAt!;
 
-      // A fresh remote row confirming the same reviewed state.
+      // A fresh remote row confirming the same completed state.
       final Parcel freshRemote = parcel.copyWith(
-        reviewed: true,
-        reviewedAt: localReviewedAt,
-        reviewedBy: 'user-1',
+        completedAt: localCompletedAt,
+        completedBy: 'user-1',
       );
       repository.applyRemoteChange(freshRemote);
 
       final Parcel afterFresh = repository.parcels.single;
-      expect(afterFresh.reviewed, isTrue);
-      expect(afterFresh.reviewedAt, freshRemote.reviewedAt);
+      expect(afterFresh.completedAt, isNotNull);
+      expect(afterFresh.completedAt, freshRemote.completedAt);
     });
   });
 }

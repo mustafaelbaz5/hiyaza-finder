@@ -40,7 +40,7 @@ import 'parcel_edits_store.dart';
 /// **Outbox model (`REFACTOR_ROADMAP.md` Phase 9 #9, rebuilt per explicit
 /// sign-off — reverses the online-first-only design this class's docs
 /// previously described):** every write method (`addLocalParcel`,
-/// `deleteLocalParcel`, `updateParcel`, `setParcelReviewed`,
+/// `deleteLocalParcel`, `updateParcel`, `setParcelCompleted`,
 /// `bulkApplyField`) mutates the in-memory dataset **immediately**
 /// (optimistic — the UI reflects the change before the server has seen it)
 /// and enqueues a durable [SyncOperation] in the same call via [_syncRunner]
@@ -100,7 +100,7 @@ class HoldingsRepository
   /// `null` in tests that construct this repository directly without a
   /// Supabase-backed API — every write method treats a `null` [holdingsApi]
   /// as a no-op network call (mutates local state as if the write
-  /// succeeded), which is what lets the existing add/delete/reviewed tests
+  /// succeeded), which is what lets the existing add/delete/completed tests
   /// construct a repository with no network dependency at all.
   final HoldingsApi? holdingsApi;
 
@@ -417,14 +417,16 @@ class HoldingsRepository
     }
   }
 
-  /// Marks [parcelId] reviewed/un-reviewed — applies the change to the
-  /// dataset immediately (optimistic) and enqueues a
-  /// [MarkReviewedOperation]. Unlike [updateParcel] this never touches the
-  /// edit overlay: reviewed status is not part of the editable-field
-  /// overlay.
-  Future<Parcel?> setParcelReviewed(
+  /// Marks [parcelId] completed/reopened — the field-worker signal
+  /// (`SYSTEM_DESIGN.md` §10; `REFACTOR_ROADMAP.md` Phase 9 #12) — applies
+  /// the change to the dataset immediately (optimistic) and enqueues a
+  /// [CompleteParcelOperation]. Writes `completed_at`/`completed_by`, never
+  /// `reviewed`/`reviewed_at`/`reviewed_by` (staff/Dashboard-only). Unlike
+  /// [updateParcel] this never touches the edit overlay: completion status
+  /// is not part of the editable-field overlay.
+  Future<Parcel?> setParcelCompleted(
     final String parcelId, {
-    required final bool reviewed,
+    required final bool completed,
   }) async {
     final int idx = _dataset.indexOf(parcelId);
     if (idx < 0) return null;
@@ -432,41 +434,40 @@ class HoldingsRepository
     final bool isFieldAdded = _dataset.parcels[idx].isFieldAdded;
 
     if (_syncRunner == null) {
-      final Parcel updated = await _syncService.syncMarkReviewed(
+      final Parcel updated = await _syncService.syncMarkCompleted(
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
-        reviewed: reviewed,
+        completed: completed,
         parcel: _dataset.parcels[idx],
       );
-      _applyReviewedLocally(parcelId, idx, updated);
+      _applyCompletedLocally(parcelId, idx, updated);
       return updated;
     }
 
-    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
+    final DateTime? completedAt = completed ? DateTime.now() : null;
     final String? currentUserId =
         GetIt.instance<AuthRepository>().currentUser?.id;
     final Parcel updated = _dataset.parcels[idx].copyWith(
-      reviewed: reviewed,
-      reviewedAt: reviewedAt,
-      reviewedBy: reviewed ? currentUserId : null,
+      completedAt: completedAt,
+      completedBy: completed ? currentUserId : null,
     );
-    _applyReviewedLocally(parcelId, idx, updated);
+    _applyCompletedLocally(parcelId, idx, updated);
 
     _enqueue(
-      MarkReviewedOperation(
+      CompleteParcelOperation(
         operationId: _uuid.v4(),
         createdAt: DateTime.now(),
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
-        reviewed: reviewed,
-        reviewedAt: reviewedAt,
-        reviewedByUserId: currentUserId ?? '',
+        completed: completed,
+        completedAt: completedAt,
+        completedByUserId: currentUserId ?? '',
       ),
     );
     return updated;
   }
 
-  void _applyReviewedLocally(
+  void _applyCompletedLocally(
     final String parcelId,
     final int idx,
     final Parcel updated,
@@ -476,9 +477,8 @@ class HoldingsRepository
     _dataset.setOriginal(
       parcelId,
       (original ?? updated).copyWith(
-        reviewed: updated.reviewed,
-        reviewedAt: updated.reviewedAt,
-        reviewedBy: updated.reviewedBy,
+        completedAt: updated.completedAt,
+        completedBy: updated.completedBy,
       ),
     );
   }
@@ -666,7 +666,7 @@ class HoldingsRepository
           holderName: p.holderName,
           parcelCount: 1,
           score: 0,
-          reviewedCount: p.reviewed ? 1 : 0,
+          completedCount: p.completedAt != null ? 1 : 0,
           isFieldAdded: p.isFieldAdded,
         ),
     ];

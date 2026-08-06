@@ -4,11 +4,12 @@ import 'package:hiyaza_finder/features/holdings/presentation/cubit/home_state.da
 
 void main() {
   group('HomeState status counts', () {
-    final List<Parcel> parcels = const <Parcel>[
-      Parcel(id: 'p1', holdingId: '1', isFieldAdded: true, reviewed: false),
-      Parcel(id: 'p2', holdingId: '2', isFieldAdded: false, reviewed: true),
-      Parcel(id: 'p3', holdingId: '3', isFieldAdded: false, reviewed: false),
-      Parcel(id: 'p4', holdingId: '4', isFieldAdded: false, reviewed: false),
+    final DateTime now = DateTime.now();
+    final List<Parcel> parcels = <Parcel>[
+      const Parcel(id: 'p1', holdingId: '1', isFieldAdded: true),
+      Parcel(id: 'p2', holdingId: '2', completedAt: now),
+      const Parcel(id: 'p3', holdingId: '3'),
+      const Parcel(id: 'p4', holdingId: '4'),
     ];
 
     test('addedCount counts field-added parcels', () {
@@ -16,10 +17,10 @@ void main() {
       expect(state.addedCount, 1);
     });
 
-    test('reviewedCount/pendingReviewCount split by reviewed flag', () {
+    test('completedCount/pendingCompletionCount split by completedAt', () {
       final state = HomeState(status: HomeStatus.loaded, parcels: parcels);
-      expect(state.reviewedCount, 1);
-      expect(state.pendingReviewCount, 3);
+      expect(state.completedCount, 1);
+      expect(state.pendingCompletionCount, 3);
     });
 
     test('modifiedCount counts only parcels present in modifiedIds', () {

@@ -348,8 +348,8 @@ class _LoadedBodyState extends State<_LoadedBody> {
                       StatusSummaryCards(
                         addedCount: widget.state.addedCount,
                         modifiedCount: widget.state.modifiedCount,
-                        pendingReviewCount: widget.state.pendingReviewCount,
-                        reviewedCount: widget.state.reviewedCount,
+                        pendingCompletionCount: widget.state.pendingCompletionCount,
+                        completedCount: widget.state.completedCount,
                       ),
                       verticalSpacing(16),
                       CustomTextForm(

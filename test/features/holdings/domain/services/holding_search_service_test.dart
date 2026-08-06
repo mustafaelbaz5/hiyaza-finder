@@ -130,34 +130,36 @@ void main() {
     expect(results[0].groupKey, isNot(results[1].groupKey));
   });
 
-  group('reviewedCount', () {
-    test('is 0 for a group with no reviewed parcels', () {
+  group('completedCount', () {
+    test('is 0 for a group with no completed parcels', () {
       final results = service.search(parcels, 'محمد أحمد علي');
       final match = results.firstWhere((final r) => r.holdingId == '001117');
-      expect(match.reviewedCount, 0);
+      expect(match.completedCount, 0);
       expect(match.parcelCount, 2);
     });
 
-    test('reflects a partially-reviewed group (some parcels reviewed)', () {
+    test('reflects a partially-completed group (some parcels completed)', () {
+      final DateTime now = DateTime.now();
       final mixed = <Parcel>[
-        const Parcel(holdingId: '900', holderName: 'خالد', reviewed: true),
+        Parcel(holdingId: '900', holderName: 'خالد', completedAt: now),
         const Parcel(holdingId: '900', holderName: 'خالد'),
       ];
       final results = service.search(mixed, 'خالد');
       final match = results.first;
       expect(match.parcelCount, 2);
-      expect(match.reviewedCount, 1);
+      expect(match.completedCount, 1);
     });
 
-    test('reflects a fully-reviewed group', () {
-      final fullyReviewed = <Parcel>[
-        const Parcel(holdingId: '901', holderName: 'سامي', reviewed: true),
-        const Parcel(holdingId: '901', holderName: 'سامي', reviewed: true),
+    test('reflects a fully-completed group', () {
+      final DateTime now = DateTime.now();
+      final fullyCompleted = <Parcel>[
+        Parcel(holdingId: '901', holderName: 'سامي', completedAt: now),
+        Parcel(holdingId: '901', holderName: 'سامي', completedAt: now),
       ];
-      final results = service.search(fullyReviewed, 'سامي');
+      final results = service.search(fullyCompleted, 'سامي');
       final match = results.first;
       expect(match.parcelCount, 2);
-      expect(match.reviewedCount, 2);
+      expect(match.completedCount, 2);
     });
   });
 

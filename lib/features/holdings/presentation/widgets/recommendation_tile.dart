@@ -60,9 +60,9 @@ class RecommendationTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (result.reviewedCount > 0) ...<Widget>[
+                      if (result.completedCount > 0) ...<Widget>[
                         const SizedBox(width: 6),
-                        if (result.reviewedCount >= result.parcelCount)
+                        if (result.completedCount >= result.parcelCount)
                           StatusBadge(
                             icon: Icons.check_circle_rounded,
                             label: 'holdings.detail.reviewed_badge'.tr(),
@@ -71,7 +71,7 @@ class RecommendationTile extends StatelessWidget {
                         else
                           StatusBadge(
                             icon: Icons.hourglass_bottom_rounded,
-                            label: '${result.reviewedCount}/${result.parcelCount}',
+                            label: '${result.completedCount}/${result.parcelCount}',
                             color: AppColors.amber200,
                           ),
                       ],

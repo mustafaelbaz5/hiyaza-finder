@@ -4,9 +4,9 @@ import '../../../features/holdings/data/repository/holdings_repository.dart';
 import '../../../features/holdings/data/repository/parcel_edits_store.dart';
 import '../../../features/holdings/data/services/add_parcel_sync_handler.dart';
 import '../../../features/holdings/data/services/bulk_edit_sync_handler.dart';
+import '../../../features/holdings/data/services/complete_parcel_sync_handler.dart';
 import '../../../features/holdings/data/services/delete_parcel_sync_handler.dart';
 import '../../../features/holdings/data/services/edit_parcel_sync_handler.dart';
-import '../../../features/holdings/data/services/mark_reviewed_sync_handler.dart';
 import '../../../features/holdings/data/services/parcel_sync_service.dart';
 import '../../../features/holdings/domain/repositories/holdings_reader.dart';
 import '../../../features/holdings/domain/repositories/holdings_writer.dart';
@@ -54,8 +54,8 @@ void registerHoldingsModule(final GetIt getIt) {
       EditParcelSyncHandler(getIt<ParcelSyncService>()),
     )
     ..registerHandler(
-      MarkReviewedOperation,
-      MarkReviewedSyncHandler(getIt<HoldingsApi>()),
+      CompleteParcelOperation,
+      CompleteParcelSyncHandler(getIt<HoldingsApi>()),
     )
     ..registerHandler(
       BulkEditOperation,

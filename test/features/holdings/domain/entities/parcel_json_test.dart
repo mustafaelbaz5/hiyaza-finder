@@ -35,6 +35,8 @@ void main() {
       reviewed: true,
       reviewedAt: DateTime(2026, 1, 2, 9, 30),
       reviewedBy: 'user-uuid-1',
+      completedAt: DateTime(2026, 1, 3, 10),
+      completedBy: 'user-uuid-2',
       isFieldAdded: true,
     );
 
@@ -69,6 +71,8 @@ void main() {
     expect(roundTripped.reviewed, original.reviewed);
     expect(roundTripped.reviewedAt, original.reviewedAt);
     expect(roundTripped.reviewedBy, original.reviewedBy);
+    expect(roundTripped.completedAt, original.completedAt);
+    expect(roundTripped.completedBy, original.completedBy);
     expect(roundTripped.isFieldAdded, original.isFieldAdded);
   });
 
@@ -85,6 +89,8 @@ void main() {
     expect(p.reviewed, isFalse);
     expect(p.reviewedAt, isNull);
     expect(p.reviewedBy, isNull);
+    expect(p.completedAt, isNull);
+    expect(p.completedBy, isNull);
     expect(p.isFieldAdded, isFalse);
   });
 
@@ -129,6 +135,31 @@ void main() {
     });
   });
 
+  group('copyWith for completedAt/completedBy', () {
+    const Parcel base = Parcel(holdingId: '101', id: 'p-1');
+
+    test('the _unset sentinel lets completedAt/completedBy be explicitly cleared to null', () {
+      final Parcel withDate = base.copyWith(
+        completedAt: DateTime(2026, 1, 1),
+        completedBy: 'user-1',
+      );
+      expect(withDate.completedAt, DateTime(2026, 1, 1));
+      expect(withDate.completedBy, 'user-1');
+
+      final Parcel cleared =
+          withDate.copyWith(completedAt: null, completedBy: null);
+      expect(cleared.completedAt, isNull);
+      expect(cleared.completedBy, isNull);
+    });
+
+    test('omitting completedAt/completedBy from copyWith leaves them unchanged', () {
+      final Parcel withDate = base.copyWith(completedAt: DateTime(2026, 1, 1));
+      final Parcel untouched = withDate.copyWith(holdingId: '202');
+      expect(untouched.completedAt, DateTime(2026, 1, 1));
+      expect(untouched.holdingId, '202');
+    });
+  });
+
   test('fromEditableJson preserves origin and review metadata', () {
     final Parcel original = Parcel(
       id: 'p-1',
@@ -138,6 +169,8 @@ void main() {
       reviewed: true,
       reviewedAt: DateTime(2026, 1, 1),
       reviewedBy: 'user-1',
+      completedAt: DateTime(2026, 1, 2),
+      completedBy: 'user-2',
       isFieldAdded: true,
       pendingGroupId: 'pending-1',
       holdingsCount: 3,
@@ -153,6 +186,8 @@ void main() {
     expect(rebuilt.reviewed, original.reviewed);
     expect(rebuilt.reviewedAt, original.reviewedAt);
     expect(rebuilt.reviewedBy, original.reviewedBy);
+    expect(rebuilt.completedAt, original.completedAt);
+    expect(rebuilt.completedBy, original.completedBy);
     expect(rebuilt.isFieldAdded, original.isFieldAdded);
     expect(rebuilt.pendingGroupId, original.pendingGroupId);
     expect(rebuilt.holdingsCount, original.holdingsCount);

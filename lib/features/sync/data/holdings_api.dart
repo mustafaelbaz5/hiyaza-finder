@@ -157,19 +157,22 @@ class HoldingsApi {
     }
   }
 
-  Future<void> markReviewed({
+  /// Sets/clears field-worker completion (`completed_at`/`completed_by`) —
+  /// distinct from `reviewed`/`reviewed_at`/`reviewed_by`, which this app
+  /// never writes (staff/Dashboard-only, `SYSTEM_DESIGN.md` §10,
+  /// `REFACTOR_ROADMAP.md` Phase 9 #12).
+  Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
-    required final DateTime? reviewedAt,
-    required final String reviewedByUserId,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
   }) async {
     final String table = isFieldAdded ? 'added_holdings' : 'holdings';
     try {
       await _client.from(table).update(<String, dynamic>{
-        'reviewed': reviewed,
-        'reviewed_at': reviewedAt?.toIso8601String(),
-        'reviewed_by': reviewed ? reviewedByUserId : null,
+        'completed_at': completedAt?.toIso8601String(),
+        'completed_by': completed ? completedByUserId : null,
       }).eq('id', parcelId).timeout(_requestTimeout);
     } catch (error) {
       ErrorHandler.handleException(error);

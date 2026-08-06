@@ -11,7 +11,7 @@ class SyncOperationCodec {
   static const String _typeAdd = 'add';
   static const String _typeDelete = 'delete';
   static const String _typeEdit = 'edit';
-  static const String _typeMarkReviewed = 'mark_reviewed';
+  static const String _typeComplete = 'complete_parcel';
   static const String _typeBulkEdit = 'bulk_edit';
 
   Map<String, dynamic> toJson(final SyncOperation op) {
@@ -43,14 +43,14 @@ class SyncOperationCodec {
           'cityId': op.cityId,
           'payload': op.payload,
         },
-      MarkReviewedOperation() => <String, dynamic>{
+      CompleteParcelOperation() => <String, dynamic>{
           ...base,
-          'type': _typeMarkReviewed,
+          'type': _typeComplete,
           'parcelId': op.parcelId,
           'isFieldAdded': op.isFieldAdded,
-          'reviewed': op.reviewed,
-          'reviewedAt': op.reviewedAt?.toIso8601String(),
-          'reviewedByUserId': op.reviewedByUserId,
+          'completed': op.completed,
+          'completedAt': op.completedAt?.toIso8601String(),
+          'completedByUserId': op.completedByUserId,
         },
       BulkEditOperation() => <String, dynamic>{
           ...base,
@@ -110,8 +110,8 @@ class SyncOperationCodec {
               json['payload'] as Map<dynamic, dynamic>,
             ),
           );
-        case _typeMarkReviewed:
-          return MarkReviewedOperation(
+        case _typeComplete:
+          return CompleteParcelOperation(
             operationId: operationId,
             createdAt: createdAt,
             attempts: attempts,
@@ -119,11 +119,30 @@ class SyncOperationCodec {
             lastError: lastError,
             parcelId: json['parcelId'] as String,
             isFieldAdded: json['isFieldAdded'] as bool,
-            reviewed: json['reviewed'] as bool,
-            reviewedAt: json['reviewedAt'] == null
+            completed: json['completed'] as bool,
+            completedAt: json['completedAt'] == null
+                ? null
+                : DateTime.parse(json['completedAt'] as String),
+            completedByUserId: json['completedByUserId'] as String? ?? '',
+          );
+        // Backward-compat: a queue persisted before this rename (Phase 9
+        // #12) may still contain an old `mark_reviewed` entry on next app
+        // launch — decode it onto the new operation type/columns so it
+        // still gets flushed correctly rather than silently dropped.
+        case 'mark_reviewed':
+          return CompleteParcelOperation(
+            operationId: operationId,
+            createdAt: createdAt,
+            attempts: attempts,
+            lastAttemptAt: lastAttemptAt,
+            lastError: lastError,
+            parcelId: json['parcelId'] as String,
+            isFieldAdded: json['isFieldAdded'] as bool,
+            completed: json['reviewed'] as bool,
+            completedAt: json['reviewedAt'] == null
                 ? null
                 : DateTime.parse(json['reviewedAt'] as String),
-            reviewedByUserId: json['reviewedByUserId'] as String? ?? '',
+            completedByUserId: json['reviewedByUserId'] as String? ?? '',
           );
         case _typeBulkEdit:
           return BulkEditOperation(

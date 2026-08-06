@@ -68,24 +68,24 @@ class ParcelDetailCard extends StatelessWidget {
     final colors = context.customColors;
     final bool isAdded =
         parcel.isFieldAdded || parcel.sourceAddedHoldingId != null || isNew;
-    final bool isReviewed = parcel.reviewed;
+    final bool isCompleted = parcel.completedAt != null;
     return Container(
       padding: EdgeInsets.all(rw(12)),
       decoration: BoxDecoration(
-        color: isReviewed
+        color: isCompleted
             ? colors.surface.withValues(alpha: 0.76)
             : colors.backgroundSecondary,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isReviewed
+          color: isCompleted
               ? AppColors.green200.withValues(alpha: 0.28)
               : isAdded
                   ? AppColors.blue200.withValues(alpha: 0.35)
                   : colors.border,
-          width: isAdded || isReviewed ? 1.2 : 1,
+          width: isAdded || isCompleted ? 1.2 : 1,
         ),
         boxShadow: <BoxShadow>[
-          if (isReviewed)
+          if (isCompleted)
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
@@ -94,13 +94,13 @@ class ParcelDetailCard extends StatelessWidget {
         ],
       ),
       child: Opacity(
-        opacity: isReviewed ? 0.68 : 1,
+        opacity: isCompleted ? 0.68 : 1,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ParcelDetailTopRow(
               isAdded: isAdded,
-              isReviewed: isReviewed,
+              isReviewed: isCompleted,
               onFinish: onFinish,
               onReopen: onReopen,
               onDelete: onDelete,
@@ -108,7 +108,7 @@ class ParcelDetailCard extends StatelessWidget {
               isInheritance: parcel.isInheritance,
               isDelegate: parcel.isDelegate,
             ),
-            if (isAdded || isReviewed) verticalSpacing(8),
+            if (isAdded || isCompleted) verticalSpacing(8),
             if (isAdded)
               ParcelDetailInfoBanner(
                 icon: Icons.add_box_rounded,
@@ -116,8 +116,8 @@ class ParcelDetailCard extends StatelessWidget {
                 subtitle: 'holdings.detail.added_badge_hint'.tr(),
                 color: AppColors.blue200,
               ),
-            if (isAdded && isReviewed) verticalSpacing(8),
-            if (isReviewed)
+            if (isAdded && isCompleted) verticalSpacing(8),
+            if (isCompleted)
               ParcelDetailInfoBanner(
                 icon: Icons.check_circle_rounded,
                 label: 'holdings.detail.reviewed_badge'.tr(),
@@ -405,15 +405,17 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
-  /// Copy ID is the review-completion action (`REFACTOR_ROADMAP.md` Phase
-  /// 7): validates required fields, copies the id, then marks the parcel
-  /// reviewed via the same `setParcelReviewed` path `onFinish` used —
-  /// unless it's already reviewed, in which case this is a plain re-copy
-  /// (re-marking an already-reviewed parcel via Copy ID would be a
+  /// Copy ID is the field-worker completion action (`REFACTOR_ROADMAP.md`
+  /// Phase 7, migrated to `completed_at`/`completed_by` in Phase 9 #12):
+  /// validates required fields, copies the id, then marks the parcel
+  /// completed via the same `setParcelCompleted` path `onFinish` uses —
+  /// unless it's already completed, in which case this is a plain re-copy
+  /// (re-marking an already-completed parcel via Copy ID would be a
   /// surprising side effect of an action the user takes repeatedly while
-  /// working, e.g. to paste the id elsewhere after review).
+  /// working, e.g. to paste the id elsewhere after completion).
   Future<void> _copyId(final BuildContext context) async {
-    if (!isNew && !parcel.reviewed && !parcel.hasRequiredFieldsFilled) {
+    final bool isCompleted = parcel.completedAt != null;
+    if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
       final List<String> gaps = requiredFieldGapMessages(parcel);
       context.showErrorSnackBar(gaps.first);
       return;
@@ -423,16 +425,16 @@ class ParcelDetailCard extends StatelessWidget {
     if (!context.mounted) return;
     HapticFeedback.mediumImpact();
 
-    if (isNew || parcel.reviewed) {
+    if (isNew || isCompleted) {
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
       return;
     }
 
     try {
       await getIt<HoldingsRepository>()
-          .setParcelReviewed(parcel.id, reviewed: true);
+          .setParcelCompleted(parcel.id, completed: true);
       if (!context.mounted) return;
-      onFieldChanged(parcel.copyWith(reviewed: true));
+      onFieldChanged(parcel.copyWith(completedAt: DateTime.now()));
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
     } catch (_) {
       if (context.mounted) context.showErrorSnackBar('errors.unknown'.tr());

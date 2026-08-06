@@ -9,7 +9,7 @@ import 'package:hiyaza_finder/features/holdings/data/services/add_parcel_sync_ha
 import 'package:hiyaza_finder/features/holdings/data/services/bulk_edit_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/delete_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/edit_parcel_sync_handler.dart';
-import 'package:hiyaza_finder/features/holdings/data/services/mark_reviewed_sync_handler.dart';
+import 'package:hiyaza_finder/features/holdings/data/services/complete_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/parcel_sync_service.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/bulk_editable_field.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
@@ -26,7 +26,7 @@ class _RecordingHoldingsApi implements HoldingsApi {
   final List<String> addRecordCalls = <String>[];
   final List<String> deleteCalls = <String>[];
   final List<String> editCalls = <String>[];
-  final List<String> markReviewedCalls = <String>[];
+  final List<String> markCompletedCalls = <String>[];
   Object? errorFor;
 
   @override
@@ -68,15 +68,15 @@ class _RecordingHoldingsApi implements HoldingsApi {
       const <String>[];
 
   @override
-  Future<void> markReviewed({
+  Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
-    required final bool reviewed,
-    required final DateTime? reviewedAt,
-    required final String reviewedByUserId,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
   }) async {
-    if (errorFor == 'reviewed') throw Exception('network down');
-    markReviewedCalls.add(parcelId);
+    if (errorFor == 'completed') throw Exception('network down');
+    markCompletedCalls.add(parcelId);
   }
 
   @override
@@ -138,7 +138,7 @@ void main() {
       ..registerHandler(AddParcelOperation, AddParcelSyncHandler(syncService))
       ..registerHandler(DeleteParcelOperation, DeleteParcelSyncHandler(holdingsApi))
       ..registerHandler(EditParcelOperation, EditParcelSyncHandler(syncService))
-      ..registerHandler(MarkReviewedOperation, MarkReviewedSyncHandler(holdingsApi))
+      ..registerHandler(CompleteParcelOperation, CompleteParcelSyncHandler(holdingsApi))
       ..registerHandler(BulkEditOperation, BulkEditSyncHandler(holdingsApi));
 
     repository = HoldingsRepository(
@@ -213,31 +213,31 @@ void main() {
     });
   });
 
-  group('setParcelReviewed (outbox)', () {
-    test('applies reviewed state locally before any network call', () async {
+  group('setParcelCompleted (outbox)', () {
+    test('applies completed state locally before any network call', () async {
       final Parcel? added = await repository.addLocalParcel(
         const Parcel(holdingId: '', holderName: 'محمد'),
       );
       await syncRunner.flush();
 
       final Parcel? updated =
-          await repository.setParcelReviewed(added!.id, reviewed: true);
+          await repository.setParcelCompleted(added!.id, completed: true);
 
-      expect(updated!.reviewed, isTrue);
-      expect(repository.parcels.single.reviewed, isTrue);
-      expect(repository.parcels.single.reviewedBy, 'user-1');
+      expect(updated!.completedAt, isNotNull);
+      expect(repository.parcels.single.completedAt, isNotNull);
+      expect(repository.parcels.single.completedBy, 'user-1');
     });
 
-    test('enqueues and eventually calls markReviewed', () async {
+    test('enqueues and eventually calls markCompleted', () async {
       final Parcel? added = await repository.addLocalParcel(
         const Parcel(holdingId: '', holderName: 'محمد'),
       );
       await syncRunner.flush();
 
-      await repository.setParcelReviewed(added!.id, reviewed: true);
+      await repository.setParcelCompleted(added!.id, completed: true);
       await syncRunner.flush();
 
-      expect(holdingsApi.markReviewedCalls, contains(added.id));
+      expect(holdingsApi.markCompletedCalls, contains(added.id));
     });
   });
 

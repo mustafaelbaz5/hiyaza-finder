@@ -13,7 +13,7 @@ String syncOperationSummary(final SyncOperation op) {
         : 'sync.operation.add_parcel'.tr(),
     DeleteParcelOperation() => 'sync.operation.delete_parcel'.tr(),
     EditParcelOperation() => 'sync.operation.edit_holding'.tr(),
-    MarkReviewedOperation() => 'sync.operation.mark_reviewed'.tr(),
+    CompleteParcelOperation() => 'sync.operation.mark_reviewed'.tr(),
     BulkEditOperation() => 'sync.operation.bulk_edit'.tr(namedArgs: {'count': '1'}),
   };
 }
