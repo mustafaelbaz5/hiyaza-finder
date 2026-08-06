@@ -8,7 +8,6 @@ import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
@@ -25,7 +24,7 @@ import 'copy_all_button.dart';
 import 'crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
-import 'status_badge.dart';
+import 'parcel_detail_header.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -98,7 +97,7 @@ class ParcelDetailCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _TopStateRow(
+            ParcelDetailTopRow(
               isAdded: isAdded,
               isReviewed: isReviewed,
               onFinish: onFinish,
@@ -108,7 +107,7 @@ class ParcelDetailCard extends StatelessWidget {
             ),
             if (isAdded || isReviewed) verticalSpacing(8),
             if (isAdded)
-              _InfoBanner(
+              ParcelDetailInfoBanner(
                 icon: Icons.add_box_rounded,
                 label: 'holdings.detail.added_badge'.tr(),
                 subtitle: 'holdings.detail.added_badge_hint'.tr(),
@@ -116,14 +115,14 @@ class ParcelDetailCard extends StatelessWidget {
               ),
             if (isAdded && isReviewed) verticalSpacing(8),
             if (isReviewed)
-              _InfoBanner(
+              ParcelDetailInfoBanner(
                 icon: Icons.check_circle_rounded,
                 label: 'holdings.detail.reviewed_badge'.tr(),
                 subtitle: 'holdings.detail.reviewed_hint'.tr(),
                 color: colors.success,
               ),
             verticalSpacing(10),
-            _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
+            ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
             verticalSpacing(10),
             BorderCompass(
               holdingId: parcel.holdingId,
@@ -436,186 +435,6 @@ class ParcelDetailCard extends StatelessWidget {
       message: 'holdings.detail.delete_confirm'.tr(),
       confirmText: 'holdings.detail.delete'.tr(),
       onConfirm: onDelete!,
-    );
-  }
-}
-
-class _TopStateRow extends StatelessWidget {
-  const _TopStateRow({
-    required this.isAdded,
-    required this.isReviewed,
-    required this.onFinish,
-    required this.onReopen,
-    required this.onDelete,
-    required this.onDeleteConfirmed,
-  });
-
-  final bool isAdded;
-  final bool isReviewed;
-  final VoidCallback? onFinish;
-  final VoidCallback? onReopen;
-  final VoidCallback? onDelete;
-  final VoidCallback onDeleteConfirmed;
-
-  @override
-  Widget build(final BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              if (isAdded)
-                const StatusBadge(
-                  icon: Icons.add_box_rounded,
-                  label: 'مضافة من التطبيق',
-                  color: AppColors.blue200,
-                ),
-              if (!isReviewed && onFinish != null)
-                const StatusBadge(
-                  icon: Icons.task_alt_rounded,
-                  label: 'قيد المراجعة',
-                  color: AppColors.amber200,
-                ),
-              if (isReviewed)
-                const StatusBadge(
-                  icon: Icons.check_circle_rounded,
-                  label: 'تم المراجعة',
-                  color: AppColors.green200,
-                ),
-            ],
-          ),
-        ),
-        if (onDelete != null)
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppColors.red200),
-            tooltip: 'holdings.detail.delete'.tr(),
-            onPressed: onDeleteConfirmed,
-          ),
-        if (isReviewed && onReopen != null)
-          FilledButton.tonalIcon(
-            onPressed: onReopen,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: Text('holdings.detail.reopen'.tr()),
-          )
-        else if (!isReviewed && onFinish != null)
-          FilledButton.tonalIcon(
-            onPressed: onFinish,
-            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-            label: Text('holdings.detail.finished'.tr()),
-          ),
-      ],
-    );
-  }
-}
-
-class _InfoBanner extends StatelessWidget {
-  const _InfoBanner({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final Color color;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.font14Bold.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.font12Bold.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ParcelIdChip extends StatelessWidget {
-  const _ParcelIdChip({required this.id, required this.onCopy});
-
-  final String id;
-  final VoidCallback onCopy;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Material(
-      color: colors.background,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onCopy,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.fingerprint_rounded,
-                  size: 18, color: AppColors.green200),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'holdings.detail.parcel_id'.tr(),
-                      style: AppTextStyles.font12Bold.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      id,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.font14Bold,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded,
-                  size: 18, color: AppColors.green200),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
