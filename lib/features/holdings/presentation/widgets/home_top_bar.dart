@@ -11,27 +11,16 @@ class HomeTopBar extends StatelessWidget {
   const HomeTopBar({
     super.key,
     required this.onSettings,
-    this.onRefresh,
-    this.isRefreshing = false,
   });
 
   final VoidCallback onSettings;
 
-  /// Re-downloads the active city's latest data (after flushing any queued
-  /// local edits first) — `null` until a city is actually loaded, since
-  /// there's nothing to refresh before then.
-  final VoidCallback? onRefresh;
-
-  /// Whether a refresh triggered by [onRefresh] is currently in flight —
-  /// swaps the icon for a spinner and (via `onRefresh` itself being made
-  /// re-entrant-safe by the caller) prevents a second tap from starting a
-  /// concurrent refresh.
-  final bool isRefreshing;
-
   /// Matches [TopBarIconButton]'s footprint so the centered title/brand
   /// column stays visually centered without a second icon button on the
-  /// trailing side (the history button/screen was retired along with the
-  /// rest of the Excel-file flow — APP_PLAN.md Phase 5).
+  /// trailing side. There is no manual-refresh action here anymore
+  /// (`REFACTOR_ROADMAP.md` Phase 9 #8 — Realtime plus a silent
+  /// resume-triggered resync replaced it); this spacer keeps the layout
+  /// unchanged rather than re-centering the title column.
   static const double _iconButtonFootprint = 42;
 
   @override
@@ -77,33 +66,10 @@ class HomeTopBar extends StatelessWidget {
               ],
             ),
           ),
-          if (onRefresh == null)
-            const SizedBox(
-              width: _iconButtonFootprint,
-              height: _iconButtonFootprint,
-            )
-          else
-            SizedBox(
-              width: _iconButtonFootprint,
-              height: _iconButtonFootprint,
-              child: isRefreshing
-                  ? const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary200,
-                        ),
-                      ),
-                    )
-                  : TopBarIconButton(
-                      icon: Icons.refresh_rounded,
-                      tooltip: 'cities.stale_banner.refresh'.tr(),
-                      onTap: onRefresh!,
-                    ),
-            ),
+          const SizedBox(
+            width: _iconButtonFootprint,
+            height: _iconButtonFootprint,
+          ),
         ],
       ),
     );

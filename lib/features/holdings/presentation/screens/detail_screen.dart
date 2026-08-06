@@ -27,7 +27,7 @@ class DetailScreen extends StatefulWidget {
   State<DetailScreen> createState() => _DetailScreenState();
 }
 
-class _DetailScreenState extends State<DetailScreen> {
+class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
@@ -65,10 +65,29 @@ class _DetailScreenState extends State<DetailScreen> {
     // already open.
     _remoteChangesSub = _repository.onRemoteChange
         .listen((final _) => _refreshFromRepository());
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// The manual refresh icon/pull-gesture on this screen is deliberately
+  /// gone too (`REFACTOR_ROADMAP.md` Phase 9 #8) — same rationale as
+  /// `HomeScreen`. `syncNow()` (not just re-reading the repository) is
+  /// needed here specifically because `loadParcelsForCity`/`adopt` doesn't
+  /// fire `onRemoteChange` — a resume-triggered resync from `HomeScreen`
+  /// alone would silently miss updating an already-open `DetailScreen`.
+  @override
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(
+        _repository.syncNow().then((final _) {
+          if (mounted) _refreshFromRepository();
+        }).catchError((final _) {}),
+      );
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _remoteChangesSub.cancel();
     super.dispose();
   }
@@ -263,15 +282,6 @@ class _DetailScreenState extends State<DetailScreen> {
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
-  Future<void> _refreshCityData() async {
-    try {
-      await _repository.syncNow();
-    } catch (_) {
-      if (!mounted) return;
-      context.showErrorSnackBar('errors.unknown'.tr());
-    }
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -287,8 +297,6 @@ class _DetailScreenState extends State<DetailScreen> {
             DetailScreenHeader(
               holdingId: holdingId,
               parcelCount: _parcels.length,
-              isBusy: _isBusy,
-              onRefresh: _refreshCityData,
               onAddParcel: _parcels.isEmpty
                   ? null
                   : () => _addParcelForPerson(_parcels.first),
@@ -303,50 +311,40 @@ class _DetailScreenState extends State<DetailScreen> {
                         ),
                       ),
                     )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        try {
-                          await _repository.syncNow();
-                        } catch (_) {
-                          if (!mounted) return;
-                          this.context.showErrorSnackBar('errors.unknown'.tr());
-                        }
+                  : ListView.builder(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: rw(16),
+                      ).copyWith(bottom: rh(16)),
+                      itemCount: _parcels.length,
+                      itemBuilder: (final BuildContext context, final int i) {
+                        final Parcel parcel = _parcels[i];
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: rh(16)),
+                          child: ParcelDetailCard(
+                            parcel: parcel,
+                            originalParcel:
+                                _repository.originalParcel(parcel.id),
+                            // "New / unsynced" no longer applies once
+                            // every write is confirmed-or-failed
+                            // synchronously — there is no more window
+                            // where a record is visible but not yet on
+                            // the server.
+                            isNew: false,
+                            hideCreditType: _repository.hideCreditType,
+                            associationType:
+                                _repository.activeAssociationType,
+                            onFieldChanged: _updateField,
+                            animationDelay: Duration(milliseconds: i * 80),
+                            resolveBorderMatch: _repository.findByBorderText,
+                            onDelete: parcel.sourceAddedHoldingId != null &&
+                                    !parcel.reviewed
+                                ? () => _deleteParcel(parcel)
+                                : null,
+                            onFinish: () => _finishParcel(parcel),
+                            onReopen: () => _reopenParcel(parcel),
+                          ),
+                        );
                       },
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: rw(16),
-                        ).copyWith(bottom: rh(16)),
-                        itemCount: _parcels.length,
-                        itemBuilder: (final BuildContext context, final int i) {
-                          final Parcel parcel = _parcels[i];
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: rh(16)),
-                            child: ParcelDetailCard(
-                              parcel: parcel,
-                              originalParcel:
-                                  _repository.originalParcel(parcel.id),
-                              // "New / unsynced" no longer applies once
-                              // every write is confirmed-or-failed
-                              // synchronously — there is no more window
-                              // where a record is visible but not yet on
-                              // the server.
-                              isNew: false,
-                              hideCreditType: _repository.hideCreditType,
-                              associationType:
-                                  _repository.activeAssociationType,
-                              onFieldChanged: _updateField,
-                              animationDelay: Duration(milliseconds: i * 80),
-                              resolveBorderMatch: _repository.findByBorderText,
-                              onDelete: parcel.sourceAddedHoldingId != null &&
-                                      !parcel.reviewed
-                                  ? () => _deleteParcel(parcel)
-                                  : null,
-                              onFinish: () => _finishParcel(parcel),
-                              onReopen: () => _reopenParcel(parcel),
-                            ),
-                          );
-                        },
-                      ),
                     ),
             ),
           ],

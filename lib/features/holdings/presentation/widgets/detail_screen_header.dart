@@ -16,15 +16,11 @@ class DetailScreenHeader extends StatelessWidget {
     super.key,
     required this.holdingId,
     required this.parcelCount,
-    required this.isBusy,
-    required this.onRefresh,
     required this.onAddParcel,
   });
 
   final String holdingId;
   final int parcelCount;
-  final bool isBusy;
-  final VoidCallback onRefresh;
   final VoidCallback? onAddParcel;
 
   @override
@@ -66,11 +62,6 @@ class DetailScreenHeader extends StatelessWidget {
                     ],
                   ],
                 ),
-              ),
-              IconButton(
-                onPressed: isBusy ? null : onRefresh,
-                icon: const Icon(Icons.refresh_rounded),
-                tooltip: 'holdings.detail.refresh'.tr(),
               ),
             ],
           ),

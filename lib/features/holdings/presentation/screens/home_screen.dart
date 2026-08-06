@@ -36,7 +36,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   Timer? _debounce;
 
@@ -48,30 +48,32 @@ class _HomeScreenState extends State<HomeScreen> {
           : null;
   bool _isListening = false;
 
-  /// Drives the app-bar refresh icon's spinner and blocks re-entrant taps —
-  /// `HomeTopBar` only receives a non-null `onRefresh` once a city is
-  /// loaded (see `build` below), so this only ever runs when `cubit.
-  /// refreshActiveCity()` is actually meaningful.
-  bool _isRefreshing = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
-  /// Re-downloads the active city (gets other users' updates) — the app
-  /// bar's refresh action, replacing the old pull-to-refresh gesture, which
-  /// on the home screen's default (no search) state had no visible
-  /// scrollable content to grab onto.
-  Future<void> _refreshCity(final HomeCubit cubit) async {
-    if (_isRefreshing) return;
-    setState(() => _isRefreshing = true);
-    try {
-      await cubit.refreshActiveCity();
-    } catch (_) {
-      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
-    } finally {
-      if (mounted) setState(() => _isRefreshing = false);
+  /// The manual refresh icon/pull-gesture is deliberately gone
+  /// (`REFACTOR_ROADMAP.md` Phase 9 #8) — Realtime keeps the loaded city
+  /// current while the app is in the foreground. The one gap Realtime can't
+  /// cover is a channel that silently dropped while backgrounded (OS-level
+  /// socket teardown, a brief connectivity loss with no reconnect event) —
+  /// this resyncs silently on every foreground resume so that gap never
+  /// requires a user-facing recovery action. Errors are swallowed on
+  /// purpose: a failed background resync must not interrupt whatever the
+  /// user is doing when the app resumes; the next Realtime event or app
+  /// resume tries again.
+  @override
+  void didChangeAppLifecycleState(final AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(context.read<HomeCubit>().refreshActiveCity().catchError((final _) {}));
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _controller.dispose();
     if (_isListening) _voiceService?.stopListening();
@@ -172,10 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
               children: <Widget>[
                 HomeTopBar(
                   onSettings: () => showSettingsSheet(context),
-                  onRefresh: state.status == HomeStatus.loaded
-                      ? () => _refreshCity(cubit)
-                      : null,
-                  isRefreshing: _isRefreshing,
                 ),
                 Expanded(
                   child: AnimatedSwitcher(

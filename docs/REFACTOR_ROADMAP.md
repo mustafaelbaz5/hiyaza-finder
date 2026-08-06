@@ -287,9 +287,17 @@ off on implementing all four; each is built and gated independently before the n
   design; it adds a supplementary layer on top, catching only records synced to the server after the
   device's last city download. Zero behavior change when offline (remote call fails silently, local
   results stand alone).
-- **"No manual refresh."** Would mean removing the manual pull-to-refresh/refresh-icon actions in
-  `home_screen.dart`/`detail_screen.dart`, which directly use `HoldingsRepository.syncNow()` — a pattern
-  Phase 2's own realtime-polish work just relied on. Conflicts with the current, intentional design.
+- ✅ **"No manual refresh" (2026-08-06).** The app-bar refresh icon (`HomeTopBar`) and the detail
+  screen's `RefreshIndicator`/header refresh icon are removed — `HomeScreen`/`DetailScreen` no longer
+  expose any manual resync action. Per explicit sign-off, the safety net stays but goes silent: both
+  screens now mix in `WidgetsBindingObserver` and call `refreshActiveCity()`/`syncNow()` automatically
+  on `AppLifecycleState.resumed` (foreground return), swallowing any failure rather than surfacing it —
+  the point is to close the one gap Realtime can't cover on its own (a channel that silently dropped
+  while backgrounded), not to give the user a new visible action. `DetailScreen` needed its own
+  resume hook rather than relying solely on `HomeScreen`'s: `HoldingsRepository.loadParcelsForCity`
+  doesn't fire `onRemoteChange`, so a `HomeScreen`-only resync wouldn't reach an already-open detail
+  screen. `HomeTopBar`/`DetailScreenHeader` had their now-dead `onRefresh`/`isRefreshing`/`isBusy`
+  parameters removed rather than left unused.
 - **Background operations (continue after leaving screen, retry, queue).** This is the offline sync
   outbox model that `SYSTEM_DESIGN.md` §5 already documents as deliberately abandoned this project in
   favor of online-first (every write awaits its Supabase call synchronously; confirmed zero
