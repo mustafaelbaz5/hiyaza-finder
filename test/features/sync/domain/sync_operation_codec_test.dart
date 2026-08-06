@@ -63,6 +63,8 @@ void main() {
         parcelId: 'p1',
         isFieldAdded: true,
         reviewed: true,
+        reviewedAt: now,
+        reviewedByUserId: 'user1',
       );
 
       final SyncOperation? decoded = codec.fromJson(codec.toJson(original));

@@ -137,6 +137,8 @@ class MarkReviewedOperation extends SyncOperation {
     required this.parcelId,
     required this.isFieldAdded,
     required this.reviewed,
+    required this.reviewedAt,
+    required this.reviewedByUserId,
     super.attempts = 0,
     super.lastAttemptAt,
     super.lastError,
@@ -146,6 +148,13 @@ class MarkReviewedOperation extends SyncOperation {
   final bool isFieldAdded;
   final bool reviewed;
 
+  /// Captured at enqueue time (not execute time) so the eventual server
+  /// write matches exactly the value already applied to the local dataset
+  /// optimistically — the two must never drift just because the operation
+  /// sat in the queue for a while before actually running.
+  final DateTime? reviewedAt;
+  final String reviewedByUserId;
+
   @override
   MarkReviewedOperation withAttempt({required final String? error}) =>
       MarkReviewedOperation(
@@ -154,6 +163,8 @@ class MarkReviewedOperation extends SyncOperation {
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
         reviewed: reviewed,
+        reviewedAt: reviewedAt,
+        reviewedByUserId: reviewedByUserId,
         attempts: attempts + 1,
         lastAttemptAt: DateTime.now(),
         lastError: error,

@@ -298,10 +298,47 @@ off on implementing all four; each is built and gated independently before the n
   doesn't fire `onRemoteChange`, so a `HomeScreen`-only resync wouldn't reach an already-open detail
   screen. `HomeTopBar`/`DetailScreenHeader` had their now-dead `onRefresh`/`isRefreshing`/`isBusy`
   parameters removed rather than left unused.
-- **Background operations (continue after leaving screen, retry, queue).** This is the offline sync
-  outbox model that `SYSTEM_DESIGN.md` §5 already documents as deliberately abandoned this project in
-  favor of online-first (every write awaits its Supabase call synchronously; confirmed zero
-  fire-and-forget writes exist today). Re-introducing it reverses that decision.
+- 🚧 **Background operations (continue after leaving screen, retry, queue) — in progress, 2026-08-06.**
+  This reverses `SYSTEM_DESIGN.md` §5's documented online-first decision, per explicit user sign-off
+  to rebuild it. Being built in three gated sub-steps:
+  1. ✅ **Core outbox infrastructure** (`lib/features/sync/domain/entities/sync_operation.dart`,
+     `sync_operation_codec.dart`, `lib/features/sync/domain/services/sync_runner.dart`,
+     `sync_backoff.dart`, `sync_operation_handler.dart`, `lib/features/sync/data/sync_queue_store.dart`)
+     — rebuilds the previously-documented-but-never-built `SyncOperation`/`SyncOperationHandler`/
+     `SyncRunner` design from `SYSTEM_DESIGN.md` §5.1 almost exactly as originally specified.
+     `SyncOperation` is a sealed class (`AddParcelOperation`/`DeleteParcelOperation`/
+     `EditParcelOperation`/`MarkReviewedOperation`/`BulkEditOperation`), pure data with
+     `attempts`/`lastAttemptAt`/`lastError`. `SyncRunner` is generic (zero feature imports), FIFO,
+     exponential-backoff retry, parks an operation at `maxAttempts` (visible, not auto-retried) with an
+     explicit `retry()` that bypasses backoff for a future manual-retry UI. 19 tests.
+  2. ✅ **HoldingsRepository rewired.** All 5 write methods (`addLocalParcel`, `deleteLocalParcel`,
+     `updateParcel`, `setParcelReviewed`, `bulkApplyField`) now mutate the local dataset **immediately**
+     (optimistic) and enqueue a `SyncOperation` in the same call — none of them await the network
+     round-trip anymore when a `SyncRunner` is configured. A `_syncRunner == null` fallback path
+     (test-mode, mirrors the old `holdingsApi == null` convention) preserves the exact original
+     await-then-mutate ordering so existing repository tests asserting "a failed write leaves the
+     dataset untouched" keep passing unchanged — that invariant is real and correct for the *synchronous
+     test double*, it's just no longer true for the production optimistic path, which is now covered by
+     its own dedicated test file (`holdings_repository_outbox_test.dart`, 7 tests) proving the local
+     mutation happens before any network call and survives a network failure without being undone.
+     `AddParcelSyncHandler`/`DeleteParcelSyncHandler`/`EditParcelSyncHandler`/
+     `MarkReviewedSyncHandler`/`BulkEditSyncHandler` (`lib/features/holdings/data/services/`) execute
+     each operation type against `ParcelSyncService`/`HoldingsApi`. The old synchronous
+     `promotedHoldingId` swap in `addLocalParcel` (avoiding a person briefly showing under its
+     pre-promotion id) is **not** duplicated in the async handler — that reconciliation now arrives via
+     the existing Realtime path instead, same as any other device's write, which is simpler and already
+     proven correct. `bulkApplyField`'s `BulkEditOutcome` now means "rows queued," not "rows the server
+     confirmed" — a per-row synchronous success/failure summary no longer exists under this model; a
+     permanently-failed row surfaces later via the queue, not from the call site. DI:
+     `SyncRunner`/`SyncQueueStore` registered in `sync_module.dart`; `holdings_module.dart` registers
+     each handler and injects `SyncRunner` into `HoldingsRepository`; `dependency_injection.dart`
+     restores the queue from durable storage at startup, mirrors every in-memory queue change back to
+     storage via `SyncRunner.onQueueChanged`, and fires an initial fire-and-forget flush.
+     `HomeScreen`'s existing resume-lifecycle hook (Phase 9 #8) now also calls `SyncRunner.flush()`, so
+     app-resume both re-syncs the read side and drains the write queue.
+  3. ⬜ **Failed-syncs UI** — not yet built. `SyncRunner.operations`/`onQueueChanged` already expose
+     everything needed (pending count, per-operation `attempts`/`lastError`, `retry()`/`remove()`) for a
+     surface letting the user see and act on a permanently-failed write; no screen currently reads it.
 - **In-app activity center per city.** Larger in scope than `PROJECT_OBJECTIVES.md` §4's explicit
   "lightweight... not a Dashboard replacement" boundary for in-app stats.
 

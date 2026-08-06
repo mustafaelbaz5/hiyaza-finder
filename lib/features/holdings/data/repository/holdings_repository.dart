@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
+import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../cities/data/holding_row_mapper.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
 import '../../../sync/data/holdings_api.dart';
 import '../../../sync/data/realtime_sync_service.dart';
+import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/parcel_change_handler.dart';
+import '../../../sync/domain/services/sync_runner.dart';
 import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../domain/entities/parcel.dart';
@@ -32,12 +37,19 @@ import 'parcel_edits_store.dart';
 /// state itself, keeping its own responsibility to "know how to perform
 /// each write/realtime-apply operation," not "be the dataset."
 ///
-/// Every write method (`addLocalParcel`, `deleteLocalParcel`, `updateParcel`,
-/// `setParcelReviewed`, `bulkApplyField`) awaits the Supabase call FIRST (via
-/// [ParcelSyncService]) and only mutates the dataset once the server has
-/// confirmed the write — there is no local-first deferral/outbox: a failed
-/// write throws and leaves the in-memory dataset exactly as it was, for the
-/// caller to catch and show an error.
+/// **Outbox model (`REFACTOR_ROADMAP.md` Phase 9 #9, rebuilt per explicit
+/// sign-off — reverses the online-first-only design this class's docs
+/// previously described):** every write method (`addLocalParcel`,
+/// `deleteLocalParcel`, `updateParcel`, `setParcelReviewed`,
+/// `bulkApplyField`) mutates the in-memory dataset **immediately**
+/// (optimistic — the UI reflects the change before the server has seen it)
+/// and enqueues a durable [SyncOperation] in the same call via [_syncRunner]
+/// — it does not await the network round-trip. [_syncRunner] executes and
+/// retries operations in the background (`SyncRunner.flush`, triggered on
+/// enqueue and on reconnect/app-resume); a permanently-failed operation
+/// (past `SyncRunner.maxAttempts`) stays visible in
+/// `SyncRunner.operations` for a "failed syncs" UI to surface and let the
+/// user retry or discard, rather than being silently dropped.
 class HoldingsRepository
     implements HoldingsReader, HoldingsWriter, ParcelChangeHandler {
   HoldingsRepository({
@@ -50,18 +62,40 @@ class HoldingsRepository
     this.realtimeSyncService,
     final Uuid uuid = const Uuid(),
     final ParcelSyncService? syncService,
+    final SyncRunner? syncRunner,
   })  : _dataset = datasetState ??
             ParcelDatasetState(editsStore: editsStore, editOverlay: editOverlay),
         _queryService = queryService,
         _bulkEditService = bulkEditService,
         _uuid = uuid,
-        _syncService = syncService ?? ParcelSyncService(holdingsApi: holdingsApi);
+        _syncService = syncService ?? ParcelSyncService(holdingsApi: holdingsApi),
+        _syncRunner = syncRunner;
 
   final ParcelDatasetState _dataset;
   final ParcelQueryService _queryService;
   final BulkEditService _bulkEditService;
   final Uuid _uuid;
   final ParcelSyncService _syncService;
+
+  /// `null` in tests that don't exercise the outbox path — every write
+  /// method falls back to enqueueing nothing (matching the prior
+  /// `holdingsApi == null` "no-op network call" test convention) when this
+  /// is unset, so existing repository tests that assert on immediate local
+  /// state don't need an outbox double just to construct the repository.
+  final SyncRunner? _syncRunner;
+
+  /// Enqueues [operation] and kicks off a best-effort immediate flush —
+  /// fire-and-forget on purpose (`REFACTOR_ROADMAP.md` Phase 9 #9): the
+  /// calling write method has already returned to the UI by the time this
+  /// runs, since it's called without awaiting. A slow/offline flush simply
+  /// leaves the operation queued for the next trigger (reconnect, app
+  /// resume, or the next unrelated write's own flush attempt).
+  void _enqueue(final SyncOperation operation) {
+    final SyncRunner? runner = _syncRunner;
+    if (runner == null) return;
+    runner.enqueue(operation);
+    unawaited(runner.flush());
+  }
 
   /// `null` in tests that construct this repository directly without a
   /// Supabase-backed API — every write method treats a `null` [holdingsApi]
@@ -177,10 +211,16 @@ class HoldingsRepository
 
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person
-  /// ([parentHoldingId] set to that person's `Parcel.id`). Awaits the
-  /// Supabase insert first; the dataset is only mutated once the server has
-  /// confirmed the write, so a failed write leaves it untouched and
-  /// propagates the exception to the caller.
+  /// ([parentHoldingId] set to that person's `Parcel.id`).
+  ///
+  /// **Outbox model:** the local dataset is mutated immediately
+  /// (optimistic) and an [AddParcelOperation] is enqueued in the same call
+  /// — this method does not await the Supabase insert when a [_syncRunner]
+  /// is configured. The server-side promotion into `holdings` (previously
+  /// reconciled synchronously here by swapping in `promotedHoldingId`) now
+  /// arrives later via the normal Realtime path (`applyRemoteChange`), same
+  /// as any other device's write — see `AddParcelSyncHandler`'s doc for why
+  /// duplicating that reconciliation here would be redundant.
   ///
   /// Does nothing (returns `null`) if no city is active.
   Future<Parcel?> addLocalParcel(
@@ -234,54 +274,66 @@ class HoldingsRepository
     final String? safeParentHoldingId =
         (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
 
+    void applyLocally(final Parcel finalParcel) {
+      // Keep عدد القطع في الحيازة consistent across every parcel that shares
+      // this holding — the new parcel's count already reflects the total
+      // (set by the caller), so every sibling parcel is bumped to match it.
+      if (parent != null) {
+        _dataset.replaceAll(<Parcel>[
+          for (final Parcel p in _dataset.parcels)
+            if (p.groupKey == parent.groupKey)
+              p.copyWith(holdingsCount: finalParcel.holdingsCount)
+            else
+              p,
+        ]);
+      }
+      _dataset.append(finalParcel);
+      _dataset.setOriginal(finalParcel.id, finalParcel);
+      _dataset.rebuildBorderIndex();
+    }
+
+    if (_syncRunner != null) {
+      // Optimistic: apply locally first, enqueue, return without awaiting
+      // the network. The server-side promotion swap the old synchronous
+      // path did here now arrives later via Realtime — see this method's
+      // doc.
+      applyLocally(withId);
+      _enqueue(
+        AddParcelOperation(
+          operationId: _uuid.v4(),
+          createdAt: DateTime.now(),
+          cityId: cityId,
+          parcel: withId,
+          parentHoldingId: safeParentHoldingId,
+        ),
+      );
+      return withId;
+    }
+
+    // No outbox configured (test-mode/no-network path, mirrors the old
+    // `holdingsApi == null` convention) — preserve the original
+    // await-then-mutate behavior exactly: a failed write must leave the
+    // dataset completely untouched, and a synchronously-promoted row must
+    // be shown under its final id immediately, never briefly under the
+    // pre-promotion one.
     final String? promotedHoldingId = await _syncService.syncAddParcel(
       parcelId: withId.id,
       cityId: cityId,
       parcel: withId,
       parentHoldingId: safeParentHoldingId,
     );
-
-    // `added_holdings_auto_approve` (a DB trigger) promotes every new
-    // record into `holdings` synchronously, in the same transaction as the
-    // insert above — so by the time `addRecord` returns, the row this
-    // client just created has *already* been superseded by a `holdings`
-    // row. Reflecting that immediately (rather than waiting on Realtime to
-    // deliver the trigger's own INSERT/UPDATE events and reconcile them)
-    // is what avoids the person briefly appearing under its pre-promotion
-    // id before "moving" to a different-looking entry once Realtime
-    // catches up. Every field is already known client-side (it's exactly
-    // what was just submitted) — no extra round-trip fetch needed, just
-    // swap the id and flip `isFieldAdded` to match a `holdings`-origin row.
     final Parcel finalParcel = promotedHoldingId == null
         ? withId
         : withId.copyWith(id: promotedHoldingId, isFieldAdded: false);
-
-    // Keep عدد القطع في الحيازة consistent across every parcel that shares
-    // this holding — the new parcel's count already reflects the total
-    // (set by the caller), so every sibling parcel is bumped to match it.
-    if (parent != null) {
-      _dataset.replaceAll(<Parcel>[
-        for (final Parcel p in _dataset.parcels)
-          if (p.groupKey == parent.groupKey)
-            p.copyWith(holdingsCount: finalParcel.holdingsCount)
-          else
-            p,
-      ]);
-    }
-
-    _dataset.append(finalParcel);
-    _dataset.setOriginal(finalParcel.id, finalParcel);
-    _dataset.rebuildBorderIndex();
+    applyLocally(finalParcel);
     return finalParcel;
   }
 
-  /// Deletes a field-created record from the server (`added_holdings`) and
-  /// drops it from the in-memory dataset once the delete is confirmed.
-  /// Returns `false` without touching the server if [id] isn't in the
-  /// active dataset or isn't a field-added record — part of the
-  /// authoritative `holdings` import, which this app never deletes.
-  /// Propagates the exception on a failed server delete rather than
-  /// mutating local state.
+  /// Deletes a field-created record — drops it from the in-memory dataset
+  /// immediately (optimistic) and enqueues a [DeleteParcelOperation].
+  /// Returns `false` without touching local state or the server if [id]
+  /// isn't in the active dataset or isn't a field-added record — part of
+  /// the authoritative `holdings` import, which this app never deletes.
   Future<bool> deleteLocalParcel(final String id) async {
     final int idx = _dataset.indexOf(id);
     if (idx < 0) return false;
@@ -290,42 +342,52 @@ class HoldingsRepository
         removed.sourceAddedHoldingId ?? (removed.isFieldAdded ? removed.id : null);
     if (addedHoldingId == null) return false;
 
-    await _syncService.syncDeleteParcel(addedHoldingId);
+    Future<void> applyLocally() async {
+      _dataset.replaceAll(<Parcel>[
+        for (final Parcel p in _dataset.parcels)
+          if (p.id != id && p.sourceAddedHoldingId != addedHoldingId)
+            // Mirrors addLocalParcel's bump: undo it for any sibling parcel
+            // still sharing this holding.
+            (p.groupKey == removed.groupKey && p.holdingsCount != null)
+                ? p.copyWith(holdingsCount: p.holdingsCount! - 1)
+                : p,
+      ]);
+      _dataset.removeOriginal(id);
+      _dataset.removeEdit(id);
+      await _dataset.persistEdits();
+      _dataset.rebuildBorderIndex();
+    }
 
-    _dataset.replaceAll(<Parcel>[
-      for (final Parcel p in _dataset.parcels)
-        if (p.id != id && p.sourceAddedHoldingId != addedHoldingId)
-          // Mirrors addLocalParcel's bump: undo it for any sibling parcel
-          // still sharing this holding.
-          (p.groupKey == removed.groupKey && p.holdingsCount != null)
-              ? p.copyWith(holdingsCount: p.holdingsCount! - 1)
-              : p,
-    ]);
-    _dataset.removeOriginal(id);
-    _dataset.removeEdit(id);
-    await _dataset.persistEdits();
-    _dataset.rebuildBorderIndex();
+    if (_syncRunner != null) {
+      // Optimistic: apply locally first, enqueue, return without awaiting
+      // the network.
+      await applyLocally();
+      _enqueue(
+        DeleteParcelOperation(
+          operationId: _uuid.v4(),
+          createdAt: DateTime.now(),
+          addedHoldingId: addedHoldingId,
+        ),
+      );
+      return true;
+    }
+
+    // No outbox configured — preserve the original await-then-mutate
+    // behavior: a failed server delete must leave local state untouched.
+    await _syncService.syncDeleteParcel(addedHoldingId);
+    await applyLocally();
     return true;
   }
 
-  /// Persists an edited parcel — awaits the Supabase `holding_edits` insert
-  /// first, and only reflects the change in the dataset once the server has
-  /// confirmed it, so search/detail/border navigation never show a state
-  /// the server hasn't accepted.
+  /// Persists an edited parcel — applies it to the dataset immediately
+  /// (optimistic) and enqueues an [EditParcelOperation] rather than
+  /// awaiting the Supabase `holding_edits` insert.
   @override
   Future<void> updateParcel(final Parcel edited) async {
     final int idx = _dataset.indexOf(edited.id);
     if (idx < 0) return;
     final Map<String, dynamic> snapshot = _dataset.editSnapshot(edited);
-
     final String? cityId = _dataset.activeCityId;
-    if (cityId != null) {
-      await _syncService.syncEditParcel(
-        holdingId: edited.id,
-        cityId: cityId,
-        payload: snapshot,
-      );
-    }
 
     _dataset.replaceAt(idx, edited);
     // A single-field edit can change حائز/مالك name — rebuild so a fresh
@@ -333,12 +395,33 @@ class HoldingsRepository
     _dataset.rebuildBorderIndex();
     _dataset.setEdit(edited.id, snapshot);
     await _dataset.persistEdits();
+
+    if (cityId == null) return;
+
+    if (_syncRunner != null) {
+      _enqueue(
+        EditParcelOperation(
+          operationId: _uuid.v4(),
+          createdAt: DateTime.now(),
+          holdingId: edited.id,
+          cityId: cityId,
+          payload: snapshot,
+        ),
+      );
+    } else {
+      await _syncService.syncEditParcel(
+        holdingId: edited.id,
+        cityId: cityId,
+        payload: snapshot,
+      );
+    }
   }
 
-  /// Marks [parcelId] reviewed/un-reviewed — awaits the Supabase column
-  /// UPDATE first, only reflecting it in the dataset once confirmed. Unlike
-  /// [updateParcel] this never touches the edit overlay: reviewed status is
-  /// not part of the editable-field overlay.
+  /// Marks [parcelId] reviewed/un-reviewed — applies the change to the
+  /// dataset immediately (optimistic) and enqueues a
+  /// [MarkReviewedOperation]. Unlike [updateParcel] this never touches the
+  /// edit overlay: reviewed status is not part of the editable-field
+  /// overlay.
   Future<Parcel?> setParcelReviewed(
     final String parcelId, {
     required final bool reviewed,
@@ -347,13 +430,47 @@ class HoldingsRepository
     if (idx < 0) return null;
 
     final bool isFieldAdded = _dataset.parcels[idx].isFieldAdded;
-    final Parcel updated = await _syncService.syncMarkReviewed(
-      parcelId: parcelId,
-      isFieldAdded: isFieldAdded,
-      reviewed: reviewed,
-      parcel: _dataset.parcels[idx],
-    );
 
+    if (_syncRunner == null) {
+      final Parcel updated = await _syncService.syncMarkReviewed(
+        parcelId: parcelId,
+        isFieldAdded: isFieldAdded,
+        reviewed: reviewed,
+        parcel: _dataset.parcels[idx],
+      );
+      _applyReviewedLocally(parcelId, idx, updated);
+      return updated;
+    }
+
+    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
+    final String? currentUserId =
+        GetIt.instance<AuthRepository>().currentUser?.id;
+    final Parcel updated = _dataset.parcels[idx].copyWith(
+      reviewed: reviewed,
+      reviewedAt: reviewedAt,
+      reviewedBy: reviewed ? currentUserId : null,
+    );
+    _applyReviewedLocally(parcelId, idx, updated);
+
+    _enqueue(
+      MarkReviewedOperation(
+        operationId: _uuid.v4(),
+        createdAt: DateTime.now(),
+        parcelId: parcelId,
+        isFieldAdded: isFieldAdded,
+        reviewed: reviewed,
+        reviewedAt: reviewedAt,
+        reviewedByUserId: currentUserId ?? '',
+      ),
+    );
+    return updated;
+  }
+
+  void _applyReviewedLocally(
+    final String parcelId,
+    final int idx,
+    final Parcel updated,
+  ) {
     _dataset.replaceAt(idx, updated);
     final Parcel? original = _dataset.originalParcel(parcelId);
     _dataset.setOriginal(
@@ -364,7 +481,6 @@ class HoldingsRepository
         reviewedBy: updated.reviewedBy,
       ),
     );
-    return updated;
   }
 
   /// Reverts a parcel to its original parsed values.
@@ -576,12 +692,14 @@ class HoldingsRepository
       _queryService.findByBorderText(_dataset.borderIndex, borderText);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
-  /// [basin] (only parcels whose اسم الحوض matches). Awaits each row's
-  /// Supabase insert directly (no outbox), continuing past a per-row
-  /// failure rather than aborting the whole batch — a bulk edit spans many
-  /// independent holdings, so one failure shouldn't silently discard
-  /// progress on the rest. Returns how many rows succeeded and how many
-  /// failed, for the caller to report a mixed result.
+  /// [basin] (only parcels whose اسم الحوض matches).
+  ///
+  /// **Outbox model:** every in-scope row is applied to the local dataset
+  /// immediately and one [BulkEditOperation] per row is enqueued — this no
+  /// longer awaits each row's Supabase insert, so [BulkEditOutcome] means
+  /// "rows queued for background sync," not "rows the server has already
+  /// confirmed." A permanently-failed row surfaces later via the
+  /// failed-syncs UI, not synchronously from this call.
   @override
   Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
@@ -607,42 +725,64 @@ class HoldingsRepository
       (basin == null || p.basinName == basin ? inScope : outOfScope).add(p);
     }
 
-    // Snapshots are computed up front (keyed by id) so syncBulkEdit's
-    // per-parcel snapshot callback and this method's own success/failure
-    // bookkeeping agree on the exact same payload per row.
+    // Snapshots are computed up front (keyed by id) so the enqueue loop and
+    // this method's own edit-overlay bookkeeping agree on the exact same
+    // payload per row.
     final Map<String, Map<String, dynamic>> snapshots = <String, Map<String, dynamic>>{
       for (final Parcel p in inScope) p.id: _dataset.editSnapshot(p),
     };
 
-    final BulkSyncResult syncResult = await _syncService.syncBulkEdit(
-      parcels: inScope,
-      cityId: cityId,
-      snapshotForParcel: (final Parcel p) => snapshots[p.id]!,
-    );
+    if (_syncRunner == null) {
+      final BulkSyncResult syncResult = await _syncService.syncBulkEdit(
+        parcels: inScope,
+        cityId: cityId,
+        snapshotForParcel: (final Parcel p) => snapshots[p.id]!,
+      );
 
-    final List<Parcel> nextInScope = <Parcel>[];
-    for (final Parcel p in inScope) {
-      if (!syncResult.failedIds.contains(p.id)) {
-        _dataset.setEdit(p.id, snapshots[p.id]!);
-        nextInScope.add(p);
-      } else {
-        // Row failed — keep its pre-bulk-edit value both on screen and in
-        // the edit overlay rather than a value the server never confirmed.
-        nextInScope.add(
-          _dataset.originalParcel(p.id) != null ? _dataset.applyEdit(p) : p,
-        );
+      final List<Parcel> nextInScope = <Parcel>[];
+      for (final Parcel p in inScope) {
+        if (!syncResult.failedIds.contains(p.id)) {
+          _dataset.setEdit(p.id, snapshots[p.id]!);
+          nextInScope.add(p);
+        } else {
+          nextInScope.add(
+            _dataset.originalParcel(p.id) != null ? _dataset.applyEdit(p) : p,
+          );
+        }
       }
+      _dataset.replaceAll(<Parcel>[...nextInScope, ...outOfScope]);
+      _dataset.rebuildBorderIndex();
+      if (syncResult.outcome.succeeded > 0) {
+        await _dataset.persistEdits();
+      }
+      return syncResult.outcome;
     }
 
-    _dataset.replaceAll(<Parcel>[...nextInScope, ...outOfScope]);
+    for (final Parcel p in inScope) {
+      _dataset.setEdit(p.id, snapshots[p.id]!);
+    }
+    _dataset.replaceAll(<Parcel>[...inScope, ...outOfScope]);
     // Defensive: no `BulkEditableField` touches حائز/مالك today, but
     // rebuilding here is O(n) same as the reassignment above and keeps
     // this repository from silently drifting out of sync if that ever
     // changes, without needing every future field to remember this rule.
     _dataset.rebuildBorderIndex();
-    if (syncResult.outcome.succeeded > 0) {
-      await _dataset.persistEdits();
+    await _dataset.persistEdits();
+
+    if (cityId != null) {
+      for (final Parcel p in inScope) {
+        _enqueue(
+          BulkEditOperation(
+            operationId: _uuid.v4(),
+            createdAt: DateTime.now(),
+            holdingId: p.id,
+            cityId: cityId,
+            payload: snapshots[p.id]!,
+          ),
+        );
+      }
     }
-    return syncResult.outcome;
+
+    return BulkEditOutcome(succeeded: inScope.length, failed: 0);
   }
 }

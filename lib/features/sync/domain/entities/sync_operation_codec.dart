@@ -49,6 +49,8 @@ class SyncOperationCodec {
           'parcelId': op.parcelId,
           'isFieldAdded': op.isFieldAdded,
           'reviewed': op.reviewed,
+          'reviewedAt': op.reviewedAt?.toIso8601String(),
+          'reviewedByUserId': op.reviewedByUserId,
         },
       BulkEditOperation() => <String, dynamic>{
           ...base,
@@ -118,6 +120,10 @@ class SyncOperationCodec {
             parcelId: json['parcelId'] as String,
             isFieldAdded: json['isFieldAdded'] as bool,
             reviewed: json['reviewed'] as bool,
+            reviewedAt: json['reviewedAt'] == null
+                ? null
+                : DateTime.parse(json['reviewedAt'] as String),
+            reviewedByUserId: json['reviewedByUserId'] as String? ?? '',
           );
         case _typeBulkEdit:
           return BulkEditOperation(

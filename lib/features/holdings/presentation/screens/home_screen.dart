@@ -19,6 +19,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
 import '../../../cities/domain/entities/city_snapshot.dart';
+import '../../../sync/domain/services/sync_runner.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../cubit/home_cubit.dart';
@@ -64,10 +65,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// purpose: a failed background resync must not interrupt whatever the
   /// user is doing when the app resumes; the next Realtime event or app
   /// resume tries again.
+  ///
+  /// Also flushes the outbox (`REFACTOR_ROADMAP.md` Phase 9 #9) — app
+  /// resume is exactly when a queue built up while backgrounded (no network,
+  /// or the process was suspended mid-write) should get another chance to
+  /// drain, on top of `SyncRunner`'s own enqueue-triggered flush attempts.
   @override
   void didChangeAppLifecycleState(final AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(context.read<HomeCubit>().refreshActiveCity().catchError((final _) {}));
+      unawaited(getIt<SyncRunner>().flush());
     }
   }
 
