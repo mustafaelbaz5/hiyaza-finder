@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/toggle_field_row.dart';
 
 import '../../../../support/localized_widget_test_harness.dart';
 

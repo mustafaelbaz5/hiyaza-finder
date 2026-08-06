@@ -7,9 +7,9 @@ import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
 import 'package:hiyaza_finder/features/cities/domain/entities/association_type.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/domain/services/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/field_row.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/responsive_fields_wrap.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/toggle_field_row.dart';
 
 /// Collapsed-by-default section for the less-frequently-needed fields
 /// (المديرية/الإدارة/كود الحوض/نوع الاستخدام), toggled independently per

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/logic/services/area_calculator.dart';
+import 'package:hiyaza_finder/features/holdings/domain/services/area_calculator.dart';
 
 void main() {
   group('AreaCalculator.totalSqm', () {

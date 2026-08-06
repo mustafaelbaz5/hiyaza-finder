@@ -13,7 +13,7 @@ import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../../domain/services/field_change_tracker.dart';
-import '../../logic/services/area_calculator.dart';
+import '../../domain/services/area_calculator.dart';
 import '../widgets/add_record_header.dart';
 import '../widgets/crop_type_picker.dart';
 import '../widgets/field_edit_dialogs.dart';

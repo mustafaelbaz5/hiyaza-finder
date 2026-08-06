@@ -15,7 +15,7 @@ import '../../domain/repositories/holdings_writer.dart';
 import '../../domain/services/bulk_edit_service.dart';
 import '../../domain/services/parcel_edit_overlay.dart';
 import '../../domain/services/parcel_query_service.dart';
-import '../../logic/services/holding_search_service.dart';
+import '../../domain/services/holding_search_service.dart';
 import '../services/parcel_sync_service.dart';
 import 'parcel_dataset_state.dart';
 import 'parcel_edits_store.dart';

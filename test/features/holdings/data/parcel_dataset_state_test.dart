@@ -3,7 +3,7 @@ import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/parcel_dataset_state.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/logic/services/arabic_normalizer.dart';
+import 'package:hiyaza_finder/features/holdings/domain/services/arabic_normalizer.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};

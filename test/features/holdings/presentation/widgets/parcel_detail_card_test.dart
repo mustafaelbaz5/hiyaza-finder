@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_detail_card.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/status_badge.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_detail_card.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_badge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reads the real translation file straight off disk instead of through

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/logic/services/holding_search_service.dart';
+import 'package:hiyaza_finder/features/holdings/domain/services/holding_search_service.dart';
 
 Parcel _parcel(final String holdingId, final String holderName) => Parcel(
       holdingId: holdingId,

@@ -6,7 +6,7 @@ import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
 import 'package:hiyaza_finder/core/utils/spacing.dart';
 import 'package:hiyaza_finder/core/widgets/custom_text_button.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_state.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/cubit/home_state.dart';
 
 class ErrorBody extends StatelessWidget {
   const ErrorBody({super.key, required this.state, required this.onPickFile});

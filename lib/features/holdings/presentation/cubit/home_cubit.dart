@@ -7,7 +7,7 @@ import '../../../cities/domain/entities/city_snapshot.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
-import '../services/holding_search_service.dart';
+import '../../domain/services/holding_search_service.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {

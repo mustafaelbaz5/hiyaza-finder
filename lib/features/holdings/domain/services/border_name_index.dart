@@ -1,4 +1,4 @@
-import '../../logic/services/arabic_normalizer.dart';
+import '../services/arabic_normalizer.dart';
 import '../entities/parcel.dart';
 
 /// A precomputed, O(1)-lookup index from normalized حائز/مالك name to the

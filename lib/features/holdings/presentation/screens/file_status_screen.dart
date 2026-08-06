@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/crop_type_picker.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/picker_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/section_card.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/crop_type_picker.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/picker_row.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/section_card.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';

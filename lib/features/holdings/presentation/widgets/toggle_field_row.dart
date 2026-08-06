@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/field_row.dart';
 
 /// A boolean-valued sibling to [FieldRow] — same tile styling, but the
 /// value is flipped directly with a [Switch] instead of opening a dialog,

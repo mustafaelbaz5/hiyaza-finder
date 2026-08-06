@@ -13,11 +13,11 @@ import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_s
 import 'package:hiyaza_finder/features/cities/presentation/screens/manage_cities_screen.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/add_record_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/detail_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/file_status_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/screens/home_screen.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/screens/add_record_screen.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/screens/detail_screen.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/screens/file_status_screen.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/screens/home_screen.dart';
 
 class AppRouter {
   AppRouter._();

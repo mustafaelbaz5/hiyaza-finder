@@ -4,7 +4,7 @@ import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
 import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/inline_action.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/inline_action.dart';
 
 class FileInfoCard extends StatelessWidget {
   const FileInfoCard({

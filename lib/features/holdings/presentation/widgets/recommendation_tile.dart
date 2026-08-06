@@ -5,7 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import '../../logic/services/holding_search_service.dart';
+import '../../domain/services/holding_search_service.dart';
 import 'status_badge.dart';
 
 class RecommendationTile extends StatelessWidget {

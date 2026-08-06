@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// [child] in a real [EasyLocalization] (loading the actual
 /// `assets/lang/*.json` files off disk, not a mock) + [ScreenUtilInit] +
 /// [MaterialApp], the same setup
-/// `test/features/holdings/ui/widgets/parcel_detail_card_test.dart`
+/// `test/features/holdings/presentation/widgets/parcel_detail_card_test.dart`
 /// hand-rolled first. See [_FileAssetLoader]'s doc comment for why this
 /// specific loading strategy (microtask + synchronous file read) is needed
 /// to avoid easy_localization/flutter_test pitfalls.

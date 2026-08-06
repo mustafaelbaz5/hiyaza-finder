@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../../domain/entities/parcel.dart';
-import '../services/holding_search_service.dart';
+import '../../domain/services/holding_search_service.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
 

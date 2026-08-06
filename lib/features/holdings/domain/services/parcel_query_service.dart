@@ -1,5 +1,5 @@
-import '../../logic/services/arabic_normalizer.dart';
-import '../../logic/services/holding_search_service.dart';
+import '../services/arabic_normalizer.dart';
+import '../services/holding_search_service.dart';
 import '../entities/parcel.dart';
 import 'border_name_index.dart';
 

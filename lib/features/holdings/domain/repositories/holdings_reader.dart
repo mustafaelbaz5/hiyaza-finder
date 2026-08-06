@@ -1,4 +1,4 @@
-import '../../logic/services/holding_search_service.dart';
+import '../services/holding_search_service.dart';
 import '../entities/parcel.dart';
 
 /// Read-side contract for holdings data, kept separate from

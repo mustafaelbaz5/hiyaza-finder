@@ -6,7 +6,7 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
-import '../../logic/services/holding_search_service.dart';
+import '../../domain/services/holding_search_service.dart';
 import 'recommendation_tile.dart';
 
 class RecommendationList extends StatelessWidget {
