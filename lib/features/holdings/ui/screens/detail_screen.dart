@@ -11,8 +11,8 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../hiyaza_finder_app.dart';
-import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import '../widgets/parcel_detail_card.dart';
 import 'add_record_screen.dart';
 
@@ -64,7 +64,8 @@ class _DetailScreenState extends State<DetailScreen> {
     // this screen would only reflect such a change on its own successful
     // writes, never on one that originated elsewhere while this screen is
     // already open.
-    _remoteChangesSub = _repository.onRemoteChange.listen((final _) => _refreshFromRepository());
+    _remoteChangesSub = _repository.onRemoteChange
+        .listen((final _) => _refreshFromRepository());
   }
 
   @override
@@ -97,7 +98,8 @@ class _DetailScreenState extends State<DetailScreen> {
         return;
       }
       setState(() {
-        _parcels = _parcels.where((final Parcel p) => p.id != parcel.id).toList();
+        _parcels =
+            _parcels.where((final Parcel p) => p.id != parcel.id).toList();
       });
       context.showSuccessSnackBar('holdings.detail.deleted'.tr());
     } catch (_) {
@@ -145,7 +147,9 @@ class _DetailScreenState extends State<DetailScreen> {
           // Search screen re-reads repository state on its own next
           // rebuild regardless of outcome.
           onPressed: () {
-            _repository.setParcelReviewed(parcel.id, reviewed: false).catchError(
+            _repository
+                .setParcelReviewed(parcel.id, reviewed: false)
+                .catchError(
               (final Object _) {
                 HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
                   SnackBar(content: Text('errors.unknown'.tr())),
@@ -169,7 +173,8 @@ class _DetailScreenState extends State<DetailScreen> {
     try {
       await _repository.setParcelReviewed(parcel.id, reviewed: false);
       if (!mounted) return;
-      final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+      final int idx =
+          _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
       if (idx >= 0) {
         setState(() {
           _parcels[idx] = _parcels[idx].copyWith(reviewed: false);
@@ -259,6 +264,15 @@ class _DetailScreenState extends State<DetailScreen> {
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
+  Future<void> _refreshCityData() async {
+    try {
+      await _repository.syncNow();
+    } catch (_) {
+      if (!mounted) return;
+      context.showErrorSnackBar('errors.unknown'.tr());
+    }
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -311,6 +325,11 @@ class _DetailScreenState extends State<DetailScreen> {
                             ],
                           ],
                         ),
+                      ),
+                      IconButton(
+                        onPressed: _isBusy ? null : _refreshCityData,
+                        icon: const Icon(Icons.refresh_rounded),
+                        tooltip: 'holdings.detail.refresh'.tr(),
                       ),
                     ],
                   ),
