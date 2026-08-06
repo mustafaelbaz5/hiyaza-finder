@@ -140,20 +140,20 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               ? ResponsiveFieldsWrap(
                   children: [
                     ToggleFieldRow(
-                      label: 'وراثة',
+                      label: 'holdings.fields.inheritance'.tr(),
                       value: widget.parcel.isInheritance,
-                      activeLabel: 'وراثة',
-                      inactiveLabel: 'ليست وراثة',
+                      activeLabel: 'holdings.fields.inheritance'.tr(),
+                      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
                       isModified: _isModified((final p) => p.isInheritance),
                       onChanged: (final bool v) => widget.onFieldChanged(
                         widget.parcel.copyWith(isInheritance: v),
                       ),
                     ),
                     ToggleFieldRow(
-                      label: 'مفوض',
+                      label: 'holdings.fields.delegate'.tr(),
                       value: widget.parcel.isDelegate,
-                      activeLabel: 'مفوض',
-                      inactiveLabel: 'غير مفوض',
+                      activeLabel: 'holdings.fields.delegate'.tr(),
+                      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
                       isModified: _isModified((final p) => p.isDelegate),
                       onChanged: (final bool v) => widget.onFieldChanged(
                         widget.parcel.copyWith(isDelegate: v),
@@ -162,12 +162,12 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                     if (widget.associationType ==
                         AssociationType.agriculturalReform)
                       FieldRow(
-                        label: 'نوع الإصلاح',
+                        label: 'holdings.fields.reform_type'.tr(),
                         value: widget.parcel.reformType,
                         isModified: _isModified((final p) => p.reformType),
                         onEdit: () => _editDropdown(
                           context,
-                          title: 'نوع الإصلاح',
+                          title: 'holdings.fields.reform_type'.tr(),
                           initialValue: widget.parcel.reformType,
                           options: Parcel.reformTypeOptions,
                           allowClear: false,
@@ -178,12 +178,12 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       )
                     else if (!widget.hideCreditType)
                       FieldRow(
-                        label: 'نوع الائتمان',
+                        label: 'holdings.fields.credit_type'.tr(),
                         value: widget.parcel.creditType,
                         isModified: _isModified((final p) => p.creditType),
                         onEdit: () => _editDropdown(
                           context,
-                          title: 'نوع الائتمان',
+                          title: 'holdings.fields.credit_type'.tr(),
                           initialValue: widget.parcel.creditType,
                           options: Parcel.creditTypeOptions,
                           allowClear: false,
@@ -193,12 +193,12 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                         ),
                       ),
                     FieldRow(
-                      label: 'نوع الاستخدام',
+                      label: 'holdings.fields.usage_type'.tr(),
                       value: widget.parcel.usageType,
                       isModified: _isModified((final p) => p.usageType),
                       onEdit: () => _editDropdown(
                         context,
-                        title: 'نوع الاستخدام',
+                        title: 'holdings.fields.usage_type'.tr(),
                         initialValue: widget.parcel.usageType,
                         options: Parcel.usageTypeOptions,
                         allowClear: false,
@@ -208,13 +208,13 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       ),
                     ),
                     FieldRow(
-                      label: 'كود الحوض',
+                      label: 'holdings.fields.basin_code'.tr(),
                       value: widget.parcel.basinCode,
                       placeholder: '-1',
                       isModified: _isModified((final p) => p.basinCode),
                       onEdit: () => _editText(
                         context,
-                        title: 'كود الحوض',
+                        title: 'holdings.fields.basin_code'.tr(),
                         initialValue: widget.parcel.basinCode ?? '',
                         apply: (final String v) => widget.parcel.copyWith(
                           basinCode: v.isEmpty ? null : v,
@@ -222,10 +222,71 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       ),
                     ),
                     FieldRow(
-                        label: 'المديرية', value: widget.parcel.directorate),
+                      label: 'holdings.fields.directorate'.tr(),
+                      value: widget.parcel.directorate,
+                      isModified: _isModified((final p) => p.directorate),
+                      onEdit: () => _editText(
+                        context,
+                        title: 'holdings.fields.directorate'.tr(),
+                        initialValue: widget.parcel.directorate ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          directorate: v.isEmpty ? null : v,
+                        ),
+                      ),
+                    ),
                     FieldRow(
-                      label: 'الإدارة',
+                      label: 'holdings.fields.administration'.tr(),
                       value: widget.parcel.administration,
+                      isModified: _isModified((final p) => p.administration),
+                      onEdit: () => _editText(
+                        context,
+                        title: 'holdings.fields.administration'.tr(),
+                        initialValue: widget.parcel.administration ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          administration: v.isEmpty ? null : v,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
+                      label: 'holdings.fields.holder_name_farmer_card'.tr(),
+                      value: widget.parcel.holderNameFarmerCard,
+                      isModified:
+                          _isModified((final p) => p.holderNameFarmerCard),
+                      onEdit: () => _editText(
+                        context,
+                        title: 'holdings.fields.holder_name_farmer_card'.tr(),
+                        initialValue: widget.parcel.holderNameFarmerCard ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          holderNameFarmerCard: v.isEmpty ? null : v,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
+                      label: 'holdings.fields.owner_name_farmer_card'.tr(),
+                      value: widget.parcel.ownerNameFarmerCard,
+                      isModified:
+                          _isModified((final p) => p.ownerNameFarmerCard),
+                      onEdit: () => _editText(
+                        context,
+                        title: 'holdings.fields.owner_name_farmer_card'.tr(),
+                        initialValue: widget.parcel.ownerNameFarmerCard ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          ownerNameFarmerCard: v.isEmpty ? null : v,
+                        ),
+                      ),
+                    ),
+                    FieldRow(
+                      label: 'holdings.fields.growth_stages'.tr(),
+                      value: widget.parcel.growthStages,
+                      isModified: _isModified((final p) => p.growthStages),
+                      onEdit: () => _editText(
+                        context,
+                        title: 'holdings.fields.growth_stages'.tr(),
+                        initialValue: widget.parcel.growthStages ?? '',
+                        apply: (final String v) => widget.parcel.copyWith(
+                          growthStages: v.isEmpty ? null : v,
+                        ),
+                      ),
                     ),
                   ],
                 )

@@ -7,6 +7,7 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../domain/entities/cached_city_meta.dart';
 import '../../domain/repositories/city_repository.dart';
@@ -27,6 +28,7 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   final CityRepository _repository = getIt<CityRepository>();
 
   bool _isLoading = true;
+  bool _hasError = false;
   List<CachedCityMeta> _cities = const <CachedCityMeta>[];
   String? _activeCityId;
   final Set<String> _deletingCityIds = <String>{};
@@ -38,16 +40,27 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _isLoading = true);
-    final List<CachedCityMeta> cities = await _repository.listCachedCities();
-    final String? activeCityId =
-        (await _repository.loadActiveCachedSnapshot())?.cityId;
-    if (!mounted) return;
     setState(() {
-      _cities = cities;
-      _activeCityId = activeCityId;
-      _isLoading = false;
+      _isLoading = true;
+      _hasError = false;
     });
+    try {
+      final List<CachedCityMeta> cities = await _repository.listCachedCities();
+      final String? activeCityId =
+          (await _repository.loadActiveCachedSnapshot())?.cityId;
+      if (!mounted) return;
+      setState(() {
+        _cities = cities;
+        _activeCityId = activeCityId;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
   }
 
   Future<void> _confirmDelete(final CachedCityMeta city) async {
@@ -67,17 +80,23 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
 
   Future<void> _delete(final CachedCityMeta city) async {
     setState(() => _deletingCityIds.add(city.cityId));
-    await _repository.deleteCachedCity(city.cityId);
-    if (!mounted) return;
-    setState(() {
-      _cities = _cities
-          .where((final CachedCityMeta c) => c.cityId != city.cityId)
-          .toList();
-      _deletingCityIds.remove(city.cityId);
-      if (_activeCityId == city.cityId) _activeCityId = null;
-    });
-    if (mounted) {
-      context.showSuccessSnackBar('cities.manage.deleted'.tr());
+    try {
+      await _repository.deleteCachedCity(city.cityId);
+      if (!mounted) return;
+      setState(() {
+        _cities = _cities
+            .where((final CachedCityMeta c) => c.cityId != city.cityId)
+            .toList();
+        _deletingCityIds.remove(city.cityId);
+        if (_activeCityId == city.cityId) _activeCityId = null;
+      });
+      if (mounted) {
+        context.showSuccessSnackBar('cities.manage.deleted'.tr());
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _deletingCityIds.remove(city.cityId));
+      context.showErrorSnackBar('errors.unknown'.tr());
     }
   }
 
@@ -135,6 +154,38 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary200),
+      );
+    }
+
+    if (_hasError) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: rw(32)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: rf(40),
+                color: AppColors.red200,
+              ),
+              verticalSpacing(12),
+              Text(
+                'errors.unknown'.tr(),
+                style: AppTextStyles.font14Regular.copyWith(
+                  color: colors.textHint,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              verticalSpacing(16),
+              CustomTextButton(
+                text: 'errors.retry'.tr(),
+                onPressed: _load,
+                isFullWidth: false,
+              ),
+            ],
+          ),
+        ),
       );
     }
 

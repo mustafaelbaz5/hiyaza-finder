@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../cities/data/holding_row_mapper.dart';
@@ -71,7 +72,26 @@ class RealtimeSyncService {
       callback: _handleHoldingEditPayload,
     );
 
-    channel.subscribe();
+    channel.subscribe(
+      (final RealtimeSubscribeStatus status, final Object? error) {
+        // supabase_flutter retries the underlying socket connection on its
+        // own — this callback exists purely for visibility (there is no
+        // logging framework in this app yet, see
+        // FLUTTER_ARCHITECTURE_REFERENCE.md §15 item 6) rather than to
+        // trigger a manual reconnect: a channelError/timedOut here doesn't
+        // mean the app is broken, since every write already confirms
+        // against the server directly (online-first, §5) — it only means
+        // *other devices'* changes won't appear live until the socket
+        // recovers, which the underlying client already does automatically.
+        if (status == RealtimeSubscribeStatus.channelError ||
+            status == RealtimeSubscribeStatus.timedOut) {
+          debugPrint(
+            'RealtimeSyncService: city-$cityId-changes subscription '
+            '$status${error != null ? ' ($error)' : ''}',
+          );
+        }
+      },
+    );
     _channel = channel;
   }
 

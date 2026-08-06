@@ -79,7 +79,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   bool get _canSave =>
       _isFilled(_parcel.holderName) &&
       _isFilled(_parcel.basinName) &&
-      _isFilled(_parcel.cropType);
+      _isFilled(_parcel.cropType) &&
+      Parcel.isNationalIdValid(_parcel.nationalId);
 
   /// One line per still-missing required field, in the same order as
   /// [_canSave]'s checks — shown below the Save button while any are
@@ -88,6 +89,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         if (!_isFilled(_parcel.holderName)) 'holdings.add.holder_required'.tr(),
         if (!_isFilled(_parcel.basinName)) 'holdings.add.basin_required'.tr(),
         if (!_isFilled(_parcel.cropType)) 'holdings.add.crop_type_required'.tr(),
+        if (!Parcel.isNationalIdValid(_parcel.nationalId))
+          'holdings.add.national_id_invalid'.tr(),
       ];
 
   /// Whether the field read via [current] from `_parcel` differs from
@@ -477,6 +480,57 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             isModified: _isModified((final p) => p.isDelegate),
                             onChanged: (final bool v) => setState(
                               () => _parcel = _parcel.copyWith(isDelegate: v),
+                            ),
+                          ),
+                          FieldRow(
+                            label:
+                                'holdings.fields.holder_name_farmer_card'.tr(),
+                            value: _parcel.holderNameFarmerCard,
+                            isModified: _isModified(
+                              (final p) => p.holderNameFarmerCard,
+                            ),
+                            onEdit: () => _editText(
+                              context,
+                              title:
+                                  'holdings.fields.holder_name_farmer_card'
+                                      .tr(),
+                              initialValue:
+                                  _parcel.holderNameFarmerCard ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                holderNameFarmerCard: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label:
+                                'holdings.fields.owner_name_farmer_card'.tr(),
+                            value: _parcel.ownerNameFarmerCard,
+                            isModified: _isModified(
+                              (final p) => p.ownerNameFarmerCard,
+                            ),
+                            onEdit: () => _editText(
+                              context,
+                              title:
+                                  'holdings.fields.owner_name_farmer_card'
+                                      .tr(),
+                              initialValue: _parcel.ownerNameFarmerCard ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                ownerNameFarmerCard: v.isEmpty ? null : v,
+                              ),
+                            ),
+                          ),
+                          FieldRow(
+                            label: 'holdings.fields.growth_stages'.tr(),
+                            value: _parcel.growthStages,
+                            isModified:
+                                _isModified((final p) => p.growthStages),
+                            onEdit: () => _editText(
+                              context,
+                              title: 'holdings.fields.growth_stages'.tr(),
+                              initialValue: _parcel.growthStages ?? '',
+                              apply: (final String v) => _parcel.copyWith(
+                                growthStages: v.isEmpty ? null : v,
+                              ),
                             ),
                           ),
                         ],

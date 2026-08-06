@@ -235,6 +235,7 @@
       "holder_required": "Holder name is required",
       "basin_required": "Please select a basin",
       "crop_type_required": "Please select a crop type",
+      "national_id_invalid": "National ID must be 14 digits",
       "no_active_city": "Can't add without a loaded city",
       "discard_confirm": "Your changes will be lost. Leave anyway?"
     },

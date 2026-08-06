@@ -235,6 +235,7 @@
       "holder_required": "اسم الحائز مطلوب",
       "basin_required": "اختر اسم الحوض",
       "crop_type_required": "اختر نوع الزرع",
+      "national_id_invalid": "الرقم القومي يجب أن يتكون من 14 رقمًا",
       "no_active_city": "لا يمكن الإضافة بدون مدينة محمّلة",
       "discard_confirm": "سيتم فقدان التغييرات، هل تريد الخروج؟"
     },

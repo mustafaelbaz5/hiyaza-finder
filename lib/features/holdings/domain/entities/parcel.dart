@@ -162,6 +162,18 @@ class Parcel {
     return trimmed.isNotEmpty && trimmed != '-';
   }
 
+  /// Egyptian national ID format: exactly 14 digits. `null`/empty is
+  /// considered valid here — the field itself isn't required (see
+  /// `PROJECT_OBJECTIVES.md` §6.1: national ID format is a shared
+  /// client+server rule, but the field's presence isn't mandatory).
+  /// Server-side enforcement is the actual authority (`DATABASE_REFERENCE.md`
+  /// §4.10); this is the fast-feedback client-side layer only.
+  static bool isNationalIdValid(final String? value) {
+    final String trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return true;
+    return RegExp(r'^\d{14}$').hasMatch(trimmed);
+  }
+
   static const String defaultCreditType = 'ملك';
   static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';
