@@ -206,7 +206,7 @@ class HoldingsRepository
         : null;
 
     final String generatedId = _uuid.v4();
-    final String? personId = parcel.personId ??
+    final String personId = parcel.personId ??
         (parent != null && parent.isHoldingIdPending
             ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
             : generatedId);

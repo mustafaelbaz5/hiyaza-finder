@@ -309,7 +309,7 @@ class _DetailScreenState extends State<DetailScreen> {
                           await _repository.syncNow();
                         } catch (_) {
                           if (!mounted) return;
-                          context.showErrorSnackBar('errors.unknown'.tr());
+                          this.context.showErrorSnackBar('errors.unknown'.tr());
                         }
                       },
                       child: ListView.builder(

@@ -5,15 +5,22 @@
 **Architecture Pattern:** Clean Architecture (3-layer: presentation, domain, data)  
 **Canonical Source:** `lib/` folder structure, `APP_PLAN.md` (design decisions)
 
-**Accuracy note (added during Phase 1 architecture audit):** this document contains claims that do
-not match the real `lib/` tree as of this note — file names (`holding_detail_screen.dart` should be
-`detail_screen.dart`, `search_cubit.dart` should be `home_cubit.dart`), files that don't exist
-(`sync_status_badge.dart`, `sync_operation.dart`, `sync_queue.dart`, `usecases/` folders under
-`auth`/`cities`), and stale claims already corrected below: **`lib/core/api/` (Dio) and
-`lib/core/errors/handlers/dio_handler.dart` have been removed** (confirmed genuinely unreferenced —
-no Firebase packages ever existed in `pubspec.yaml`, contrary to §17's claim). Verify any other
-specific file/line/status claim in this document against the real repo before relying on it — treat
-this as a useful starting inventory of concerns (§14/§15's lists), not a verified source of truth.
+**Accuracy note (added during Phase 1 architecture audit, updated during Phase 6 cleanup
+2026-08-06):** this document contains claims that do not match the real `lib/` tree as of this note —
+file names (`holding_detail_screen.dart` should be `detail_screen.dart`, `search_cubit.dart` should be
+`home_cubit.dart`), files that don't exist (`sync_status_badge.dart`, `sync_operation.dart`,
+`sync_queue.dart`, `usecases/` folders under `auth`/`cities`), and stale claims already corrected
+below: **`lib/core/api/` (Dio) and `lib/core/errors/handlers/dio_handler.dart` have been removed**
+(confirmed genuinely unreferenced — no Firebase packages ever existed in `pubspec.yaml`, contrary to
+§17's claim). Phase 6 cleanup additionally deleted confirmed-dead files this doc's §1 tree still lists:
+`lib/core/utils/validators.dart`, `lib/core/utils/app_constants.dart`, four of five
+`lib/core/utils/extensions/*.dart` files (`list_ext`, `string_ext`, `datetime_ext`, `num_ext` — only
+`context_ext.dart` is live), `lib/core/utils/functions/app_setting_method.dart`, and
+`lib/core/widgets/ui/loaders/overlay_loader.dart` — all confirmed zero-reference before removal. The
+empty `lib/features/sync/presentation/` directory (§14/§15 items 21/22) was also deleted outright.
+Verify any other specific file/line/status claim in this document against the real repo before relying
+on it — treat this as a useful starting inventory of concerns (§14/§15's lists), not a verified source
+of truth.
 
 ---
 
@@ -84,17 +91,10 @@ lib/
 │   │
 │   ├── utils/
 │   │   ├── app_assets.dart          (asset paths)
-│   │   ├── app_constants.dart       (hardcoded constants)
 │   │   ├── spacing.dart             (design tokens)
-│   │   ├── validators.dart          (form validation)
 │   │   ├── extensions/
-│   │   │   ├── context_ext.dart     (BuildContext helpers)
-│   │   │   ├── datetime_ext.dart
-│   │   │   ├── list_ext.dart
-│   │   │   ├── num_ext.dart
-│   │   │   └── string_ext.dart
+│   │   │   └── context_ext.dart     (BuildContext helpers)
 │   │   └── functions/
-│   │       ├── app_setting_method.dart
 │   │       └── url_launcher.dart
 │   │
 │   └── widgets/                     (reusable UI components)
@@ -108,8 +108,6 @@ lib/
 │       │   │   ├── choice_dialog.dart
 │       │   │   ├── custom_app_dialog.dart
 │       │   │   └── text_input_dialog.dart
-│       │   └── loaders/
-│       │       └── overlay_loader.dart
 │
 ├── features/                        # Feature modules (domain/data/presentation per feature)
 │   │
@@ -1231,14 +1229,13 @@ class ClipboardFormatter {
     - City download pages silently; no UI feedback.
     - Could show "Fetching page 2 of 3..." for transparency (not critical).
 
-13. **Old Firebase Deps Still in pubspec.yaml**
-    - Firebase dependencies listed but unused (target Phase 5 cleanup).
-    - Current: firebase_core, firebase_auth, cloud_firestore, firebase_storage.
-    - Refactor: remove all four + clean up handlers.
+13. ~~Old Firebase Deps Still in pubspec.yaml~~ — **stale claim, confirmed false** (Phase 6
+    cleanup, 2026-08-06): `pubspec.yaml` has zero Firebase packages; none ever existed there. See
+    this doc's top-of-file accuracy note.
 
-14. **Dio Interceptors Setup but Unused**
-    - API consumer fully set up but Supabase takes precedence.
-    - Refactor: delete dio_factory, api_consumer, api_interceptors (dead code).
+14. ~~Dio Interceptors Setup but Unused~~ — **already removed** (`lib/core/api/`,
+    `lib/core/errors/handlers/dio_handler.dart` deleted in Phase 1, confirmed per this doc's
+    top-of-file accuracy note).
 
 15. **No Widget Testing for Large Widgets**
     - `ParcelDetailCard` has no widget tests.
@@ -1373,8 +1370,9 @@ class ClipboardFormatter {
 | `google_fonts` | ^8.1.0 | Font loading |
 | `flutter_screenutil` | ^5.9.3 | Responsive sizing |
 
-**Unused (to be removed):**
-- `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage` (phase 5)
+**Unused/stale claim:** none — `pubspec.yaml` confirmed to have zero Firebase packages as of the Phase
+6 cleanup (2026-08-06); no Firebase dependency was ever added to this project. See this doc's
+top-of-file accuracy note.
 
 ---
 
