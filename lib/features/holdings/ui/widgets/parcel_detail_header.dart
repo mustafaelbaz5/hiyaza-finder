@@ -36,21 +36,21 @@ class ParcelDetailTopRow extends StatelessWidget {
             runSpacing: 8,
             children: <Widget>[
               if (isAdded)
-                const StatusBadge(
+                StatusBadge(
                   icon: Icons.add_box_rounded,
-                  label: 'مضافة من التطبيق',
+                  label: 'holdings.status.added_from_app'.tr(),
                   color: AppColors.blue200,
                 ),
               if (!isReviewed && onFinish != null)
-                const StatusBadge(
+                StatusBadge(
                   icon: Icons.task_alt_rounded,
-                  label: 'قيد المراجعة',
+                  label: 'holdings.status.pending_review'.tr(),
                   color: AppColors.amber200,
                 ),
               if (isReviewed)
-                const StatusBadge(
+                StatusBadge(
                   icon: Icons.check_circle_rounded,
-                  label: 'تم المراجعة',
+                  label: 'holdings.status.reviewed'.tr(),
                   color: AppColors.green200,
                 ),
             ],

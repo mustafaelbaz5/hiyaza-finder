@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart' hide TextDirection;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -53,7 +54,7 @@ class BorderCompass extends StatelessWidget {
     return Column(
       children: [
         _BorderCell(
-          label: 'شمال (البحري)',
+          label: 'holdings.borders.north'.tr(),
           text: north,
           isNavigable: navigable(north),
           onTap: onTapBorder == null ? null : () => onTapBorder!(north),
@@ -64,7 +65,7 @@ class BorderCompass extends StatelessWidget {
           children: [
             Expanded(
               child: _BorderCell(
-                label: 'غرب (الغربي)',
+                label: 'holdings.borders.west'.tr(),
                 text: west,
                 isNavigable: navigable(west),
                 onTap: onTapBorder == null ? null : () => onTapBorder!(west),
@@ -75,7 +76,7 @@ class BorderCompass extends StatelessWidget {
             const SizedBox(width: 5),
             Expanded(
               child: _BorderCell(
-                label: 'شرق (الشرقي)',
+                label: 'holdings.borders.east'.tr(),
                 text: east,
                 isNavigable: navigable(east),
                 onTap: onTapBorder == null ? null : () => onTapBorder!(east),
@@ -85,7 +86,7 @@ class BorderCompass extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         _BorderCell(
-          label: 'جنوب (القبلي)',
+          label: 'holdings.borders.south'.tr(),
           text: south,
           isNavigable: navigable(south),
           onTap: onTapBorder == null ? null : () => onTapBorder!(south),

@@ -9,58 +9,58 @@ for full schema detail, and `PROJECT_OBJECTIVES.md` for the business goals every
 
 ## Phase 1 — Database: additive schema evolution
 
+**Status (2026-08-06): fully resolved and reclassified against the live database**
+(`bbahuyqjptojlighriyy`, direct `list_migrations`/`execute_sql` verification — read-only, nothing
+executed beyond `SELECT`s and catalog introspection). Every item below either has a live-confirmed
+scope or has been retired as moot once checked against reality. See `DATABASE_REFERENCE.md` §4 and §7
+for full per-item justification; this section carries only the final scope + classification.
+
 **Objective:** close every confirmed structural gap without breaking anything currently live.
 
-**Scope:**
-```sql
--- association types (DATABASE_REFERENCE.md §4.1)
-create table association_types (...); -- seed with current 2 values
-alter table cities add column association_type_code text references association_types(code);
+**Classification legend** (per the deployment-safety rule governing this whole effort):
+- **Safe before release** — fully additive, zero Flutter dependency, deployable now with no
+  coordination.
+- **Safe after Flutter update** — additive at the schema level, but only becomes meaningful once a
+  Flutter release reads/writes the new columns; deploying early is harmless, just inert.
+- **Requires maintenance window** — not a pure additive schema change; either rewrites existing rows,
+  or changes the behavior of an existing live function/trigger in a way that needs a deliberate
+  before/after verification pass, not a blind same-day rollout.
+- **Optional cleanup** — safe to defer indefinitely; do only once justified by actual need.
 
--- holding_edits discriminator (§4.2)
-alter table holding_edits add column holding_type text not null default 'holding'
-  check (holding_type in ('holding', 'added_holding'));
+| # | Item | Scope | Classification | Notes |
+|---|---|---|---|---|
+| 1 | `association_types` reference table (`DATABASE_REFERENCE.md` §4.1) | `create table association_types (...)`; seed 2 current values; `cities.association_type_code` new nullable column | **Safe before release** | Existing `association_type` enum untouched; Dashboard mgmt UI is separate follow-up work |
+| 2 | `holding_edits.holding_type` discriminator (§4.2, §7.1) | `alter table holding_edits add column holding_type text not null default 'holding' check (...)` | **Safe before release** | Zero Flutter dependency (confirmed: zero `.rpc()` calls, column never read by any live query); old rows get an approximate default, see §7.1 caveat |
+| 3 | `editable_fields` table + validation trigger (§4.3, §7.2) | `create table editable_fields (...)` + trigger, deployed **warn-only** first | **Safe before release** for the table + warn-only trigger; promotion to reject-mode is its own later step, treated as **Requires maintenance window** in spirit (needs an observation window against real traffic, not a timed rollout) | Do not enable rejection until a confirmed zero-unknown-key observation period |
+| 4 | `added_holdings.reform_type` (§4.4) | — | **Already live** — no migration needed | Confirmed via column comment on the live schema |
+| 5 | `city_top_holders` refresh automation (§4.5) | — | **Retired — moot** | Live-verified plain view, not materialized; no refresh step exists to automate |
+| 6 | `persons` table (§4.6) | — | **Not building** | Superseded; `person_id` (already live) is the real, correct mechanism |
+| 6b | `person_client_id` (§7.5, new finding) | — | **Not building; doc cleanup only** | Confirmed absent from live schema; delete/mark-abandoned the stale Flutter-repo migration file that introduced it |
+| 7 | Completion state `completed_at`/`completed_by` (§4.7) | `alter table holdings/added_holdings add column completed_at timestamptz, add column completed_by uuid references profiles(id)` | **Safe before release**, but functionally inert until Flutter Phase 2 reads/writes it — tracked as **Safe after Flutter update** for when it becomes *meaningful*, even though the migration itself can ship immediately | Explicitly named as a current Flutter Phase 2 blocker in this doc's own prior status update |
+| 8 | Soft delete `deleted_at`/`deleted_by` on `added_holdings` (§4.8) | `alter table added_holdings add column deleted_at timestamptz, add column deleted_by uuid references profiles(id)` | **Safe before release**; filter-usage is **Safe after Flutter update** | Existing queries keep returning these rows until Flutter Phase 2 adds `deleted_at is null` filters |
+| 9 | Sync idempotency `operation_id`/`target_was_stale` (§4.9, §7 decision) | `alter table holding_edits add column operation_id uuid unique; add column target_was_stale boolean not null default false` | **Safe before release** | Repurposed as general retry-safety/staleness-detection infrastructure, independent of the abandoned offline outbox — see §7's alternatives-considered writeup for why this wasn't dropped |
+| 10 | National ID format CHECK (§4.10, §7.6) | `check (national_id ~ '^\d{14}$' or national_id = '1111111111')` on `holdings`/`added_holdings`, added **`VALID`, not `NOT VALID`** | **Safe before release** | Live audit: only 1 non-conforming row per table, both the known placeholder — constraint is 100% compliant with current data once the placeholder is exempted, no need for the cautious `NOT VALID` path |
+| 11 | `commit_import_batch` dedup guard (§7.4, new finding) | Add `on conflict (city_id, dedup_key) do nothing` to the existing insert, wire the already-present-but-hardcoded `rowsDuplicate` response field to the real count | **Requires maintenance window** | Confirmed live: the function currently has **zero** dedup guard — a behavior change to an existing, load-bearing function, not a new additive object; needs a deliberate test-import verification pass (duplicate/fresh/partial-overlap files) before shipping, and a small Dashboard follow-up to surface the now-real `rowsDuplicate` count |
+| 12 | Legacy `id`/`client_id` backfill on `added_holdings` (§6) | `update added_holdings set id = client_id where id <> client_id` + repoint `holding_edits.holding_id` for affected rows | **Requires maintenance window**, explicit sign-off gated | Live-reconfirmed: exactly 353 rows. Deferred to Phase 4, not this phase — rewrites synced production rows and an append-only audit table's keys |
+| 13 | `is_stale` column/index/filter cleanup | Drop the vestigial column, its index, and all `is_stale=false` filter clauses | **Optional cleanup** | Currently a functional no-op (nothing sets it `true` anymore); needs a full grep of every reader before removal, not urgent |
 
--- shared field-name source of truth + payload validation (§4.3)
-create table editable_fields (...);
--- + validation trigger on holding_edits
+**Dependencies:** items 1, 2, 3 (table+warn-trigger), 7, 8, 9, 10 have none — can start immediately.
+Item 11 (import dedup) has no schema dependency but needs its own verification pass. Item 12 needs
+explicit user sign-off, tracked separately in Phase 4.
 
--- reform_type gap (§4.4)
-alter table added_holdings add column reform_type text;
+**Complexity:** low for every "Safe before release" item — new tables, new nullable columns, new
+indexes, no existing row rewritten, no existing constraint tightened on non-compliant data (confirmed
+by live audit for item 10). Item 11 is low-complexity but touches existing logic, hence its own
+classification. Item 12 is the only genuinely complex/high-risk item, and it's excluded from this
+phase's default execution.
 
--- city_top_holders refresh automation (§4.5)
-
--- persons table (§4.6)
-create table persons (...);
-alter table holdings add column person_id_fk uuid references persons(id); -- or repoint existing person_id
-alter table added_holdings add column person_id_fk uuid references persons(id);
-create index holdings_person_idx on holdings (person_id);
-create index added_holdings_person_idx on added_holdings (person_id);
-
--- completion state (§4.7)
-alter table holdings add column completed_at timestamptz, add column completed_by uuid references profiles(id);
-alter table added_holdings add column completed_at timestamptz, add column completed_by uuid references profiles(id);
-
--- soft delete (§4.8)
-alter table added_holdings add column deleted_at timestamptz, add column deleted_by uuid references profiles(id);
-
--- sync idempotency (§4.9)
-alter table holding_edits add column operation_id uuid unique;
-alter table holding_edits add column target_was_stale boolean not null default false;
-
--- national ID format (§4.10)
--- CHECK constraint, 14-digit format, where national_id is not null
-```
-
-**Dependencies:** none — can start immediately.
-
-**Complexity:** low. Every item is additive: new tables, new nullable columns, new indexes. No existing
-row is rewritten, no existing constraint tightened, no existing column's meaning changes.
-
-**Risks:** low. The one item with real risk — the legacy `id`/`client_id` backfill — is deliberately
-excluded from this phase (see Phase 4).
+**Risks:** low across the "Safe before release" set — live-verified against actual production data,
+not assumed. Item 11's risk is behavioral (a currently-permissive import path becomes selectively
+rejecting) rather than structural. Item 12 remains the one deliberately deferred, sign-off-gated risk.
 
 **Notes:** Excel import/export schema and behavior are out of scope for this phase, and for every phase.
+Item 11 touches the import *commit* function's dedup behavior, not the Excel column mapping/schema
+itself — the export format and import field mapping remain untouched.
 
 ---
 
@@ -201,15 +201,27 @@ before they run.
   once their domain is fully defined; Dashboard removes its export fallback logic once real data flows.
 - **Legacy `id`/`client_id` backfill** (`DATABASE_REFERENCE.md` §6) — executed only after explicit
   go-ahead, since it rewrites already-synced production rows and an append-only audit table.
+  **Requires maintenance window.** Live-reconfirmed 2026-08-06: exactly 353 rows.
+- **`commit_import_batch` dedup guard** (`DATABASE_REFERENCE.md` §7.4, new 2026-08-06 finding) —
+  live-verified to currently have zero duplicate-import protection. **Requires maintenance window**
+  (needs a test-import verification pass first); pulled forward from "investigate" to a scoped,
+  Ready-to-implement item now that its current behavior is confirmed, not assumed. Small Dashboard
+  follow-up: wire the already-present `rowsDuplicate` response field to the real count once the guard
+  ships.
 - Per-city user scoping, if still needed by this point.
 - Begin `holding_edits` retention/archival planning if table size has become a measured concern.
+- **Documentation cleanup:** delete or mark-abandoned the Flutter repo's stale
+  `20260805000020_person_client_id.sql` and `20260801000011_city_top_holders.sql` (materialized-view
+  version) migration files — both describe objects confirmed absent from/inconsistent with the live
+  schema (`DATABASE_REFERENCE.md` §7.5, §2.7) and currently mislead anyone reading that repo's
+  migrations folder.
 
 **Dependencies:** Phases 1–3 complete.
 
 **Complexity:** low — mostly follow-through on already-scoped items.
 
-**Risks:** low; the one higher-stakes item (the legacy-id backfill) is explicitly gated on sign-off,
-not defaulted.
+**Risks:** low; the two higher-stakes items (the legacy-id backfill, the import dedup guard) are each
+explicitly gated on a verification/sign-off step, not defaulted to a blind rollout.
 
 ---
 
@@ -218,6 +230,15 @@ not defaulted.
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value
 phase — should start once Phase 1's schema lands, so the Flutter rebuild targets the final schema
 rather than migrating twice. Phase 4 follows once 1–3 are stable.
+
+**Phase 1 execution order (resolved 2026-08-06, see the classification table above):** every "Safe
+before release" item (1, 2, 3-table, 7, 8, 9, 10) can be written and deployed together as one batch —
+none has a dependency on another within that set. The `editable_fields` trigger ships warn-only in the
+same batch; its promotion to reject-mode is a separate, later step gated on an observation window. The
+`commit_import_batch` dedup guard (11) and the legacy id/client_id backfill (12) are each their own
+single-item change, deployed independently with their own verification pass — never bundled into the
+same deploy as the additive batch, so a problem with either is trivially isolated and rolled back
+without touching the unrelated additive work.
 
 ## Gate discipline (carried forward from the app's own prior planning convention, applied platform-wide)
 

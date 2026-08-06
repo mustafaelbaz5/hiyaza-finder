@@ -38,7 +38,9 @@
     "ok": "حسنًا",
     "close": "إغلاق",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "cancel": "إلغاء",
+    "save": "حفظ"
   },
   "sync": {
     "status": {
@@ -162,6 +164,29 @@
       "holder_name_farmer_card": "اسم الحائز (بطاقة الفلاح)",
       "owner_name_farmer_card": "اسم المالك (بطاقة الفلاح)",
       "growth_stages": "مراحل النمو"
+    },
+    "borders": {
+      "north": "شمال (البحري)",
+      "south": "جنوب (القبلي)",
+      "east": "شرق (الشرقي)",
+      "west": "غرب (الغربي)"
+    },
+    "field": {
+      "modified_badge": "تم التعديل",
+      "edit_tooltip": "تعديل",
+      "copy_tooltip": "نسخ"
+    },
+    "crop_type": {
+      "specify_title": "حدد نوع الزرع (اختياري)"
+    },
+    "status": {
+      "added_from_app": "مضافة من التطبيق",
+      "pending_review": "قيد المراجعة",
+      "reviewed": "تم المراجعة"
+    },
+    "association_type": {
+      "agricultural_credit": "الائتمان الزراعي",
+      "agricultural_reform": "الإصلاح الزراعي"
     },
     "reform_types": {
       "owned": "إصلاح مُملك",

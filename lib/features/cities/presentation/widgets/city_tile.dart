@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/themes/app_colors.dart';
@@ -23,8 +24,10 @@ class CityTile extends StatelessWidget {
   /// dashboard hasn't set a type for this city yet, in which case no
   /// badge is shown at all rather than guessing.
   String? _associationTypeLabel() => switch (city.associationType) {
-        AssociationType.agriculturalCredit => 'الائتمان الزراعي',
-        AssociationType.agriculturalReform => 'الإصلاح الزراعي',
+        AssociationType.agriculturalCredit =>
+          'holdings.association_type.agricultural_credit'.tr(),
+        AssociationType.agriculturalReform =>
+          'holdings.association_type.agricultural_reform'.tr(),
         null => null,
       };
 

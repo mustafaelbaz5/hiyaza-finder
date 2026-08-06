@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
@@ -30,8 +31,9 @@ class ToggleFieldRow extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String stateText =
-        value ? (activeLabel ?? 'نعم') : (inactiveLabel ?? 'لا');
+    final String stateText = value
+        ? (activeLabel ?? 'app_dialogs.yes'.tr())
+        : (inactiveLabel ?? 'app_dialogs.no'.tr());
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -75,7 +77,7 @@ class ToggleFieldRow extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          'تم التعديل',
+                          'holdings.field.modified_badge'.tr(),
                           style: AppTextStyles.font12Bold.copyWith(
                             color: AppColors.amber300,
                             fontSize: 9,

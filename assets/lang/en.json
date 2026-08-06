@@ -38,7 +38,9 @@
     "ok": "OK",
     "close": "Close",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "sync": {
     "status": {
@@ -162,6 +164,29 @@
       "holder_name_farmer_card": "Holder name (farmer card)",
       "owner_name_farmer_card": "Owner name (farmer card)",
       "growth_stages": "Growth stages"
+    },
+    "borders": {
+      "north": "North",
+      "south": "South",
+      "east": "East",
+      "west": "West"
+    },
+    "field": {
+      "modified_badge": "Modified",
+      "edit_tooltip": "Edit",
+      "copy_tooltip": "Copy"
+    },
+    "crop_type": {
+      "specify_title": "Specify crop type (optional)"
+    },
+    "status": {
+      "added_from_app": "Added from app",
+      "pending_review": "Pending review",
+      "reviewed": "Reviewed"
+    },
+    "association_type": {
+      "agricultural_credit": "Agricultural credit",
+      "agricultural_reform": "Agricultural reform"
     },
     "reform_types": {
       "owned": "Owned Reform",

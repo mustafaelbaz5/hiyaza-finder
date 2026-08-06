@@ -17,6 +17,19 @@ import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
 import '../../data/repository/holdings_repository.dart';
 
+/// Localized display label for a [BulkEditableField] — kept here (UI layer)
+/// rather than as a `.label` getter on the enum itself, since
+/// `BulkEditableField` lives in `domain/entities/` (pure Dart, no Flutter/
+/// easy_localization dependency allowed per CLAUDE.md's layering rule).
+String bulkEditableFieldLabel(final BulkEditableField field) => switch (field) {
+      BulkEditableField.cropType => 'holdings.fields.crop_type'.tr(),
+      BulkEditableField.notes => 'holdings.fields.notes'.tr(),
+      BulkEditableField.creditType => 'holdings.fields.credit_type'.tr(),
+      BulkEditableField.reformType => 'holdings.fields.reform_type'.tr(),
+      BulkEditableField.usageType => 'holdings.fields.usage_type'.tr(),
+      BulkEditableField.isInheritance => 'holdings.fields.inheritance'.tr(),
+    };
+
 /// Overview of the active city's data — holding counts per حوض — plus a
 /// bulk edit tool applying one of the app-added fields (نوع الزرع،
 /// ملاحظات، …) to every parcel in one حوض (or the whole city) at once.
@@ -66,7 +79,8 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       title: 'holdings.bulk_edit.pick_field_title'.tr(),
       options: [
         for (final BulkEditableField f in selectableFields)
-          ChoiceOption<BulkEditableField>(value: f, label: f.label),
+          ChoiceOption<BulkEditableField>(
+              value: f, label: bulkEditableFieldLabel(f)),
       ],
       selected: _bulkField,
     );
@@ -81,7 +95,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
     if (_bulkField.isBoolean) {
       final ChoiceDialogResult<bool>? result = await showChoiceDialog<bool>(
         context,
-        title: _bulkField.label,
+        title: bulkEditableFieldLabel(_bulkField),
         options: [
           ChoiceOption<bool>(
             value: true,
@@ -111,7 +125,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
 
     final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
       context,
-      title: _bulkField.label,
+      title: bulkEditableFieldLabel(_bulkField),
       options: [
         for (final String o in _bulkField.textOptions)
           ChoiceOption<String>(value: o, label: o),
@@ -131,7 +145,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       context,
       message: 'holdings.bulk_edit.confirm_message'.tr(
         namedArgs: {
-          'field': _bulkField.label,
+          'field': bulkEditableFieldLabel(_bulkField),
           'value': _valueLabel(_bulkValue),
           'scope': scope,
         },
@@ -306,7 +320,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                           verticalSpacing(8),
                           PickerRow(
                             label: 'holdings.bulk_edit.field_label'.tr(),
-                            value: _bulkField.label,
+                            value: bulkEditableFieldLabel(_bulkField),
                             onTap: _pickBulkField,
                           ),
                           verticalSpacing(8),

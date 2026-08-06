@@ -13,15 +13,6 @@ enum BulkEditableField {
 }
 
 extension BulkEditableFieldX on BulkEditableField {
-  String get label => switch (this) {
-        BulkEditableField.cropType => 'نوع الزرع',
-        BulkEditableField.notes => 'ملاحظات',
-        BulkEditableField.creditType => 'نوع الائتمان',
-        BulkEditableField.reformType => 'نوع الإصلاح',
-        BulkEditableField.usageType => 'نوع الاستخدام',
-        BulkEditableField.isInheritance => 'وراثة',
-      };
-
   /// `true` for the one boolean field (وراثة) — picked via two named
   /// options instead of the free dropdown list [textOptions] provides.
   bool get isBoolean => this == BulkEditableField.isInheritance;

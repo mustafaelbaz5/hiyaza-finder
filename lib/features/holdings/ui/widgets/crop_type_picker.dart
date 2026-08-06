@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
@@ -22,7 +23,7 @@ Future<ChoiceDialogResult<String>?> pickCropType(
 }) async {
   final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
     context,
-    title: 'نوع الزرع',
+    title: 'holdings.fields.crop_type'.tr(),
     options: [
       for (final String option in Parcel.cropTypeOptions)
         ChoiceOption<String>(value: option, label: option),
@@ -36,7 +37,7 @@ Future<ChoiceDialogResult<String>?> pickCropType(
 
   final String? custom = await showTextInputDialog(
     context,
-    title: 'حدد نوع الزرع (اختياري)',
+    title: 'holdings.crop_type.specify_title'.tr(),
     initialValue: '',
   );
   final String? trimmed = custom?.trim();

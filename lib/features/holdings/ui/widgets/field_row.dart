@@ -107,12 +107,12 @@ class FieldRow extends StatelessWidget {
                 TileIconButton(
                   icon: Icons.edit_rounded,
                   onTap: onEdit!,
-                  tooltip: 'تعديل',
+                  tooltip: 'holdings.field.edit_tooltip'.tr(),
                 ),
               TileIconButton(
                 icon: Icons.copy_rounded,
                 onTap: () => _copy(context, displayValue),
-                tooltip: 'نسخ',
+                tooltip: 'holdings.field.copy_tooltip'.tr(),
               ),
             ],
           ),
@@ -146,7 +146,7 @@ class _ModifiedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        'تم التعديل',
+        'holdings.field.modified_badge'.tr(),
         style: AppTextStyles.font12Bold.copyWith(
           color: AppColors.amber300,
           fontSize: 9,

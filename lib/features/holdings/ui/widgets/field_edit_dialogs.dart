@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/themes/app_text_styles.dart';
@@ -80,7 +81,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'المساحة',
+              'holdings.fields.area'.tr(),
               textAlign: TextAlign.center,
               style: AppTextStyles.font18Bold.copyWith(
                 color: colors.textPrimary,
@@ -88,7 +89,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(16),
             CustomTextForm(
-              hintText: 'فدان',
+              hintText: 'holdings.detail.feddan'.tr(),
               controller: _feddanController,
               isRTL: true,
               autofocus: true,
@@ -98,7 +99,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(10),
             CustomTextForm(
-              hintText: 'قيراط',
+              hintText: 'holdings.detail.qirat'.tr(),
               controller: _qiratController,
               isRTL: true,
               keyboardType: const TextInputType.numberWithOptions(
@@ -107,7 +108,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(10),
             CustomTextForm(
-              hintText: 'سهم',
+              hintText: 'holdings.detail.sahm'.tr(),
               controller: _sahmController,
               isRTL: true,
               keyboardType: const TextInputType.numberWithOptions(
@@ -119,7 +120,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
               children: [
                 Expanded(
                   child: CustomTextButton.outlined(
-                    text: 'إلغاء',
+                    text: 'app_dialogs.cancel'.tr(),
                     size: CustomButtonSize.small,
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -127,7 +128,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
                 horizontalSpacing(8),
                 Expanded(
                   child: CustomTextButton(
-                    text: 'حفظ',
+                    text: 'app_dialogs.save'.tr(),
                     size: CustomButtonSize.small,
                     onPressed: () => Navigator.pop(context, (
                       feddan: _parseLocalizedNum(_feddanController.text),
