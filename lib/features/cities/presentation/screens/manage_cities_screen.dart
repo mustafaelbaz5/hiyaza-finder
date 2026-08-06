@@ -1,17 +1,16 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/screen_header.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../domain/entities/cached_city_meta.dart';
 import '../../domain/repositories/city_repository.dart';
+import '../widgets/cached_city_tile.dart';
+import '../widgets/manage_cities_states.dart';
 
 /// Lets the field worker see every city with data still on this device —
 /// not just the active one — and free up space by deleting ones they're
@@ -101,12 +100,6 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
     }
   }
 
-  String _formatSize(final int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -126,8 +119,6 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   }
 
   Widget _buildBody(final BuildContext context) {
-    final colors = context.customColors;
-
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary200),
@@ -135,75 +126,11 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
     }
 
     if (_hasError) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: rw(32)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(rw(24)),
-                decoration: BoxDecoration(
-                  color: AppColors.red200.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.error_outline_rounded,
-                  size: rf(40),
-                  color: AppColors.red200,
-                ),
-              ).animate().shake(duration: 400.ms, hz: 4),
-              verticalSpacing(20),
-              Text(
-                'errors.unknown'.tr(),
-                style: AppTextStyles.font16SemiBold.copyWith(
-                  color: colors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              verticalSpacing(20),
-              CustomTextButton(
-                text: 'errors.retry'.tr(),
-                onPressed: _load,
-                isFullWidth: false,
-              ),
-            ],
-          ).animate().fadeIn(duration: 300.ms),
-        ),
-      );
+      return ManageCitiesErrorState(onRetry: _load);
     }
 
     if (_cities.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: rw(32)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(rw(24)),
-                decoration: BoxDecoration(
-                  color: AppColors.primary50.withValues(alpha: 0.25),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.location_city_outlined,
-                  size: rf(56),
-                  color: AppColors.primary200,
-                ),
-              ),
-              verticalSpacing(20),
-              Text(
-                'cities.manage.empty'.tr(),
-                style: AppTextStyles.font16SemiBold.copyWith(
-                  color: colors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ).animate().fadeIn(duration: 300.ms),
-        ),
-      );
+      return const ManageCitiesEmptyState();
     }
 
     return ListView.builder(
@@ -212,120 +139,13 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
       itemCount: _cities.length,
       itemBuilder: (final BuildContext context, final int i) {
         final CachedCityMeta city = _cities[i];
-        final bool isActive = city.cityId == _activeCityId;
-        final bool isDeleting = _deletingCityIds.contains(city.cityId);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isActive ? AppColors.primary200 : colors.border,
-              width: isActive ? 1.5 : 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary50.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.location_city_rounded,
-                  color: AppColors.primary200,
-                ),
-              ),
-              horizontalSpacing(12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (isActive) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary200.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'cities.manage.current_badge'.tr(),
-                              style: AppTextStyles.font12Bold.copyWith(
-                                color: AppColors.primary200,
-                              ),
-                            ),
-                          ),
-                          horizontalSpacing(6),
-                        ],
-                        Expanded(
-                          child: Text(
-                            city.cityName,
-                            style: AppTextStyles.font16SemiBold.copyWith(
-                              color: colors.textPrimary,
-                            ),
-                            textAlign: TextAlign.right,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'cities.manage.summary'.tr(
-                        namedArgs: {
-                          'count': city.parcelsCount.toString(),
-                          'size': _formatSize(city.fileSizeBytes),
-                        },
-                      ),
-                      style: AppTextStyles.font12Regular.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
-                ),
-              ),
-              horizontalSpacing(8),
-              if (isDeleting)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: AppColors.red200,
-                  ),
-                )
-              else
-                IconButton(
-                  tooltip: 'cities.manage.delete'.tr(),
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: AppColors.red200,
-                  ),
-                  onPressed: () => _confirmDelete(city),
-                ),
-            ],
-          ),
-        )
-            .animate(key: ValueKey<String>('${city.cityId}-anim'))
-            .fadeIn(duration: 200.ms, delay: (i * 20).ms)
-            .slideY(
-              begin: 0.06,
-              end: 0,
-              duration: 200.ms,
-              delay: (i * 20).ms,
-              curve: Curves.easeOutCubic,
-            );
+        return CachedCityTile(
+          city: city,
+          isActive: city.cityId == _activeCityId,
+          isDeleting: _deletingCityIds.contains(city.cityId),
+          onDelete: () => _confirmDelete(city),
+          animationIndex: i,
+        );
       },
     );
   }

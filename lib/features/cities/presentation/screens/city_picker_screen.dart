@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -13,6 +12,8 @@ import '../../domain/entities/city.dart';
 import '../../domain/entities/city_snapshot.dart';
 import '../cubit/city_picker_cubit.dart';
 import '../cubit/city_state.dart';
+import '../widgets/city_list_states.dart';
+import '../widgets/city_picker_loading_list.dart';
 import '../widgets/city_tile.dart';
 
 /// Lists published cities and downloads the picked one, then pops with
@@ -147,13 +148,13 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                     builder: (final BuildContext context,
                         final CityPickerState state) {
                       if (state.status == CityPickerStatus.loading) {
-                        return _LoadingList(
+                        return CityPickerLoadingList(
                             horizontalPadding: horizontalPadding);
                       }
 
                       if (state.status == CityPickerStatus.error &&
                           state.cities.isEmpty) {
-                        return _ErrorState(
+                        return CityListErrorState(
                           message: state.errorMessage ?? 'errors.unknown'.tr(),
                           onRetry: () =>
                               context.read<CityPickerCubit>().loadCities(),
@@ -161,7 +162,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                       }
 
                       if (state.cities.isEmpty) {
-                        return _EmptyState(
+                        return CityListEmptyState(
                           icon: Icons.location_city_rounded,
                           title: 'cities.picker.empty'.tr(),
                         );
@@ -191,7 +192,7 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                             ),
                           Expanded(
                             child: filtered.isEmpty
-                                ? _EmptyState(
+                                ? CityListEmptyState(
                                     icon: Icons.search_off_rounded,
                                     title: 'cities.picker.no_results'.tr(
                                       namedArgs: {'query': _query.trim()},
@@ -245,118 +246,5 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
         );
       },
     );
-  }
-}
-
-/// Skeleton placeholder shown while cities load — communicates "content is
-/// coming here" instead of a bare spinner floating in empty space.
-class _LoadingList extends StatelessWidget {
-  const _LoadingList({required this.horizontalPadding});
-
-  final double horizontalPadding;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding)
-          .copyWith(top: rh(4)),
-      itemCount: 6,
-      itemBuilder: (final BuildContext context, final int i) => Container(
-        height: rh(72),
-        margin: EdgeInsets.only(bottom: rh(10)),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.border),
-        ),
-      )
-          .animate(
-              onPlay: (final AnimationController c) => c.repeat(reverse: true))
-          .fadeIn(duration: 700.ms, delay: (i * 60).ms)
-          .then()
-          .custom(
-            duration: 700.ms,
-            builder: (final BuildContext context, final double value,
-                    final Widget child) =>
-                Opacity(opacity: 0.55 + (0.45 * value), child: child),
-          ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.icon, required this.title, this.subtitle});
-
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: rw(24)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: colors.textHint),
-            verticalSpacing(12),
-            Text(
-              title,
-              style:
-                  AppTextStyles.font16Regular.copyWith(color: colors.textHint),
-              textAlign: TextAlign.center,
-            ),
-            if (subtitle != null) ...[
-              verticalSpacing(4),
-              Text(
-                subtitle!,
-                style: AppTextStyles.font12Regular
-                    .copyWith(color: colors.textHint),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms);
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: rw(24)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 40, color: AppColors.red200),
-            verticalSpacing(12),
-            Text(
-              message,
-              style: AppTextStyles.font16Regular
-                  .copyWith(color: colors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            verticalSpacing(16),
-            TextButton(
-              onPressed: onRetry,
-              child: Text('errors.retry'.tr()),
-            ),
-          ],
-        ),
-      ),
-    ).animate().fadeIn(duration: 250.ms);
   }
 }

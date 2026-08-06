@@ -303,28 +303,50 @@ exactly why they're gated here instead of built.
 
 ## Phase 8 — Project-wide feature-parity pass
 
-**Status (2026-08-06):** added from the same planning audit as Phase 7.
+**Status (2026-08-06): done.** Applied the same quality bar Phases 1–5/7 already applied to `holdings`
+(architecture, test coverage) to `auth`, `cities`, `about`, `sync`.
 
 **Objective:** Phases 1–5/7 applied a real quality bar (architecture, localization, tests, UI
 consistency) to `holdings` specifically. No phase has yet applied that same bar project-wide to the
 features that went untouched this session: `auth`, `cities`, `about`, `sync`.
 
-**Scope:**
-- Resolve the `logic/`+`ui/` (holdings) vs. `presentation/` (every other feature) folder-naming
-  drift — confirmed real during the audit, not previously flagged anywhere. Pick one convention and
-  apply it consistently.
-- Remove `lib/features/sync/presentation/` — confirmed to be a completely empty directory (dead
-  structure, zero files).
-- Audit `auth`/`cities`/`about`/`sync` for the same god-class/localization/test-coverage gaps Phases
-  1–5 already found and fixed in `holdings`, rather than assuming those features are fine because they
-  weren't in scope yet.
+**Done:**
+- ✅ **`holdings` `logic/`+`ui/` → `domain/`+`presentation/` rename.** Pure-Dart services
+  (`arabic_normalizer`, `area_calculator`, `holding_search_service`) moved to `domain/services/`; the
+  cubit moved to `presentation/cubit/`; `ui/screens`+`ui/widgets` merged into `presentation/`. `about`'s
+  `ui/` renamed to `presentation/` too (no `domain/` layer added — its single `about_constants.dart` is
+  genuinely just constants, not domain logic; CLAUDE.md already documents `about` as presentation-only
+  by design). `auth`/`cities`/`sync` already used `domain/`+`presentation/` — confirmed no drift there.
+- ✅ **Removed the empty `lib/features/sync/presentation/` directory.**
+- ✅ **`cities` god-classes split:** `city_picker_screen.dart` (362→250 lines) and
+  `manage_cities_screen.dart` (332→152 lines) — extracted `CityPickerLoadingList`, `CityListEmptyState`/
+  `CityListErrorState`, `CachedCityTile`, `ManageCitiesEmptyState`/`ManageCitiesErrorState` into
+  `presentation/widgets/`.
+- ✅ **`sync` test coverage:** extracted the private payload-dispatch logic from `RealtimeSyncService`
+  (untestable without a real `SupabaseClient`/`RealtimeChannel`) into a new, pure, public
+  `RealtimePayloadDispatcher` (`domain/realtime_payload_dispatcher.dart`) — `PostgresChangePayload` has
+  a plain public constructor, making the dispatch decisions (delete detection, the
+  `added_holdings`-promotion dedup check, edit-payload validation) directly unit-testable. 9 new tests.
+  `HoldingsApi`/`RealtimeSyncService` themselves remain untested — thin wrappers directly calling
+  `SupabaseClient`, not worth mocking the query-builder chain for.
+- ✅ **`about` test coverage:** widget test for `AboutScreen` (2 tests). Needed a new
+  `wrapLocalizedScreen`/`pumpLocalizedScreen` harness variant (`test/support/localized_widget_test_harness.dart`)
+  — `AboutScreen` has its own top-level `Scaffold`+`SingleChildScrollView`, which the existing
+  `pumpLocalized` harness's wrapper nested inside another one, throwing an unbounded-height layout error.
+- ✅ **`cities` test coverage:** widget test for `ManageCitiesScreen` (3 tests: empty/populated/error
+  states) via a `_FakeCityRepository` registered through `getIt`.
+- ✅ **`auth` test coverage:** widget test for `LoginScreen` (4 tests: renders, empty-form validation,
+  malformed-email validation, failed sign-in stays on screen) and a unit test for the display-name/role
+  mapping logic, extracted from `SupabaseAuthRepository`'s private `_toAppUser` into a public
+  `toAppUser()` (`data/supabase_user_mapper.dart`) for the same "make the pure logic testable without a
+  real Supabase client" reason as the sync dispatcher — Supabase's `User` type also has a plain public
+  constructor. 6 new tests.
 
-**Dependencies:** none — can start independently of Phase 7.
+**Deliberately not done:** deep behavioral tests for `HoldingsApi`/`RealtimeSyncService`'s actual
+Supabase wiring (would need mocking Postgrest's fluent query builder — low value for the effort versus
+the extracted pure-logic tests above, which cover the actual decision logic).
 
-**Complexity:** low–medium — mostly consistency work, not new features.
-
-**Risks:** low — these are the smaller, less-trafficked features; regression surface is narrower than
-`holdings`.
+flutter analyze: clean. flutter test: 230/230 passing (up from 206 before this phase).
 
 ---
 

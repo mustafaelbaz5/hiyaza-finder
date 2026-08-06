@@ -53,6 +53,43 @@ Future<void> pumpLocalized(final WidgetTester tester, final Widget child) async 
   await tester.pumpAndSettle();
 }
 
+/// Same localization/ScreenUtil setup as [wrapLocalized], but hands [child]
+/// straight to `MaterialApp.home` with no extra `Scaffold`/
+/// `SingleChildScrollView` wrapper — for full-screen widgets ([child]
+/// already provides its own `Scaffold`), where [wrapLocalized]'s wrapper
+/// would nest two unbounded-height scrollables and throw a layout error.
+Widget wrapLocalizedScreen(
+  final Widget child, {
+  final Locale locale = const Locale('ar'),
+}) {
+  return EasyLocalization(
+    supportedLocales: const <Locale>[Locale('ar'), Locale('en')],
+    path: 'assets/lang',
+    startLocale: locale,
+    fallbackLocale: const Locale('ar'),
+    assetLoader: const _FileAssetLoader(),
+    child: Builder(
+      builder: (final BuildContext context) => ScreenUtilInit(
+        designSize: const Size(375, 812),
+        builder: (final BuildContext context, final Widget? _) => MaterialApp(
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          home: child,
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> pumpLocalizedScreen(
+  final WidgetTester tester,
+  final Widget child,
+) async {
+  await tester.pumpWidget(wrapLocalizedScreen(child));
+  await tester.pumpAndSettle();
+}
+
 /// Call once in a `setUpAll` before any test in the file uses
 /// [pumpLocalized]/[wrapLocalized].
 Future<void> initLocalizedWidgetTestHarness() async {

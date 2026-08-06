@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/about/ui/about_screen.dart';
+import 'package:hiyaza_finder/features/about/presentation/about_screen.dart';
 import 'package:hiyaza_finder/features/auth/presentation/screens/login_screen.dart';
 import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
