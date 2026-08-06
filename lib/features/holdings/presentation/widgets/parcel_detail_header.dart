@@ -7,13 +7,17 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import 'status_badge.dart';
 
 /// The status/actions row at the top of [ParcelDetailCard] — badges for
-/// added/pending-review/reviewed state, plus delete/finish/reopen actions.
+/// added/pending-review/reviewed state, plus delete/reopen actions. Copy ID
+/// is the sole completion trigger (`REFACTOR_ROADMAP.md` Phase 9 #3) — a
+/// standalone "Finish" action used to exist here too and wrote the same
+/// `completedAt` field via a second, independent path; removed so there's
+/// only one way to complete a parcel. Reopen stays: it's the only UI path
+/// that un-completes a parcel, which Copy ID intentionally never does.
 class ParcelDetailTopRow extends StatelessWidget {
   const ParcelDetailTopRow({
     super.key,
     required this.isAdded,
     required this.isReviewed,
-    required this.onFinish,
     required this.onReopen,
     required this.onDelete,
     required this.onDeleteConfirmed,
@@ -23,7 +27,6 @@ class ParcelDetailTopRow extends StatelessWidget {
 
   final bool isAdded;
   final bool isReviewed;
-  final VoidCallback? onFinish;
   final VoidCallback? onReopen;
   final VoidCallback? onDelete;
   final VoidCallback onDeleteConfirmed;
@@ -61,7 +64,7 @@ class ParcelDetailTopRow extends StatelessWidget {
                   label: 'holdings.status.delegate'.tr(),
                   color: AppColors.amber200,
                 ),
-              if (!isReviewed && onFinish != null)
+              if (!isReviewed)
                 StatusBadge(
                   icon: Icons.task_alt_rounded,
                   label: 'holdings.status.pending_review'.tr(),
@@ -84,16 +87,10 @@ class ParcelDetailTopRow extends StatelessWidget {
             onPressed: onDeleteConfirmed,
           ),
         if (isReviewed && onReopen != null)
-          FilledButton.tonalIcon(
+          OutlinedButton.icon(
             onPressed: onReopen,
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: Text('holdings.detail.reopen'.tr()),
-          )
-        else if (!isReviewed && onFinish != null)
-          FilledButton.tonalIcon(
-            onPressed: onFinish,
-            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-            label: Text('holdings.detail.finished'.tr()),
           ),
       ],
     );
@@ -156,6 +153,11 @@ class ParcelDetailInfoBanner extends StatelessWidget {
 }
 
 /// The tappable رقم القطعة chip — copies [id] to the clipboard via [onCopy].
+/// This is the screen's primary action (`REFACTOR_ROADMAP.md` Phase 9 #4):
+/// it both identifies the parcel and, for an incomplete parcel, is what
+/// completes it (see `ParcelDetailCard._copyId`) — filled and high-contrast
+/// so it's the easiest thing on the card to find and tap, in contrast to
+/// Reopen/Copy All/Delete's lighter outlined/icon-only treatments.
 class ParcelIdChip extends StatelessWidget {
   const ParcelIdChip({super.key, required this.id, required this.onCopy});
 
@@ -164,24 +166,18 @@ class ParcelIdChip extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final colors = context.customColors;
     return Material(
-      color: colors.background,
+      color: AppColors.green200,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onCopy,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: <Widget>[
               const Icon(Icons.fingerprint_rounded,
-                  size: 18, color: AppColors.green200),
+                  size: 20, color: Colors.white),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -190,21 +186,22 @@ class ParcelIdChip extends StatelessWidget {
                     Text(
                       'holdings.detail.parcel_id'.tr(),
                       style: AppTextStyles.font12Bold.copyWith(
-                        color: colors.textSecondary,
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                     Text(
                       id,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.font14Bold,
+                      style: AppTextStyles.font14Bold.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded,
-                  size: 18, color: AppColors.green200),
+              const Icon(Icons.copy_rounded, size: 20, color: Colors.white),
             ],
           ),
         ),

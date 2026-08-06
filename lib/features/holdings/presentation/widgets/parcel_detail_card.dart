@@ -39,7 +39,6 @@ class ParcelDetailCard extends StatelessWidget {
     this.animationDelay = Duration.zero,
     this.resolveBorderMatch,
     this.onDelete,
-    this.onFinish,
     this.onReopen,
   });
 
@@ -52,7 +51,6 @@ class ParcelDetailCard extends StatelessWidget {
   final AssociationType? associationType;
   final Duration animationDelay;
   final Parcel? Function(String? borderText)? resolveBorderMatch;
-  final VoidCallback? onFinish;
   final VoidCallback? onReopen;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
@@ -101,7 +99,6 @@ class ParcelDetailCard extends StatelessWidget {
             ParcelDetailTopRow(
               isAdded: isAdded,
               isReviewed: isCompleted,
-              onFinish: onFinish,
               onReopen: onReopen,
               onDelete: onDelete,
               onDeleteConfirmed: () => _confirmDelete(context),
@@ -162,23 +159,6 @@ class ParcelDetailCard extends StatelessWidget {
                     apply: (final String v) => parcel.copyWith(holdingId: v),
                   ),
                 ),
-                if (parcel.holdingsCount != null)
-                  FieldRow(
-                    label: 'holdings.detail.holdings_count'.tr(),
-                    value: parcel.holdingsCount.toString(),
-                  ),
-                FieldRow(
-                  label: 'holdings.fields.owner_name'.tr(),
-                  value: _formatter.effectiveOwnerName(parcel),
-                  isModified: _isModified((final p) => p.ownerName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.owner_name'.tr(),
-                    initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(ownerName: v.isEmpty ? null : v),
-                  ),
-                ),
                 FieldRow(
                   label: 'holdings.fields.holder_name'.tr(),
                   value: parcel.holderName,
@@ -202,6 +182,42 @@ class ParcelDetailCard extends StatelessWidget {
                     keyboardType: TextInputType.number,
                     apply: (final String v) =>
                         parcel.copyWith(nationalId: v.isEmpty ? null : v),
+                  ),
+                ),
+                FieldRow(
+                  label: 'holdings.fields.area'.tr(),
+                  value: _formatter.areaFraction(parcel),
+                  isModified: _isModified((final p) => p.feddan) ||
+                      _isModified((final p) => p.qirat) ||
+                      _isModified((final p) => p.sahm),
+                  onEdit: () => _editArea(context),
+                ),
+                FieldRow(
+                  label: 'holdings.fields.area_sqm'.tr(),
+                  value: _formatter.formatNumber(parcel.totalSqm),
+                  isModified: _isModified((final p) => p.totalSqm),
+                ),
+                FieldRow(
+                  label: 'holdings.fields.crop_type'.tr(),
+                  value: parcel.cropType,
+                  isModified: _isModified((final p) => p.cropType),
+                  onEdit: () => _editCropType(context),
+                ),
+                if (parcel.holdingsCount != null)
+                  FieldRow(
+                    label: 'holdings.detail.holdings_count'.tr(),
+                    value: parcel.holdingsCount.toString(),
+                  ),
+                FieldRow(
+                  label: 'holdings.fields.owner_name'.tr(),
+                  value: _formatter.effectiveOwnerName(parcel),
+                  isModified: _isModified((final p) => p.ownerName),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'holdings.fields.owner_name'.tr(),
+                    initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
+                    apply: (final String v) =>
+                        parcel.copyWith(ownerName: v.isEmpty ? null : v),
                   ),
                 ),
                 FieldRow(
@@ -233,26 +249,6 @@ class ParcelDetailCard extends StatelessWidget {
                     apply: (final String v) =>
                         parcel.copyWith(landNumber: v.isEmpty ? null : v),
                   ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.area'.tr(),
-                  value: _formatter.areaFraction(parcel),
-                  isModified: _isModified((final p) => p.feddan) ||
-                      _isModified((final p) => p.qirat) ||
-                      _isModified((final p) => p.sahm),
-                  onEdit: () => _editArea(context),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.area_sqm'.tr(),
-                  value: _formatter.formatNumber(parcel.totalSqm),
-                  isModified: _isModified((final p) => p.totalSqm),
-                  onEdit: () => _editArea(context),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.crop_type'.tr(),
-                  value: parcel.cropType,
-                  isModified: _isModified((final p) => p.cropType),
-                  onEdit: () => _editCropType(context),
                 ),
                 FieldRow(
                   label: 'holdings.fields.notes'.tr(),
@@ -405,11 +401,12 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
-  /// Copy ID is the field-worker completion action (`REFACTOR_ROADMAP.md`
-  /// Phase 7, migrated to `completed_at`/`completed_by` in Phase 9 #12):
-  /// validates required fields, copies the id, then marks the parcel
-  /// completed via the same `setParcelCompleted` path `onFinish` uses —
-  /// unless it's already completed, in which case this is a plain re-copy
+  /// Copy ID is the field-worker completion action, and now the *only* one
+  /// (`REFACTOR_ROADMAP.md` Phase 7, migrated to `completed_at`/
+  /// `completed_by` in Phase 9 #12, standalone Finish button removed in
+  /// Phase 9 #3): validates required fields, copies the id, then marks the
+  /// parcel completed via `setParcelCompleted` — unless it's already
+  /// completed, in which case this is a plain re-copy
   /// (re-marking an already-completed parcel via Copy ID would be a
   /// surprising side effect of an action the user takes repeatedly while
   /// working, e.g. to paste the id elsewhere after completion).

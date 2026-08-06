@@ -9,7 +9,6 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../hiyaza_finder_app.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../widgets/detail_screen_header.dart';
@@ -133,64 +132,6 @@ class _DetailScreenState extends State<DetailScreen>
     } finally {
       _isBusy = false;
     }
-  }
-
-  /// Marks [parcel] completed (the field-worker signal — `SYSTEM_DESIGN.md`
-  /// §10, `REFACTOR_ROADMAP.md` Phase 9 #12), shows a 5s undo snackbar via
-  /// the app-level `scaffoldMessengerKey` (so it survives this screen
-  /// popping — see `HiyazaFinderApp.scaffoldMessengerKey`), and pops back
-  /// to search immediately per the requirement that Finish returns to
-  /// search.
-  Future<void> _finishParcel(final Parcel parcel) async {
-    if (_isBusy) return;
-    _isBusy = true;
-    try {
-      await _repository.setParcelCompleted(parcel.id, completed: true);
-    } catch (_) {
-      _isBusy = false;
-      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
-      return;
-    }
-    _isBusy = false;
-    if (!mounted) return;
-    final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
-    if (idx >= 0) {
-      setState(() {
-        _parcels[idx] = _parcels[idx].copyWith(completedAt: DateTime.now());
-      });
-    }
-
-    HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text('holdings.detail.finished'.tr()),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: 'holdings.detail.undo'.tr(),
-          // May fire after this screen has been popped — must not touch
-          // this.context/setState, only the repository (a GetIt singleton
-          // independent of any screen's lifecycle) and the app-level
-          // scaffold messenger key, both outliving this screen. A failed
-          // undo surfaces its own snackbar via that same app-level key
-          // rather than this.context, which may already be unmounted.
-          // Search screen re-reads repository state on its own next
-          // rebuild regardless of outcome.
-          onPressed: () {
-            _repository
-                .setParcelCompleted(parcel.id, completed: false)
-                .catchError(
-              (final Object _) {
-                HiyazaFinderApp.scaffoldMessengerKey.currentState?.showSnackBar(
-                  SnackBar(content: Text('errors.unknown'.tr())),
-                );
-                return null;
-              },
-            );
-          },
-        ),
-      ),
-    );
-
-    if (mounted) context.pop();
   }
 
   /// Un-marks [parcel] completed — user-initiated, no confirmation dialog,
@@ -320,80 +261,97 @@ class _DetailScreenState extends State<DetailScreen>
         )
         .toList();
 
+    final bool showAddFab = _parcels.isNotEmpty;
+
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: <Widget>[
-            DetailScreenHeader(
-              holdingId: holdingId,
-              parcelCount: _parcels.length,
-              onAddParcel: _parcels.isEmpty
-                  ? null
-                  : () => _addParcelForPerson(_parcels.first),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                DetailScreenHeader(
+                  holdingId: holdingId,
+                  parcelCount: _parcels.length,
+                ),
+                // A filter row is only useful once there's more than one
+                // parcel to narrow down — the common case (a single-parcel
+                // holding) would just show one chip meaningfully selected,
+                // pure clutter.
+                if (_parcels.length > 1) ...[
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                    child: ParcelStatusFilterRow(
+                      selected: _filter,
+                      counts: _filterCounts(),
+                      onSelected: (final ParcelStatusFilter filter) =>
+                          setState(() => _filter = filter),
+                    ),
+                  ),
+                  verticalSpacing(8),
+                ],
+                Expanded(
+                  child: visibleParcels.isEmpty
+                      ? Center(
+                          child: Text(
+                            'holdings.detail.empty'.tr(),
+                            style: AppTextStyles.font16Regular.copyWith(
+                              color: colors.textHint,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: rw(16),
+                          ).copyWith(bottom: rh(16 + (showAddFab ? 64 : 0))),
+                          itemCount: visibleParcels.length,
+                          itemBuilder:
+                              (final BuildContext context, final int i) {
+                            final Parcel parcel = visibleParcels[i];
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: rh(16)),
+                              child: ParcelDetailCard(
+                                parcel: parcel,
+                                originalParcel:
+                                    _repository.originalParcel(parcel.id),
+                                // "New / unsynced" no longer applies once
+                                // every write is confirmed-or-failed
+                                // synchronously — there is no more window
+                                // where a record is visible but not yet on
+                                // the server.
+                                isNew: false,
+                                hideCreditType: _repository.hideCreditType,
+                                associationType:
+                                    _repository.activeAssociationType,
+                                onFieldChanged: _updateField,
+                                animationDelay:
+                                    Duration(milliseconds: i * 80),
+                                resolveBorderMatch:
+                                    _repository.findByBorderText,
+                                onDelete:
+                                    parcel.sourceAddedHoldingId != null &&
+                                            parcel.completedAt == null
+                                        ? () => _deleteParcel(parcel)
+                                        : null,
+                                onReopen: () => _reopenParcel(parcel),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-            // A filter row is only useful once there's more than one
-            // parcel to narrow down — the common case (a single-parcel
-            // holding) would just show one chip meaningfully selected,
-            // pure clutter.
-            if (_parcels.length > 1) ...[
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                child: ParcelStatusFilterRow(
-                  selected: _filter,
-                  counts: _filterCounts(),
-                  onSelected: (final ParcelStatusFilter filter) =>
-                      setState(() => _filter = filter),
+            if (showAddFab)
+              PositionedDirectional(
+                bottom: rh(20),
+                end: rw(20),
+                child: FloatingActionButton.extended(
+                  onPressed: () => _addParcelForPerson(_parcels.first),
+                  icon: const Icon(Icons.add_location_alt_rounded),
+                  label: Text('holdings.add.new_parcel_title'.tr()),
                 ),
               ),
-              verticalSpacing(8),
-            ],
-            Expanded(
-              child: visibleParcels.isEmpty
-                  ? Center(
-                      child: Text(
-                        'holdings.detail.empty'.tr(),
-                        style: AppTextStyles.font16Regular.copyWith(
-                          color: colors.textHint,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: rw(16),
-                      ).copyWith(bottom: rh(16)),
-                      itemCount: visibleParcels.length,
-                      itemBuilder: (final BuildContext context, final int i) {
-                        final Parcel parcel = visibleParcels[i];
-                        return Padding(
-                          padding: EdgeInsets.only(bottom: rh(16)),
-                          child: ParcelDetailCard(
-                            parcel: parcel,
-                            originalParcel:
-                                _repository.originalParcel(parcel.id),
-                            // "New / unsynced" no longer applies once
-                            // every write is confirmed-or-failed
-                            // synchronously — there is no more window
-                            // where a record is visible but not yet on
-                            // the server.
-                            isNew: false,
-                            hideCreditType: _repository.hideCreditType,
-                            associationType: _repository.activeAssociationType,
-                            onFieldChanged: _updateField,
-                            animationDelay: Duration(milliseconds: i * 80),
-                            resolveBorderMatch: _repository.findByBorderText,
-                            onDelete: parcel.sourceAddedHoldingId != null &&
-                                    parcel.completedAt == null
-                                ? () => _deleteParcel(parcel)
-                                : null,
-                            onFinish: () => _finishParcel(parcel),
-                            onReopen: () => _reopenParcel(parcel),
-                          ),
-                        );
-                      },
-                    ),
-            ),
           ],
         ),
       ),

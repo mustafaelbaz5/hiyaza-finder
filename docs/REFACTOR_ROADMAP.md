@@ -445,6 +445,45 @@ flutter analyze: clean. flutter test: 230/230 passing (up from 206 before this p
 
 ---
 
+## Phase 9 — Parcel Details UX pass (field-worker QA request, 2026-08-07)
+
+**Status (2026-08-07): done.** A QA-style requirements list (9 items) came in requesting a
+usability pass on the Parcel Details screen. Audited against current code first — findings below —
+then implemented. flutter analyze clean, flutter test 279/279 passing (no test count change — no
+widget test directly exercised the removed `onFinish` callback).
+
+**Coverage matrix:**
+
+| # | Requirement | Status | Evidence |
+|---|---|---|---|
+| 1 | Hide derived fields from manual entry | ⚠️ PARTIAL | `area_sqm` is already auto-calculated (`AreaCalculator.totalSqm`) whenever فدان/قيراط/سهم change, but is still rendered as its own tappable/editable `FieldRow` (`parcel_detail_card.dart`), duplicating the fraction field just above it and implying it's independently editable when it isn't. |
+| 2/8 | Reorganize details screen, most-used info first | ⚠️ PARTIAL | A primary (`ResponsiveFieldsWrap`) vs. secondary (`SeeMoreSection`, collapsed) split already exists and is reasonable, but not formally reviewed for ordering, and not named `section_holder`/`section_extra` as the localization keys of the same name imply. |
+| 3 | Copy ID = the only completion trigger, remove standalone Finish | ❌ MISSING | Copy ID already auto-completes (`_copyId` calls `setParcelCompleted(completed: true)`), but a fully independent Finish/Reopen button pair still exists (`ParcelDetailTopRow` → `DetailScreen._finishParcel`/`_reopenParcel`). Two independent paths write the same `completedAt` field today. |
+| 4 | Emphasize primary action, de-emphasize secondary | ❌ MISSING | Delete/Reopen/Finish/Copy ID/Copy All/Add Parcel all use comparable tonal/outlined weight — no visual hierarchy. |
+| 5 | Spacing/grouping/readability polish | ⚠️ PARTIAL | Rolled into #2/#8's reorganization pass rather than tracked separately. |
+| 6 | Faster data entry, fewer taps | ⚠️ PARTIAL | Rolled into #1 (removing the redundant area_sqm tap target) and #3 (removing the now-redundant Finish tap once Copy ID covers it). |
+| 7 | Floating Add Parcel action | ❌ MISSING | `DetailScreen` uses an inline `CustomTextButton.outlined` in the header (`detail_screen_header.dart`), not a FAB. `HomeScreen` already has a `FloatingActionButton.extended` precedent to follow (`home_screen.dart:392`). |
+| 9 | Growth Stage field | ⚠️ PARTIAL | Real end-to-end field already exists (`Parcel.growthStages`, both DB tables, `SeeMoreSection` UI) but as unconstrained free text with no defined value list, unlike `cropTypeOptions`/`usageTypeOptions` which have real option enums in `parcel.dart`. No documented business list of growth-stage values exists yet — implemented as a picker-ready free-text field until one is defined, architecture kept extensible (plain `String?`, same pattern as crop type's "specify other" fallback).
+
+**Scope for this phase:**
+- **#1** Remove `area_sqm`'s tap-to-edit affordance in `parcel_detail_card.dart` — display-only, driven purely by `AreaCalculator.totalSqm`.
+- **#3** Remove the standalone Finish button from `ParcelDetailTopRow`/`DetailScreen`; Copy ID remains the sole completion trigger. Reopen stays (still needed to undo a completion — no other UI path does that).
+- **#4** Restyle Copy ID as the visually primary action (filled, higher-contrast) on the card; Delete/Reopen/Copy All step down to lighter/outlined treatments.
+- **#2/#5/#8** Light reordering pass inside `ResponsiveFieldsWrap`/`SeeMoreSection` — most-referenced-in-the-field values (holding number, holder name, national ID, area) first; keep the existing primary/secondary split, just re-rank within each.
+- **#7** Convert `DetailScreen`'s "Add Parcel" header button to a `FloatingActionButton`, matching `HomeScreen`'s existing FAB pattern.
+- **#9** No DB/data change needed (field already real) — leave as free text; not building a picker without a defined value list (would need to invent business values not specified anywhere).
+- **#6** No dedicated work beyond the above — already addressed by #1/#3 reducing taps.
+
+**Dependencies:** none — purely Flutter UI, no schema change needed (all backing fields already live).
+
+**Complexity:** low–medium — mostly widget-level changes to already-existing, already-tested pieces
+(`parcel_detail_card.dart`, `parcel_detail_header.dart`, `detail_screen.dart`, `detail_screen_header.dart`).
+
+**Risks:** low — no data-model change, so it's UI-reversible if a change reads wrong once used in the
+field.
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value
