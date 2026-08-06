@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
-import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
@@ -19,7 +18,7 @@ import '../../domain/services/bulk_edit_service.dart';
 import '../../domain/services/parcel_edit_overlay.dart';
 import '../../domain/services/parcel_query_service.dart';
 import '../../logic/services/holding_search_service.dart';
-import '../added_holdings_mapper.dart';
+import '../services/parcel_sync_service.dart';
 import 'parcel_edits_store.dart';
 
 /// Owns the in-memory dataset for the active city, and the local overlay
@@ -44,17 +43,20 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     this.holdingsApi,
     this.realtimeSyncService,
     final Uuid uuid = const Uuid(),
+    final ParcelSyncService? syncService,
   })  : _editsStore = editsStore,
         _queryService = queryService,
         _editOverlay = editOverlay,
         _bulkEditService = bulkEditService,
-        _uuid = uuid;
+        _uuid = uuid,
+        _syncService = syncService ?? ParcelSyncService(holdingsApi: holdingsApi);
 
   final ParcelEditsStore _editsStore;
   final ParcelQueryService _queryService;
   final ParcelEditOverlay _editOverlay;
   final BulkEditService _bulkEditService;
   final Uuid _uuid;
+  final ParcelSyncService _syncService;
 
   /// `null` in tests that construct this repository directly without a
   /// Supabase-backed API — every write method treats a `null` [holdingsApi]
@@ -280,14 +282,11 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String? safeParentHoldingId =
         (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
 
-    final String currentUserId =
-        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
-    final String? promotedHoldingId = await holdingsApi?.addRecord(
-      id: withId.id,
+    final String? promotedHoldingId = await _syncService.syncAddParcel(
+      parcelId: withId.id,
       cityId: cityId,
-      record: parcelToAddedHoldingsRecord(withId),
+      parcel: withId,
       parentHoldingId: safeParentHoldingId,
-      createdByUserId: currentUserId,
     );
 
     // `added_holdings_auto_approve` (a DB trigger) promotes every new
@@ -339,7 +338,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         removed.sourceAddedHoldingId ?? (removed.isFieldAdded ? removed.id : null);
     if (addedHoldingId == null) return false;
 
-    await holdingsApi?.deleteAddedHolding(addedHoldingId);
+    await _syncService.syncDeleteParcel(addedHoldingId);
 
     _parcels = <Parcel>[
       for (final Parcel p in _parcels)
@@ -372,14 +371,11 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final Map<String, dynamic> snapshot = _editOverlay.snapshot(edited);
 
     final String? cityId = _activeCityId;
-    final String currentUserId =
-        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
     if (cityId != null) {
-      await holdingsApi?.editHolding(
+      await _syncService.syncEditParcel(
         holdingId: edited.id,
         cityId: cityId,
         payload: snapshot,
-        editedByUserId: currentUserId,
       );
     }
 
@@ -404,28 +400,19 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final int idx = _parcels.indexWhere((final Parcel p) => p.id == parcelId);
     if (idx < 0) return null;
 
-    final DateTime? reviewedAt = reviewed ? DateTime.now() : null;
-    final String? currentUserId = GetIt.instance<AuthRepository>().currentUser?.id;
     final bool isFieldAdded = _parcels[idx].isFieldAdded;
-
-    await holdingsApi?.markReviewed(
+    final Parcel updated = await _syncService.syncMarkReviewed(
       parcelId: parcelId,
       isFieldAdded: isFieldAdded,
       reviewed: reviewed,
-      reviewedAt: reviewedAt,
-      reviewedByUserId: currentUserId ?? '',
+      parcel: _parcels[idx],
     );
 
-    final Parcel updated = _parcels[idx].copyWith(
-      reviewed: reviewed,
-      reviewedAt: reviewedAt,
-      reviewedBy: reviewed ? currentUserId : null,
-    );
     _parcels[idx] = updated;
     _originalById[parcelId] = (_originalById[parcelId] ?? updated).copyWith(
-      reviewed: reviewed,
-      reviewedAt: reviewedAt,
-      reviewedBy: reviewed ? currentUserId : null,
+      reviewed: updated.reviewed,
+      reviewedAt: updated.reviewedAt,
+      reviewedBy: updated.reviewedBy,
     );
     return updated;
   }
@@ -617,48 +604,47 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     }
 
     final String? cityId = _activeCityId;
-    final String currentUserId =
-        GetIt.instance<AuthRepository>().currentUser?.id ?? '';
 
-    final List<Parcel> nextParcels = <Parcel>[];
-    int succeeded = 0;
-    int failed = 0;
+    final List<Parcel> inScope = <Parcel>[];
+    final List<Parcel> outOfScope = <Parcel>[];
     for (final Parcel p in result.parcels) {
-      final bool inScope = basin == null || p.basinName == basin;
-      if (!inScope) {
-        nextParcels.add(p);
-        continue;
-      }
-      final Map<String, dynamic> snapshot = _editOverlay.snapshot(p);
-      try {
-        if (cityId != null) {
-          await holdingsApi?.editHolding(
-            holdingId: p.id,
-            cityId: cityId,
-            payload: snapshot,
-            editedByUserId: currentUserId,
-          );
-        }
-        _edits[p.id] = snapshot;
-        nextParcels.add(p);
-        succeeded++;
-      } catch (_) {
+      (basin == null || p.basinName == basin ? inScope : outOfScope).add(p);
+    }
+
+    // Snapshots are computed up front (keyed by id) so syncBulkEdit's
+    // per-parcel snapshot callback and this method's own success/failure
+    // bookkeeping agree on the exact same payload per row.
+    final Map<String, Map<String, dynamic>> snapshots = <String, Map<String, dynamic>>{
+      for (final Parcel p in inScope) p.id: _editOverlay.snapshot(p),
+    };
+
+    final BulkSyncResult syncResult = await _syncService.syncBulkEdit(
+      parcels: inScope,
+      cityId: cityId,
+      snapshotForParcel: (final Parcel p) => snapshots[p.id]!,
+    );
+
+    final List<Parcel> nextInScope = <Parcel>[];
+    for (final Parcel p in inScope) {
+      if (!syncResult.failedIds.contains(p.id)) {
+        _edits[p.id] = snapshots[p.id]!;
+        nextInScope.add(p);
+      } else {
         // Row failed — keep its pre-bulk-edit value both on screen and in
         // [_edits] rather than a value the server never confirmed.
-        nextParcels.add(_originalById[p.id] != null ? _applyEdit(p) : p);
-        failed++;
+        nextInScope.add(_originalById[p.id] != null ? _applyEdit(p) : p);
       }
     }
 
-    _parcels = nextParcels;
+    _parcels = <Parcel>[...nextInScope, ...outOfScope];
     // Defensive: no `BulkEditableField` touches حائز/مالك today, but
     // rebuilding here is O(n) same as the reassignment above and keeps
     // this repository from silently drifting out of sync if that ever
     // changes, without needing every future field to remember this rule.
     _rebuildBorderIndex();
-    if (succeeded > 0 && _activeEditsKey != null) {
+    if (syncResult.outcome.succeeded > 0 && _activeEditsKey != null) {
       await _editsStore.save(_activeEditsKey!, _edits);
     }
-    return BulkEditOutcome(succeeded: succeeded, failed: failed);
+    return syncResult.outcome;
   }
 }
