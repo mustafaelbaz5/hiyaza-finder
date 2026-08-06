@@ -47,6 +47,11 @@ class _FakeHoldingsApi implements HoldingsApi {
   final List<_AddRecordCall> addRecordCalls = <_AddRecordCall>[];
   Object? addRecordError;
 
+  @override
+  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
+      searchRemote({required final String cityId, required final String query}) async =>
+          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+
   /// Configurable return values for [addRecord], mirroring
   /// `added_holdings.promoted_holding_id` — mimics the real
   /// `added_holdings_auto_approve` trigger returning a *fresh* promoted

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
+import '../../../cities/data/holding_row_mapper.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
@@ -505,6 +506,55 @@ class HoldingsRepository
   @override
   List<SearchResult> search(final String query, {final String? basin}) =>
       _queryService.search(_dataset.parcels, query, basin: basin);
+
+  /// Live server-side follow-up to [search] (`REFACTOR_ROADMAP.md` Phase 9
+  /// #7) — queries `holdings`/`added_holdings` directly for [query] and
+  /// returns only the results not already present among [localResults]
+  /// (matched by `groupKey`), so the merged list never duplicates a holding
+  /// the local cache already found. Returns an empty list (rather than
+  /// throwing) if no city is active or the query fails — this is always a
+  /// supplementary call layered on top of the already-shown local results,
+  /// never a replacement for them.
+  Future<List<SearchResult>> searchRemote(
+    final String query,
+    final List<SearchResult> localResults,
+  ) async {
+    final String? cityId = _dataset.activeCityId;
+    if (cityId == null || holdingsApi == null) return const <SearchResult>[];
+    final String trimmed = query.trim();
+    if (trimmed.isEmpty) return const <SearchResult>[];
+
+    final ({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})
+        rows = await holdingsApi!.searchRemote(cityId: cityId, query: trimmed);
+
+    final List<Parcel> remoteParcels = <Parcel>[
+      for (final Map<String, dynamic> row in rows.holdings) holdingRowToParcel(row),
+      for (final Map<String, dynamic> row in rows.addedHoldings) addedHoldingRowToParcel(row),
+    ];
+    if (remoteParcels.isEmpty) return const <SearchResult>[];
+
+    final Set<String> localKeys =
+        localResults.map((final SearchResult r) => r.groupKey).toSet();
+
+    final Map<String, Parcel> bestByHolding = <String, Parcel>{};
+    for (final Parcel p in remoteParcels) {
+      if (localKeys.contains(p.groupKey)) continue;
+      bestByHolding.putIfAbsent(p.groupKey, () => p);
+    }
+
+    return <SearchResult>[
+      for (final Parcel p in bestByHolding.values)
+        SearchResult(
+          holdingId: p.holdingId,
+          groupKey: p.groupKey,
+          holderName: p.holderName,
+          parcelCount: 1,
+          score: 0,
+          reviewedCount: p.reviewed ? 1 : 0,
+          isFieldAdded: p.isFieldAdded,
+        ),
+    ];
+  }
 
   /// Distinct اسم الحوض values in the active dataset, sorted.
   @override

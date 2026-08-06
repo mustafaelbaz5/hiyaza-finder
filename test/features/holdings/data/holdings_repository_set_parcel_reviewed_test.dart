@@ -48,6 +48,11 @@ class _FakeHoldingsApi implements HoldingsApi {
   Object? markReviewedError;
 
   @override
+  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
+      searchRemote({required final String cityId, required final String query}) async =>
+          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+
+  @override
   Future<void> markReviewed({
     required final String parcelId,
     required final bool isFieldAdded,

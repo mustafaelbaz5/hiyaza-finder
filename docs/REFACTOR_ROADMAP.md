@@ -268,15 +268,25 @@ already-documented architectural decision.
   infrastructure today. Needs richer per-parcel status than the current single `reviewed` boolean
   provides — cannot be meaningfully built until `completed_at` lands.
 
-**Explicitly open decisions — flagged, NOT yet approved for implementation:**
+**Explicitly open decisions — user approved 2026-08-06, implemented one at a time, gated:**
 
 Each of these was raised during the planning audit as a "new-sounding" requirement that, if built,
-would reverse a decision this project already made and documented. They are recorded here so the
-tension stays visible; none should be implemented without the user separately approving the reversal.
+would reverse a decision this project already made and documented. The user has now explicitly signed
+off on implementing all four; each is built and gated independently before the next starts.
 
-- **Search: cache-first + live DB + merge.** Would reverse the fully local-first search model
-  `SYSTEM_DESIGN.md` §13 is built around (in-memory city snapshot, zero remote calls, the basis of its
-  whole scalability argument). Confirmed today: search is 100% local.
+- ✅ **Search: cache-first + live DB + merge (2026-08-06).** Local city-snapshot search
+  (`HoldingSearchService`) remains the primary, instant, offline-first path — unchanged. Added
+  `HoldingsApi.searchRemote` (queries `holdings`+`added_holdings` for the active city: exact
+  رقم الحيازة or `ilike` حائز/مالك match, capped 20 rows each) and
+  `HoldingsRepository.searchRemote(query, localResults)`, which maps rows via the existing
+  `holdingRowToParcel`/`addedHoldingRowToParcel` mappers and returns only holdings not already present
+  among the local results (deduped by `groupKey`). `HomeCubit.search()` now fires this as an
+  **additive follow-up** after emitting local results immediately — a token counter
+  (`_searchToken`) discards a stale reply if the user has typed a newer query since, and a failed/slow
+  remote call never blocks or replaces what's already on screen. This does not reverse the local-first
+  design; it adds a supplementary layer on top, catching only records synced to the server after the
+  device's last city download. Zero behavior change when offline (remote call fails silently, local
+  results stand alone).
 - **"No manual refresh."** Would mean removing the manual pull-to-refresh/refresh-icon actions in
   `home_screen.dart`/`detail_screen.dart`, which directly use `HoldingsRepository.syncNow()` — a pattern
   Phase 2's own realtime-polish work just relied on. Conflicts with the current, intentional design.

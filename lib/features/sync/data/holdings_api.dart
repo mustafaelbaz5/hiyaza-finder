@@ -117,6 +117,46 @@ class HoldingsApi {
     }
   }
 
+  /// Live server-side search fallback for [cityId] — matches [query]
+  /// against رقم الحيازة (exact) or حائز/مالك name (`ilike` contains) across
+  /// both `holdings` and `added_holdings`. Called *in addition to* the
+  /// primary local cache search (`REFACTOR_ROADMAP.md` Phase 9 #7), never
+  /// instead of it: the local city snapshot remains the fast, offline-first
+  /// primary path; this only catches records synced to the server after the
+  /// device's last download, which the local cache can't see yet. Returns
+  /// raw rows per table so the caller can map each with the correct mapper
+  /// (`holdingRowToParcel`/`addedHoldingRowToParcel`) — kept out of this
+  /// data-source class to avoid a `cities`-feature import here.
+  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
+      searchRemote({
+    required final String cityId,
+    required final String query,
+  }) async {
+    try {
+      final List<Map<String, dynamic>> holdingsRows = await _client
+          .from('holdings')
+          .select()
+          .eq('city_id', cityId)
+          .or('holding_id_number.eq.$query,holder_name.ilike.%$query%')
+          .limit(20)
+          .timeout(_requestTimeout);
+      final List<Map<String, dynamic>> addedRows = await _client
+          .from('added_holdings')
+          .select()
+          .eq('city_id', cityId)
+          .isFilter('promoted_holding_id', null)
+          .or('holding_id_number.eq.$query,holder_name.ilike.%$query%')
+          .limit(20)
+          .timeout(_requestTimeout);
+      return (holdings: holdingsRows, addedHoldings: addedRows);
+    } catch (_) {
+      // A failed live search must never break the local results already on
+      // screen — the caller treats this as "no remote results found",
+      // exactly like being offline.
+      return (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+    }
+  }
+
   Future<void> markReviewed({
     required final String parcelId,
     required final bool isFieldAdded,

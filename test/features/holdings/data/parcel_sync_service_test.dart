@@ -16,6 +16,11 @@ class _FakeHoldingsApi implements HoldingsApi {
   final List<_AddRecordCall> addRecordCalls = <_AddRecordCall>[];
   final List<String> deleteAddedHoldingCalls = <String>[];
   final List<Map<String, dynamic>> editHoldingCalls = <Map<String, dynamic>>[];
+
+  @override
+  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
+      searchRemote({required final String cityId, required final String query}) async =>
+          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
   final List<Map<String, dynamic>> markReviewedCalls = <Map<String, dynamic>>[];
 
   Object? addRecordError;

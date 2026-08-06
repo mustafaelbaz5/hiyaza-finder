@@ -163,11 +163,33 @@ class HomeCubit extends Cubit<HomeState> {
     );
   }
 
+  /// Search token guarding [_mergeRemoteResults] — incremented on every call
+  /// so a slow remote reply for a stale query can never overwrite the
+  /// results of a newer one the user has since typed (`REFACTOR_ROADMAP.md`
+  /// Phase 9 #7).
+  int _searchToken = 0;
+
   void search(final String query) {
+    final int token = ++_searchToken;
     final List<SearchResult> results = query.trim().isEmpty
         ? const <SearchResult>[]
         : _repository.search(query, basin: state.selectedBasin);
     emit(state.copyWith(query: query, results: results));
+    if (query.trim().isNotEmpty) unawaited(_mergeRemoteResults(query, token));
+  }
+
+  /// Fires the live-DB follow-up search and, once it returns, merges any
+  /// results the local cache missed into [HomeState.results] — additive
+  /// only, never replaces what local search already found
+  /// (`HoldingsRepository.searchRemote`'s own doc). No-op if a newer search
+  /// has started since this call ([_searchToken] no longer matches), or if
+  /// the query/basin has changed underneath it while awaiting.
+  Future<void> _mergeRemoteResults(final String query, final int token) async {
+    final List<SearchResult> remote =
+        await _repository.searchRemote(query, state.results);
+    if (token != _searchToken || remote.isEmpty) return;
+    if (state.query != query) return;
+    emit(state.copyWith(results: <SearchResult>[...state.results, ...remote]));
   }
 
   /// Narrows subsequent searches to [basin] (اسم الحوض), or `null` to
