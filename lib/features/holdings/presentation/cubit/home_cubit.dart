@@ -143,8 +143,16 @@ class HomeCubit extends Cubit<HomeState> {
       availableBasins: _repository.availableBasins,
       selectedBasin: null,
       isCityDataStale: false,
+      modifiedIds: _modifiedIds(parcels),
     );
   }
+
+  /// Which of [parcels] have a local edit-overlay entry — backs
+  /// `HomeState.modifiedCount` (`REFACTOR_ROADMAP.md` Phase 9 #13).
+  Set<String> _modifiedIds(final List<Parcel> parcels) => <String>{
+        for (final Parcel p in parcels)
+          if (_repository.isParcelEdited(p.id)) p.id,
+      };
 
   /// Re-derives state from the repository's current data — used after
   /// returning from a screen that mutated parcels directly on the
@@ -152,13 +160,15 @@ class HomeCubit extends Cubit<HomeState> {
   /// mutates the same underlying list in place without going through the
   /// cubit, so Bloc's equality check wouldn't otherwise notice the change.
   void refreshData() {
+    final List<Parcel> parcels = _repository.parcels;
     emit(
       state.copyWith(
-        parcels: _repository.parcels,
+        parcels: parcels,
         availableBasins: _repository.availableBasins,
         results: state.query.trim().isEmpty
             ? state.results
             : _repository.search(state.query, basin: state.selectedBasin),
+        modifiedIds: _modifiedIds(parcels),
       ),
     );
   }

@@ -217,6 +217,7 @@
       "holdings_loaded": "{count} حيازة محمّلة",
       "change_file": "تغيير المدينة",
       "summary_added": "مضافة",
+      "summary_modified": "معدّلة",
       "summary_pending_review": "قيد المراجعة",
       "summary_reviewed": "تمت المراجعة"
     },

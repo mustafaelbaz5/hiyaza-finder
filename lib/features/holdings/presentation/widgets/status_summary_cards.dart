@@ -6,20 +6,25 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 
-/// Lightweight per-status breakdown row for the home screen — added /
-/// pending-review / reviewed parcel counts (`REFACTOR_ROADMAP.md` Phase 7,
-/// `PROJECT_OBJECTIVES.md` §4). Deliberately just three numbers, no filters
-/// or drill-down — anything more crosses into the "activity center" scope
-/// §4 explicitly excludes from the in-app experience.
+/// Lightweight per-status breakdown row for the home screen — modified /
+/// added / pending-review / reviewed parcel counts (`REFACTOR_ROADMAP.md`
+/// Phase 7/9, `PROJECT_OBJECTIVES.md` §4's "original / modified / added /
+/// reviewed counts" — no separate "original" card since it's just
+/// `holdingCount - addedCount`, not independently useful to a field worker).
+/// Deliberately just four numbers, no filters or drill-down — anything more
+/// crosses into the "activity center" scope §4 explicitly excludes from the
+/// in-app experience (`REFACTOR_ROADMAP.md` Phase 9 #13).
 class StatusSummaryCards extends StatelessWidget {
   const StatusSummaryCards({
     super.key,
     required this.addedCount,
+    required this.modifiedCount,
     required this.pendingReviewCount,
     required this.reviewedCount,
   });
 
   final int addedCount;
+  final int modifiedCount;
   final int pendingReviewCount;
   final int reviewedCount;
 
@@ -33,6 +38,15 @@ class StatusSummaryCards extends StatelessWidget {
             label: 'holdings.home.summary_added'.tr(),
             count: addedCount,
             color: AppColors.blue200,
+          ),
+        ),
+        horizontalSpacing(8),
+        Expanded(
+          child: _StatusSummaryCard(
+            icon: Icons.edit_rounded,
+            label: 'holdings.home.summary_modified'.tr(),
+            count: modifiedCount,
+            color: AppColors.blue300,
           ),
         ),
         horizontalSpacing(8),

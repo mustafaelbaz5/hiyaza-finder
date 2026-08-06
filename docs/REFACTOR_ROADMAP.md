@@ -351,8 +351,23 @@ off on implementing all four; each is built and gated independently before the n
 
   **Phase 9 #9 complete** — flutter analyze clean, flutter test 263/263 passing (up from 250 before
   this item).
-- **In-app activity center per city.** Larger in scope than `PROJECT_OBJECTIVES.md` §4's explicit
-  "lightweight... not a Dashboard replacement" boundary for in-app stats.
+- ✅ **In-app activity center per city (2026-08-06) — resolved as a scope clarification, not a
+  reversal.** The full "activity center" reading (filterable history, drill-down lists, a dedicated
+  screen) was and remains out of scope per §4's "lightweight... not a Dashboard replacement" boundary —
+  not built. What §4's actual requirement text asks for is four counts: original/modified/added/
+  reviewed. Added/reviewed already existed (Phase 7's `StatusSummaryCards`); this closes the one real
+  gap — **modified** — by adding `HomeState.modifiedIds`/`modifiedCount` (populated by `HomeCubit` from
+  `HoldingsRepository.isParcelEdited`, snapshotted into state rather than queried per-build so it stays
+  a plain `Equatable` field) and a 4th `StatusSummaryCards` tile. No "original" tile: it's just
+  `holdingCount - addedCount`, explicitly judged not worth its own card. Still deliberately just plain
+  numbers — no filters, no history feed, no drill-down — the exact boundary the widget's own doc comment
+  already stated before this item was addressed. 8 new tests
+  (`test/features/holdings/presentation/cubit/home_state_test.dart`, also covering the previously-
+  untested `addedCount`/`reviewedCount`/`pendingReviewCount` getters).
+
+**All four explicitly-flagged open-decision items (#7, #8, #9, #13) are now resolved** — three were
+implemented as approved reversals of documented decisions; #13 turned out to be a scope clarification
+achievable without any reversal at all. flutter analyze clean, flutter test 270/270 passing.
 
 **Dependencies:** the "buildable now" items have none. Details-screen tabs depend on Phase 1's
 `completed_at`/`completed_by`. The four open-decision items depend on explicit user sign-off before

@@ -20,6 +20,7 @@ class HomeState extends Equatable {
     this.availableBasins = const <String>[],
     this.selectedBasin,
     this.isCityDataStale = false,
+    this.modifiedIds = const <String>{},
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -40,21 +41,36 @@ class HomeState extends Equatable {
   /// cached locally — drives a non-blocking "تحديث البيانات" banner.
   final bool isCityDataStale;
 
+  /// `Parcel.id`s with a local edit-overlay entry
+  /// (`HoldingsRepository.isParcelEdited`) — snapshotted into state
+  /// (rather than queried per-build from the repository) so
+  /// [modifiedCount] is a plain `Equatable`-comparable field like every
+  /// other count here. Populated by `HomeCubit` alongside [parcels]
+  /// whenever the dataset is (re)loaded.
+  final Set<String> modifiedIds;
+
   /// Raw parcel row count for the loaded dataset — a single حيازة can span
   /// several قطع, so this counts every parcel row, not distinct holdings
   /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
   int get holdingCount => parcels.length;
 
   /// Parcel-row counts by status, for the home screen's lightweight summary
-  /// cards (`REFACTOR_ROADMAP.md` Phase 7, `PROJECT_OBJECTIVES.md` §4's
+  /// cards (`REFACTOR_ROADMAP.md` Phase 7/9, `PROJECT_OBJECTIVES.md` §4's
   /// "original / modified / added / reviewed counts"). Counts parcel rows,
-  /// matching [holdingCount]'s convention — not distinct holdings.
+  /// matching [holdingCount]'s convention — not distinct holdings. There is
+  /// no separate "original" count: it's just `holdingCount - addedCount`,
+  /// not independently useful enough to a field worker to warrant its own
+  /// card (`REFACTOR_ROADMAP.md` Phase 9 #13 — deliberately kept lightweight,
+  /// not a drill-down/filterable activity center).
   int get addedCount =>
       parcels.where((final Parcel p) => p.isFieldAdded).length;
 
   int get reviewedCount => parcels.where((final Parcel p) => p.reviewed).length;
 
   int get pendingReviewCount => parcels.length - reviewedCount;
+
+  int get modifiedCount =>
+      parcels.where((final Parcel p) => modifiedIds.contains(p.id)).length;
 
   HomeState copyWith({
     final HomeStatus? status,
@@ -65,6 +81,7 @@ class HomeState extends Equatable {
     final List<String>? availableBasins,
     final Object? selectedBasin = _unset,
     final bool? isCityDataStale,
+    final Set<String>? modifiedIds,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -77,6 +94,7 @@ class HomeState extends Equatable {
           ? this.selectedBasin
           : selectedBasin as String?,
       isCityDataStale: isCityDataStale ?? this.isCityDataStale,
+      modifiedIds: modifiedIds ?? this.modifiedIds,
     );
   }
 
@@ -90,5 +108,6 @@ class HomeState extends Equatable {
         availableBasins,
         selectedBasin,
         isCityDataStale,
+        modifiedIds,
       ];
 }
