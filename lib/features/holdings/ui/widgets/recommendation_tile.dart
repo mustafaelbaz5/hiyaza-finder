@@ -24,8 +24,11 @@ class RecommendationTile extends StatelessWidget {
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final String holderName = result.holderName ?? '—';
-    final String suffix =
-        result.parcelCount > 1 ? ' (${result.parcelCount} قطع)' : '';
+    final String suffix = result.parcelCount > 1
+        ? 'holdings.detail.parcel_count_suffix'.tr(
+            namedArgs: {'count': result.parcelCount.toString()},
+          )
+        : '';
 
     return InkWell(
       onTap: onTap,
