@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_status_filter.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
@@ -27,7 +28,8 @@ class DetailScreen extends StatefulWidget {
   State<DetailScreen> createState() => _DetailScreenState();
 }
 
-class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver {
+class _DetailScreenState extends State<DetailScreen>
+    with WidgetsBindingObserver {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
@@ -49,6 +51,12 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
   /// already show their own tap-affordance state); it exists purely to
   /// reject a re-entrant call while the first is still awaiting Supabase.
   bool _isBusy = false;
+
+  /// Current status filter (`REFACTOR_ROADMAP.md` Phase 9 #12) — a filter
+  /// row over this screen's own (typically small) parcel list rather than
+  /// separate tab pages, since a holding rarely has more than a handful of
+  /// parcels.
+  ParcelStatusFilter _filter = ParcelStatusFilter.all;
 
   late final StreamSubscription<void> _remoteChangesSub;
 
@@ -284,11 +292,33 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
+  Map<ParcelStatusFilter, int> _filterCounts() {
+    return <ParcelStatusFilter, int>{
+      for (final ParcelStatusFilter filter in ParcelStatusFilter.values)
+        filter: _parcels
+            .where(
+              (final Parcel p) => filter.matches(
+                p,
+                isModified: _repository.isParcelEdited(p.id),
+              ),
+            )
+            .length,
+    };
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final String holdingId =
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
+    final List<Parcel> visibleParcels = _parcels
+        .where(
+          (final Parcel p) => _filter.matches(
+            p,
+            isModified: _repository.isParcelEdited(p.id),
+          ),
+        )
+        .toList();
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -303,8 +333,24 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
                   ? null
                   : () => _addParcelForPerson(_parcels.first),
             ),
+            // A filter row is only useful once there's more than one
+            // parcel to narrow down — the common case (a single-parcel
+            // holding) would just show one chip meaningfully selected,
+            // pure clutter.
+            if (_parcels.length > 1) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                child: ParcelStatusFilterRow(
+                  selected: _filter,
+                  counts: _filterCounts(),
+                  onSelected: (final ParcelStatusFilter filter) =>
+                      setState(() => _filter = filter),
+                ),
+              ),
+              verticalSpacing(8),
+            ],
             Expanded(
-              child: _parcels.isEmpty
+              child: visibleParcels.isEmpty
                   ? Center(
                       child: Text(
                         'holdings.detail.empty'.tr(),
@@ -317,9 +363,9 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
                       padding: EdgeInsets.symmetric(
                         horizontal: rw(16),
                       ).copyWith(bottom: rh(16)),
-                      itemCount: _parcels.length,
+                      itemCount: visibleParcels.length,
                       itemBuilder: (final BuildContext context, final int i) {
-                        final Parcel parcel = _parcels[i];
+                        final Parcel parcel = visibleParcels[i];
                         return Padding(
                           padding: EdgeInsets.only(bottom: rh(16)),
                           child: ParcelDetailCard(
@@ -333,8 +379,7 @@ class _DetailScreenState extends State<DetailScreen> with WidgetsBindingObserver
                             // the server.
                             isNew: false,
                             hideCreditType: _repository.hideCreditType,
-                            associationType:
-                                _repository.activeAssociationType,
+                            associationType: _repository.activeAssociationType,
                             onFieldChanged: _updateField,
                             animationDelay: Duration(milliseconds: i * 80),
                             resolveBorderMatch: _repository.findByBorderText,

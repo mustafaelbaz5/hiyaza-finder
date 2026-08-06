@@ -263,7 +263,13 @@
       "section_holder_subtitle": "The fields most useful while working in the field.",
       "section_extra": "Additional details",
       "section_extra_subtitle": "Less frequently used fields that are still available when needed.",
-      "reopen": "Reopen"
+      "reopen": "Reopen",
+      "filter_all": "All",
+      "filter_original": "Original",
+      "filter_added": "Added",
+      "filter_modified": "Modified",
+      "filter_completed": "Completed",
+      "filter_pending": "Pending"
     },
     "add": {
       "new_person_cta": "Add",

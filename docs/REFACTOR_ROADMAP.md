@@ -262,11 +262,22 @@ already-documented architectural decision.
 - ✅ **Home screen summary cards.** New `StatusSummaryCards` widget (added/pending-review/reviewed
   parcel-row counts, derived from `HomeState.parcels` — no new state) shown below `FileInfoCard`.
 
-**Blocked on Phase 1 DB work (`completed_at`/`completed_by`, not yet applied live):**
+**Unblocked and done (2026-08-06) — `completed_at`/`completed_by` confirmed live:**
 
-- **Details-screen tabs** (Original/Added/Modified/Reviewed/Pending). `detail_screen.dart` has zero tab
-  infrastructure today. Needs richer per-parcel status than the current single `reviewed` boolean
-  provides — cannot be meaningfully built until `completed_at` lands.
+- ✅ **Details-screen tabs** (Original/Added/Modified/Completed/Pending), built as
+  `REFACTOR_ROADMAP.md` Phase 9 #12, in two gated sub-steps:
+  1. Migrated the field-worker completion signal (Finish/Reopen buttons, Copy-ID auto-complete, home
+     summary cards, per-holding search badges) from the `reviewed` column onto the new
+     `completed_at`/`completed_by` columns — `reviewed`/`reviewed_at`/`reviewed_by` are reserved for a
+     future staff/Dashboard workflow and the Flutter app no longer reads or writes them anywhere. This
+     was a larger rename than originally scoped: `reviewed` turned out to be driving every
+     field-worker-completion surface in the app already, not just Copy-ID.
+  2. Built the actual filter UI: `ParcelStatusFilter` (`parcel_status_filter.dart`) + a chip row over
+     `DetailScreen`'s own parcel list — a holding typically has only 1–3 parcels, so this is a filter
+     over the existing on-screen list, not separate navigable tab pages, matching the "lightweight, not
+     a Dashboard replacement" philosophy already established for the home summary cards. The row only
+     shows once a holding has more than one parcel (a single-parcel holding gains nothing from
+     filtering its own one row).
 
 **Explicitly open decisions — user approved 2026-08-06, implemented one at a time, gated:**
 
@@ -365,17 +376,19 @@ off on implementing all four; each is built and gated independently before the n
   (`test/features/holdings/presentation/cubit/home_state_test.dart`, also covering the previously-
   untested `addedCount`/`reviewedCount`/`pendingReviewCount` getters).
 
-**All four explicitly-flagged open-decision items (#7, #8, #9, #13) are now resolved** — three were
-implemented as approved reversals of documented decisions; #13 turned out to be a scope clarification
-achievable without any reversal at all. flutter analyze clean, flutter test 270/270 passing.
+**All four explicitly-flagged open-decision items (#7, #8, #9, #13), plus the previously-blocked #12,
+are now resolved.** Three of the open-decision items were implemented as approved reversals of
+documented decisions; #13 turned out to be a scope clarification achievable without any reversal at
+all. #12 was unblocked once `completed_at`/`completed_by` were confirmed live and involved both a
+larger-than-expected data-model migration and the actual filter UI. **Phase 9 is complete.** flutter
+analyze clean, flutter test 279/279 passing.
 
-**Dependencies:** the "buildable now" items have none. Details-screen tabs depend on Phase 1's
-`completed_at`/`completed_by`. The four open-decision items depend on explicit user sign-off before
-they're even scheduled.
+**Dependencies:** none remaining — every item this phase tracked (#7, #8, #9, #12, #13) is done.
 
 **Complexity:** low–medium for the buildable items (mostly wiring existing, already-tested lower
-layers into new UI); details-screen tabs are medium once unblocked; the open-decision items are
-each a real scope/architecture decision, not an estimate.
+layers into new UI); #12 was medium-high once unblocked, due to the `reviewed`→`completed_at` rename
+turning out larger than scoped; the open-decision items were each a real scope/architecture decision,
+not an estimate.
 
 **Risks:** low for the buildable items. The open-decision items each carry the risk of quietly
 undoing a considered, documented trade-off if implemented without a fresh, explicit go-ahead — that is

@@ -263,7 +263,13 @@
       "section_holder_subtitle": "أهم المعلومات التي يحتاجها الفريق أثناء العمل الميداني.",
       "section_extra": "تفاصيل إضافية",
       "section_extra_subtitle": "بيانات أقل استخدامًا لكنها تبقى متاحة عند الحاجة.",
-      "reopen": "إعادة فتح"
+      "reopen": "إعادة فتح",
+      "filter_all": "الكل",
+      "filter_original": "أصلية",
+      "filter_added": "مضافة",
+      "filter_modified": "معدّلة",
+      "filter_completed": "مكتملة",
+      "filter_pending": "قيد الإنجاز"
     },
     "add": {
       "new_person_cta": "إضافة",
