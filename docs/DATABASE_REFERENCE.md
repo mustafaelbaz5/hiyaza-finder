@@ -1,8 +1,12 @@
 # HiyazaFinder — Database Reference
 
 **Status:** Frozen v1 — permanent reference for the schema: current state, evaluation, and the
-additive target design. Canonical source for applied migrations remains `supabase/migrations/`; this
-document explains what exists, why, and what's changing.
+additive target design. **Correction (confirmed against the live Supabase project, `Hiyaza` /
+`bbahuyqjptojlighriyy`):** this repo's `supabase/migrations/` folder is *not* the canonical migration
+history — it has ~19 files that don't correspond by name or version to what's actually applied (63
+migrations live, per `list_migrations`). The dashboard repo owns the real migration history; treat
+this Flutter repo's `supabase/migrations/` folder as stale/for-reference-only until reconciled, and
+consult the live schema or the dashboard repo for ground truth on anything schema-related.
 **Companions:** `SYSTEM_DESIGN.md` (how the schema is used), `REFACTOR_ROADMAP.md` (when each change
 lands).
 
@@ -195,14 +199,11 @@ Both apps generate/validate their editable-field lists from this table. A trigge
 validates incoming `payload` keys against it for the target's table, rejecting unknown keys at write
 time instead of silently dropping them.
 
-### 4.4 `added_holdings.reform_type`
+### 4.4 `added_holdings.reform_type` — **done, confirmed live**
 
-```sql
-alter table added_holdings add column reform_type text;
-```
-
-Closes the confirmed data-loss bug: field records created in reform-type cities currently lose this
-value on save.
+Confirmed via the live schema (`holdings`/`added_holdings` both carry `reform_type text`, nullable,
+column comment: "Reform type — referenced by holding_edits payload and the export pipeline but never
+backed by a column until now"). The gap described here is closed; no further action needed.
 
 ### 4.5 `city_top_holders` refresh automation
 
@@ -210,7 +211,21 @@ Move from "Dashboard must remember to call `REFRESH MATERIALIZED VIEW`" to a tri
 scheduled-job-driven refresh after import completion. Mechanism to be chosen during implementation
 (trigger on `import_batches` commit vs. a scheduled job); either closes the gap.
 
-### 4.6 `persons` table (new)
+### 4.6 `persons` table — **superseded, not built; `person_id` is the real mechanism**
+
+This section originally proposed a dedicated `persons` table (design kept below for history). That was
+never implemented. The live schema instead has `holdings.person_id` / `added_holdings.person_id` —
+confirmed via `list_tables` as a plain `uuid`, not an FK — described by its own column comment as a
+"Generated grouping id for a person's parcels — one shared id per real national_id, an independent id
+per placeholder/NULL national_id row," assigned automatically on `added_holdings` insert by a trigger
+(`assign_person_id()`). `holdings_person_idx`/`added_holdings_person_idx`-style indexes on `person_id`
+do exist live (confirmed via applied migrations `20260804222202_index_person_id` and others in that
+same date range). Treat `person_id` as the real, intentional mechanism — not a gap to close — and
+consult the live schema/dashboard-repo migrations (§6) rather than this section's original design if
+you need the exact assignment/uniqueness semantics, since this doc was not kept in sync with that
+trigger's actual behavior.
+
+<!-- Original design, not implemented — kept for history:
 
 **Why:** `person_id` today is a bare, unconstrained uuid copied client-side with no backing table and
 no consistency enforcement — two rows with the same `person_id` could disagree on `holding_id_number`
@@ -251,6 +266,8 @@ Add matching indexes for the new primary navigation query ("show all parcels for
 create index holdings_person_idx       on holdings (person_id);
 create index added_holdings_person_idx on added_holdings (person_id);
 ```
+
+-->
 
 ### 4.7 Completion state (field-worker workflow — distinct from `reviewed`)
 

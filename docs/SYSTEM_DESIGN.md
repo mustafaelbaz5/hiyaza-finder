@@ -78,6 +78,21 @@ separate code paths.
 
 ## 5. Synchronization flow
 
+**Status: superseded by the actual implementation — online-first, no outbox.** The original design
+below (§5, §5.1, §5.2) called for an offline-first local queue (`SyncOperation`/`SyncOperationHandler`/
+`SyncRunner`) as the highest-priority piece of the Flutter rebuild. That was never built, and a later
+commit explicitly removed the sync-outbox tests that had been scaffolded for it. The app's actual,
+intentional design is **online-first**: every write method on `HoldingsRepository` (`addLocalParcel`,
+`deleteLocalParcel`, `updateParcel`, `setParcelReviewed`, `bulkApplyField`, now delegating to
+`ParcelSyncService` — see `lib/features/holdings/data/services/parcel_sync_service.dart`) awaits its
+Supabase call directly and only mutates in-memory/local-cache state once the server has confirmed the
+write. A failed write throws and leaves local state untouched, for the caller to catch and surface an
+error — there is no local-first deferral, no durable queue, and no reconnect-triggered flush. This
+paragraph, not the outbox description that follows, is the current source of truth; §5.1/§5.2 are kept
+below only as a historical record of the originally-designed (and abandoned) alternative.
+
+**Original design (not implemented, kept for history):**
+
 ```
 Flutter write (edit / add / complete)
   → written to local snapshot immediately (UI updates instantly)
@@ -115,33 +130,41 @@ this ordering closes it.
 
 ## 6. Event flow
 
-One consistent shape, reused for edits, additions, and completions alike:
+**Status: partially superseded, per §5's online-first correction.** Steps 1–2 below describe the
+never-built outbox and don't reflect the actual flow. The real shape, reused for edits, additions, and
+completions alike:
 
-1. **Local optimistic event** — the write lands in local state and the UI reflects it before any
-   network round-trip.
-2. **Durable enqueue** — the write becomes a `SyncOperation`, survives app restarts, is retried until
-   it succeeds or is parked.
-3. **Server persistence** — the operation lands as a real row (`holding_edits` insert, `added_holdings`
-   insert, a completion-state update), idempotently (§9).
+1. **Server round-trip first** — `ParcelSyncService` (`lib/features/holdings/data/services/
+   parcel_sync_service.dart`) awaits the Supabase write directly; there is no local-optimistic step and
+   no durable enqueue ahead of it.
+2. **Server persistence** — the write lands as a real row (`holding_edits` insert, `added_holdings`
+   insert, a completion-state update).
+3. **Local state update** — only once the server has confirmed the write does `HoldingsRepository`
+   mutate its in-memory dataset/local cache. A failed write throws before this step runs, leaving local
+   state exactly as it was.
 4. **Trigger-driven propagation** — a DB trigger bumps `cities.data_version` (freshness signal) and,
    where applicable, writes an `audit_feed` entry (Dashboard visibility) — populated by the database,
    not application code, so it can't be bypassed by a code path that forgets to log.
-5. **Translation** — the raw Postgres row change is translated into a domain event (`ParcelChanged`,
-   `PersonCreated`, `ParcelCompleted`) in exactly one place. No feature handler ever parses a raw table
-   row directly.
-6. **Realtime broadcast** — subscribed clients receive the domain event and patch local state through
-   the same per-feature handler that applied the local optimistic event in step 1. One code path
-   handles "I made this change" and "someone else made this change" — not two.
+5. **Translation** — the raw Postgres row change is translated into a `Parcel` by `holdingRowToParcel`/
+   `addedHoldingRowToParcel` (`lib/features/cities/data/holding_row_mapper.dart`) in exactly one place.
+   No feature handler ever parses a raw table row directly.
+6. **Realtime broadcast** — subscribed clients receive the mapped `Parcel` and patch local state via
+   `ParcelChangeHandler` (`lib/features/sync/domain/parcel_change_handler.dart`) — the same interface
+   `HoldingsRepository` implements for its own local writes' bookkeeping, so "I made this change" and
+   "someone else made this change" both funnel through one contract.
 
 ---
 
 ## 7. Realtime flow
 
 Subscriptions stay scoped to the active city (correct for the offline-work model; multi-city
-simultaneous work is explicitly out of scope — see §12). The dispatch mechanism is generic: instead of
-a realtime service calling concretely into a specific feature's repository, it publishes the domain
-events from §6 step 5, and any registered feature handler can consume them. A future feature needing
-live updates registers a handler instead of the realtime service growing a new hardcoded call.
+simultaneous work is explicitly out of scope — see §12). `RealtimeSyncService`
+(`lib/features/sync/data/realtime_sync_service.dart`) depends on the `ParcelChangeHandler` interface
+rather than the concrete `HoldingsRepository`, so it isn't hardcoded to one feature's class — but this
+is currently a single interface with a single implementation/consumer, not a registry of many handlers
+keyed by event type. If a second feature needs its own realtime handling, extending this to an actual
+registry (dispatch by table/event type to whichever handler is registered) is the natural next step —
+not yet needed, per the extensibility principle's own "don't build for one consumer" rule (§3).
 
 **The one place allowed to know about every feature at once** is the composition root — the
 dependency-injection setup that wires which handler serves which operation type / domain event. This
@@ -174,14 +197,13 @@ flags it) — a conscious choice, not an oversight.
 
 ## 9. Idempotency
 
-Every write that goes through the sync outbox carries the operation's client-generated id
-(`operation_id`) through to the database (`holding_edits.operation_id`, unique). A retried flush after
-a lost server acknowledgment is `on conflict do nothing`, not a second row. This matters more than it
-would in a system without a user-facing audit trail: a phantom duplicate edit isn't just harmless
-noise once every row is a visible entry in someone's audit timeline (per the Dashboard's History &
-Activity vision) — it's a misleading one.
-
-`added_holdings.client_id` (already unique) provides the same guarantee for record creation.
+**Status: partially superseded, per §5's online-first correction** — there is no sync outbox/flush to
+retry, so the "retried flush" scenario below doesn't arise the way originally described. What's
+actually live: `holding_edits.client_op_id` (confirmed via the live schema, not `operation_id` as
+originally named here) carries a client-generated id through to the database, and
+`added_holdings.client_id` (unique) provides the same guarantee for record creation — both still
+useful for detecting an accidental double-submit from the UI layer itself, just not for a queue-replay
+scenario that no longer exists.
 
 ---
 
@@ -200,27 +222,35 @@ Two distinct, permanent, non-conflicting states — not one ambiguous flag:
 Open ──(copy Parcel ID)──▶ Completed ──(manual reopen)──▶ Open
 ```
 
-Entering `Completed` goes through the same sync-outbox path as any other write (§5) — it must survive
-bad connectivity and propagate via Realtime, per the business vision's requirement that other users
-immediately see a parcel has been processed. Modeled as its own domain service in the Flutter app, not
-logic embedded in a widget or smeared across a search cubit.
+Entering `Completed` goes through the same online-first write path as any other write (§5,
+`ParcelSyncService.syncMarkReviewed`) — the app awaits server confirmation before reflecting it
+locally, and it propagates to other devices via Realtime (§7). "Survive bad connectivity" here means
+"the write throws and the UI shows an error if offline," not queued-for-later-retry, since there is no
+outbox.
 
 ---
 
 ## 11. Add-person / add-parcel workflow
 
-One atomic operation, one `SyncOperation`, one local-state update — never two steps that could
-partially fail and leave an orphaned person or parcel. Once synced, an added record is addressable
-identically to an imported one everywhere in the system.
+**Status: `persons` table premise superseded.** This section originally called for a dedicated
+`persons` table (see `DATABASE_REFERENCE.md` §4.6, similarly corrected). That was never built; the
+live mechanism is `holdings.person_id`/`added_holdings.person_id` — a generated, trigger-maintained
+grouping id (see the live schema's own column comment: "Generated grouping id for a person's parcels
+— one shared id per real national_id, an independent id per placeholder/NULL national_id row"), backed
+app-side by `Parcel.personId`/`Parcel.pendingGroupId` (`lib/features/holdings/domain/entities/
+parcel.dart`) rather than a foreign key into a `persons` table. Treat this as the real mechanism, not a
+gap to close.
 
-**Duplicate-person prevention, two layers, because the honest answer differs by data availability:**
-- Where `national_id` is captured, a partial unique index (`persons(city_id, national_id) where
-  national_id is not null`) makes an *exact* duplicate structurally impossible.
-- Where it isn't (a brand-new person, offline, two devices, no shared ID yet), structural prevention
-  across two devices that don't know about each other isn't possible. Instead: a server-side fuzzy
-  name-match check at sync time flags — never blocks — a probable duplicate, surfaced through the same
-  review-queue pattern the Dashboard already has for `added_holdings`. Detection, not silent
-  prevention, is the honest design for the offline case.
+One atomic operation, one server round-trip (`ParcelSyncService.syncAddParcel`), one local-state
+update — never two steps that could partially fail and leave an orphaned person or parcel. Once
+synced, an added record is addressable identically to an imported one everywhere in the system.
+
+**Duplicate-person prevention:** unlike the originally-planned partial unique index on a `persons`
+table, duplicate prevention today is whatever the live `person_id`-assignment trigger
+(`assign_person_id()`, confirmed on `added_holdings`) does at insert time — this doc doesn't have
+independent confirmation of its exact matching behavior; check the live migration/trigger definition
+(dashboard-repo-owned, per `DATABASE_REFERENCE.md`'s corrected §6) rather than assuming the
+national-id-unique-index design below is what's actually enforced.
 
 **Deletion:** soft-delete (`deleted_at`/`deleted_by` on `added_holdings`). The field worker's
 experience is identical to a hard delete — the parcel disappears from every view immediately — but the
