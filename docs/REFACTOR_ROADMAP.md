@@ -225,6 +225,107 @@ explicitly gated on a verification/sign-off step, not defaulted to a blind rollo
 
 ---
 
+## Phase 7 — Deferred UI/UX & workflow requirements (Flutter)
+
+**Status (2026-08-06):** added from a full planning audit (24 requirement categories checked against
+code and docs; see the audit's coverage matrix, retained in the session's plan history) that verified
+which of the user's discussed requirements were actually captured here versus only ever discussed in
+conversation. This phase exists so nothing stays chat-only.
+
+**Objective:** close the confirmed, real UI/UX and workflow gaps found by the audit — split into items
+that are buildable now, one item blocked on Phase 1 DB work, and four items that are explicitly **not
+yet approved for implementation** pending the user's sign-off, because building them would reverse an
+already-documented architectural decision.
+
+**Buildable now (unblocked):**
+
+- **Review-workflow redesign — Copy ID becomes the review action.** Today `parcel_detail_card.dart`
+  treats Finish, Copy ID, and Copy All as three independent actions with no code path linking copying
+  to `reviewed`. New flow: Copy ID validates required fields → copies → calls the existing
+  `ParcelSyncService.syncMarkReviewed(reviewed: true)` path (already implemented, already covered by
+  `test/features/holdings/data/parcel_sync_service_test.dart`). Built against the existing
+  `reviewed`/`reviewedAt`/`reviewedBy` fields — **not** blocked on `completed_at`. Migrating this
+  workflow's semantics onto `completed_at` once that column ships live (a more correct
+  field-worker-vs-office distinction than reusing `reviewed`) is a documented follow-up, not a
+  prerequisite.
+- **Snackbar strategy.** 29 call sites across 10 files today (heaviest: `detail_screen.dart`, 10), no
+  stacking-prevention or priority system. Add a small shared snackbar-priority helper so a new message
+  doesn't stack behind/interrupt an in-flight one.
+- **Newly added parcels sort first.** No recency sort/timestamp comparator exists anywhere in
+  search/query services today; add one so field-created parcels surface at the top.
+- **Holder-status UI badge.** `isInheritance`/`isDelegate` are already real, editable, DB-persisted
+  `Parcel` fields (confirmed, not clipboard-only) — the only real gap is a visible status badge in
+  `parcel_detail_header.dart`/`status_badge.dart`, currently absent. Small, scoped UI addition, not a
+  data-model change.
+- **Home screen summary cards.** Today only holding count + basin + staleness are shown; add
+  per-status breakdown cards (pending/modified/added counts) from data already available locally.
+
+**Blocked on Phase 1 DB work (`completed_at`/`completed_by`, not yet applied live):**
+
+- **Details-screen tabs** (Original/Added/Modified/Reviewed/Pending). `detail_screen.dart` has zero tab
+  infrastructure today. Needs richer per-parcel status than the current single `reviewed` boolean
+  provides — cannot be meaningfully built until `completed_at` lands.
+
+**Explicitly open decisions — flagged, NOT yet approved for implementation:**
+
+Each of these was raised during the planning audit as a "new-sounding" requirement that, if built,
+would reverse a decision this project already made and documented. They are recorded here so the
+tension stays visible; none should be implemented without the user separately approving the reversal.
+
+- **Search: cache-first + live DB + merge.** Would reverse the fully local-first search model
+  `SYSTEM_DESIGN.md` §13 is built around (in-memory city snapshot, zero remote calls, the basis of its
+  whole scalability argument). Confirmed today: search is 100% local.
+- **"No manual refresh."** Would mean removing the manual pull-to-refresh/refresh-icon actions in
+  `home_screen.dart`/`detail_screen.dart`, which directly use `HoldingsRepository.syncNow()` — a pattern
+  Phase 2's own realtime-polish work just relied on. Conflicts with the current, intentional design.
+- **Background operations (continue after leaving screen, retry, queue).** This is the offline sync
+  outbox model that `SYSTEM_DESIGN.md` §5 already documents as deliberately abandoned this project in
+  favor of online-first (every write awaits its Supabase call synchronously; confirmed zero
+  fire-and-forget writes exist today). Re-introducing it reverses that decision.
+- **In-app activity center per city.** Larger in scope than `PROJECT_OBJECTIVES.md` §4's explicit
+  "lightweight... not a Dashboard replacement" boundary for in-app stats.
+
+**Dependencies:** the "buildable now" items have none. Details-screen tabs depend on Phase 1's
+`completed_at`/`completed_by`. The four open-decision items depend on explicit user sign-off before
+they're even scheduled.
+
+**Complexity:** low–medium for the buildable items (mostly wiring existing, already-tested lower
+layers into new UI); details-screen tabs are medium once unblocked; the open-decision items are
+each a real scope/architecture decision, not an estimate.
+
+**Risks:** low for the buildable items. The open-decision items each carry the risk of quietly
+undoing a considered, documented trade-off if implemented without a fresh, explicit go-ahead — that is
+exactly why they're gated here instead of built.
+
+---
+
+## Phase 8 — Project-wide feature-parity pass
+
+**Status (2026-08-06):** added from the same planning audit as Phase 7.
+
+**Objective:** Phases 1–5/7 applied a real quality bar (architecture, localization, tests, UI
+consistency) to `holdings` specifically. No phase has yet applied that same bar project-wide to the
+features that went untouched this session: `auth`, `cities`, `about`, `sync`.
+
+**Scope:**
+- Resolve the `logic/`+`ui/` (holdings) vs. `presentation/` (every other feature) folder-naming
+  drift — confirmed real during the audit, not previously flagged anywhere. Pick one convention and
+  apply it consistently.
+- Remove `lib/features/sync/presentation/` — confirmed to be a completely empty directory (dead
+  structure, zero files).
+- Audit `auth`/`cities`/`about`/`sync` for the same god-class/localization/test-coverage gaps Phases
+  1–5 already found and fixed in `holdings`, rather than assuming those features are fine because they
+  weren't in scope yet.
+
+**Dependencies:** none — can start independently of Phase 7.
+
+**Complexity:** low–medium — mostly consistency work, not new features.
+
+**Risks:** low — these are the smaller, less-trafficked features; regression surface is narrower than
+`holdings`.
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

@@ -95,6 +95,17 @@ from drifting apart silently (`SYSTEM_DESIGN.md` §8):
 | Holding-number immutability post-import | `holding_id_number` | Field rendered read-only | No write path exists outside Dashboard-assigned promotion |
 | Editable-field set | `holding_edits.payload` keys | Form only exposes known-editable fields | `editable_fields` table + write-time trigger validation (`DATABASE_REFERENCE.md` §4.3) |
 
+### 6.2 Required-field validation utility — decision needed
+
+**Status (2026-08-06, found during planning audit):** `lib/core/utils/validators.dart` exists but is
+dead code — zero call sites. Field-level required-value checks in `add_record_screen.dart` are done ad
+hoc per-field instead of through any shared utility. Neither of the two coherent states ("we have a
+reusable validators utility and use it everywhere" or "validation intentionally lives per-screen, no
+shared utility") is actually true today — this is an unresolved middle state, not a considered choice.
+**Decision needed:** either wire `validators.dart` into a real reusable required-field system (tracked
+under `REFACTOR_ROADMAP.md` Phase 7's validation item), or delete the dead file and document per-screen
+validation as the intentional pattern. Not resolved as of this writing.
+
 ## 7. Current limitations (at the time this document was written)
 
 `reform_type` missing from `added_holdings`; soft FK ambiguity in `holding_edits.holding_id`;

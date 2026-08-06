@@ -1160,6 +1160,18 @@ class ClipboardFormatter {
     - Once deleted, cannot recover (except via DB backup).
     - Workaround: don't offer delete UI; only dashboard can remove via data correction.
 
+21. **`holdings` feature uses `logic/`+`ui/`, every other feature uses `presentation/`** (found
+    2026-08-06 planning audit)
+    - `holdings` is the only feature split into `data/logic/ui` instead of `data/domain/presentation`.
+    - No functional impact, but breaks the "one convention" assumption the rest of this document (and
+      `REFACTOR_ROADMAP.md` Phase 8) makes.
+    - Tracked in `REFACTOR_ROADMAP.md` Phase 8 (project-wide feature-parity pass).
+
+22. **`lib/features/sync/presentation/` is a completely empty directory** (found 2026-08-06 planning
+    audit)
+    - Zero files inside it; dead structure left over from an earlier design, not cleaned up.
+    - Tracked in `REFACTOR_ROADMAP.md` Phase 8.
+
 ---
 
 ## 15. Code Smells & Refactor Opportunities
@@ -1255,6 +1267,15 @@ class ClipboardFormatter {
 20. **Color Palette Not Themeable**
    - Colors hardcoded per light/dark theme; no color variables or tokens.
    - Refactor: extract to theme.colorScheme or Material Design 3 tokens.
+
+21. **`holdings`'s `logic/`+`ui/` split vs. every other feature's `presentation/`**
+   - Real, confirmed naming drift (2026-08-06 audit), not just a stylistic nit — anyone reading this
+     doc's §1 tree literally alongside the real `holdings` folder will find it doesn't match.
+   - Refactor: pick one convention project-wide; tracked in `REFACTOR_ROADMAP.md` Phase 8.
+
+22. **Empty `lib/features/sync/presentation/` directory**
+   - Zero files; should be deleted outright, not merely renamed.
+   - Tracked in `REFACTOR_ROADMAP.md` Phase 8.
 
 ---
 
