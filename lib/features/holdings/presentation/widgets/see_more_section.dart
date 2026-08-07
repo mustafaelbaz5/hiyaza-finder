@@ -279,12 +279,14 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       label: 'holdings.fields.growth_stages'.tr(),
                       value: widget.parcel.growthStages,
                       isModified: _isModified((final p) => p.growthStages),
-                      onEdit: () => _editText(
+                      onEdit: () => _editDropdown(
                         context,
                         title: 'holdings.fields.growth_stages'.tr(),
-                        initialValue: widget.parcel.growthStages ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          growthStages: v.isEmpty ? null : v,
+                        initialValue: widget.parcel.growthStages,
+                        options: Parcel.growthStageOptions,
+                        allowClear: false,
+                        apply: (final String? v) => widget.parcel.copyWith(
+                          growthStages: v ?? Parcel.defaultGrowthStage,
                         ),
                       ),
                     ),

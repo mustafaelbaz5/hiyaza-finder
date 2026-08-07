@@ -463,24 +463,31 @@ widget test directly exercised the removed `onFinish` callback).
 | 5 | Spacing/grouping/readability polish | ⚠️ PARTIAL | Rolled into #2/#8's reorganization pass rather than tracked separately. |
 | 6 | Faster data entry, fewer taps | ⚠️ PARTIAL | Rolled into #1 (removing the redundant area_sqm tap target) and #3 (removing the now-redundant Finish tap once Copy ID covers it). |
 | 7 | Floating Add Parcel action | ❌ MISSING | `DetailScreen` uses an inline `CustomTextButton.outlined` in the header (`detail_screen_header.dart`), not a FAB. `HomeScreen` already has a `FloatingActionButton.extended` precedent to follow (`home_screen.dart:392`). |
-| 9 | Growth Stage field | ⚠️ PARTIAL | Real end-to-end field already exists (`Parcel.growthStages`, both DB tables, `SeeMoreSection` UI) but as unconstrained free text with no defined value list, unlike `cropTypeOptions`/`usageTypeOptions` which have real option enums in `parcel.dart`. No documented business list of growth-stage values exists yet — implemented as a picker-ready free-text field until one is defined, architecture kept extensible (plain `String?`, same pattern as crop type's "specify other" fallback).
+| 9 | Growth Stage field | ✅ DONE | Real end-to-end field already existed (`Parcel.growthStages`, both DB tables, `SeeMoreSection`/`AddRecordScreen` UI) but as unconstrained free text. User supplied the real business value list — converted to a real option enum (`Parcel.growthStageOptions`) matching the `usageTypeOptions`/`cropTypeOptions` pattern.
 
-**Scope for this phase:**
-- **#1** Remove `area_sqm`'s tap-to-edit affordance in `parcel_detail_card.dart` — display-only, driven purely by `AreaCalculator.totalSqm`.
-- **#3** Remove the standalone Finish button from `ParcelDetailTopRow`/`DetailScreen`; Copy ID remains the sole completion trigger. Reopen stays (still needed to undo a completion — no other UI path does that).
-- **#4** Restyle Copy ID as the visually primary action (filled, higher-contrast) on the card; Delete/Reopen/Copy All step down to lighter/outlined treatments.
-- **#2/#5/#8** Light reordering pass inside `ResponsiveFieldsWrap`/`SeeMoreSection` — most-referenced-in-the-field values (holding number, holder name, national ID, area) first; keep the existing primary/secondary split, just re-rank within each.
-- **#7** Convert `DetailScreen`'s "Add Parcel" header button to a `FloatingActionButton`, matching `HomeScreen`'s existing FAB pattern.
-- **#9** No DB/data change needed (field already real) — leave as free text; not building a picker without a defined value list (would need to invent business values not specified anywhere).
-- **#6** No dedicated work beyond the above — already addressed by #1/#3 reducing taps.
+**Scope for this phase (all done, 2026-08-07):**
+- **#1** ✅ Removed `area_sqm`'s tap-to-edit affordance in `parcel_detail_card.dart` — display-only, driven purely by `AreaCalculator.totalSqm`.
+- **#3** ✅ Removed the standalone Finish button from `ParcelDetailTopRow`/`DetailScreen`; Copy ID remains the sole completion trigger. Reopen stays (still needed to undo a completion — no other UI path does that).
+- **#4** ✅ Restyled Copy ID (`ParcelIdChip`) as the visually primary action (filled, high-contrast green); `CopyAllButton` stepped down to an outlined secondary style so it no longer competes with it.
+- **#2/#8** ✅ Reordering pass inside `ResponsiveFieldsWrap` — holder name, national ID, and area now lead; crop type moved up; association/basin/land-number/notes moved later. Existing primary (`ResponsiveFieldsWrap`) vs. secondary (`SeeMoreSection`) split kept as-is.
+- **#5** ✅ `ResponsiveFieldsWrap` breakpoints tightened (1→2 columns on phones, 2→3 on tablets, 3→4 on desktop) — most field values here are short, so the previous single-phone-column layout wasted horizontal space and forced more scrolling than the content needed. `SeeMoreSection`'s collapse/expand affordance reviewed, already compact — no change needed there.
+- **#6** Reviewed `add_record_screen.dart` end-to-end: it already reuses the exact same field-edit dialogs as the detail card, has a single always-visible required-field gate with inline per-field gap messages, and needed no structural tap-reduction — the real friction reduction for data entry came from #1 (one fewer dead tap target) and #3 (one fewer redundant completion action).
+- **#7** ✅ Converted `DetailScreen`'s "Add Parcel" header button to a `FloatingActionButton.extended`, matching `HomeScreen`'s existing add-person FAB pattern exactly (`PositionedDirectional` in a `Stack`, not `Scaffold.floatingActionButton`).
+- **#9** ✅ Added `Parcel.growthStageOptions` (مرحله الانبات / مرحله النمو الخضري / مرحله الإزهار واثمار) and `Parcel.defaultGrowthStage` (مرحله النمو الخضري) — mirrors `usageType`'s constructor-default + dropdown-picker pattern exactly. Wired through `copyWith`, `fromJson`/`toJson`, `fromEditableJson`/`toEditableJson`, both `holding_row_mapper.dart` mappers (default applied when a live DB row predates this field), and both UI edit sites (`see_more_section.dart`, `add_record_screen.dart`) — `_editText` replaced with `_editDropdown`, same call shape as `usage_type`'s row.
 
-**Dependencies:** none — purely Flutter UI, no schema change needed (all backing fields already live).
+**Dependencies:** none — purely Flutter UI + one enum addition, no schema change needed (the
+`growth_stages` column already exists live; this phase only constrains its allowed values client-side).
 
 **Complexity:** low–medium — mostly widget-level changes to already-existing, already-tested pieces
-(`parcel_detail_card.dart`, `parcel_detail_header.dart`, `detail_screen.dart`, `detail_screen_header.dart`).
+(`parcel_detail_card.dart`, `parcel_detail_header.dart`, `detail_screen.dart`, `detail_screen_header.dart`,
+`parcel.dart`, `see_more_section.dart`, `add_record_screen.dart`, `holding_row_mapper.dart`).
 
-**Risks:** low — no data-model change, so it's UI-reversible if a change reads wrong once used in the
-field.
+**Risks:** low — no data-model/schema change; the growth-stage constraint is client-side only (an
+existing free-text value from before this change, or a Dashboard-side edit outside this enum, still
+round-trips through `Parcel` unchanged — it just can't be re-selected via the Flutter picker unless it
+matches one of the three options, same tradeoff `usageType`/`creditType` already accept).
+
+flutter analyze: clean. flutter test: 279/279 passing (no test count change).
 
 ---
 

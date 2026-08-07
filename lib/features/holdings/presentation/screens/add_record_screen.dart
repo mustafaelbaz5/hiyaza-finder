@@ -517,12 +517,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             value: _parcel.growthStages,
                             isModified:
                                 _isModified((final p) => p.growthStages),
-                            onEdit: () => _editText(
+                            onEdit: () => _editDropdown(
                               context,
                               title: 'holdings.fields.growth_stages'.tr(),
-                              initialValue: _parcel.growthStages ?? '',
-                              apply: (final String v) => _parcel.copyWith(
-                                growthStages: v.isEmpty ? null : v,
+                              initialValue: _parcel.growthStages,
+                              options: Parcel.growthStageOptions,
+                              allowClear: false,
+                              apply: (final String? v) => _parcel.copyWith(
+                                growthStages: v ?? Parcel.defaultGrowthStage,
                               ),
                             ),
                           ),

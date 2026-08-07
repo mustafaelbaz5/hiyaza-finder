@@ -42,7 +42,7 @@ class Parcel {
     this.isFieldAdded = false,
     this.holderNameFarmerCard,
     this.ownerNameFarmerCard,
-    this.growthStages,
+    this.growthStages = defaultGrowthStage,
   });
 
   /// Stable identity — for an imported parcel this is `holdings.id` as
@@ -206,6 +206,7 @@ class Parcel {
   static const String defaultCreditType = 'ملك';
   static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';
+  static const String defaultGrowthStage = 'مرحله النمو الخضري';
 
   static const List<String> creditTypeOptions = <String>['ملك', 'أوقاف'];
 
@@ -234,6 +235,12 @@ class Parcel {
     'عنب',
     'باذنجان',
     'اخرى',
+  ];
+
+  static const List<String> growthStageOptions = <String>[
+    'مرحله الانبات',
+    'مرحله النمو الخضري',
+    'مرحله الإزهار واثمار',
   ];
 
   static const List<String> notesOptions = <String>[
@@ -432,7 +439,7 @@ class Parcel {
       isFieldAdded: original.isFieldAdded,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
-      growthStages: json['growthStages'] as String?,
+      growthStages: json['growthStages'] as String? ?? defaultGrowthStage,
     );
   }
 
@@ -529,7 +536,7 @@ class Parcel {
       isFieldAdded: json['isFieldAdded'] as bool? ?? false,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
-      growthStages: json['growthStages'] as String?,
+      growthStages: json['growthStages'] as String? ?? defaultGrowthStage,
     );
   }
 }
