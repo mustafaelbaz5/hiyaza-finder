@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
-/// A secondary, outlined pill for the card's copy-all action — deliberately
-/// lighter-weight than [ParcelIdChip] (`REFACTOR_ROADMAP.md` Phase 9 #4):
-/// Copy ID is the primary, most-used action, this is an occasional one.
+/// A small, compact text action for the card's copy-all action — deliberately
+/// lighter-weight and not full-width (`REFACTOR_ROADMAP.md` Phase 9 #4,
+/// Phase 10 §7): Copy ID is the primary, most-used action and the app is
+/// primarily a data-entry tool, not a copy/export one — this stays a
+/// low-emphasis, occasional action that doesn't compete for attention or
+/// screen space.
 class CopyAllButton extends StatelessWidget {
   const CopyAllButton({super.key, required this.onTap});
 
@@ -14,34 +17,32 @@ class CopyAllButton extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final TextStyle textStyle = AppTextStyles.font14SemiBold.copyWith(
+    final TextStyle textStyle = AppTextStyles.font12Medium.copyWith(
       color: colors.textSecondary,
     );
 
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: colors.border),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.copy_all_rounded,
-                size: 18,
-                color: colors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text('holdings.detail.copy_all'.tr(), style: textStyle),
-            ],
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.copy_all_rounded,
+                  size: 14,
+                  color: colors.textSecondary,
+                ),
+                const SizedBox(width: 6),
+                Text('holdings.detail.copy_all'.tr(), style: textStyle),
+              ],
+            ),
           ),
         ),
       ),

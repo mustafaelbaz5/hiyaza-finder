@@ -476,43 +476,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             ),
                           ),
                           FieldRow(
-                            label:
-                                'holdings.fields.holder_name_farmer_card'.tr(),
-                            value: _parcel.holderNameFarmerCard,
-                            isModified: _isModified(
-                              (final p) => p.holderNameFarmerCard,
-                            ),
-                            onEdit: () => _editText(
-                              context,
-                              title:
-                                  'holdings.fields.holder_name_farmer_card'
-                                      .tr(),
-                              initialValue:
-                                  _parcel.holderNameFarmerCard ?? '',
-                              apply: (final String v) => _parcel.copyWith(
-                                holderNameFarmerCard: v.isEmpty ? null : v,
-                              ),
-                            ),
-                          ),
-                          FieldRow(
-                            label:
-                                'holdings.fields.owner_name_farmer_card'.tr(),
-                            value: _parcel.ownerNameFarmerCard,
-                            isModified: _isModified(
-                              (final p) => p.ownerNameFarmerCard,
-                            ),
-                            onEdit: () => _editText(
-                              context,
-                              title:
-                                  'holdings.fields.owner_name_farmer_card'
-                                      .tr(),
-                              initialValue: _parcel.ownerNameFarmerCard ?? '',
-                              apply: (final String v) => _parcel.copyWith(
-                                ownerNameFarmerCard: v.isEmpty ? null : v,
-                              ),
-                            ),
-                          ),
-                          FieldRow(
                             label: 'holdings.fields.growth_stages'.tr(),
                             value: _parcel.growthStages,
                             isModified:

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/responsive_fields_wrap.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/see_more_section.dart';
 
 import '../../../../core/di/dependency_injection.dart';
@@ -61,50 +60,38 @@ class ParcelDetailCard extends StatelessWidget {
     return FieldChangeTracker.isModified(current(parcel), current(original));
   }
 
+  String? _prefixed(final String? prefix, final String? name) {
+    if (name == null || name.isEmpty) return name;
+    return prefix == null ? name : '$prefix $name';
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final bool isAdded =
         parcel.isFieldAdded || parcel.sourceAddedHoldingId != null || isNew;
     final bool isCompleted = parcel.completedAt != null;
-    return Container(
-      padding: EdgeInsets.all(rw(12)),
-      decoration: BoxDecoration(
-        color: isCompleted
-            ? colors.surface.withValues(alpha: 0.76)
-            : colors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isCompleted
-              ? AppColors.green200.withValues(alpha: 0.28)
-              : isAdded
-                  ? AppColors.blue200.withValues(alpha: 0.35)
-                  : colors.border,
-          width: isAdded || isCompleted ? 1.2 : 1,
-        ),
-        boxShadow: <BoxShadow>[
-          if (isCompleted)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-        ],
-      ),
-      child: Opacity(
-        opacity: isCompleted ? 0.68 : 1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ParcelDetailTopRow(
-              isAdded: isAdded,
-              isReviewed: isCompleted,
-              onReopen: onReopen,
-              onDelete: onDelete,
-              onDeleteConfirmed: () => _confirmDelete(context),
-              isInheritance: parcel.isInheritance,
-              isDelegate: parcel.isDelegate,
-            ),
+    // Completed parcels are locked (`REFACTOR_ROADMAP.md` Phase 10 §9): a
+    // stronger, darker treatment than the old subtle-fade look, and fields
+    // stop being directly tappable/editable — إعادة الفتح (top row, kept
+    // OUTSIDE the ignore-pointer scope below) is the only way back into an
+    // editable state, communicating that reopening is a deliberate,
+    // required step rather than something a stray tap on a field could
+    // bypass.
+    final Widget topRow = ParcelDetailTopRow(
+      isAdded: isAdded,
+      isReviewed: isCompleted,
+      onReopen: onReopen,
+      onDelete: onDelete,
+      onDeleteConfirmed: () => _confirmDelete(context),
+      isInheritance: parcel.isInheritance,
+      isDelegate: parcel.isDelegate,
+    );
+    final Widget body = Opacity(
+      opacity: isCompleted ? 0.55 : 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
             if (isAdded || isCompleted) verticalSpacing(8),
             if (isAdded)
               ParcelDetailInfoBanner(
@@ -143,126 +130,163 @@ class ParcelDetailCard extends StatelessWidget {
             CopyAllButton(onTap: () => _copyAll(context)),
             verticalSpacing(12),
             verticalSpacing(8),
-            ResponsiveFieldsWrap(
+            // Row 1: رقم الحيازة + عدد القطع share one row (`REFACTOR_ROADMAP.md`
+            // Phase 10 §4) — every other primary field below gets its own
+            // full-width row instead of a multi-column grid, since these are
+            // the values field workers read/edit most and horizontal
+            // compression made them harder to scan and tap accurately.
+            Row(
               children: [
-                FieldRow(
-                  label: 'holdings.detail.holding_id'.tr(),
-                  value: parcel.isHoldingIdPending
-                      ? 'holdings.detail.holding_id_pending'.tr()
-                      : parcel.holdingId,
-                  isModified: _isModified((final p) => p.holdingId),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.detail.holding_id'.tr(),
-                    initialValue:
-                        parcel.isHoldingIdPending ? '' : parcel.holdingId,
-                    apply: (final String v) => parcel.copyWith(holdingId: v),
+                Expanded(
+                  flex: parcel.holdingsCount != null ? 2 : 1,
+                  child: FieldRow(
+                    label: 'holdings.detail.holding_id'.tr(),
+                    value: parcel.isHoldingIdPending
+                        ? 'holdings.detail.holding_id_pending'.tr()
+                        : parcel.holdingId,
+                    isModified: _isModified((final p) => p.holdingId),
+                    onEdit: () => _editText(
+                      context,
+                      title: 'holdings.detail.holding_id'.tr(),
+                      initialValue:
+                          parcel.isHoldingIdPending ? '' : parcel.holdingId,
+                      apply: (final String v) =>
+                          parcel.copyWith(holdingId: v),
+                    ),
                   ),
                 ),
-                FieldRow(
-                  label: 'holdings.fields.holder_name'.tr(),
-                  value: parcel.holderName,
-                  isModified: _isModified((final p) => p.holderName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.holder_name'.tr(),
-                    initialValue: parcel.holderName ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(holderName: v.isEmpty ? null : v),
+                if (parcel.holdingsCount != null) ...[
+                  horizontalSpacing(8),
+                  Expanded(
+                    child: FieldRow(
+                      label: 'holdings.detail.holdings_count'.tr(),
+                      value: parcel.holdingsCount.toString(),
+                    ),
                   ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.national_id'.tr(),
-                  value: parcel.nationalId,
-                  isModified: _isModified((final p) => p.nationalId),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.national_id'.tr(),
-                    initialValue: parcel.nationalId ?? '',
-                    keyboardType: TextInputType.number,
-                    apply: (final String v) =>
-                        parcel.copyWith(nationalId: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.area'.tr(),
-                  value: _formatter.areaFraction(parcel),
-                  isModified: _isModified((final p) => p.feddan) ||
-                      _isModified((final p) => p.qirat) ||
-                      _isModified((final p) => p.sahm),
-                  onEdit: () => _editArea(context),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.area_sqm'.tr(),
-                  value: _formatter.formatNumber(parcel.totalSqm),
-                  isModified: _isModified((final p) => p.totalSqm),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.crop_type'.tr(),
-                  value: parcel.cropType,
-                  isModified: _isModified((final p) => p.cropType),
-                  onEdit: () => _editCropType(context),
-                ),
-                if (parcel.holdingsCount != null)
-                  FieldRow(
-                    label: 'holdings.detail.holdings_count'.tr(),
-                    value: parcel.holdingsCount.toString(),
-                  ),
-                FieldRow(
-                  label: 'holdings.fields.owner_name'.tr(),
-                  value: _formatter.effectiveOwnerName(parcel),
-                  isModified: _isModified((final p) => p.ownerName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.owner_name'.tr(),
-                    initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(ownerName: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.association_name'.tr(),
-                  value: parcel.associationName,
-                  isModified: _isModified((final p) => p.associationName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.association_name'.tr(),
-                    initialValue: parcel.associationName ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(associationName: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.basin_name'.tr(),
-                  value: parcel.basinName,
-                  isModified: _isModified((final p) => p.basinName),
-                  onEdit: () => _editBasin(context),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.land_number'.tr(),
-                  value: parcel.landNumber,
-                  isModified: _isModified((final p) => p.landNumber),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.fields.land_number'.tr(),
-                    initialValue: parcel.landNumber ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(landNumber: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'holdings.fields.notes'.tr(),
-                  value: parcel.notes,
-                  isModified: _isModified((final p) => p.notes),
-                  onEdit: () => _editDropdown(
-                    context,
-                    title: 'holdings.fields.notes'.tr(),
-                    initialValue: parcel.notes,
-                    options: Parcel.notesOptions,
-                    apply: (final String? v) => parcel.copyWith(notes: v),
-                  ),
-                ),
+                ],
               ],
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.owner_name'.tr(),
+              // وراثة/مفوض prefix shown here matches `ClipboardFormatter`'s
+              // exact rule (`REFACTOR_ROADMAP.md` Phase 10 §6) — display
+              // only, the edit dialog below still opens with the raw name.
+              value: _prefixed(
+                _formatter.ownerNamePrefix(parcel),
+                _formatter.effectiveOwnerName(parcel),
+              ),
+              isModified: _isModified((final p) => p.ownerName),
+              onEdit: () => _editText(
+                context,
+                title: 'holdings.fields.owner_name'.tr(),
+                initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
+                apply: (final String v) =>
+                    parcel.copyWith(ownerName: v.isEmpty ? null : v),
+              ),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.holder_name'.tr(),
+              value: _prefixed(
+                _formatter.holderNamePrefix(parcel),
+                parcel.holderName,
+              ),
+              isModified: _isModified((final p) => p.holderName),
+              onEdit: () => _editText(
+                context,
+                title: 'holdings.fields.holder_name'.tr(),
+                initialValue: parcel.holderName ?? '',
+                apply: (final String v) =>
+                    parcel.copyWith(holderName: v.isEmpty ? null : v),
+              ),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.national_id'.tr(),
+              value: parcel.nationalId,
+              isModified: _isModified((final p) => p.nationalId),
+              onEdit: () => _editText(
+                context,
+                title: 'holdings.fields.national_id'.tr(),
+                initialValue: parcel.nationalId ?? '',
+                keyboardType: TextInputType.number,
+                apply: (final String v) =>
+                    parcel.copyWith(nationalId: v.isEmpty ? null : v),
+              ),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.basin_name'.tr(),
+              value: parcel.basinName,
+              isModified: _isModified((final p) => p.basinName),
+              onEdit: () => _editBasin(context),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.area'.tr(),
+              value: _formatter.areaFraction(parcel),
+              isModified: _isModified((final p) => p.feddan) ||
+                  _isModified((final p) => p.qirat) ||
+                  _isModified((final p) => p.sahm),
+              onEdit: () => _editArea(context),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.area_sqm'.tr(),
+              value: _formatter.formatNumber(parcel.totalSqm),
+              isModified: _isModified((final p) => p.totalSqm),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.land_number'.tr(),
+              value: parcel.landNumber,
+              isModified: _isModified((final p) => p.landNumber),
+              onEdit: () => _editText(
+                context,
+                title: 'holdings.fields.land_number'.tr(),
+                initialValue: parcel.landNumber ?? '',
+                apply: (final String v) =>
+                    parcel.copyWith(landNumber: v.isEmpty ? null : v),
+              ),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.crop_type'.tr(),
+              value: parcel.cropType,
+              isModified: _isModified((final p) => p.cropType),
+              onEdit: () => _editCropType(context),
+            ),
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.association_name'.tr(),
+              value: parcel.associationName,
+              isModified: _isModified((final p) => p.associationName),
+              onEdit: () => _editText(
+                context,
+                title: 'holdings.fields.association_name'.tr(),
+                initialValue: parcel.associationName ?? '',
+                apply: (final String v) =>
+                    parcel.copyWith(associationName: v.isEmpty ? null : v),
+              ),
+            ),
+            verticalSpacing(8),
+            // Single-line truncated row rather than a taller free-form note
+            // block (`REFACTOR_ROADMAP.md` Phase 10 §10) — notes is already
+            // a fixed-option dropdown (`Parcel.notesOptions`), so it never
+            // needs to show more than one line of text at a time; the full
+            // value is always reachable via the edit dialog.
+            FieldRow(
+              label: 'holdings.fields.notes'.tr(),
+              value: parcel.notes,
+              isModified: _isModified((final p) => p.notes),
+              onEdit: () => _editDropdown(
+                context,
+                title: 'holdings.fields.notes'.tr(),
+                initialValue: parcel.notes,
+                options: Parcel.notesOptions,
+                apply: (final String? v) => parcel.copyWith(notes: v),
+              ),
             ),
             verticalSpacing(12),
             verticalSpacing(8),
@@ -273,8 +297,38 @@ class ParcelDetailCard extends StatelessWidget {
               hideCreditType: hideCreditType,
               associationType: associationType,
             ),
-          ],
+        ],
+      ),
+    );
+
+    return Container(
+      padding: EdgeInsets.all(rw(12)),
+      decoration: BoxDecoration(
+        color: isCompleted
+            ? colors.textPrimary.withValues(alpha: 0.05)
+            : colors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isCompleted
+              ? colors.textSecondary.withValues(alpha: 0.4)
+              : isAdded
+                  ? AppColors.blue200.withValues(alpha: 0.35)
+                  : colors.border,
+          width: isAdded || isCompleted ? 1.2 : 1,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          topRow,
+          // Fields become non-interactive once completed — إعادة الفتح
+          // (in [topRow], deliberately kept outside this ignore-pointer
+          // scope) is the one way back in. Delete similarly lives in the
+          // top row and stays reachable regardless of completion state (a
+          // completed field-added record can still be deleted, per
+          // `DetailScreen`'s own `onDelete` gating).
+          isCompleted ? IgnorePointer(child: body) : body,
+        ],
       ),
     )
         .animate(delay: animationDelay)

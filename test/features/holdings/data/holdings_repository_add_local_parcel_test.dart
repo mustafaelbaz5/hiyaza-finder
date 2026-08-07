@@ -181,6 +181,26 @@ void main() {
   });
 
   test(
+      'derives holderNameFarmerCard/ownerNameFarmerCard from '
+      'holderName/ownerName (REFACTOR_ROADMAP.md Phase 10 §1) — the fields '
+      'are no longer independently user-entered', () async {
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '', holderName: 'محمد', ownerName: 'أحمد'),
+    );
+
+    expect(added!.holderNameFarmerCard, 'محمد');
+    expect(added.ownerNameFarmerCard, 'أحمد');
+    expect(
+      holdingsApi.addRecordCalls.single.record['holder_name_farmer_card'],
+      'محمد',
+    );
+    expect(
+      holdingsApi.addRecordCalls.single.record['owner_name_farmer_card'],
+      'أحمد',
+    );
+  });
+
+  test(
       'adopts the promoted holdings.id immediately when the server reports '
       'this add_holdings row was already promoted (added_holdings_auto_approve '
       'trigger) — regression test: the record must never be shown, even '

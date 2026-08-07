@@ -206,7 +206,7 @@ class Parcel {
   static const String defaultCreditType = 'ملك';
   static const String defaultReformType = 'إصلاح مُملك';
   static const String defaultUsageType = 'زراعة';
-  static const String defaultGrowthStage = 'مرحله النمو الخضري';
+  static const String defaultGrowthStage = 'مرحلة النمو الخضري';
 
   static const List<String> creditTypeOptions = <String>['ملك', 'أوقاف'];
 
@@ -238,9 +238,9 @@ class Parcel {
   ];
 
   static const List<String> growthStageOptions = <String>[
-    'مرحله الانبات',
-    'مرحله النمو الخضري',
-    'مرحله الإزهار واثمار',
+    'مرحلة الإنبات',
+    'مرحلة النمو الخضري',
+    'مرحلة الإزهار والإثمار',
   ];
 
   static const List<String> notesOptions = <String>[

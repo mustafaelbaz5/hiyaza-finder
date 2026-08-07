@@ -491,6 +491,110 @@ flutter analyze: clean. flutter test: 279/279 passing (no test count change).
 
 ---
 
+## Phase 10 — Details screen UI/UX & data-behavior update (2026-08-07)
+
+**Status: done.** A 12-section QA request covering the Parcel Details experience end-to-end —
+data entry/editing speed, information hierarchy, compact layout, and one real data bug. Audited
+each section against current code before implementing; several sections landed on already-correct
+behavior needing no change, one turned into a live database fix rather than a Flutter change.
+
+**§3 — root cause found and fixed at the database layer, not in Flutter.** The reported bug ("crop
+type appears empty right after saving a new person/parcel") does not originate in the Flutter
+add/save/reload path — traced UI → `Parcel.copyWith` → `HoldingsRepository.addLocalParcel` →
+`ParcelDatasetState.append`/`setOriginal` → `ParcelQueryService.parcelsForHolding` →
+`DetailScreen._refreshFromRepository`, and `cropType` survives every hop intact (no JSON
+round-trip or overlay merge exists in this path at all — those only apply to the *edit* flow).
+Root cause: `auto_approve_added_holding()` and `approve_added_holding()` (Postgres functions,
+confirmed live via direct schema query) INSERT into `holdings` with an explicit column list that
+predates most of `added_holdings`' app-only columns — `crop_type`, `notes`, `credit_type`,
+`reform_type`, `usage_type`, `is_inheritance`, `is_delegate`, `owner_name`,
+`holder_name_farmer_card`, `owner_name_farmer_card`, `growth_stages` were all silently dropped
+(nulled) the instant a new record auto-promoted from `added_holdings` into `holdings` — which
+happens synchronously on insert, so the app's very next read of the record already saw the empty
+field. Fixed via migration `20260807000001_fix_added_holdings_promotion_field_loss.sql` (applied
+live, user-approved before running): both functions' INSERT column lists now carry every
+`added_holdings` column `holdings` also has.
+
+**§1/§5 — Farmer-card fields (`holderNameFarmerCard`/`ownerNameFarmerCard`) no longer
+user-facing.** Removed the two `FieldRow`s from `see_more_section.dart` and `add_record_screen.dart`
+— they were previously independent, separately-typed fields with no automatic link to
+`holderName`/`ownerName`. `HoldingsRepository._withDerivedFarmerCardNames` (new, applied inside
+both `addLocalParcel` and `updateParcel`) now sets them to mirror `holderName`/`ownerName` on
+every write, so the DB columns (still real, still synced — Dashboard/export consumers untouched)
+stay populated without ever being shown or re-typed in the app. New test:
+`holdings_repository_add_local_parcel_test.dart` "derives holderNameFarmerCard/ownerNameFarmerCard".
+
+**§2 — Growth stage spelling corrected.** The prior session's `growthStageOptions`/
+`defaultGrowthStage` (`Parcel`) used `ه` (heh) instead of `ة` (teh marbuta) in "مرحله", and
+option 3 was missing `ال` before "إثمار". Corrected to the user-supplied exact strings: مرحلة
+الإنبات / مرحلة النمو الخضري / مرحلة الإزهار والإثمار, default مرحلة النمو الخضري.
+
+**§4/§8/§10 — Primary field layout rebuilt as explicit full-width rows, not a multi-column
+grid.** `ParcelDetailCard`'s `ResponsiveFieldsWrap` grid replaced with an explicit `Column`: Row 1
+pairs رقم الحيازة + عدد القطع في الحيازة (`Expanded` inside a `Row`); every other primary field
+(اسم المالك, اسم الحائز, الرقم القومي, اسم الحوض, المساحة ×2, رقم الأرض, نوع الزرع, اسم الجمعية,
+ملاحظات) gets its own full-width row — avoids the horizontal compression that made fields harder
+to scan/tap accurately on phones. `ملاحظات` stays a single-line `FieldRow` (already compact —
+it's a fixed-option dropdown via `Parcel.notesOptions`, never free text, so it never needed a
+taller block) rather than a separate redesign.
+
+**§6 — وراثة/مفوض name-prefix display added to the primary card.** New
+`ClipboardFormatter.holderNamePrefix`/`ownerNamePrefix` (extracted from the existing `format()`
+prefix logic so the display and the copy-all text can never drift apart): مفوض overrides وراثة for
+اسم الحائز only, وراثة alone still prefixes both slots, matching the already-tested clipboard
+matrix exactly. `ParcelDetailCard`'s owner/holder `FieldRow`s now show the prefixed name; the edit
+dialog still opens with the raw, unprefixed name. Inheritance/Delegate toggles themselves were
+already a compact adjacent pair in `SeeMoreSection` (two-per-row via `ResponsiveFieldsWrap` on
+phones) — no widget change needed there. New tests:
+`clipboard_formatter_test.dart` "holderNamePrefix/ownerNamePrefix" (4 cases, same matrix as the
+existing `format()` coverage).
+
+**§7 — Copy All shrunk to a small, non-full-width secondary action.** Was already outlined/
+secondary-styled from Phase 9 #4, but still `width: double.infinity` — now a compact, right-aligned
+text-icon button (`font12Medium`, 14px icon, no border/fill), clearly subordinate to
+`ParcelIdChip`'s filled-green primary treatment. Copy ID was already positioned before Copy All in
+the card (`ParcelIdChip` → `BorderCompass` → `CopyAllButton`) — no reordering needed, just the size
+change.
+
+**§8 — confirmed already correct, no change.** Copy ID auto-completing the parcel
+(`ParcelDetailCard._copyId` → `HoldingsRepository.setParcelCompleted`) was already the sole
+completion path as of Phase 9 #3/#12 — verified no duplicate-operation risk exists.
+
+**§9 — Completed-parcel lock rebuilt.** Previously: light `Opacity(0.68)` dimming with a pale
+green tint — cosmetic only, every field's `onEdit` stayed wired and tappable even when completed.
+Now: `ParcelDetailCard.build` splits into `topRow` (badges, Delete, إعادة الفتح — always
+interactive) and `body` (everything else), wraps `body` in `IgnorePointer` when `completedAt !=
+null`, and uses a stronger/darker treatment (`textPrimary`-tinted background, `textSecondary`
+border, `Opacity(0.55)`) instead of the old green-tinted fade — reads as locked, not just muted.
+إعادة الفتح itself upgraded from `OutlinedButton.icon` to a filled, high-contrast `FilledButton.icon`
+(primary color, white text/icon, `lock_open_rounded`) since it's now the one interactive action
+left on a completed card and needs to read as obviously tappable.
+
+**§11 — already done** (Phase 9 #7's `FloatingActionButton.extended`, confirmed still present, no
+change needed).
+
+**§12 — addressed through the sections above, not as a separate pass:** every §1–§11 change
+already pulls in the direction of "editable information is primary, copy/export is secondary" —
+no additional isolated pass was needed beyond what those sections cover.
+
+**Dependencies:** none — one live database migration (already applied, see §3) plus Flutter-only
+changes, no other schema dependency.
+
+**Complexity:** medium — §3's root-cause trace required reading through the outbox/dataset/query
+layers before concluding the bug wasn't there, then a live Postgres function fix; §4/§9 were the
+largest Flutter-side layout/interaction changes.
+
+**Risks:** low. §3's migration is additive to two existing functions' column lists (no column
+removed, no existing behavior for already-promoted rows changed) — a newly-promoted row now
+carries more data than before, never less. §9's `IgnorePointer` only affects a parcel that is
+already `completed_at != null`; a completed parcel's fields were never meant to be edited without
+first reopening, this just makes that already-intended state actually enforced.
+
+flutter analyze: clean. flutter test: 284/284 passing (5 new — derived-farmer-card-names test,
+4 `holderNamePrefix`/`ownerNamePrefix` matrix tests).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

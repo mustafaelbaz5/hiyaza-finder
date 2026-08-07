@@ -248,34 +248,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                       ),
                     ),
                     FieldRow(
-                      label: 'holdings.fields.holder_name_farmer_card'.tr(),
-                      value: widget.parcel.holderNameFarmerCard,
-                      isModified:
-                          _isModified((final p) => p.holderNameFarmerCard),
-                      onEdit: () => _editText(
-                        context,
-                        title: 'holdings.fields.holder_name_farmer_card'.tr(),
-                        initialValue: widget.parcel.holderNameFarmerCard ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          holderNameFarmerCard: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
-                      label: 'holdings.fields.owner_name_farmer_card'.tr(),
-                      value: widget.parcel.ownerNameFarmerCard,
-                      isModified:
-                          _isModified((final p) => p.ownerNameFarmerCard),
-                      onEdit: () => _editText(
-                        context,
-                        title: 'holdings.fields.owner_name_farmer_card'.tr(),
-                        initialValue: widget.parcel.ownerNameFarmerCard ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          ownerNameFarmerCard: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
                       label: 'holdings.fields.growth_stages'.tr(),
                       value: widget.parcel.growthStages,
                       isModified: _isModified((final p) => p.growthStages),

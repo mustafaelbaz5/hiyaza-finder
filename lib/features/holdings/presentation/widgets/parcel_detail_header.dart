@@ -87,9 +87,17 @@ class ParcelDetailTopRow extends StatelessWidget {
             onPressed: onDeleteConfirmed,
           ),
         if (isReviewed && onReopen != null)
-          OutlinedButton.icon(
+          // Filled, high-contrast — the one interactive action left on a
+          // locked card (`REFACTOR_ROADMAP.md` Phase 10 §9), so it needs to
+          // read as clearly and immediately tappable, not as a muted
+          // secondary control the way Reopen looked before.
+          FilledButton.icon(
             onPressed: onReopen,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary200,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.lock_open_rounded, size: 18),
             label: Text('holdings.detail.reopen'.tr()),
           ),
       ],

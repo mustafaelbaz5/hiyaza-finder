@@ -72,6 +72,37 @@ void main() {
     );
   });
 
+  // holderNamePrefix/ownerNamePrefix back the on-screen اسم الحائز/اسم المالك
+  // display (REFACTOR_ROADMAP.md Phase 10 §6) — same rule as the matrix
+  // above, asserted directly against the prefix strings themselves rather
+  // than through the full clipboard text.
+  group('holderNamePrefix/ownerNamePrefix', () {
+    test('neither toggle on — both null', () {
+      final Parcel p = baseParcel();
+      expect(formatter.holderNamePrefix(p), isNull);
+      expect(formatter.ownerNamePrefix(p), isNull);
+    });
+
+    test('وراثة alone — both get (ورثة)', () {
+      final Parcel p = baseParcel(isInheritance: true);
+      expect(formatter.holderNamePrefix(p), '(ورثة)');
+      expect(formatter.ownerNamePrefix(p), '(ورثة)');
+    });
+
+    test('مفوض alone — only holder gets (مفوض عنه), owner stays null', () {
+      final Parcel p = baseParcel(isDelegate: true);
+      expect(formatter.holderNamePrefix(p), '(مفوض عنه)');
+      expect(formatter.ownerNamePrefix(p), isNull);
+    });
+
+    test('وراثة + مفوض together — holder (مفوض عنه) wins, owner keeps (ورثة)',
+        () {
+      final Parcel p = baseParcel(isInheritance: true, isDelegate: true);
+      expect(formatter.holderNamePrefix(p), '(مفوض عنه)');
+      expect(formatter.ownerNamePrefix(p), '(ورثة)');
+    });
+  });
+
   group('format', () {
     test('blank/empty fields render the placeholder, never skipped', () {
       const Parcel p = Parcel(holdingId: '55');

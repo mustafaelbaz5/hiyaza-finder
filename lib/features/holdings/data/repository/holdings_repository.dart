@@ -209,6 +209,17 @@ class HoldingsRepository
     );
   }
 
+  /// اسم الحائز/المالك كما يظهر في بطاقة الفلاح is no longer a
+  /// user-entered field (`REFACTOR_ROADMAP.md` Phase 10 §1) — it's derived
+  /// from [Parcel.holderName]/[Parcel.ownerName] on every write, so the two
+  /// stay in sync automatically instead of being typed twice. Applied at
+  /// the [addLocalParcel]/[updateParcel] write boundary rather than inside
+  /// [Parcel] itself, keeping the entity a plain data holder.
+  Parcel _withDerivedFarmerCardNames(final Parcel parcel) => parcel.copyWith(
+        holderNameFarmerCard: parcel.holderName,
+        ownerNameFarmerCard: parcel.ownerName,
+      );
+
   /// Adds a brand-new record created in the field — either a new person
   /// ([parentHoldingId] `null`) or a new parcel for an existing person
   /// ([parentHoldingId] set to that person's `Parcel.id`).
@@ -251,12 +262,14 @@ class HoldingsRepository
         (parent != null && parent.isHoldingIdPending
             ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
             : generatedId);
-    final Parcel withId = parcel.copyWith(
-      id: generatedId,
-      sourceAddedHoldingId: generatedId,
-      personId: personId,
-      pendingGroupId: pendingGroupId,
-      isFieldAdded: true,
+    final Parcel withId = _withDerivedFarmerCardNames(
+      parcel.copyWith(
+        id: generatedId,
+        sourceAddedHoldingId: generatedId,
+        personId: personId,
+        pendingGroupId: pendingGroupId,
+        isFieldAdded: true,
+      ),
     );
 
     // `added_holdings.parent_holding_id` is a foreign key into the
@@ -383,7 +396,8 @@ class HoldingsRepository
   /// (optimistic) and enqueues an [EditParcelOperation] rather than
   /// awaiting the Supabase `holding_edits` insert.
   @override
-  Future<void> updateParcel(final Parcel edited) async {
+  Future<void> updateParcel(final Parcel rawEdited) async {
+    final Parcel edited = _withDerivedFarmerCardNames(rawEdited);
     final int idx = _dataset.indexOf(edited.id);
     if (idx < 0) return;
     final Map<String, dynamic> snapshot = _dataset.editSnapshot(edited);

@@ -21,6 +21,19 @@ class ClipboardFormatter {
     return (holder != null && holder.isNotEmpty) ? holder : null;
   }
 
+  /// وراثة/مفوض prefix for the الحائز display — same rule [format] uses for
+  /// its clipboard text (`REFACTOR_ROADMAP.md` Phase 10 §6): مفوض overrides
+  /// وراثة for الحائز specifically, otherwise وراثة alone if set, otherwise
+  /// no prefix. Kept here (not duplicated in the widget) so the on-screen
+  /// display and the copy-all text can never drift apart.
+  String? holderNamePrefix(final Parcel p) =>
+      p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
+
+  /// وراثة prefix for the المالك display — مفوض never affects المالك, only
+  /// وراثة does. Same rule [format] uses.
+  String? ownerNamePrefix(final Parcel p) =>
+      p.isInheritance ? '(ورثة)' : null;
+
   /// One "label: value," field per line (blank slots kept, never skipped)
   /// so the pasted text both reads clearly on its own and lines up
   /// row-for-row when pasted into an external spreadsheet template.
