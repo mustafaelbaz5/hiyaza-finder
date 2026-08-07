@@ -546,7 +546,14 @@ class HoldingsRepository
   void applyRemoteChange(final Parcel updated) {
     if (_dataset.activeCityId == null) return;
 
-    final int idx = _dataset.indexOf(updated.id);
+    // A just-promoted `holdings` row arrives with a brand-new
+    // server-generated `id` — matching on `id` alone would miss the
+    // pre-promotion local entry entirely and append this as a *second*,
+    // duplicate parcel instead of replacing it in place. `sourceAddedHoldingId`
+    // is what still ties the two together (set locally in `addLocalParcel`
+    // and echoed back on the promoted row by the DB migration that added
+    // `holdings.source_added_holding_id`).
+    final int idx = _dataset.indexOfForRemoteChange(updated);
     final Parcel updatedWithGroup = idx >= 0
         ? updated.copyWith(
             sourceAddedHoldingId: _dataset.parcels[idx].sourceAddedHoldingId ??
@@ -556,7 +563,15 @@ class HoldingsRepository
           )
         : updated;
 
-    _dataset.setOriginal(updated.id, updatedWithGroup);
+    if (idx >= 0 && _dataset.parcels[idx].id != updated.id) {
+      // The old id (pre-promotion local id) is being replaced by the new
+      // server id — drop its now-stale original/edit-overlay bookkeeping so
+      // it doesn't linger under an id nothing points to any more.
+      _dataset.removeOriginal(_dataset.parcels[idx].id);
+      _dataset.removeEdit(_dataset.parcels[idx].id);
+    }
+
+    _dataset.setOriginal(updatedWithGroup.id, updatedWithGroup);
     final Parcel toShow = _dataset.applyEdit(updatedWithGroup);
     if (idx >= 0) {
       _dataset.replaceAt(idx, toShow);

@@ -23,7 +23,10 @@ import 'features/auth/presentation/cubit/session_state.dart';
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
 
-  static final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  /// Not private: `_ConnectivityGate` (below) needs a `BuildContext` that's
+  /// inside the `Navigator` `MaterialApp` creates internally, since it
+  /// itself sits in `MaterialApp.builder`, above it.
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   /// Root-level `ScaffoldMessenger` key — lets a snackbar be shown/kept
   /// alive independent of whichever `Scaffold`/route is currently on
@@ -89,45 +92,54 @@ class HiyazaFinderApp extends StatelessWidget {
               // token) and bounces them back rather than leaving screens
               // silently calling an API that will now reject them.
               listener: (final BuildContext context, final SessionState _) {
-                _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                navigatorKey.currentState?.pushNamedAndRemoveUntil(
                   Routes.login,
                   (final _) => false,
                 );
               },
-              child: _ConnectivityGate(
-                child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-                  builder: (
-                    final BuildContext context,
-                    final AppSettingsState settings,
-                  ) {
-                    return MaterialApp(
-                      navigatorKey: _navigatorKey,
-                      scaffoldMessengerKey: scaffoldMessengerKey,
-                      localizationsDelegates: context.localizationDelegates,
-                      supportedLocales: context.supportedLocales,
-                      locale: settings.locale, // driven by cubit
-                      debugShowCheckedModeBanner: false,
-                      scrollBehavior: const _AppScrollBehavior(),
-                      initialRoute: getIt<SessionCubit>().state.isAuthenticated
-                          ? Routes.home
-                          : Routes.login,
-                      onGenerateRoute: AppRouter.generateRoute,
-                      title: AppConfig.appName,
-                      // font family injected into both themes
-                      theme: getLightTheme().copyWith(
-                        textTheme: getLightTheme().textTheme.apply(
-                              fontFamily: settings.fontFamily,
-                            ),
-                      ),
-                      darkTheme: getDarkTheme().copyWith(
-                        textTheme: getDarkTheme().textTheme.apply(
-                              fontFamily: settings.fontFamily,
-                            ),
-                      ),
-                      themeMode: settings.themeMode,
-                    );
-                  },
-                ),
+              child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+                builder: (
+                  final BuildContext context,
+                  final AppSettingsState settings,
+                ) {
+                  return MaterialApp(
+                    navigatorKey: navigatorKey,
+                    scaffoldMessengerKey: scaffoldMessengerKey,
+                    localizationsDelegates: context.localizationDelegates,
+                    supportedLocales: context.supportedLocales,
+                    locale: settings.locale, // driven by cubit
+                    debugShowCheckedModeBanner: false,
+                    scrollBehavior: const _AppScrollBehavior(),
+                    initialRoute: getIt<SessionCubit>().state.isAuthenticated
+                        ? Routes.home
+                        : Routes.login,
+                    onGenerateRoute: AppRouter.generateRoute,
+                    title: AppConfig.appName,
+                    // font family injected into both themes
+                    theme: getLightTheme().copyWith(
+                      textTheme: getLightTheme().textTheme.apply(
+                            fontFamily: settings.fontFamily,
+                          ),
+                    ),
+                    darkTheme: getDarkTheme().copyWith(
+                      textTheme: getDarkTheme().textTheme.apply(
+                            fontFamily: settings.fontFamily,
+                          ),
+                    ),
+                    themeMode: settings.themeMode,
+                    // _ConnectivityGate shows a Material AlertDialog, which
+                    // needs Localizations/Navigator/Material ancestors —
+                    // MaterialApp.builder is the first point in the tree
+                    // where those exist. Wrapping MaterialApp from the
+                    // OUTSIDE (as this used to) crashes with "No
+                    // MaterialLocalizations found" the moment the gate's
+                    // very first connectivity check fails, since at that
+                    // point in the tree none of that context exists yet.
+                    builder: (final BuildContext context, final Widget? child) {
+                      return _ConnectivityGate(child: child!);
+                    },
+                  );
+                },
               ),
             ),
           ),
@@ -164,8 +176,21 @@ class _ConnectivityGateState extends State<_ConnectivityGate> {
     final bool connected = await getIt<NetworkInfo>().isConnected;
     if (connected || !mounted) return;
 
+    // This widget sits in MaterialApp.builder, ABOVE the Navigator
+    // MaterialApp creates internally — showDialog needs a context BELOW
+    // one, so `context` here would crash with "No MaterialLocalizations
+    // found" the moment this ever actually fires (i.e. exactly when the
+    // app has no internet, which is the one time this dialog needs to
+    // show). HiyazaFinderApp's own navigatorKey's context is inside that
+    // Navigator and already mounted by the time this post-frame callback
+    // runs. Checked fresh (not cached) since it can turn null between the
+    // await above and here.
+    final BuildContext? dialogContext =
+        HiyazaFinderApp.navigatorKey.currentContext;
+    if (dialogContext == null || !dialogContext.mounted) return;
+
     await AppDialogs.showError(
-      context,
+      dialogContext,
       message: 'errors.no_internet'.tr(),
       buttonText: 'errors.retry'.tr(),
       onPressed: _checkConnectivity,

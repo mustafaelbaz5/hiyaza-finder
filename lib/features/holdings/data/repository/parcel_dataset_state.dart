@@ -138,6 +138,26 @@ class ParcelDatasetState {
   int indexOf(final String id) =>
       _parcels.indexWhere((final Parcel p) => p.id == id);
 
+  /// Finds the existing entry [updated] should replace, for a case
+  /// [indexOf] alone can't handle: a just-promoted `holdings` row arrives
+  /// with a brand-new server-generated `id`, different from the
+  /// client-generated id the pre-promotion local parcel was created with
+  /// (`addLocalParcel` sets that local id as its own `sourceAddedHoldingId`
+  /// too). Matches, in order: the same `id` (ordinary update), the existing
+  /// entry's `id` equal to [updated]'s `sourceAddedHoldingId` (the
+  /// promotion case), or both sharing the same non-null
+  /// `sourceAddedHoldingId` (repeat delivery of an already-promoted row).
+  /// Without this, `applyRemoteChange` can't find the existing entry to
+  /// replace and appends the promoted row as a second, duplicate parcel.
+  int indexOfForRemoteChange(final Parcel updated) => _parcels.indexWhere(
+        (final Parcel p) =>
+            p.id == updated.id ||
+            (updated.sourceAddedHoldingId != null &&
+                p.id == updated.sourceAddedHoldingId) ||
+            (p.sourceAddedHoldingId != null &&
+                p.sourceAddedHoldingId == updated.sourceAddedHoldingId),
+      );
+
   void replaceAt(final int index, final Parcel parcel) {
     _parcels[index] = parcel;
   }

@@ -374,6 +374,51 @@ void main() {
     expect(call.id, added!.id);
   });
 
+  test(
+      'REGRESSION: a promoted holdings row arriving via applyRemoteChange '
+      '(the outbox path\'s only reconciliation mechanism — '
+      'AddParcelSyncHandler deliberately does not reconcile synchronously) '
+      'replaces the pre-promotion local entry instead of appending a '
+      'duplicate. The promoted row has a brand-new server-generated id, '
+      "different from the client-generated id addLocalParcel created — only "
+      'sourceAddedHoldingId ties them together, so matching by id alone '
+      '(as applyRemoteChange used to) misses the existing entry entirely.',
+      () async {
+    // Outbox mode: addLocalParcel applies locally and returns without a
+    // promotedHoldingId — matches the real _syncRunner != null path where
+    // reconciliation only ever happens via a later Realtime event.
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+    );
+    expect(added, isNotNull);
+    expect(repository.parcels, hasLength(1));
+
+    // Simulate the holdings INSERT Realtime event for the now-promoted
+    // row — same shape holdingRowToParcel would build: a fresh id, plus
+    // source_added_holding_id/is_field_added/created_by (this migration's
+    // whole point) pointing back at the original added_holdings row.
+    final Parcel promotedRow = Parcel(
+      id: 'server-promoted-id',
+      holdingId: added!.holdingId,
+      holderName: added.holderName,
+      landNumber: added.landNumber,
+      personId: added.personId,
+      isFieldAdded: true,
+      sourceAddedHoldingId: added.id,
+      createdBy: 'user-1',
+    );
+    repository.applyRemoteChange(promotedRow);
+
+    expect(
+      repository.parcels,
+      hasLength(1),
+      reason: 'the promoted row must replace the pre-promotion local entry '
+          'in place, not sit alongside it as a second parcel.',
+    );
+    expect(repository.parcels.single.id, 'server-promoted-id');
+    expect(repository.parcels.single.createdBy, 'user-1');
+  });
+
   test('a failed addRecord call leaves the in-memory dataset untouched and rethrows', () async {
     holdingsApi.addRecordError = Exception('network down');
 

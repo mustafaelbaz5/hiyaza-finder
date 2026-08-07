@@ -839,6 +839,57 @@ flutter analyze: clean. flutter test: 286/286 passing (3 new: `compareParcelsFor
 cases in `parcel_status_filter_test.dart`, plus a case for the `sourceAddedHoldingId`-only added-tab
 match).
 
+## Phase 15 — Realtime promotion duplicate-append fix, production-flavor connectivity-gate crash (2026-08-08)
+
+**Status: done.**
+
+**Bug 1 — `applyRemoteChange` could append a promoted parcel as a duplicate instead of replacing
+it.** Investigating a "no parcels show for added persons" report surfaced a real latent bug in the
+outbox path's only reconciliation mechanism: a just-promoted `holdings` row arrives with a
+brand-new server-generated `id` (different from the client-generated id `addLocalParcel` created),
+and the old `applyRemoteChange` matched the existing dataset entry by `id` alone
+(`_dataset.indexOf(updated.id)`). Since the ids never match for a promotion event, it always fell
+into the "not found" branch and appended the promoted row as a second parcel, leaving the
+pre-promotion local one in place too — a genuine duplicate until the next full city re-download
+silently absorbed it.
+
+Fixed with `ParcelDatasetState.indexOfForRemoteChange` (replacing `indexOf` at this one call site):
+matches on `id == updated.id` (ordinary update), `id == updated.sourceAddedHoldingId` (the
+promotion case — the old local id is exactly what the promoted row's `sourceAddedHoldingId` now
+points back to, via Phase 14's migration), or both sharing a non-null `sourceAddedHoldingId`
+(repeat delivery). When a match is found under a different id, the old id's `original`/edit-overlay
+bookkeeping is cleaned up so nothing lingers under an id no longer in the dataset.
+
+**Bug 2 — production flavor crashed on startup with no internet: "No MaterialLocalizations
+found."** `_ConnectivityGate` (`hiyaza_finder_app.dart`) wrapped `MaterialApp` from the *outside*
+and called `AppDialogs.showError` (a `showDialog`-based Material dialog) using its own
+`BuildContext` — but that context sits above `MaterialApp`'s internally-created
+`Navigator`/`Localizations`, which `showDialog` requires. `NetworkInfoImpl.isConnected` bypasses to
+`true` for `AppConfig.isDevelopment` (dev flavor only, existing `// TODO: remove before release`),
+so this crash was invisible in dev but fired on any production-flavor launch without connectivity
+— exactly what surfaced during this session's testing.
+
+Fixed by moving `_ConnectivityGate` inside `MaterialApp.builder` (so it wraps the routed content,
+not `MaterialApp` itself) and switching its dialog call to use `HiyazaFinderApp.navigatorKey`'s
+`currentContext` (newly made non-private) instead of its own — that context is guaranteed to sit
+inside the `Navigator` `MaterialApp` creates, wherever `_ConnectivityGate` itself sits in the tree.
+
+**Dependencies:** Bug 1 depends on Phase 14's `holdings.source_added_holding_id` migration already
+being live — this fix is meaningless without that column existing to round-trip through.
+
+**Complexity:** medium for bug 1 (required reasoning through Realtime event ordering and the
+outbox path's reconciliation model to find), low for bug 2 (a straightforward widget-tree ordering
+mistake, once reproduced).
+
+**Risks:** low for both — bug 1's fix only changes what an existing dataset lookup matches on, no
+behavior change for the (much more common) case where `updated.id` already matches directly. Bug
+2's fix is a mechanical reposition of one widget plus a context source change; `_ConnectivityGate`'s
+own gating behavior (check once at startup, retry loop while disconnected, never intervene again)
+is unchanged.
+
+flutter analyze: clean. flutter test: 287/287 passing (1 new: a `holdings_repository_add_local_parcel_test.dart`
+regression case simulating the outbox-path promotion-duplicate scenario directly).
+
 ---
 
 ## Sequencing summary
