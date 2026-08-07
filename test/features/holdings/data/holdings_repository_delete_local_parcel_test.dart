@@ -44,6 +44,12 @@ class _FakeHoldingsApi implements HoldingsApi {
   }
 
   @override
+  Future<Map<String, String>> fetchProfileEmails(
+    final Iterable<String> profileIds,
+  ) async =>
+      const <String, String>{};
+
+  @override
   Future<String?> addRecord({
     required final String id,
     required final String cityId,

@@ -105,6 +105,7 @@ Parcel addedHoldingRowToParcel(final Map<String, dynamic> row) {
         : DateTime.parse(row['completed_at'] as String),
     completedBy: row['completed_by'] as String?,
     isFieldAdded: true,
+    createdBy: row['created_by'] as String?,
     holderNameFarmerCard: row['holder_name_farmer_card'] as String?,
     ownerNameFarmerCard: row['owner_name_farmer_card'] as String?,
     growthStages:

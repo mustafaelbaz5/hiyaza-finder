@@ -46,12 +46,11 @@ class ParcelDetailTopRow extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              if (isAdded)
-                StatusBadge(
-                  icon: Icons.add_box_rounded,
-                  label: 'holdings.status.added_from_app'.tr(),
-                  color: AppColors.blue200,
-                ),
+              // The single "added" badge is `ParcelDetailInfoBanner` below
+              // this top row (`REFACTOR_ROADMAP.md` Phase 11 §12) — this row
+              // previously ALSO showed a small "added_from_app" StatusBadge
+              // here, duplicating the same information the banner already
+              // states more fully (label + hint + now the creator email).
               if (isInheritance)
                 StatusBadge(
                   icon: Icons.groups_rounded,
@@ -106,7 +105,9 @@ class ParcelDetailTopRow extends StatelessWidget {
 }
 
 /// A labeled info banner shown under [ParcelDetailTopRow] for the
-/// added/reviewed states — icon, bold label, and a secondary subtitle.
+/// added/reviewed states — icon, bold label, secondary subtitle, and an
+/// optional third line (used for "تمت الإضافة بواسطة: …",
+/// `REFACTOR_ROADMAP.md` Phase 11 §12) when [creatorLine] is given.
 class ParcelDetailInfoBanner extends StatelessWidget {
   const ParcelDetailInfoBanner({
     super.key,
@@ -114,12 +115,14 @@ class ParcelDetailInfoBanner extends StatelessWidget {
     required this.label,
     required this.subtitle,
     required this.color,
+    this.creatorLine,
   });
 
   final IconData icon;
   final String label;
   final String subtitle;
   final Color color;
+  final String? creatorLine;
 
   @override
   Widget build(final BuildContext context) {
@@ -151,6 +154,17 @@ class ParcelDetailInfoBanner extends StatelessWidget {
                     color: colors.textSecondary,
                   ),
                 ),
+                if (creatorLine != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    creatorLine!,
+                    style: AppTextStyles.font12Regular.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),

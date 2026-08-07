@@ -595,6 +595,93 @@ flutter analyze: clean. flutter test: 284/284 passing (5 new — derived-farmer-
 
 ---
 
+## Phase 11 — Mobile Details/City Tools UX pass #2 (2026-08-07)
+
+**Status: done.** A follow-up 18-section spec on top of Phase 10 — some items were already covered
+by Phase 10 and just reverified, several were genuinely new (moving stats into City Tools, a real
+action-order requirement, moving اسم الجمعية into More Details, exact 4-row secondary layout,
+creator-email tracking, and — the largest single change — replacing the 6-way filter-chip row with
+exactly 3 real tabs).
+
+**§1 — Home stats moved into City Tools.** `StatusSummaryCards` removed from `home_screen.dart`;
+`file_status_screen.dart` (the "City Tools" screen) now computes the same four counts directly from
+`_repository.parcels`/`isParcelEdited` (same filters `HomeState`'s getters used, not routed through
+a cubit this screen doesn't have) and renders them below the reordered Bulk Edit section — Bulk Edit
+moved to be first (was second, after Basins), stats second, Basins third.
+
+**§2 — confirmed already correct, no change.** `updateParcel`/`setParcelCompleted`/Copy ID all
+already mutate the in-memory dataset and call `setState` synchronously after each write — no manual
+refresh was ever required.
+
+**§3 — Details action-area reordered.** Was badges → Copy ID → boundaries → Copy All; now exactly
+badges/status → boundaries (`BorderCompass`) → Copy ID (`ParcelIdChip`) → Copy All, per the spec's
+explicit order.
+
+**§4/§5 — اسم الجمعية moved into More Details; exact row layout rebuilt.** `see_more_section.dart`
+rewritten from one `ResponsiveFieldsWrap` (auto-wrapping, no manual pairing) to explicit rows via a
+new `_pairRow` helper: Row 1 وراثة/مفوض, Row 2 كود الحوض/نوع الائتمان-أو-الإصلاح, Row 3 مراحل النمو
+(full-width), Row 4 المديرية/الإدارة — then اسم الجمعية (moved here from the primary card) and نوع
+الاستخدام as additional full-width rows, since the spec's 4 named rows didn't cover every existing
+field and "keep the rest of the existing functionality" ruled out dropping them.
+
+**§6/§7/§8/§9/§10 — reverified, no regressions.** Growth-stage spelling، farmer-card derivation، the
+`auto_approve_added_holding`/`approve_added_holding` DB fix، وراثة/مفوض name-prefix display، and the
+`_copyId`→`setParcelCompleted` auto-review path were all already correct from Phase 10 — grepped
+each after this phase's edits to confirm nothing touched them incidentally.
+
+**§11 — Filter-chip row replaced with exactly 3 real tabs.** This is a genuine UX reversal, not
+additive: the previous `ParcelStatusFilter` enum (`all/original/added/modified/completed/pending`,
+6 options, chip row, only shown for >1 parcel) is gone, replaced by a new `DetailScreenTab` enum
+(`all/added/reviewed`, exactly 3) and a real `TabBar`/`TabController` on `DetailScreen`, always
+visible regardless of parcel count, defaulting to الكل. `original`/`modified`/`pending` filtering is
+no longer a user-facing feature — the spec was explicit ("exactly three tabs... do not add any other
+tabs"). `parcel_status_filter.dart` rewritten (no more `ParcelStatusFilterRow`/`_FilterChip` widgets,
+just the enum + `matches`/`label`); its test file rewritten for the new 3-case API (6 tests → 3).
+
+**§12 — Duplicate added-badge removed; creator email added.** The top-row "مضافة من التطبيق"
+`StatusBadge` chip was a near-duplicate of the fuller `ParcelDetailInfoBanner` shown right below it
+— removed the chip, kept the banner. `Parcel.createdBy` (new field, `added_holdings.created_by`,
+`null` on a promoted `holdings` row — that table has no such column, same lifecycle as
+`isFieldAdded` flipping to `false` on promotion) wired through `copyWith`/`toJson`/`fromJson`/
+`addedHoldingRowToParcel`. `HoldingsApi.fetchProfileEmails` (new) resolves `profiles.email` for a
+set of uuids; `HoldingsRepository.resolveCreatorEmails` caches results in-memory for the repository's
+lifetime. New `_AddedByBanner` (stateful, `parcel_detail_card.dart`) resolves and shows "تمت الإضافة
+بواسطة: {email}" as a third banner line once known, without blocking the rest of the card on the
+lookup. **Required a live database change**, applied with explicit sign-off: `profiles`' RLS
+`profiles_self_read` policy only allowed a user to read their own row (or admin/editor/viewer roles
+to read all) — `field` was not in that allow-list, so a field worker could not resolve another field
+worker's email at all. Migration `20260807000002_allow_field_role_read_profiles.sql` adds `field` to
+the same read-only policy, matching the existing admin/editor/viewer pattern exactly (no new
+broader access, no write grant).
+
+**§13/§14/§15/§16/§17 — reverified, no regressions.** The locked/dimmed completed-card treatment
+with `IgnorePointer` + filled Reopen button, Copy ID auto-completing, Copy All's compact secondary
+styling, the single-line notes `FieldRow`, and the Add Parcel FAB were all already correct from
+Phase 10 — confirmed by direct grep after this phase's edits.
+
+**§18 — addressed through the sections above**, consistent with Phase 10 §12's same conclusion: no
+isolated "overall UX" pass was needed beyond what the concrete sections already cover.
+
+**Dependencies:** one live database migration (profiles RLS, applied with sign-off) — everything
+else is Flutter-only, no schema dependency.
+
+**Complexity:** medium-high — §11 (real tabs replacing a filter enum) and §12 (a new cross-cutting
+field, an API method, a repository cache, a stateful widget, and a live RLS change) were the two
+substantial items; §1/§3/§4/§5 were moderate layout/reorganization work on already-existing pieces.
+
+**Risks:** low-medium. §11 is a real, intentional feature removal (original/modified/pending
+filtering) per an explicit, unambiguous spec instruction — flagged here rather than silently kept
+alongside the 3 tabs. §12's RLS change is narrowly scoped (adds one role to an existing read-only
+policy, no write access, no new columns exposed beyone what admin/editor/viewer already see) but is
+the first RLS policy change made directly from this session — worth a quick Dashboard-side sanity
+check that no other policy assumed `field` could never read `profiles`.
+
+flutter analyze: clean. flutter test: 281/281 passing (net -3: the 6-case `ParcelStatusFilter` test
+replaced by a 3-case `DetailScreenTab` test, plus the `parcel_detail_card_test.dart` badge assertion
+retargeted from the removed `StatusBadge` to the surviving banner's text).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

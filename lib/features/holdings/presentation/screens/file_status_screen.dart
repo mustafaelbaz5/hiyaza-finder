@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/crop_type_picker.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/picker_row.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/section_card.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_summary_cards.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -15,6 +16,7 @@ import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../domain/entities/bulk_edit_outcome.dart';
 import '../../domain/entities/bulk_editable_field.dart';
+import '../../domain/entities/parcel.dart';
 import '../../data/repository/holdings_repository.dart';
 
 /// Localized display label for a [BulkEditableField] — kept here (UI layer)
@@ -208,6 +210,19 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
     final colors = context.customColors;
     final Map<String, int> counts = _repository.basinHoldingCounts;
     final List<String> basins = _repository.availableBasins;
+    final List<Parcel> parcels = _repository.parcels;
+    // Same four counts `HomeState` computes for the (now-removed) home-screen
+    // summary cards (`REFACTOR_ROADMAP.md` Phase 11 §1) — recomputed directly
+    // from the repository rather than routed through `HomeState`/`HomeCubit`,
+    // since this screen has no cubit of its own and these are plain filters
+    // over `parcels`, not state worth duplicating a whole state object for.
+    final int addedCount =
+        parcels.where((final Parcel p) => p.isFieldAdded).length;
+    final int completedCount =
+        parcels.where((final Parcel p) => p.completedAt != null).length;
+    final int modifiedCount = parcels
+        .where((final Parcel p) => _repository.isParcelEdited(p.id))
+        .length;
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -224,6 +239,57 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Bulk Edit is first (`REFACTOR_ROADMAP.md` Phase 11 §1)
+                    // — the primary reason a field worker opens City Tools.
+                    SectionCard(
+                      title: 'holdings.bulk_edit.section_title'.tr(),
+                      subtitle: 'holdings.bulk_edit.section_subtitle'.tr(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          PickerRow(
+                            label: 'holdings.bulk_edit.scope_label'.tr(),
+                            value: _bulkBasin ??
+                                'holdings.bulk_edit.scope_all'.tr(),
+                            onTap: _pickBulkBasin,
+                          ),
+                          verticalSpacing(8),
+                          PickerRow(
+                            label: 'holdings.bulk_edit.field_label'.tr(),
+                            value: bulkEditableFieldLabel(_bulkField),
+                            onTap: _pickBulkField,
+                          ),
+                          verticalSpacing(8),
+                          PickerRow(
+                            label: 'holdings.bulk_edit.value_label'.tr(),
+                            value: _valueLabel(_bulkValue),
+                            onTap: _pickBulkValue,
+                          ),
+                          verticalSpacing(16),
+                          CustomTextButton(
+                            text: 'holdings.bulk_edit.apply'.tr(),
+                            onPressed: _confirmAndApplyBulkEdit,
+                            isLoading: _isApplying,
+                            prefixIcon: const Icon(
+                              Icons.done_all_rounded,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    verticalSpacing(16),
+                    // Moved here from the home screen (`REFACTOR_ROADMAP.md`
+                    // Phase 11 §1) — status counts are a city-tools concern,
+                    // not something that needs to be prominent every time the
+                    // home screen opens.
+                    StatusSummaryCards(
+                      addedCount: addedCount,
+                      modifiedCount: modifiedCount,
+                      pendingCompletionCount: parcels.length - completedCount,
+                      completedCount: completedCount,
+                    ),
+                    verticalSpacing(16),
                     SectionCard(
                       title: 'holdings.bulk_edit.basins_title'.tr(),
                       subtitle: 'holdings.bulk_edit.basins_subtitle'.tr(),
@@ -279,44 +345,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                                   ),
                               ],
                             ),
-                    ),
-                    verticalSpacing(16),
-                    SectionCard(
-                      title: 'holdings.bulk_edit.section_title'.tr(),
-                      subtitle: 'holdings.bulk_edit.section_subtitle'.tr(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          PickerRow(
-                            label: 'holdings.bulk_edit.scope_label'.tr(),
-                            value: _bulkBasin ??
-                                'holdings.bulk_edit.scope_all'.tr(),
-                            onTap: _pickBulkBasin,
-                          ),
-                          verticalSpacing(8),
-                          PickerRow(
-                            label: 'holdings.bulk_edit.field_label'.tr(),
-                            value: bulkEditableFieldLabel(_bulkField),
-                            onTap: _pickBulkField,
-                          ),
-                          verticalSpacing(8),
-                          PickerRow(
-                            label: 'holdings.bulk_edit.value_label'.tr(),
-                            value: _valueLabel(_bulkValue),
-                            onTap: _pickBulkValue,
-                          ),
-                          verticalSpacing(16),
-                          CustomTextButton(
-                            text: 'holdings.bulk_edit.apply'.tr(),
-                            onPressed: _confirmAndApplyBulkEdit,
-                            isLoading: _isApplying,
-                            prefixIcon: const Icon(
-                              Icons.done_all_rounded,
-                              color: AppColors.white,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ],
                 ),

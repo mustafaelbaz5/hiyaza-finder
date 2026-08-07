@@ -27,7 +27,6 @@ import '../cubit/home_state.dart';
 import '../../domain/services/holding_search_service.dart';
 import '../widgets/basin_filter_sheet.dart';
 import '../widgets/recommendation_list.dart';
-import '../widgets/status_summary_cards.dart';
 import 'add_record_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -343,13 +342,6 @@ class _LoadedBodyState extends State<_LoadedBody> {
                         onChangeFile: widget.onChangeCity,
                         onOpenBasinFilter: widget.onOpenBasinFilter,
                         onOpenFileStatus: widget.onOpenFileStatus,
-                      ),
-                      verticalSpacing(10),
-                      StatusSummaryCards(
-                        addedCount: widget.state.addedCount,
-                        modifiedCount: widget.state.modifiedCount,
-                        pendingCompletionCount: widget.state.pendingCompletionCount,
-                        completedCount: widget.state.completedCount,
                       ),
                       verticalSpacing(16),
                       CustomTextForm(

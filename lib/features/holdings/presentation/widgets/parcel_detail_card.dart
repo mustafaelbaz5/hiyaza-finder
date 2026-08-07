@@ -92,14 +92,11 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+            // Action-area order is fixed (`REFACTOR_ROADMAP.md` Phase 11
+            // §3): status/badges → boundaries → Copy ID → Copy All.
             if (isAdded || isCompleted) verticalSpacing(8),
             if (isAdded)
-              ParcelDetailInfoBanner(
-                icon: Icons.add_box_rounded,
-                label: 'holdings.detail.added_badge'.tr(),
-                subtitle: 'holdings.detail.added_badge_hint'.tr(),
-                color: AppColors.blue200,
-              ),
+              _AddedByBanner(parcel: parcel),
             if (isAdded && isCompleted) verticalSpacing(8),
             if (isCompleted)
               ParcelDetailInfoBanner(
@@ -108,8 +105,6 @@ class ParcelDetailCard extends StatelessWidget {
                 subtitle: 'holdings.detail.reviewed_hint'.tr(),
                 color: colors.success,
               ),
-            verticalSpacing(10),
-            ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
             verticalSpacing(10),
             BorderCompass(
               holdingId: parcel.holdingId,
@@ -126,6 +121,8 @@ class ParcelDetailCard extends StatelessWidget {
                   : (final String? borderText) =>
                       resolveBorderMatch!(borderText) != null,
             ),
+            verticalSpacing(10),
+            ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
             verticalSpacing(10),
             CopyAllButton(onTap: () => _copyAll(context)),
             verticalSpacing(12),
@@ -256,19 +253,6 @@ class ParcelDetailCard extends StatelessWidget {
               value: parcel.cropType,
               isModified: _isModified((final p) => p.cropType),
               onEdit: () => _editCropType(context),
-            ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.association_name'.tr(),
-              value: parcel.associationName,
-              isModified: _isModified((final p) => p.associationName),
-              onEdit: () => _editText(
-                context,
-                title: 'holdings.fields.association_name'.tr(),
-                initialValue: parcel.associationName ?? '',
-                apply: (final String v) =>
-                    parcel.copyWith(associationName: v.isEmpty ? null : v),
-              ),
             ),
             verticalSpacing(8),
             // Single-line truncated row rather than a taller free-form note
@@ -517,6 +501,58 @@ class ParcelDetailCard extends StatelessWidget {
       message: 'holdings.detail.delete_confirm'.tr(),
       confirmText: 'holdings.detail.delete'.tr(),
       onConfirm: onDelete!,
+    );
+  }
+}
+
+/// The single "added" badge (`REFACTOR_ROADMAP.md` Phase 11 §12) — resolves
+/// [Parcel.createdBy] to an email via `HoldingsRepository.resolveCreatorEmails`
+/// (cached, so repeated cards for the same creator only hit the network
+/// once) and shows it as a third line once known. Renders the banner
+/// immediately without waiting on the lookup — the creator line simply
+/// appears once resolved, never blocking the rest of the card.
+class _AddedByBanner extends StatefulWidget {
+  const _AddedByBanner({required this.parcel});
+
+  final Parcel parcel;
+
+  @override
+  State<_AddedByBanner> createState() => _AddedByBannerState();
+}
+
+class _AddedByBannerState extends State<_AddedByBanner> {
+  String? _creatorEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(final _AddedByBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parcel.createdBy != widget.parcel.createdBy) _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final String? createdBy = widget.parcel.createdBy;
+    if (createdBy == null) return;
+    final Map<String, String> emails =
+        await getIt<HoldingsRepository>().resolveCreatorEmails([createdBy]);
+    if (mounted) setState(() => _creatorEmail = emails[createdBy]);
+  }
+
+  @override
+  Widget build(final BuildContext context) {
+    return ParcelDetailInfoBanner(
+      icon: Icons.add_box_rounded,
+      label: 'holdings.detail.added_badge'.tr(),
+      subtitle: 'holdings.detail.added_badge_hint'.tr(),
+      color: AppColors.blue200,
+      creatorLine: _creatorEmail == null
+          ? null
+          : 'holdings.detail.added_by'.tr(namedArgs: {'email': _creatorEmail!}),
     );
   }
 }

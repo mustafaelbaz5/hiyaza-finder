@@ -259,17 +259,15 @@
       "reviewed_hint": "تم جمع هذه البيانات من الحقل ويمكن التعامل معها كحيازة مكتملة.",
       "added_badge": "مضافة من التطبيق",
       "added_badge_hint": "هذا السجل لم يكن ضمن البيانات المستوردة الأصلية.",
+      "added_by": "تمت الإضافة بواسطة: {email}",
       "section_holder": "البيانات الأساسية",
       "section_holder_subtitle": "أهم المعلومات التي يحتاجها الفريق أثناء العمل الميداني.",
       "section_extra": "تفاصيل إضافية",
       "section_extra_subtitle": "بيانات أقل استخدامًا لكنها تبقى متاحة عند الحاجة.",
       "reopen": "إعادة فتح",
       "filter_all": "الكل",
-      "filter_original": "أصلية",
-      "filter_added": "مضافة",
-      "filter_modified": "معدّلة",
-      "filter_completed": "مكتملة",
-      "filter_pending": "قيد الإنجاز"
+      "filter_added": "المضافة",
+      "tab_reviewed": "تمت المراجعة"
     },
     "add": {
       "new_person_cta": "إضافة",

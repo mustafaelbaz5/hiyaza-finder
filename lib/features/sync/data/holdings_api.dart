@@ -178,4 +178,29 @@ class HoldingsApi {
       ErrorHandler.handleException(error);
     }
   }
+
+  /// Resolves `profiles.email` for a set of `profiles.id` uuids — used to
+  /// show "تمت الإضافة بواسطة: user@email.com" on an added-parcel badge
+  /// (`REFACTOR_ROADMAP.md` Phase 11 §12, `Parcel.createdBy`). Returns an
+  /// empty map (never throws) on failure — a missing creator email is a
+  /// cosmetic gap, not worth surfacing as an error to the field worker.
+  Future<Map<String, String>> fetchProfileEmails(
+    final Iterable<String> profileIds,
+  ) async {
+    final List<String> ids = profileIds.toSet().toList();
+    if (ids.isEmpty) return const <String, String>{};
+    try {
+      final List<Map<String, dynamic>> rows = await _client
+          .from('profiles')
+          .select('id, email')
+          .inFilter('id', ids)
+          .timeout(_requestTimeout);
+      return <String, String>{
+        for (final Map<String, dynamic> row in rows)
+          row['id'] as String: row['email'] as String,
+      };
+    } catch (_) {
+      return const <String, String>{};
+    }
+  }
 }

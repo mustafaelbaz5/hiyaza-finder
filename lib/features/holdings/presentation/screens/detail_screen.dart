@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_stat
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -28,7 +29,7 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
 
@@ -51,17 +52,21 @@ class _DetailScreenState extends State<DetailScreen>
   /// reject a re-entrant call while the first is still awaiting Supabase.
   bool _isBusy = false;
 
-  /// Current status filter (`REFACTOR_ROADMAP.md` Phase 9 #12) — a filter
-  /// row over this screen's own (typically small) parcel list rather than
-  /// separate tab pages, since a holding rarely has more than a handful of
-  /// parcels.
-  ParcelStatusFilter _filter = ParcelStatusFilter.all;
+  /// Exactly three tabs — الكل/المضافة/تمت المراجعة (`REFACTOR_ROADMAP.md`
+  /// Phase 11 §11), always shown (unlike the filter-chip row this replaced,
+  /// which only appeared for holdings with more than one parcel). الكل is
+  /// always the default/opening tab, per the spec.
+  late final TabController _tabController;
 
   late final StreamSubscription<void> _remoteChangesSub;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: DetailScreenTab.values.length, vsync: this)
+      ..addListener(() {
+        if (!_tabController.indexIsChanging) setState(() {});
+      });
     _parcels = List<Parcel>.of(widget.parcels);
     _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
     // A Realtime event (e.g. this exact person's newly-added parcel being
@@ -96,6 +101,7 @@ class _DetailScreenState extends State<DetailScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _remoteChangesSub.cancel();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -233,33 +239,15 @@ class _DetailScreenState extends State<DetailScreen>
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
-  Map<ParcelStatusFilter, int> _filterCounts() {
-    return <ParcelStatusFilter, int>{
-      for (final ParcelStatusFilter filter in ParcelStatusFilter.values)
-        filter: _parcels
-            .where(
-              (final Parcel p) => filter.matches(
-                p,
-                isModified: _repository.isParcelEdited(p.id),
-              ),
-            )
-            .length,
-    };
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final String holdingId =
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
-    final List<Parcel> visibleParcels = _parcels
-        .where(
-          (final Parcel p) => _filter.matches(
-            p,
-            isModified: _repository.isParcelEdited(p.id),
-          ),
-        )
-        .toList();
+    final DetailScreenTab activeTab =
+        DetailScreenTab.values[_tabController.index];
+    final List<Parcel> visibleParcels =
+        _parcels.where((final Parcel p) => activeTab.matches(p)).toList();
 
     final bool showAddFab = _parcels.isNotEmpty;
 
@@ -275,22 +263,22 @@ class _DetailScreenState extends State<DetailScreen>
                   holdingId: holdingId,
                   parcelCount: _parcels.length,
                 ),
-                // A filter row is only useful once there's more than one
-                // parcel to narrow down — the common case (a single-parcel
-                // holding) would just show one chip meaningfully selected,
-                // pure clutter.
-                if (_parcels.length > 1) ...[
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                    child: ParcelStatusFilterRow(
-                      selected: _filter,
-                      counts: _filterCounts(),
-                      onSelected: (final ParcelStatusFilter filter) =>
-                          setState(() => _filter = filter),
-                    ),
-                  ),
-                  verticalSpacing(8),
-                ],
+                // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
+                // Phase 11 §11) — unlike the filter-chip row this replaced,
+                // which only appeared once a holding had more than one
+                // parcel; a fixed tab bar is part of the screen's layout
+                // regardless of how many parcels are on it.
+                TabBar(
+                  controller: _tabController,
+                  labelColor: AppColors.primary200,
+                  unselectedLabelColor: colors.textSecondary,
+                  indicatorColor: AppColors.primary200,
+                  tabs: [
+                    for (final DetailScreenTab tab in DetailScreenTab.values)
+                      Tab(text: tab.label()),
+                  ],
+                ),
+                verticalSpacing(8),
                 Expanded(
                   child: visibleParcels.isEmpty
                       ? Center(

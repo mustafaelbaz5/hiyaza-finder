@@ -40,6 +40,7 @@ class Parcel {
     this.completedAt,
     this.completedBy,
     this.isFieldAdded = false,
+    this.createdBy,
     this.holderNameFarmerCard,
     this.ownerNameFarmerCard,
     this.growthStages = defaultGrowthStage,
@@ -113,6 +114,15 @@ class Parcel {
   /// row. Structural/origin metadata, never user-edited; needed so
   /// `setParcelReviewed`/`pushMarkReviewed` know which table to UPDATE.
   final bool isFieldAdded;
+
+  /// `added_holdings.created_by` (`profiles.id`, uuid) — who added this
+  /// record in the field (`REFACTOR_ROADMAP.md` Phase 11 §12). Only ever
+  /// populated on an unpromoted `added_holdings` row: `holdings` has no
+  /// `created_by` column, so this is `null` once the record is promoted
+  /// (same lifecycle as [isFieldAdded] flipping to `false`). Resolving the
+  /// creator's display email from this id is the UI layer's job
+  /// (`HoldingsApi.fetchProfileEmails`), not stored on the entity itself.
+  final String? createdBy;
 
   /// اسم الحائز كما يظهر في بطاقة الفلاح (farmer-card name) — distinct from
   /// [holderName], which is the Excel-import/edit-overlay identity field.
@@ -304,6 +314,7 @@ class Parcel {
     final Object? completedAt = _unset,
     final Object? completedBy = _unset,
     final bool? isFieldAdded,
+    final Object? createdBy = _unset,
     final Object? holderNameFarmerCard = _unset,
     final Object? ownerNameFarmerCard = _unset,
     final Object? growthStages = _unset,
@@ -350,6 +361,7 @@ class Parcel {
       completedAt: resolve(completedAt, this.completedAt),
       completedBy: resolve(completedBy, this.completedBy),
       isFieldAdded: isFieldAdded ?? this.isFieldAdded,
+      createdBy: resolve(createdBy, this.createdBy),
       holderNameFarmerCard:
           resolve(holderNameFarmerCard, this.holderNameFarmerCard),
       ownerNameFarmerCard:
@@ -437,6 +449,7 @@ class Parcel {
       completedAt: original.completedAt,
       completedBy: original.completedBy,
       isFieldAdded: original.isFieldAdded,
+      createdBy: original.createdBy,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
       growthStages: json['growthStages'] as String? ?? defaultGrowthStage,
@@ -485,6 +498,7 @@ class Parcel {
         'completedAt': completedAt?.toIso8601String(),
         'completedBy': completedBy,
         'isFieldAdded': isFieldAdded,
+        'createdBy': createdBy,
         'holderNameFarmerCard': holderNameFarmerCard,
         'ownerNameFarmerCard': ownerNameFarmerCard,
         'growthStages': growthStages,
@@ -534,6 +548,7 @@ class Parcel {
           : DateTime.parse(json['completedAt'] as String),
       completedBy: json['completedBy'] as String?,
       isFieldAdded: json['isFieldAdded'] as bool? ?? false,
+      createdBy: json['createdBy'] as String?,
       holderNameFarmerCard: json['holderNameFarmerCard'] as String?,
       ownerNameFarmerCard: json['ownerNameFarmerCard'] as String?,
       growthStages: json['growthStages'] as String? ?? defaultGrowthStage,

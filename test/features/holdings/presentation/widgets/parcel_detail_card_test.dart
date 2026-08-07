@@ -7,7 +7,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_detail_card.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_badge.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reads the real translation file straight off disk instead of through
@@ -158,13 +157,11 @@ void main() {
         ),
       );
 
-      expect(
-        find.byWidgetPredicate(
-          (final Widget widget) =>
-              widget is StatusBadge && widget.label == 'مضافة من التطبيق',
-        ),
-        findsOneWidget,
-      );
+      // The standalone top-row "مضافة من التطبيق" StatusBadge chip was
+      // removed as a duplicate of the fuller added-badge banner below it
+      // (`REFACTOR_ROADMAP.md` Phase 11 §12) — assert against the banner's
+      // own label text instead.
+      expect(find.text('مضافة من التطبيق'), findsOneWidget);
     },
   );
 

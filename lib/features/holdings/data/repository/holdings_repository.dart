@@ -686,6 +686,32 @@ class HoldingsRepository
     ];
   }
 
+  /// Resolves creator emails for the given `Parcel.createdBy` uuids
+  /// (`REFACTOR_ROADMAP.md` Phase 11 §12) — cached in-memory for the life
+  /// of the repository (city-session scoped) since a profile's email
+  /// essentially never changes mid-session and this is called once per
+  /// visible added-parcel badge. Returns an empty map when there's no
+  /// [holdingsApi] (test/no-network mode) or nothing to resolve.
+  final Map<String, String> _profileEmailCache = <String, String>{};
+
+  Future<Map<String, String>> resolveCreatorEmails(
+    final Iterable<String> createdByIds,
+  ) async {
+    final List<String> missing = createdByIds
+        .toSet()
+        .where((final String id) => !_profileEmailCache.containsKey(id))
+        .toList();
+    if (missing.isNotEmpty && holdingsApi != null) {
+      final Map<String, String> fetched =
+          await holdingsApi!.fetchProfileEmails(missing);
+      _profileEmailCache.addAll(fetched);
+    }
+    return <String, String>{
+      for (final String id in createdByIds)
+        if (_profileEmailCache.containsKey(id)) id: _profileEmailCache[id]!,
+    };
+  }
+
   /// Distinct اسم الحوض values in the active dataset, sorted.
   @override
   List<String> get availableBasins =>
