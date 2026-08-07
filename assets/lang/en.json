@@ -186,6 +186,9 @@
     "crop_type": {
       "specify_title": "Specify crop type (optional)"
     },
+    "notes_field": {
+      "specify_title": "Write the note (optional)"
+    },
     "status": {
       "added_from_app": "Added from app",
       "pending_review": "Pending review",

@@ -20,6 +20,7 @@ import '../widgets/field_edit_dialogs.dart';
 import '../widgets/field_row.dart';
 import '../widgets/required_field_gaps.dart';
 import '../widgets/responsive_fields_wrap.dart';
+import '../widgets/specify_other_picker.dart';
 import '../widgets/toggle_field_row.dart';
 
 /// Navigation arguments for the add-record route.
@@ -200,6 +201,26 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     setState(
       () => _parcel = _parcel.copyWith(
         cropType: result.isClear ? null : result.value,
+      ),
+    );
+  }
+
+  /// ملاحظات gets the same "specify other" escape hatch نوع الزرع has
+  /// (`REFACTOR_ROADMAP.md` Phase 12).
+  Future<void> _editNotes(final BuildContext context) async {
+    final ChoiceDialogResult<String>? result = await pickWithOther(
+      context,
+      title: 'holdings.fields.notes'.tr(),
+      selected: _parcel.notes,
+      options: Parcel.notesOptions,
+      otherOption: Parcel.notesOtherOption,
+      specifyTitle: 'holdings.notes_field.specify_title'.tr(),
+      clearLabel: '—',
+    );
+    if (result == null) return;
+    setState(
+      () => _parcel = _parcel.copyWith(
+        notes: result.isClear ? null : result.value,
       ),
     );
   }
@@ -418,14 +439,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             label: 'holdings.fields.notes'.tr(),
                             value: _parcel.notes,
                             isModified: _isModified((final p) => p.notes),
-                            onEdit: () => _editDropdown(
-                              context,
-                              title: 'holdings.fields.notes'.tr(),
-                              initialValue: _parcel.notes,
-                              options: Parcel.notesOptions,
-                              apply: (final String? v) =>
-                                  _parcel.copyWith(notes: v),
-                            ),
+                            onEdit: () => _editNotes(context),
                           ),
                           if (!hideCreditType)
                             FieldRow(

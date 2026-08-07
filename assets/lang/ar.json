@@ -186,6 +186,9 @@
     "crop_type": {
       "specify_title": "حدد نوع الزرع (اختياري)"
     },
+    "notes_field": {
+      "specify_title": "اكتب الملاحظة (اختياري)"
+    },
     "status": {
       "added_from_app": "مضافة من التطبيق",
       "pending_review": "قيد المراجعة",

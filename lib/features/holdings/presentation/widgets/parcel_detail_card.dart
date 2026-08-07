@@ -25,6 +25,7 @@ import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'parcel_detail_header.dart';
 import 'required_field_gaps.dart';
+import 'specify_other_picker.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -264,13 +265,7 @@ class ParcelDetailCard extends StatelessWidget {
               label: 'holdings.fields.notes'.tr(),
               value: parcel.notes,
               isModified: _isModified((final p) => p.notes),
-              onEdit: () => _editDropdown(
-                context,
-                title: 'holdings.fields.notes'.tr(),
-                initialValue: parcel.notes,
-                options: Parcel.notesOptions,
-                apply: (final String? v) => parcel.copyWith(notes: v),
-              ),
+              onEdit: () => _editNotes(context),
             ),
             verticalSpacing(12),
             verticalSpacing(8),
@@ -337,28 +332,6 @@ class ParcelDetailCard extends StatelessWidget {
     onFieldChanged(apply(value));
   }
 
-  Future<void> _editDropdown(
-    final BuildContext context, {
-    required final String title,
-    required final String? initialValue,
-    required final List<String> options,
-    required final Parcel Function(String? value) apply,
-    final bool allowClear = true,
-  }) async {
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
-      context,
-      title: title,
-      options: [
-        for (final String option in options)
-          ChoiceOption<String>(value: option, label: option),
-      ],
-      selected: initialValue,
-      clearLabel: allowClear ? '—' : null,
-    );
-    if (result == null) return;
-    onFieldChanged(apply(result.isClear ? null : result.value));
-  }
-
   Future<void> _editCropType(final BuildContext context) async {
     final ChoiceDialogResult<String>? result = await pickCropType(
       context,
@@ -367,6 +340,26 @@ class ParcelDetailCard extends StatelessWidget {
     if (result == null) return;
     onFieldChanged(
       parcel.copyWith(cropType: result.isClear ? null : result.value),
+    );
+  }
+
+  /// ملاحظات gets the same "specify other" escape hatch نوع الزرع has
+  /// (`REFACTOR_ROADMAP.md` Phase 12) — most parcels fit one of
+  /// [Parcel.notesOptions], but a field worker occasionally needs to write
+  /// something the fixed list doesn't cover.
+  Future<void> _editNotes(final BuildContext context) async {
+    final ChoiceDialogResult<String>? result = await pickWithOther(
+      context,
+      title: 'holdings.fields.notes'.tr(),
+      selected: parcel.notes,
+      options: Parcel.notesOptions,
+      otherOption: Parcel.notesOtherOption,
+      specifyTitle: 'holdings.notes_field.specify_title'.tr(),
+      clearLabel: '—',
+    );
+    if (result == null) return;
+    onFieldChanged(
+      parcel.copyWith(notes: result.isClear ? null : result.value),
     );
   }
 

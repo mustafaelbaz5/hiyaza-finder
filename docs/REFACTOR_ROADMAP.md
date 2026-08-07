@@ -749,6 +749,39 @@ flutter analyze: clean. flutter test: 283/283 passing (2 new).
 
 ---
 
+## Phase 13 — ملاحظات "specify other" option (2026-08-07)
+
+**Status: done.** ملاحظات gets the same "specify other" escape hatch نوع الزرع already had: a new
+`أخرى` entry appended to `Parcel.notesOptions`, picking it opens a free-text follow-up dialog so a
+field worker can write a note the fixed list doesn't cover, instead of being stuck with the closest
+approximate option.
+
+**`pickWithOther` (new, `specify_other_picker.dart`)** generalizes `pickCropType`'s "choice dialog →
+if 'other', follow up with free text" flow into a reusable function, rather than duplicating that
+logic a second time for ملاحظات. `pickCropType` itself was left as its own thin wrapper (a second call
+site elsewhere in the app relies on its exact signature) but could be rewritten in terms of
+`pickWithOther` in a later cleanup if a third field ever needs the same pattern.
+
+Wired into all three places ملاحظات is edited: `ParcelDetailCard._editNotes` (detail card),
+`AddRecordScreen._editNotes` (new-record form), and `FileStatusScreen._pickBulkValue`'s notes branch
+(bulk edit) — each replaces a plain `showChoiceDialog`/`_editDropdown` call with `pickWithOther`,
+mirroring exactly how each of those three call sites already special-cased `BulkEditableField.cropType`/
+`_editCropType` for the same reason.
+
+**Dependencies:** none — `notesOptions`'s `أخرى` entry is a plain Dart list value, no DB/schema
+involvement; the custom text a user types is stored in the same `notes` column as any other value.
+
+**Complexity:** low — reused the exact "specify other" pattern already proven for نوع الزرع.
+
+**Risks:** low. Purely additive (`أخرى` is a new list entry, not a rename/removal of any existing
+option) — every previously-valid `notes` value is unaffected.
+
+flutter analyze: clean. flutter test: 283/283 passing (no test count change — `pickWithOther`/
+`pickCropType` are UI-orchestration glue, matching the existing pattern of not unit-testing that
+category of code in this codebase).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

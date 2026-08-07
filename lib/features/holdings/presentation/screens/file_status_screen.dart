@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/crop_type_picker.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/picker_row.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/section_card.dart';
+import 'package:hiyaza_finder/features/holdings/presentation/widgets/specify_other_picker.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_summary_cards.dart';
 
 import '../../../../core/di/dependency_injection.dart';
@@ -119,6 +120,21 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
       final ChoiceDialogResult<String>? result = await pickCropType(
         context,
         selected: _bulkValue as String?,
+      );
+      if (result == null) return;
+      setState(() => _bulkValue = result.isClear ? null : result.value);
+      return;
+    }
+
+    if (_bulkField == BulkEditableField.notes) {
+      final ChoiceDialogResult<String>? result = await pickWithOther(
+        context,
+        title: bulkEditableFieldLabel(_bulkField),
+        selected: _bulkValue as String?,
+        options: Parcel.notesOptions,
+        otherOption: Parcel.notesOtherOption,
+        specifyTitle: 'holdings.notes_field.specify_title'.tr(),
+        clearLabel: 'holdings.bulk_edit.value_placeholder'.tr(),
       );
       if (result == null) return;
       setState(() => _bulkValue = result.isClear ? null : result.value);

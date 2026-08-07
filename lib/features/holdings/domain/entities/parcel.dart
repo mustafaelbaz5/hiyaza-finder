@@ -265,7 +265,14 @@ class Parcel {
     'خطوط الحصر غير مطابقة للصورة',
     'لا يوجد خطوط حصر لتوضيح التقسيمات',
     'تعارض التقسيمات بين اكثر من موظف حصر ميداني',
+    notesOtherOption,
   ];
+
+  /// The ملاحظات option that unlocks the free-text follow-up
+  /// (`REFACTOR_ROADMAP.md` Phase 12) — same "specify other" pattern
+  /// `cropTypeOtherOption` already established, for when none of the fixed
+  /// options fit.
+  static const String notesOtherOption = 'أخرى';
 
   /// Sentinel meaning "leave this field unchanged" — lets every field below
   /// be explicitly overridden, including to `null`, which a plain `??`
