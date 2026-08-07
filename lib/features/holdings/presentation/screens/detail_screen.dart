@@ -134,7 +134,7 @@ class _DetailScreenState extends State<DetailScreen>
       });
       context.showSuccessSnackBar('holdings.detail.deleted'.tr());
     } catch (_) {
-      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+      if (mounted) context.showErrorSnackBar('holdings.detail.delete_error'.tr());
     } finally {
       _isBusy = false;
     }
@@ -156,18 +156,31 @@ class _DetailScreenState extends State<DetailScreen>
         });
       }
     } catch (_) {
-      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+      if (mounted) context.showErrorSnackBar('holdings.detail.reopen_failed'.tr());
     } finally {
       _isBusy = false;
     }
   }
 
-  /// Default الملاحظات value applied automatically whenever an existing
-  /// record is edited or a new parcel is added for an existing person —
-  /// flags the record as needing a field-survey follow-up without relying
-  /// on the user to remember to set it themselves.
+  /// الملاحظات default used when a brand-new parcel is created (Add Parcel/
+  /// Add Person) — still freely user-editable in the form before saving.
   static const String _needsSurveyNote = 'نقص بيانات الحصر';
 
+  /// الملاحظات value automatically set when نوع الاستخدام is changed away
+  /// from the default زراعة (`REFACTOR_ROADMAP.md` Phase 12).
+  static const String _nonAgriculturalUsageNote = 'استخدام غير زراعي';
+
+  /// الملاحظات no longer gets force-overwritten on every field edit — that
+  /// silently discarded whatever the user had actually written whenever
+  /// they corrected any unrelated field (`REFACTOR_ROADMAP.md` Phase 12).
+  /// It's now only auto-set by two specific, deliberate triggers:
+  /// - المساحة (فدان/قيراط/سهم or المساحة بالمتر) changing → "نقص بيانات
+  ///   الحصر" (the field survey for this parcel needs re-verifying).
+  /// - نوع الاستخدام changing away from the زراعة default → "استخدام غير
+  ///   زراعي".
+  /// Every other field edit leaves الملاحظات exactly as the user last set
+  /// it. If both triggers fire in the same edit, نوع الاستخدام's message
+  /// wins (it's the more specific, actionable one).
   Future<void> _updateField(final Parcel updated) async {
     if (_isBusy) return;
     _isBusy = true;
@@ -175,14 +188,23 @@ class _DetailScreenState extends State<DetailScreen>
       final int idx = _parcels.indexWhere(
         (final Parcel p) => p.id == updated.id,
       );
-      // Force الملاحظات to the "needs survey" default on every field edit —
-      // unless this save is itself the user explicitly changing الملاحظات
-      // (detected by comparing against the pre-edit value), in which case
-      // their choice wins instead of being overwritten.
       final Parcel? before = idx >= 0 ? _parcels[idx] : null;
-      final Parcel toSave = (before != null && updated.notes == before.notes)
-          ? updated.copyWith(notes: _needsSurveyNote)
-          : updated;
+      Parcel toSave = updated;
+      if (before != null) {
+        final bool areaChanged = updated.feddan != before.feddan ||
+            updated.qirat != before.qirat ||
+            updated.sahm != before.sahm ||
+            updated.totalSqm != before.totalSqm;
+        final bool usageChangedAwayFromDefault =
+            updated.usageType != before.usageType &&
+                updated.usageType != Parcel.defaultUsageType;
+        if (areaChanged) {
+          toSave = toSave.copyWith(notes: _needsSurveyNote);
+        }
+        if (usageChangedAwayFromDefault) {
+          toSave = toSave.copyWith(notes: _nonAgriculturalUsageNote);
+        }
+      }
 
       await _repository.updateParcel(toSave);
       if (idx >= 0) {
@@ -190,7 +212,7 @@ class _DetailScreenState extends State<DetailScreen>
       }
       if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
     } catch (_) {
-      if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
+      if (mounted) context.showErrorSnackBar('holdings.detail.save_failed'.tr());
     } finally {
       _isBusy = false;
     }

@@ -192,4 +192,38 @@ void main() {
     expect(rebuilt.pendingGroupId, original.pendingGroupId);
     expect(rebuilt.holdingsCount, original.holdingsCount);
   });
+
+  test(
+      'associationName round-trips through toEditableJson/fromEditableJson '
+      '(REFACTOR_ROADMAP.md Phase 12 — was silently dropped, a real edit-loss '
+      'bug: editable in More Details since Phase 11 §4 but excluded from the '
+      'edit-overlay snapshot until now)', () {
+    const Parcel original = Parcel(
+      id: 'p-1',
+      holdingId: '101',
+      associationName: 'جمعية الدير',
+    );
+    final Parcel edited = original.copyWith(associationName: 'جمعية جديدة');
+
+    final Map<String, dynamic> snapshot = edited.toEditableJson();
+    expect(snapshot['associationName'], 'جمعية جديدة');
+
+    final Parcel rebuilt = Parcel.fromEditableJson(original, snapshot);
+    expect(rebuilt.associationName, 'جمعية جديدة');
+  });
+
+  test(
+      'fromEditableJson falls back to original.associationName for a '
+      'pre-Phase-12 snapshot that never recorded it', () {
+    const Parcel original = Parcel(
+      id: 'p-1',
+      holdingId: '101',
+      associationName: 'جمعية الدير',
+    );
+    final Parcel rebuilt = Parcel.fromEditableJson(
+      original,
+      <String, dynamic>{'holderName': 'محمد'},
+    );
+    expect(rebuilt.associationName, 'جمعية الدير');
+  });
 }

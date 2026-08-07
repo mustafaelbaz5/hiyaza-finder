@@ -389,6 +389,7 @@ class Parcel {
         'sahm': sahm,
         'totalSqm': totalSqm,
         'ownerName': ownerName,
+        'associationName': associationName,
         'cropType': cropType,
         'notes': notes,
         'creditType': creditType,
@@ -402,10 +403,14 @@ class Parcel {
       };
 
   /// Rebuilds a parcel from [original] — which supplies the never-editable
-  /// fields (id, pageNumber, borders, associationName) — overlaid with a
-  /// saved [json] snapshot produced by [toEditableJson]. `holdingId` falls
-  /// back to [original]'s value only for snapshots saved before it became
-  /// editable.
+  /// fields (id, pageNumber, borders) — overlaid with a saved [json]
+  /// snapshot produced by [toEditableJson]. `holdingId` falls back to
+  /// [original]'s value only for snapshots saved before it became editable.
+  /// `associationName` became editable when it moved into the More Details
+  /// section (`REFACTOR_ROADMAP.md` Phase 11 §4) — falls back to
+  /// [original]'s value for snapshots saved before that (this doc comment
+  /// previously, incorrectly, still listed it as never-editable, matching a
+  /// real bug: the field was editable in the UI but silently never synced).
   factory Parcel.fromEditableJson(
     final Parcel original,
     final Map<String, dynamic> json,
@@ -421,7 +426,8 @@ class Parcel {
       borderSouth: original.borderSouth,
       borderWest: original.borderWest,
       borderNorth: original.borderNorth,
-      associationName: original.associationName,
+      associationName:
+          json['associationName'] as String? ?? original.associationName,
       directorate: json['directorate'] as String?,
       administration: json['administration'] as String?,
       basinName: json['basinName'] as String?,

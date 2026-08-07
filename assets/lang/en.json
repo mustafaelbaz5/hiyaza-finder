@@ -267,12 +267,16 @@
       "reopen": "Reopen",
       "filter_all": "All",
       "filter_added": "Added",
-      "tab_reviewed": "Reviewed"
+      "tab_reviewed": "Reviewed",
+      "save_failed": "Couldn't save the change — check your connection and try again",
+      "delete_error": "Couldn't delete the record — check your connection and try again",
+      "reopen_failed": "Couldn't reopen the record — check your connection and try again",
+      "copy_and_review_failed": "ID copied, but couldn't update the review status — try again"
     },
     "add": {
       "new_person_cta": "Add",
       "new_person_title": "Add new person",
-      "new_parcel_title": "Add a new parcel",
+      "new_parcel_title": "Add",
       "for_person": "Add a new parcel for {name}",
       "land_number_hint": "Enter the correct land number",
       "save": "Save",
@@ -282,7 +286,8 @@
       "crop_type_required": "Please select a crop type",
       "national_id_invalid": "National ID must be 14 digits",
       "no_active_city": "Can't add without a loaded city",
-      "discard_confirm": "Your changes will be lost. Leave anyway?"
+      "discard_confirm": "Your changes will be lost. Leave anyway?",
+      "save_failed": "Couldn't save the new record — check your connection and try again"
     },
     "edit": {
       "title": "Edit holding {id}",

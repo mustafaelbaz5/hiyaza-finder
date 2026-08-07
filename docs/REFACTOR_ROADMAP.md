@@ -682,6 +682,73 @@ retargeted from the removed `StatusBadge` to the surviving banner's text).
 
 ---
 
+## Phase 12 — Copy-all visibility, notes auto-set correction, sync-completeness audit,
+snackbar clarity (2026-08-07)
+
+**Status: done.** A small, focused follow-up: `Parcel.defaultUsageType`/`defaultCreditType` were
+already correct (`زراعة`/`ملك`, verified, no change needed); the other four items were real.
+
+**Copy All button restored to genuinely visible.** Phase 9 #4/Phase 10 §7 shrank it to a small
+right-aligned text link (14px icon, no border/fill) in the name of de-emphasizing copy/export next
+to Copy ID — but that went far enough that the button became hard to notice and hard to tap
+accurately, which the user flagged directly. `CopyAllButton` rebuilt as a full-width outlined button
+(`AppColors.primary200` border/text/icon) — clearly visible and easy to hit, while staying outlined
+rather than filled so `ParcelIdChip`'s solid-green fill still reads as the primary action. Visibility
+and hierarchy are not the same axis; the previous version conflated them.
+
+**الملاحظات no longer force-overwritten on every field edit.** Previously, `DetailScreen._updateField`
+unconditionally reset الملاحظات to "نقص بيانات الحصر" on *any* field save unless the save was itself
+an explicit edit to الملاحظات — silently discarding whatever the user had actually written the moment
+they corrected an unrelated field (national ID, basin, crop type, anything). Replaced with exactly
+two deliberate triggers, per explicit user confirmation: المساحة (فدان/قيراط/سهم/المساحة بالمتر)
+changing → "نقص بيانات الحصر"; نوع الاستخدام changing away from the زراعة default → "استخدام غير
+زراعي" (wins if both fire in the same edit — the more specific, actionable message). Every other
+field edit now leaves الملاحظات exactly as the user last set it. New-parcel creation (Add
+Parcel/Add Person) still defaults to "نقص بيانات الحصر" as a starting value, unchanged — still
+freely editable in the form before saving.
+
+**Sync-completeness audit found and fixed a real silent-edit-loss bug.** Traced every UI-editable
+field through `toEditableJson()`/`fromEditableJson()`/`EditParcelOperation`'s payload
+(`ParcelDatasetState.editSnapshot` → `ParcelEditOverlay.snapshot`) and `parcelToAddedHoldingsRecord()`
+for the add flow. Found: **اسم الجمعية (`associationName`)** became user-editable when it moved into
+More Details (Phase 11 §4), but `Parcel.toEditableJson()`/`fromEditableJson()` still treated it as
+one of the "never-editable, always-from-original" fields (a leftover from when it truly wasn't
+editable) — an edit displayed correctly on screen and updated local state, but was silently dropped
+before reaching `EditParcelOperation`'s payload, and reverted to the original value on the next
+overlay rebuild (app restart, an incoming Realtime edit from another device). Fixed: added
+`associationName` to both `toEditableJson`/`fromEditableJson`, with a fallback to
+`original.associationName` for a pre-fix snapshot that never recorded it (so an already-queued sync
+operation from before this fix doesn't crash or silently null the field on decode). Every other field
+checked (growth stage, notes, usage type, credit type, and everything editable in
+`add_record_screen.dart`) was already correctly wired end-to-end — no other gaps found. New tests:
+`parcel_json_test.dart` "associationName round-trips through toEditableJson/fromEditableJson" and the
+pre-fix-snapshot fallback case.
+
+**Snackbar messages made action-specific instead of a blanket "حدث خطأ غير متوقع."** Added
+`holdings.detail.save_failed`/`delete_error`/`reopen_failed`/`copy_and_review_failed` and
+`holdings.add.save_failed`, wired into `DetailScreen._updateField`/`_deleteParcel`/`_reopenParcel`,
+`AddRecordScreen._save`, and `ParcelDetailCard._copyId`'s completion-write failure — each now names
+the action that failed and suggests checking the connection, rather than a generic unexpected-error
+message that gave no signal about what to retry. `file_status_screen.dart`'s bulk-edit flow already
+had three specific outcome messages (all-succeeded/all-failed/partial) — left its outer catch-all as
+`errors.unknown` since that's the correct fallback for a genuinely unexpected exception outside the
+three known outcomes, not a gap.
+
+**Dependencies:** none — Flutter-only, no schema change (the sync-completeness fix corrects how an
+already-live column, `associationName`/`holdings.association_name`/`added_holdings.association_name`,
+gets included in the existing edit-overlay payload — the column itself needed no migration).
+
+**Complexity:** low-medium — the `associationName` fix required care around backward-compat decoding
+of a pre-fix snapshot; everything else was a contained, well-scoped change to already-existing pieces.
+
+**Risks:** low. The `associationName` fix is strictly additive to the sync payload (a field that
+previously never synced now does) — no existing behavior for any other field changed. The notes
+auto-set narrowing is a deliberate, explicitly-confirmed behavior change, not a silent one.
+
+flutter analyze: clean. flutter test: 283/283 passing (2 new).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

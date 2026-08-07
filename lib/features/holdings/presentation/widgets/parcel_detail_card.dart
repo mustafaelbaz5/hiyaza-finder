@@ -472,7 +472,9 @@ class ParcelDetailCard extends StatelessWidget {
       onFieldChanged(parcel.copyWith(completedAt: DateTime.now()));
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
     } catch (_) {
-      if (context.mounted) context.showErrorSnackBar('errors.unknown'.tr());
+      if (context.mounted) {
+        context.showErrorSnackBar('holdings.detail.copy_and_review_failed'.tr());
+      }
     }
   }
 
