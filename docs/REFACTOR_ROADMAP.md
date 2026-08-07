@@ -892,6 +892,37 @@ regression case simulating the outbox-path promotion-duplicate scenario directly
 
 ---
 
+## Phase 16 — Flavor-consistent, backend-accurate connectivity check (2026-08-08)
+
+**Status: done.** `NetworkInfoImpl.isConnected` had `if (AppConfig.isDevelopment) return true; //
+TODO: remove before release` — a dev-only bypass that made the connectivity check meaningless in
+dev and, worse, meant it was never actually exercised until production, where Phase 15's
+`_ConnectivityGate` crash was first hit. Removed the bypass entirely — both flavors now run the
+exact same check.
+
+The underlying check itself was also weak: `InternetConnectionChecker.createInstance()`'s default
+address list pings generic public hosts unrelated to whether the app can actually reach its own
+Supabase backend — an emulator/device can resolve those while Supabase itself is unreachable, or
+vice versa. `core_module.dart` now configures the checker with `AppConfig.supabaseUrl` (a new
+getter, reads `SUPABASE_URL` from the already-loaded `.env` via `flutter_dotenv`) as the primary
+address, plus two well-known highly-available hosts (`one.one.one.one`, `dns.google`) as fallbacks
+so a momentary Supabase-side blip alone doesn't read as "no internet" when the device is otherwise
+online — any one responding is enough (`requireAllAddressesToRespond` stays `false`, the package
+default).
+
+**Dependencies:** none — purely a `NetworkInfo`/DI configuration change, no schema/API involvement.
+
+**Complexity:** low.
+
+**Risks:** low. The connectivity check now runs for real in dev too (previously always a silent
+`true`) — a dev tester on a genuinely disconnected network will now see the same "no internet"
+dialog a production user would, which is the intended, more accurate behavior, not a regression.
+
+flutter analyze: clean. flutter test: 287/287 passing (no test count change — DI wiring and a
+`.env`-backed config getter aren't unit-tested in this codebase's existing conventions).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

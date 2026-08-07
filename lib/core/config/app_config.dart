@@ -1,7 +1,15 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 enum Environment { development, production }
 
 class AppConfig {
   AppConfig._();
+
+  /// The backend URL the app actually depends on — used by
+  /// [NetworkInfoImpl] to check connectivity against Supabase itself
+  /// rather than an unrelated public host, so the check means the same
+  /// thing ("can this app reach its backend?") in both flavors.
+  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
 
   // Environment — driven by --dart-define at compile time
   static const String _env = String.fromEnvironment(
