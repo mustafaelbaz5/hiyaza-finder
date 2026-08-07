@@ -58,8 +58,16 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
   /// error from Postgres (no useful message reaches the user, and the
   /// outbox just retries the same doomed insert forever). Caught here,
   /// before it ever leaves the device, with a message that actually says
-  /// what's wrong.
+  /// what's wrong. فدان stays unbounded by this — a large-but-legitimate
+  /// فدان count is plausible; قيراط/سهم below have their own tighter,
+  /// domain-meaningful caps instead.
   static const double _maxAreaValue = 999999.9999;
+
+  /// 24 قيراط make a فدان and 24 سهم make a قيراط — a value of 24 or more
+  /// in either field is never legitimate (it should have been carried over
+  /// into the next unit instead), so it's rejected the same way an
+  /// out-of-DB-range value is.
+  static const double _maxQiratOrSahm = 24;
 
   String? _errorText;
 
@@ -68,11 +76,16 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
     final double? qirat = _parseLocalizedNum(_qiratController.text);
     final double? sahm = _parseLocalizedNum(_sahmController.text);
 
-    final bool tooLarge = (feddan != null && feddan.abs() >= _maxAreaValue) ||
-        (qirat != null && qirat.abs() >= _maxAreaValue) ||
-        (sahm != null && sahm.abs() >= _maxAreaValue);
-    if (tooLarge) {
+    if (feddan != null && feddan.abs() >= _maxAreaValue) {
       setState(() => _errorText = 'holdings.detail.area_value_too_large'.tr());
+      return;
+    }
+    if (qirat != null && qirat.abs() >= _maxQiratOrSahm) {
+      setState(() => _errorText = 'holdings.detail.qirat_max_exceeded'.tr());
+      return;
+    }
+    if (sahm != null && sahm.abs() >= _maxQiratOrSahm) {
+      setState(() => _errorText = 'holdings.detail.sahm_max_exceeded'.tr());
       return;
     }
 

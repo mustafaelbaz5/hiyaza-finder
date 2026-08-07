@@ -974,6 +974,50 @@ were never integers.
 flutter analyze: clean. flutter test: 287/287 passing (2 of `added_holdings_mapper_test.dart`'s
 existing cases updated to reflect the numeric, not int, column type; no net test count change).
 
+## Phase 18 — قيراط/سهم caps, reviewed-card locked styling, added-by verification (2026-08-08)
+
+**Status: done.**
+
+**قيراط/سهم domain caps.** 24 قيراط make a فدان and 24 سهم make a قيراط, so a value of 24 or more in
+either field is never legitimate — it should have carried over into the next unit instead. Added a
+`_maxQiratOrSahm = 24` check in `_AreaEditDialog._save` (`field_edit_dialogs.dart`), alongside
+Phase 17's existing `_maxAreaValue` DB-range check on فدان. فدان itself stays unbounded — a large
+فدان count is plausible on its own. Each violation gets its own inline error message
+(`holdings.detail.qirat_max_exceeded`/`sahm_max_exceeded`).
+
+**Reviewed-parcel UI.** Removed the large "تم مراجعة القطعة" / "تم جمع هذه البيانات من الحقل..."
+banner from `ParcelDetailCard` — the small "تم المراجعة" `StatusBadge` already in `ParcelDetailTopRow`
+said the same thing, and the full banner was redundant weight on an already-done record. That badge's
+icon changed from a plain checkmark to a lock icon to read as "locked," not just "successfully
+marked." The card's own locked styling (shown when `completedAt != null`) was strengthened: the
+previous treatment was a barely-there `textPrimary` tint at 5% alpha with a translucent border, easy
+to miss next to an active card; now a distinctly grey `textSecondary`-tinted surface (10% alpha) with
+a solid, more visible grey border (55% alpha, 1.5px) — a completed parcel should be unmistakable at a
+glance, not just slightly faded.
+
+**Added-by-app info — verified, not changed.** `_AddedByBanner` (`parcel_detail_card.dart`) already
+resolves `Parcel.createdBy` to an email via `HoldingsRepository.resolveCreatorEmails` and shows it as
+a third banner line once resolved — this was Phase 11 work, confirmed still correct and now actually
+functional end-to-end thanks to Phase 14/15's `holdings.created_by` migration and Realtime-promotion
+fixes (previously `createdBy` was silently lost the moment a parcel promoted from `added_holdings`
+into `holdings`, so the creator line would only show at the top before promotion arrived, if at all).
+No code change needed here — user confirmed keeping the existing 3-line banner shape (label → hint →
+"تمت الإضافة بواسطة: {email}") rather than collapsing into one combined line.
+
+**Dependencies:** the added-by-app verification only actually shows correct data now because of
+Phase 14/15's DB migration and duplicate-append fix — without those, `createdBy` would still be lost
+on promotion regardless of this phase's UI being otherwise correct.
+
+**Complexity:** low — no new mechanisms, straightforward validation/styling changes to existing code.
+
+**Risks:** low. Removing the reviewed banner is purely subtractive (the badge already carried the
+same information); the قيراط/سهم caps only reject values that were never valid; the styling change is
+visual-only, no behavior change to `IgnorePointer`/`onReopen`/etc.
+
+flutter analyze: clean. flutter test: 287/287 passing (no new tests — these are UI-styling and
+inline-validation-message changes, matching the existing pattern of not unit-testing that category
+of change in this codebase; validated by re-running the full suite for regressions).
+
 ---
 
 ## Sequencing summary

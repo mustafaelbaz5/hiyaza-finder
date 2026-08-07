@@ -94,18 +94,17 @@ class ParcelDetailCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
             // Action-area order is fixed (`REFACTOR_ROADMAP.md` Phase 11
-            // §3): status/badges → boundaries → Copy ID → Copy All.
-            if (isAdded || isCompleted) verticalSpacing(8),
-            if (isAdded)
+            // §3): status/badges → boundaries → Copy ID → Copy All. The
+            // large "تم مراجعة القطعة" banner that used to sit here for a
+            // completed parcel was removed (`REFACTOR_ROADMAP.md` Phase 18)
+            // — the small "تم المراجعة" `StatusBadge` in [topRow] already
+            // says this, and the card's own locked styling (stronger tint/
+            // border below) carries the rest; a second full banner repeating
+            // the same fact was redundant weight on an already-done record.
+            if (isAdded) ...[
+              verticalSpacing(8),
               _AddedByBanner(parcel: parcel),
-            if (isAdded && isCompleted) verticalSpacing(8),
-            if (isCompleted)
-              ParcelDetailInfoBanner(
-                icon: Icons.check_circle_rounded,
-                label: 'holdings.detail.reviewed_badge'.tr(),
-                subtitle: 'holdings.detail.reviewed_hint'.tr(),
-                color: colors.success,
-              ),
+            ],
             verticalSpacing(10),
             BorderCompass(
               holdingId: parcel.holdingId,
@@ -280,20 +279,26 @@ class ParcelDetailCard extends StatelessWidget {
       ),
     );
 
+    // A completed parcel needs to read as clearly locked/done at a glance,
+    // distinct from an active card, not just slightly faded
+    // (`REFACTOR_ROADMAP.md` Phase 18) — a visibly grey-tinted surface plus
+    // a solid (not translucent) grey border, rather than the previous
+    // barely-there tint that looked close to a normal card.
+    final Color lockedSurface = colors.textSecondary.withValues(alpha: 0.10);
+    final Color lockedBorder = colors.textSecondary.withValues(alpha: 0.55);
+
     return Container(
       padding: EdgeInsets.all(rw(12)),
       decoration: BoxDecoration(
-        color: isCompleted
-            ? colors.textPrimary.withValues(alpha: 0.05)
-            : colors.backgroundSecondary,
+        color: isCompleted ? lockedSurface : colors.backgroundSecondary,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isCompleted
-              ? colors.textSecondary.withValues(alpha: 0.4)
+              ? lockedBorder
               : isAdded
                   ? AppColors.blue200.withValues(alpha: 0.35)
                   : colors.border,
-          width: isAdded || isCompleted ? 1.2 : 1,
+          width: isCompleted ? 1.5 : (isAdded ? 1.2 : 1),
         ),
       ),
       child: Column(

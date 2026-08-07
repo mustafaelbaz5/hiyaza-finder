@@ -246,6 +246,8 @@
       "holdings_count": "عدد القطع في الحيازة",
       "border_no_data": "لا توجد بيانات لهذا الشخص",
       "area_value_too_large": "القيمة كبيرة جدًا — يرجى مراجعة الرقم المدخل",
+      "qirat_max_exceeded": "القيراط لا يمكن أن يتجاوز 24",
+      "sahm_max_exceeded": "السهم لا يمكن أن يتجاوز 24",
       "new_badge": "جديد — بانتظار المزامنة",
       "parcel_count": "{count} قطعة",
       "parcel_count_suffix": " ({count} قطع)",

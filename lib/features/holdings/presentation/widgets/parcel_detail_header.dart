@@ -70,8 +70,12 @@ class ParcelDetailTopRow extends StatelessWidget {
                   color: AppColors.amber200,
                 ),
               if (isReviewed)
+                // Lock icon (not a plain checkmark) reinforces that this
+                // parcel is locked/read-only, not just "successfully
+                // marked" — matches the card's own strengthened locked
+                // styling below (`REFACTOR_ROADMAP.md` Phase 18).
                 StatusBadge(
-                  icon: Icons.check_circle_rounded,
+                  icon: Icons.lock_rounded,
                   label: 'holdings.status.reviewed'.tr(),
                   color: AppColors.green200,
                 ),
