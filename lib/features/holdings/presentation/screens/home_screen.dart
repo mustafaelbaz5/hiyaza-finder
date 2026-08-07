@@ -280,7 +280,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
           holdingId: '-1', // default; editable in the form below
           nationalId: '11111111111111',
           landNumber: '-1',
-          notes: 'غير محيز',
+          notes: 'نقص بيانات الحصر',
           holdingsCount: 1, // a brand-new person starts with one قطعة
         ),
       ),

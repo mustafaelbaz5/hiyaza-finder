@@ -268,8 +268,10 @@ class _DetailScreenState extends State<DetailScreen>
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
     final DetailScreenTab activeTab =
         DetailScreenTab.values[_tabController.index];
-    final List<Parcel> visibleParcels =
-        _parcels.where((final Parcel p) => activeTab.matches(p)).toList();
+    final List<Parcel> visibleParcels = _parcels
+        .where((final Parcel p) => activeTab.matches(p))
+        .toList()
+      ..sort(compareParcelsForDisplay);
 
     final bool showAddFab = _parcels.isNotEmpty;
 

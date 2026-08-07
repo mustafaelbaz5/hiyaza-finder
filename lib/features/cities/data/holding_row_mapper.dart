@@ -48,7 +48,9 @@ Parcel holdingRowToParcel(final Map<String, dynamic> row) {
         ? null
         : DateTime.parse(row['completed_at'] as String),
     completedBy: row['completed_by'] as String?,
-    isFieldAdded: false,
+    isFieldAdded: row['is_field_added'] as bool? ?? false,
+    createdBy: row['created_by'] as String?,
+    sourceAddedHoldingId: row['source_added_holding_id'] as String?,
     holderNameFarmerCard: row['holder_name_farmer_card'] as String?,
     ownerNameFarmerCard: row['owner_name_farmer_card'] as String?,
     growthStages:

@@ -780,6 +780,65 @@ flutter analyze: clean. flutter test: 283/283 passing (no test count change — 
 `pickCropType` are UI-orchestration glue, matching the existing pattern of not unit-testing that
 category of code in this codebase).
 
+## Phase 14 — Added-provenance loss on promotion, notes default, الكل tab ordering (2026-08-08)
+
+**Status: done.**
+
+**Bug 1 — added-parcel provenance permanently lost on promotion.** A field-added parcel's
+"مضافة"/creator-email visibility only survived until `added_holdings.promoted_holding_id` got set
+(the `auto_approve_added_holding` trigger fires essentially immediately on insert), at which point
+the client's `RealtimePayloadDispatcher` treats the `added_holdings` row as deleted and starts
+showing the `holdings` row instead (`realtime_payload_dispatcher.dart` §"added_holdings needs one
+extra check"). `holdings` had **no `created_by`/`is_field_added`/`source_added_holding_id`
+columns at all**, and `holding_row_mapper.dart`'s `holdingRowToParcel` hardcoded `isFieldAdded:
+false` and never read `created_by` — so the moment promotion completed (near-instant), the badge,
+المضافة tab membership, and creator email were gone for good, not just delayed.
+
+Fixed at both layers:
+- **DB** (`supabase/migrations/20260808000001_preserve_added_provenance_on_promotion.sql`, applied
+  live): added the three columns to `holdings`, and updated both `approve_added_holding` and
+  `auto_approve_added_holding` to carry `created_by`/`is_field_added: true`/
+  `source_added_holding_id` through on the INSERT into `holdings`. Additive-only — existing
+  historical rows just read as `is_field_added = false`, same as their current (already wrong)
+  display, not a regression.
+- **Flutter** (`holding_row_mapper.dart`): `holdingRowToParcel` now reads all three columns instead
+  of hardcoding `isFieldAdded: false`.
+- **Flutter** (`parcel_status_filter.dart`): `DetailScreenTab.added.matches` was checking only
+  `isFieldAdded`, while `ParcelDetailCard`'s own badge check used `isFieldAdded ||
+  sourceAddedHoldingId != null || isNew` — a parcel identified only via `sourceAddedHoldingId` (the
+  common case right after promotion) showed the badge on the card but never appeared under the
+  المضافة tab. Aligned the tab filter to the same definition.
+
+**Bug 2 — wrong default ملاحظات on "Add new person."** `home_screen.dart`'s `_openAddPerson` set
+`notes: 'غير محيز'` on the blank template `Parcel`; the sibling "add parcel for existing person" flow
+(`detail_screen.dart`'s `_addParcelForPerson`) already correctly used `'نقص بيانات الحصر'`
+(`_needsSurveyNote`). Fixed `home_screen.dart` to match.
+
+**Bug 3 — no ordering in الكل tab.** `detail_screen.dart` never sorted `visibleParcels` at all — plain
+fetch/insertion order. Added `compareParcelsForDisplay` (`parcel_status_filter.dart`): original
+parcels first, then added parcels, with reviewed parcels (either origin) sunk to the end — applied to
+every tab, not just الكل, since a reviewed added-parcel sinking within المضافة too matches the same
+"done work drops to the bottom" intent.
+
+**Dependencies:** the DB migration is a prerequisite for bug 1's Flutter fix actually taking effect —
+without the new columns, `holding_row_mapper.dart` would just read `null`/`false` regardless of the
+code change.
+
+**Complexity:** medium — required tracing the promotion path (`added_holdings` insert → trigger →
+`holdings` insert → Realtime delete-then-reinsert on the client) to find where provenance actually
+got dropped, plus a live schema change.
+
+**Risks:** low-medium. DB change is additive (new nullable/defaulted columns, no existing column
+touched); promotion functions are `create or replace` on the same signature, no callers need to
+change. The one behavior change to watch: المضافة tab and الكل ordering now surface more parcels
+as "added" than before (any parcel with `sourceAddedHoldingId` set, not just `isFieldAdded`) — this
+is the intended fix, not a side effect, but worth knowing if a field worker asks why a previously
+badge-less parcel suddenly shows "مضافة".
+
+flutter analyze: clean. flutter test: 286/286 passing (3 new: `compareParcelsForDisplay` sort-order
+cases in `parcel_status_filter_test.dart`, plus a case for the `sourceAddedHoldingId`-only added-tab
+match).
+
 ---
 
 ## Sequencing summary
