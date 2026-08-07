@@ -923,6 +923,59 @@ flutter analyze: clean. flutter test: 287/287 passing (no test count change — 
 
 ---
 
+## Phase 17 — root cause of the persistent "تعذّرت المزامنة" sync failure: unvalidated area values (2026-08-08)
+
+**Status: done.** The sync failure banner that survived Phases 15/16's connectivity fixes turned out
+to be unrelated to connectivity at all — confirmed via Supabase logs (`get_logs` on `postgres` and
+`api`): every retry of the stuck `AddParcelOperation` hit `POST /rest/v1/added_holdings` and got
+back `400` with Postgres error `numeric field overflow`. The outbox's exponential backoff was
+retrying the exact same doomed insert indefinitely, since the payload itself was invalid — no amount
+of connectivity or Realtime fixes could ever make it succeed.
+
+Root cause: `field_edit_dialogs.dart`'s المساحة editor accepts فدان/قيراط/سهم as free-typed numbers
+with zero upper-bound validation, and `added_holdings_mapper.dart` sent whatever was typed straight
+through. `added_holdings.feddan/qirat/sahm` are `numeric(10,4)` (max `999999.9999`) — a field worker
+mistyping a value (extra digit, wrong field) produces a number Postgres rejects outright, and the
+only feedback that reached the user was the generic "check your internet connection" sync-failure
+card, not an actual explanation.
+
+Also found and fixed a **stale/incorrect comment**, not a live bug: the mapper's `.round()` calls on
+`feddan`/`qirat`/`sahm` claimed these were `int` columns ("Postgres rejects a double like `1.0`") —
+confirmed via `information_schema.columns` that they're actually `numeric(10,4)` and always have
+been in this migration set; the comment (and a same-claim unit test) predates whichever migration
+last touched these columns. Removed the now-pointless `.round()` (kept the `?? 0` fallback — the
+columns are `NOT NULL`) so a fractional فدان value isn't silently truncated to a whole number before
+ever reaching validation.
+
+Fixed:
+- `field_edit_dialogs.dart`'s `_AreaEditDialog` now validates on save: any of the three values at or
+  above `999999.9999` shows an inline Arabic error ("القيمة كبيرة جدًا — يرجى مراجعة الرقم
+  المدخل") and blocks the dialog from closing, instead of letting an invalid value ever reach the
+  outbox where it fails silently and permanently.
+- `added_holdings_mapper.dart` sends `feddan`/`qirat`/`sahm` as their literal (possibly fractional)
+  value with only a `?? 0` null-fallback, not `.round()`.
+- `added_holdings_mapper_test.dart` updated to match — the old test asserted `isA<int>()` based on
+  the incorrect "these are int columns" premise.
+
+**What this does NOT fix:** the one sync operation already stuck in this device's outbox queue with
+an invalid value — that entry will keep retrying and failing forever regardless of this fix, since
+the fix only prevents a *new* bad value from being created. It needs to be discarded from the sync
+sheet (تجاهل) and the parcel's area re-entered correctly by hand.
+
+**Dependencies:** none.
+
+**Complexity:** medium — required checking live Supabase Postgres/API logs to find the actual
+failure reason, since neither the client nor the generic sync-failure UI surfaced it.
+
+**Risks:** low. The validation is purely additive (rejects values that were always going to fail
+server-side anyway); the mapper change only removes unnecessary integer rounding on columns that
+were never integers.
+
+flutter analyze: clean. flutter test: 287/287 passing (2 of `added_holdings_mapper_test.dart`'s
+existing cases updated to reflect the numeric, not int, column type; no net test count change).
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

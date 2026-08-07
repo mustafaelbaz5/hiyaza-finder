@@ -245,6 +245,7 @@
       "holding_id_pending": "No number yet — new",
       "holdings_count": "Number of parcels in holding",
       "border_no_data": "No data exists for this person",
+      "area_value_too_large": "Value is too large — please check the number entered",
       "new_badge": "New — pending sync",
       "parcel_count": "{count} parcels",
       "parcel_count_suffix": " ({count} parcels)",

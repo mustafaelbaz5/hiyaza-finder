@@ -73,15 +73,19 @@ void main() {
   });
 
   test(
-      'feddan/qirat/sahm serialize as int, not double — the DB columns are '
-      '`int`, and Postgres rejects a JSON double like 1.0 with "invalid '
-      'input syntax for type integer" even when the value is whole '
-      '(Dart\'s `1.0 == 1` being true means a plain value-equality check '
-      'would not have caught this)', () {
-    const Parcel p = Parcel(holdingId: '', holderName: 'محمد', feddan: 2, qirat: 5, sahm: 0);
+      'feddan/qirat/sahm are sent as-is (fractional or whole) — the DB '
+      'columns are `numeric(10,4)`, not `int`, so no rounding/coercion is '
+      'needed', () {
+    const Parcel p = Parcel(
+      holdingId: '',
+      holderName: 'محمد',
+      feddan: 2.5,
+      qirat: 5,
+      sahm: 0,
+    );
     final Map<String, dynamic> record = parcelToAddedHoldingsRecord(p);
-    expect(record['feddan'], isA<int>());
-    expect(record['qirat'], isA<int>());
-    expect(record['sahm'], isA<int>());
+    expect(record['feddan'], 2.5);
+    expect(record['qirat'], 5);
+    expect(record['sahm'], 0);
   });
 }

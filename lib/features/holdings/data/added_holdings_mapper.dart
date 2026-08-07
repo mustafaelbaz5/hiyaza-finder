@@ -26,13 +26,15 @@ Map<String, dynamic> parcelToAddedHoldingsRecord(final Parcel p) {
     'border_west': p.borderWest,
     'border_south': p.borderSouth,
     'border_north': p.borderNorth,
-    // `added_holdings.feddan/qirat/sahm` are Postgres `int` columns, but
-    // `Parcel`'s are `double?` (the area editor deals in fractional
-    // فدان) — sending a double like `1.0` straight through fails
-    // Postgres' integer cast ("invalid input syntax for type integer").
-    'feddan': (p.feddan ?? 0).round(),
-    'qirat': (p.qirat ?? 0).round(),
-    'sahm': (p.sahm ?? 0).round(),
+    // `added_holdings.feddan/qirat/sahm` are `not null numeric(10,4)` —
+    // fractional فدان values round-trip fine as-is (no `.round()` needed,
+    // unlike an actual `int` column), but a `null` value still needs the
+    // `?? 0` fallback since the column itself is NOT NULL. The area edit
+    // dialog (`field_edit_dialogs.dart`) already rejects a value at or
+    // above 999999.9999 before it reaches here.
+    'feddan': p.feddan ?? 0,
+    'qirat': p.qirat ?? 0,
+    'sahm': p.sahm ?? 0,
     'total_sqm': p.totalSqm,
     'crop_type': p.cropType,
     'notes': p.notes,

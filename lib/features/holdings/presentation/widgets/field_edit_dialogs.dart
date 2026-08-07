@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -51,6 +52,32 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
   late final TextEditingController _sahmController = TextEditingController(
     text: _numToText(widget.sahm),
   );
+
+  /// `added_holdings.feddan/qirat/sahm` are `numeric(10,4)` — a value at or
+  /// above this silently fails the sync with a raw "numeric field overflow"
+  /// error from Postgres (no useful message reaches the user, and the
+  /// outbox just retries the same doomed insert forever). Caught here,
+  /// before it ever leaves the device, with a message that actually says
+  /// what's wrong.
+  static const double _maxAreaValue = 999999.9999;
+
+  String? _errorText;
+
+  void _save() {
+    final double? feddan = _parseLocalizedNum(_feddanController.text);
+    final double? qirat = _parseLocalizedNum(_qiratController.text);
+    final double? sahm = _parseLocalizedNum(_sahmController.text);
+
+    final bool tooLarge = (feddan != null && feddan.abs() >= _maxAreaValue) ||
+        (qirat != null && qirat.abs() >= _maxAreaValue) ||
+        (sahm != null && sahm.abs() >= _maxAreaValue);
+    if (tooLarge) {
+      setState(() => _errorText = 'holdings.detail.area_value_too_large'.tr());
+      return;
+    }
+
+    Navigator.pop(context, (feddan: feddan, qirat: qirat, sahm: sahm));
+  }
 
   // Disposing here — rather than right after showDialog's Future resolves
   // — matters: this only runs once Flutter actually unmounts the dialog,
@@ -115,6 +142,16 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
                 decimal: true,
               ),
             ),
+            if (_errorText != null) ...[
+              verticalSpacing(10),
+              Text(
+                _errorText!,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.font12Regular.copyWith(
+                  color: AppColors.red200,
+                ),
+              ),
+            ],
             verticalSpacing(20),
             Row(
               children: [
@@ -130,11 +167,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
                   child: CustomTextButton(
                     text: 'app_dialogs.save'.tr(),
                     size: CustomButtonSize.small,
-                    onPressed: () => Navigator.pop(context, (
-                      feddan: _parseLocalizedNum(_feddanController.text),
-                      qirat: _parseLocalizedNum(_qiratController.text),
-                      sahm: _parseLocalizedNum(_sahmController.text),
-                    )),
+                    onPressed: _save,
                   ),
                 ),
               ],
