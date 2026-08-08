@@ -1572,6 +1572,82 @@ added here will confirm on the next occurrence whether this exact mechanism is w
 flutter analyze: clean. flutter test: 326/326 passing (no test count change — this fix has no
 automated coverage yet, see above).
 
+**Fifth follow-up (same phase): require a real رقم الحيازة before a new person/parcel can be saved.**
+
+Every bug this whole phase traced (empty details after add, duplicate cards, the review retry loop, the
+detail-screen blanking) shared one root condition: a field-added parcel left at the `"-1"` رقم الحيازة
+placeholder is "pending," and every write path downstream has to carry extra logic to handle a pending
+record's shifting identity (`groupKey` keyed off `personId` instead of `holdingId`, promotion timing,
+etc.). Per explicit request, رقم الحيازة now joins the existing required-field set
+(اسم الحائز/اسم الحوض/نوع الزرع) — a field worker must enter a real holding number before Save is
+enabled, closing off this whole class of ambiguity at the source rather than continuing to reconcile it
+downstream.
+
+**Fix:**
+1. `Parcel.hasRequiredFieldsFilled` now also checks `!isHoldingIdPending` (the existing getter that
+   already treats `""`/`"-"`/`"-1"` as not-yet-assigned) — `AddRecordScreen._canSave` already gates
+   directly on this getter, so Save is now disabled until a real number is entered, with no separate
+   change needed in the screen itself.
+2. `requiredFieldGapMessages` gained a new first-listed message (`holdings.add.holding_id_required`,
+   matching رقم الحيازة's position at the top of the form) for the pending case.
+3. `AddRecordScreen`'s رقم الحيازة field label gained the `*` required-marker, matching every other
+   required field's existing convention.
+
+**Dependencies:** none — self-contained to the shared `hasRequiredFieldsFilled` gate already used by
+both `AddRecordScreen`'s save button and `ParcelDetailCard`'s Copy ID review gate. **Complexity:** low.
+
+**Risks:** low-medium. This is a genuine behavior change, not just messaging — a field worker can no
+longer create a new person/parcel without immediately knowing/entering its official number, which may
+not always be available at time of entry in the field. Accepted as the explicit tradeoff requested,
+given the alternative was leaving the entire pending-parcel reconciliation surface open indefinitely.
+Existing already-pending parcels created before this change are unaffected — this only gates *new*
+saves going forward, not a migration of past records.
+
+Regression tests added: `parcel_national_id_test.dart` (4 new cases: `"-1"`, blank, `"-"`, and a real
+number), `required_field_gaps_test.dart` (new file, 3 tests: the real Arabic message shows, a complete
+parcel shows nothing, and the holding-id message is listed first) — plus one existing
+`parcel_detail_card_test.dart` fixture (`p-stale-field-added`) updated from a pending `"-1"` to a real
+holding number, since it was inadvertently relying on the now-closed pending path to reach the
+reconciliation logic it's actually testing.
+
+flutter analyze: clean. flutter test: 333/333 passing.
+
+**Sixth follow-up (same phase): allow "-1" as a deliberate, explicitly-entered value.**
+
+Per explicit follow-up request: the required-field rule above was too strict — رقم الحيازة needed to
+stay required (forcing an explicit choice, not a silent default), but a field worker who genuinely
+doesn't yet have the official number must still be able to type `"-1"` themselves as an intentional
+sortable placeholder, not be permanently blocked from saving.
+
+**Fix:**
+1. New `Parcel.isHoldingIdExplicitlyEntered(value)` — rejects only blank/whitespace-only input,
+   deliberately allowing `"-1"` (unlike [isHoldingIdPending], which still treats `"-1"` as pending —
+   that getter is untouched, since `groupKey`/search grouping must keep working exactly as before for
+   a manually-entered `"-1"`). `hasRequiredFieldsFilled`/`requiredFieldGapMessages` switched to this
+   new check.
+2. Critical companion change: `AddRecordScreen`'s رقم الحيازة field, `HomeScreen._openAddPerson`'s
+   initial `Parcel`, no longer auto-fill/reset to `"-1"` — the field now starts and stays genuinely
+   blank until the user types something. Without this, the auto-filled `"-1"` would satisfy the
+   now-more-permissive required check without the user ever touching the field, silently defeating the
+   point of making it required in the first place (confirmed via explicit user sign-off before
+   implementing, given the ambiguity).
+3. `DetailScreen._addParcelForPerson` (add a parcel for an *existing* person) intentionally left
+   unchanged — it inherits the parent's real, already-assigned رقم الحيازة via `source.copyWith(...)`,
+   which is correct as-is; only the *new person* flow needed the blank-by-default change.
+
+**Dependencies:** the prior required-field-gate follow-up in this same phase. **Complexity:** low.
+
+**Risks:** low. Existing already-saved parcels (whether their رقم الحيازة is a real number or a
+previously-defaulted `"-1"`) are unaffected — this only changes the save-time gate and the form's
+initial/cleared value going forward.
+
+Updated regression tests: `parcel_national_id_test.dart` (`"-1"` now asserts `isTrue`, blank/
+whitespace-only still `isFalse`), `required_field_gaps_test.dart` (added a case confirming `"-1"`
+produces no gap message, existing cases switched from `"-1"` to blank to still exercise the
+required-message path).
+
+flutter analyze: clean. flutter test: 334/334 passing.
+
 ---
 
 ## Sequencing summary

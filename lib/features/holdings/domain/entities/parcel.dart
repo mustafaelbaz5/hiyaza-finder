@@ -225,23 +225,39 @@ class Parcel {
     return RegExp(r'^\d{14}$').hasMatch(trimmed);
   }
 
+  /// رقم الحيازة must be explicitly typed by the user — blank or
+  /// whitespace-only counts as "not filled," same as [isValueFilled] — but
+  /// unlike [isValueFilled]/[isHoldingIdPending], the literal `"-1"` value
+  /// is deliberately treated as a *valid, filled* entry here, not a
+  /// placeholder to reject. رقم الحيازة joined the required-field set in
+  /// Phase 25's first follow-up specifically to stop a field worker from
+  /// saving a brand-new record without ever touching the field at all — the
+  /// actual goal was forcing an explicit choice, not banning `"-1"` as a
+  /// value. A field worker who genuinely doesn't have the official number
+  /// yet can still deliberately enter `"-1"` themselves as a sortable
+  /// placeholder (`AddRecordScreen`'s field now starts genuinely blank
+  /// rather than auto-filling `"-1"`, so reaching this value only happens
+  /// via an explicit keystroke) — [isHoldingIdPending]/[groupKey] are
+  /// intentionally NOT changed by this: a manually-entered `"-1"` still
+  /// correctly groups as pending for search/detail purposes, which is
+  /// exactly the sorting behavior this is for.
+  static bool isHoldingIdExplicitlyEntered(final String? value) {
+    final String trimmed = value?.trim() ?? '';
+    return trimmed.isNotEmpty;
+  }
+
   /// رقم الحيازة, اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly
-  /// filled/chosen (see [isValueFilled]/[isHoldingIdPending]), and
+  /// filled/chosen (see [isHoldingIdExplicitlyEntered]/[isValueFilled]), and
   /// [nationalId] must be a valid format if present. Shared by
   /// `AddRecordScreen`'s save gate and the review-completion gate
   /// (`ParcelDetailCard`'s Copy ID action, per `REFACTOR_ROADMAP.md` Phase
   /// 7) so "what counts as a complete record" can't drift between the two
-  /// flows. رقم الحيازة was added to this gate in Phase 25's follow-up: a
-  /// field worker leaving it at the `"-1"` placeholder was the root
-  /// condition every pending-parcel promotion/reconciliation bug this phase
-  /// fixed traced back to — requiring a real value up front removes that
-  /// whole class of ambiguity at the source, rather than continuing to
-  /// paper over it downstream. Per-field message strings live in the UI
-  /// layer (`.tr()` needs `easy_localization`, unavailable to this pure-Dart
-  /// entity) — see `requiredFieldGaps` in
+  /// flows. Per-field message strings live in the UI layer (`.tr()` needs
+  /// `easy_localization`, unavailable to this pure-Dart entity) — see
+  /// `requiredFieldGaps` in
   /// `ui/widgets/parcel_detail_card.dart`/`add_record_screen.dart`.
   bool get hasRequiredFieldsFilled =>
-      !isHoldingIdPending &&
+      isHoldingIdExplicitlyEntered(holdingId) &&
       isValueFilled(holderName) &&
       isValueFilled(basinName) &&
       isValueFilled(cropType) &&

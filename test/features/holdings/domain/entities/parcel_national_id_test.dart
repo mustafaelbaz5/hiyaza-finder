@@ -99,5 +99,40 @@ void main() {
         isFalse,
       );
     });
+
+    // REFACTOR_ROADMAP.md Phase 25 follow-up: رقم الحيازة must be
+    // explicitly typed by the user before a new person/parcel can be
+    // saved — but "-1" is a deliberately ALLOWED value (a field worker who
+    // genuinely doesn't have the official number yet can type it themselves
+    // as a sortable placeholder). Only genuinely blank/whitespace-only input
+    // is rejected; `AddRecordScreen`'s field no longer auto-fills "-1", so
+    // reaching that value only happens via an explicit keystroke.
+    test('true when holdingId is explicitly "-1"', () {
+      expect(
+        complete.copyWith(holdingId: '-1').hasRequiredFieldsFilled,
+        isTrue,
+      );
+    });
+
+    test('false when holdingId is blank', () {
+      expect(
+        complete.copyWith(holdingId: '').hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when holdingId is whitespace-only', () {
+      expect(
+        complete.copyWith(holdingId: '   ').hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('true when holdingId is a real number', () {
+      expect(
+        complete.copyWith(holdingId: '229').hasRequiredFieldsFilled,
+        isTrue,
+      );
+    });
   });
 }

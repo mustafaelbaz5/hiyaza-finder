@@ -277,7 +277,12 @@ class _LoadedBodyState extends State<_LoadedBody> {
       Routes.addRecord,
       arguments: const AddRecordArgs(
         initialParcel: Parcel(
-          holdingId: '-1', // default; editable in the form below
+          // Left blank rather than defaulting to "-1" — رقم الحيازة is a
+          // required field (`Parcel.hasRequiredFieldsFilled`) that must be
+          // explicitly typed, even if the user's own answer ends up being
+          // "-1" themselves; auto-filling it here would satisfy the
+          // required-field gate without the user ever touching the field.
+          holdingId: '',
           nationalId: '11111111111111',
           landNumber: '-1',
           notes: 'نقص بيانات الحصر',

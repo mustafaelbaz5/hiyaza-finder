@@ -349,9 +349,16 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 context,
                                 title: 'holdings.fields.holding_id'.tr(),
                                 initialValue: _parcel.holdingId,
-                                apply: (final String v) => _parcel.copyWith(
-                                  holdingId: v.isEmpty ? '-1' : v,
-                                ),
+                                // Deliberately left as-is when cleared — no
+                                // longer silently resets to "-1". The field
+                                // is required (`Parcel
+                                // .hasRequiredFieldsFilled`), so Save simply
+                                // stays disabled until the user types
+                                // something; typing "-1" themselves is still
+                                // allowed as an explicit sortable
+                                // placeholder, just never auto-applied.
+                                apply: (final String v) =>
+                                    _parcel.copyWith(holdingId: v),
                               ),
                             ),
                             if (_parcel.holdingsCount != null)

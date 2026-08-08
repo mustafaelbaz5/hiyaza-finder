@@ -9,7 +9,7 @@ import '../../domain/entities/parcel.dart';
 /// layer (not on [Parcel] itself) because `.tr()` needs `easy_localization`,
 /// which the pure-Dart domain entity can't import.
 List<String> requiredFieldGapMessages(final Parcel parcel) => <String>[
-      if (parcel.isHoldingIdPending)
+      if (!Parcel.isHoldingIdExplicitlyEntered(parcel.holdingId))
         'holdings.add.holding_id_required'.tr(),
       if (!Parcel.isValueFilled(parcel.holderName))
         'holdings.add.holder_required'.tr(),
