@@ -23,6 +23,8 @@ class ParcelDetailTopRow extends StatelessWidget {
     required this.onDeleteConfirmed,
     this.isInheritance = false,
     this.isDelegate = false,
+    this.isDeleting = false,
+    this.isReopening = false,
   });
 
   final bool isAdded;
@@ -36,6 +38,14 @@ class ParcelDetailTopRow extends StatelessWidget {
   /// never as a visible in-app badge.
   final bool isInheritance;
   final bool isDelegate;
+
+  /// While the delete/reopen network call for *this* parcel is in flight
+  /// (`REFACTOR_ROADMAP.md` Phase 21) — swaps the action's icon for a small
+  /// spinner and disables it, so the user gets feedback exactly where they
+  /// tapped instead of a silent wait until the snackbar appears. Per-parcel
+  /// (not a screen-wide flag), since several cards can be on screen at once.
+  final bool isDeleting;
+  final bool isReopening;
 
   @override
   Widget build(final BuildContext context) {
@@ -84,10 +94,19 @@ class ParcelDetailTopRow extends StatelessWidget {
         ),
         if (onDelete != null)
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppColors.red200),
+            icon: isDeleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.red200,
+                    ),
+                  )
+                : const Icon(Icons.delete_outline_rounded,
+                    color: AppColors.red200),
             tooltip: 'holdings.detail.delete'.tr(),
-            onPressed: onDeleteConfirmed,
+            onPressed: isDeleting ? null : onDeleteConfirmed,
           ),
         if (isReviewed && onReopen != null)
           // Filled, high-contrast — the one interactive action left on a
@@ -95,12 +114,21 @@ class ParcelDetailTopRow extends StatelessWidget {
           // read as clearly and immediately tappable, not as a muted
           // secondary control the way Reopen looked before.
           FilledButton.icon(
-            onPressed: onReopen,
+            onPressed: isReopening ? null : onReopen,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary200,
               foregroundColor: Colors.white,
             ),
-            icon: const Icon(Icons.lock_open_rounded, size: 18),
+            icon: isReopening
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.lock_open_rounded, size: 18),
             label: Text('holdings.detail.reopen'.tr()),
           ),
       ],
@@ -185,10 +213,22 @@ class ParcelDetailInfoBanner extends StatelessWidget {
 /// so it's the easiest thing on the card to find and tap, in contrast to
 /// Reopen/Copy All/Delete's lighter outlined/icon-only treatments.
 class ParcelIdChip extends StatelessWidget {
-  const ParcelIdChip({super.key, required this.id, required this.onCopy});
+  const ParcelIdChip({
+    super.key,
+    required this.id,
+    required this.onCopy,
+    this.isLoading = false,
+  });
 
   final String id;
   final VoidCallback onCopy;
+
+  /// While `setParcelCompleted` is in flight for this parcel
+  /// (`REFACTOR_ROADMAP.md` Phase 21) — swaps the fingerprint icon for a
+  /// small spinner and disables the tap, since this chip both copies the id
+  /// and (on first tap) marks the parcel reviewed, a real network write the
+  /// user previously had no feedback for while it was happening.
+  final bool isLoading;
 
   @override
   Widget build(final BuildContext context) {
@@ -197,13 +237,22 @@ class ParcelIdChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: onCopy,
+        onTap: isLoading ? null : onCopy,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: <Widget>[
-              const Icon(Icons.fingerprint_rounded,
-                  size: 20, color: Colors.white),
+              isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.fingerprint_rounded,
+                      size: 20, color: Colors.white),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(

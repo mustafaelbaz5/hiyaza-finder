@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/see_more_section.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -42,6 +43,8 @@ class ParcelDetailCard extends StatelessWidget {
     this.onDelete,
     this.onReopen,
     this.onCompleted,
+    this.isDeleting = false,
+    this.isReopening = false,
   });
 
   final Parcel parcel;
@@ -54,6 +57,13 @@ class ParcelDetailCard extends StatelessWidget {
   final Duration animationDelay;
   final Parcel? Function(String? borderText)? resolveBorderMatch;
   final VoidCallback? onReopen;
+
+  /// Passed straight through to [ParcelDetailTopRow] (`REFACTOR_ROADMAP.md`
+  /// Phase 21) — the caller tracks which parcel's delete/reopen call is
+  /// currently in flight (`DetailScreen._busyParcelIds`), since that's
+  /// screen-level state this stateless card has no way to know on its own.
+  final bool isDeleting;
+  final bool isReopening;
 
   /// Fired by [_copyId] once `setParcelCompleted` is server-confirmed —
   /// deliberately separate from [onFieldChanged] (`REFACTOR_ROADMAP.md`
@@ -99,6 +109,8 @@ class ParcelDetailCard extends StatelessWidget {
       onDeleteConfirmed: () => _confirmDelete(context),
       isInheritance: parcel.isInheritance,
       isDelegate: parcel.isDelegate,
+      isDeleting: isDeleting,
+      isReopening: isReopening,
     );
     final Widget body = Opacity(
       opacity: isCompleted ? 0.55 : 1,
@@ -134,7 +146,7 @@ class ParcelDetailCard extends StatelessWidget {
                       resolveBorderMatch!(borderText) != null,
             ),
             verticalSpacing(10),
-            ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
+            _ReviewIdChip(id: parcel.id, onCopy: _copyId),
             verticalSpacing(10),
             CopyAllButton(onTap: () => _copyAll(context)),
             verticalSpacing(12),
@@ -507,9 +519,14 @@ class ParcelDetailCard extends StatelessWidget {
           'holdings.detail.already_reviewed_elsewhere'.tr(),
         );
       }
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        context.showErrorSnackBar('holdings.detail.copy_and_review_failed'.tr());
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.copy_and_review_failed'.tr(),
+          ),
+        );
       }
     }
   }
@@ -591,6 +608,50 @@ class _AddedByBannerState extends State<_AddedByBanner> {
       creatorLine: _creatorEmail == null
           ? null
           : 'holdings.detail.added_by'.tr(namedArgs: {'email': _creatorEmail!}),
+    );
+  }
+}
+
+/// Owns its own in-flight state for `_copyId` (`REFACTOR_ROADMAP.md`
+/// Phase 21) — `ParcelDetailCard` itself stays a `StatelessWidget`
+/// (converting the whole ~600-line card would be a much larger,
+/// unnecessary diff for what's really a one-chip concern), so this small
+/// wrapper is the only piece that needs local state: a spinner replacing
+/// the fingerprint icon and a disabled tap target while
+/// `setParcelCompleted` is awaiting the server, instead of the silent wait
+/// the user previously had no feedback for at all.
+class _ReviewIdChip extends StatefulWidget {
+  const _ReviewIdChip({required this.id, required this.onCopy});
+
+  final String id;
+
+  /// `ParcelDetailCard._copyId` — already handles its own snackbars/error
+  /// classification; this wrapper only needs to know when it starts/ends.
+  final Future<void> Function(BuildContext context) onCopy;
+
+  @override
+  State<_ReviewIdChip> createState() => _ReviewIdChipState();
+}
+
+class _ReviewIdChipState extends State<_ReviewIdChip> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap(final BuildContext context) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      await widget.onCopy(context);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(final BuildContext context) {
+    return ParcelIdChip(
+      id: widget.id,
+      isLoading: _isLoading,
+      onCopy: () => _handleTap(context),
     );
   }
 }

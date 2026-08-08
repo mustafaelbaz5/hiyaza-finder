@@ -7,6 +7,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart'
     show InternetConnectionStatus;
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/networking/network_info.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -48,13 +49,16 @@ class _DetailScreenState extends State<DetailScreen>
   /// safe even for the (rare) empty-list case elsewhere in this file.
   String? _groupKey;
 
-  /// Guards each write action against a concurrent second tap while its own
-  /// request is in flight — a single flag is enough since this screen's
-  /// actions (delete/finish/reopen/field-edit) are never meant to run two
-  /// at once. Drives no visible spinner of its own (the per-card widgets
-  /// already show their own tap-affordance state); it exists purely to
-  /// reject a re-entrant call while the first is still awaiting Supabase.
-  bool _isBusy = false;
+  /// Guards each write action against a concurrent second tap on the *same*
+  /// parcel while its own request is in flight, and drives the delete/
+  /// reopen spinners on that parcel's card (`REFACTOR_ROADMAP.md` Phase 21
+  /// — previously a single screen-wide `bool` with no visible feedback at
+  /// all). Keyed by parcel id rather than a single flag since several cards
+  /// are on screen at once and each needs its own independent busy state —
+  /// deleting one parcel must not block reopening a different one.
+  final Set<String> _busyParcelIds = <String>{};
+
+  bool _isParcelBusy(final String parcelId) => _busyParcelIds.contains(parcelId);
 
   /// Exactly three tabs — الكل/المضافة/تمت المراجعة (`REFACTOR_ROADMAP.md`
   /// Phase 11 §11), always shown (unlike the filter-chip row this replaced,
@@ -144,8 +148,8 @@ class _DetailScreenState extends State<DetailScreen>
   }
 
   Future<void> _deleteParcel(final Parcel parcel) async {
-    if (_isBusy) return;
-    _isBusy = true;
+    if (_isParcelBusy(parcel.id)) return;
+    setState(() => _busyParcelIds.add(parcel.id));
     try {
       final bool deleted = await _repository.deleteLocalParcel(parcel.id);
       if (!mounted) return;
@@ -158,18 +162,25 @@ class _DetailScreenState extends State<DetailScreen>
             _parcels.where((final Parcel p) => p.id != parcel.id).toList();
       });
       context.showSuccessSnackBar('holdings.detail.deleted'.tr());
-    } catch (_) {
-      if (mounted) context.showErrorSnackBar('holdings.detail.delete_error'.tr());
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.delete_error'.tr(),
+          ),
+        );
+      }
     } finally {
-      _isBusy = false;
+      if (mounted) setState(() => _busyParcelIds.remove(parcel.id));
     }
   }
 
   /// Un-marks [parcel] completed — user-initiated, no confirmation dialog,
   /// no snackbar (decision #2: deliberate user-initiated undo).
   Future<void> _reopenParcel(final Parcel parcel) async {
-    if (_isBusy) return;
-    _isBusy = true;
+    if (_isParcelBusy(parcel.id)) return;
+    setState(() => _busyParcelIds.add(parcel.id));
     try {
       await _repository.setParcelCompleted(parcel.id, completed: false);
       if (!mounted) return;
@@ -180,10 +191,17 @@ class _DetailScreenState extends State<DetailScreen>
           _parcels[idx] = _parcels[idx].copyWith(completedAt: null);
         });
       }
-    } catch (_) {
-      if (mounted) context.showErrorSnackBar('holdings.detail.reopen_failed'.tr());
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.reopen_failed'.tr(),
+          ),
+        );
+      }
     } finally {
-      _isBusy = false;
+      if (mounted) setState(() => _busyParcelIds.remove(parcel.id));
     }
   }
 
@@ -220,8 +238,8 @@ class _DetailScreenState extends State<DetailScreen>
   /// it. If both triggers fire in the same edit, نوع الاستخدام's message
   /// wins (it's the more specific, actionable one).
   Future<void> _updateField(final Parcel updated) async {
-    if (_isBusy) return;
-    _isBusy = true;
+    if (_isParcelBusy(updated.id)) return;
+    setState(() => _busyParcelIds.add(updated.id));
     try {
       final int idx = _parcels.indexWhere(
         (final Parcel p) => p.id == updated.id,
@@ -249,10 +267,17 @@ class _DetailScreenState extends State<DetailScreen>
         setState(() => _parcels[idx] = toSave);
       }
       if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
-    } catch (_) {
-      if (mounted) context.showErrorSnackBar('holdings.detail.save_failed'.tr());
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.save_failed'.tr(),
+          ),
+        );
+      }
     } finally {
-      _isBusy = false;
+      if (mounted) setState(() => _busyParcelIds.remove(updated.id));
     }
   }
 
@@ -386,6 +411,8 @@ class _DetailScreenState extends State<DetailScreen>
                                         ? () => _deleteParcel(parcel)
                                         : null,
                                 onReopen: () => _reopenParcel(parcel),
+                                isDeleting: _isParcelBusy(parcel.id),
+                                isReopening: _isParcelBusy(parcel.id),
                               ),
                             );
                           },

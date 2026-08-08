@@ -414,4 +414,109 @@ void main() {
       },
     );
   });
+
+  group('delete/reopen loading state (REFACTOR_ROADMAP.md Phase 21)', () {
+    testWidgets(
+      'isDeleting shows a spinner instead of the delete icon and disables it',
+      (final tester) async {
+        const Parcel deletableParcel = Parcel(
+          id: 'p-del',
+          holdingId: '303',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          sourceAddedHoldingId: 'added-1',
+        );
+
+        bool deleteConfirmedCalled = false;
+
+        // A CircularProgressIndicator is indeterminate — it never settles,
+        // so pumpAndSettle (used by the shared `_pump` helper) times out.
+        // Two explicit pumps are enough to build the tree and animate one
+        // frame.
+        await tester.pumpWidget(
+          _wrap(
+            ParcelDetailCard(
+              parcel: deletableParcel,
+              onFieldChanged: (final _) {},
+              onDelete: () => deleteConfirmedCalled = true,
+              isDeleting: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(IconButton),
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+
+        final IconButton deleteButton = tester.widget<IconButton>(
+          find.byType(IconButton).first,
+        );
+        expect(deleteButton.onPressed, isNull);
+
+        // Tapping a disabled IconButton is a no-op — confirms the loading
+        // state actually blocks re-entrant taps, not just visually.
+        await tester.tap(find.byType(IconButton).first, warnIfMissed: false);
+        await tester.pump();
+        expect(deleteConfirmedCalled, isFalse);
+
+        // CircularProgressIndicator's implicit animation ticker leaves a
+        // pending timer that fails the test framework's teardown invariant
+        // check unless the animating tree is torn down before the test ends.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'isReopening shows a spinner instead of the reopen icon and disables it',
+      (final tester) async {
+        final Parcel reviewedParcel = Parcel(
+          id: 'p-reopen',
+          holdingId: '404',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          completedAt: DateTime(2026, 8, 10),
+        );
+
+        bool reopenCalled = false;
+
+        await tester.pumpWidget(
+          _wrap(
+            ParcelDetailCard(
+              parcel: reviewedParcel,
+              onFieldChanged: (final _) {},
+              onReopen: () => reopenCalled = true,
+              isReopening: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byIcon(Icons.lock_open_rounded), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(FilledButton),
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+
+        final FilledButton reopenButton =
+            tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(reopenButton.onPressed, isNull);
+        expect(reopenCalled, isFalse);
+
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      },
+    );
+  });
 }

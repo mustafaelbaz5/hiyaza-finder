@@ -7,6 +7,7 @@ import 'package:hiyaza_finder/features/holdings/presentation/widgets/specify_oth
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_summary_cards.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -205,10 +206,12 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
           ),
         );
       }
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _isApplying = false);
-      context.showErrorSnackBar('errors.unknown'.tr());
+      context.showErrorSnackBar(
+        resolveWriteErrorMessage(error, fallback: 'errors.unknown'.tr()),
+      );
     }
   }
 

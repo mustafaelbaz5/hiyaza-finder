@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -132,9 +133,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       }
       context.showSuccessSnackBar('holdings.add.saved'.tr());
       Navigator.pop(context, true);
-    } catch (e) {
+    } catch (error) {
       if (!mounted) return;
-      context.showErrorSnackBar('holdings.add.save_failed'.tr());
+      context.showErrorSnackBar(
+        resolveWriteErrorMessage(
+          error,
+          fallback: 'holdings.add.save_failed'.tr(),
+        ),
+      );
       setState(() => _isSaving = false);
     }
   }
