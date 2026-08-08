@@ -4,6 +4,7 @@
   "errors": {
     "no_internet": "No internet connection. Please check your network.",
     "timeout": "Request timeout. Please try again.",
+    "timeout_uncertain": "Connection timed out, but the action may have already gone through — checking now...",
     "connection_error": "Connection error. Please check your internet connection.",
     "bad_request": "Invalid request. Please check your input.",
     "unauthorized": "Unauthorized access. Please login again.",
@@ -279,6 +280,8 @@
       "reopen_failed": "Couldn't reopen the record — check your connection and try again",
       "copy_and_review_failed": "ID copied, but couldn't update the review status — try again",
       "already_reviewed_elsewhere": "ID copied, but this parcel was already reviewed from another device",
+      "review_confirmed_after_timeout": "ID copied. The connection timed out, but the check confirmed the review went through successfully",
+      "review_still_uncertain": "ID copied, but the review status couldn't be confirmed due to a connection issue — check the status later",
       "saving_field": "Saving change…",
       "deleting_in_progress": "Deleting record…",
       "reopening_in_progress": "Reopening record…",

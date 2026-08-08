@@ -53,6 +53,30 @@ void main() {
     );
   });
 
+  testWidgets(
+      'a TimeoutException with timeoutOutcomeUncertain resolves to the '
+      'uncertain-outcome string, not the plain "try again" one '
+      '(REFACTOR_ROADMAP.md Phase 25)', (final tester) async {
+    await pumpLocalized(
+      tester,
+      Builder(
+        builder: (final context) => Text(
+          resolveWriteErrorMessage(
+            TimeoutException(),
+            fallback: 'unused',
+            timeoutOutcomeUncertain: true,
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.text(
+        'انتهت مهلة الاتصال، لكن العملية قد تكون قد تمت بالفعل — يتم التحقق الآن...',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a ConflictException resolves to the real conflict string',
       (final tester) async {
     await pumpLocalized(

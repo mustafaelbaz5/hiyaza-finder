@@ -91,6 +91,13 @@ class _RecordingHoldingsApi implements HoldingsApi {
   Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
       searchRemote({required final String cityId, required final String query}) async =>
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+
+  @override
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async =>
+      null;
 }
 
 /// This entire test file exercises the *offline* outbox path

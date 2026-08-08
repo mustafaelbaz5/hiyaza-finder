@@ -38,6 +38,13 @@ class _FakeHoldingsApi implements HoldingsApi {
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
 
   @override
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async =>
+      null;
+
+  @override
   Future<void> deleteAddedHolding(final String id) async {
     if (deleteError != null) throw deleteError!;
     deletedIds.add(id);

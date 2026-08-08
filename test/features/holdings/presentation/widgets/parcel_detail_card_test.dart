@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/errors/exceptions.dart' as app_exceptions;
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
 import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
@@ -105,6 +106,10 @@ class _FakeHoldingsApi implements HoldingsApi {
   }) async =>
       const <String>[];
 
+  /// Set by a test to make [markCompleted] throw instead of succeeding —
+  /// used to simulate a timed-out `mark_parcel_completed` RPC call.
+  Object? markCompletedError;
+
   @override
   Future<void> markCompleted({
     required final String parcelId,
@@ -112,12 +117,24 @@ class _FakeHoldingsApi implements HoldingsApi {
     required final bool completed,
     required final DateTime? completedAt,
     required final String completedByUserId,
-  }) async {}
+  }) async {
+    if (markCompletedError != null) throw markCompletedError!;
+  }
 
   @override
   Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
       searchRemote({required final String cityId, required final String query}) async =>
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+
+  /// Configurable result for the post-timeout reconciliation read.
+  ({Map<String, dynamic> row, bool isFieldAdded})? fetchParcelByIdResult;
+
+  @override
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async =>
+      fetchParcelByIdResult;
 }
 
 class _FakeAuthRepository implements AuthRepository {
@@ -411,6 +428,128 @@ void main() {
 
         expect(fieldChangedResult, isNotNull);
         expect(fieldChangedResult!.completedAt, isNotNull);
+      },
+    );
+  });
+
+  group('Copy ID timeout reconciliation (REFACTOR_ROADMAP.md Phase 25)', () {
+    const Parcel reviewParcel = Parcel(
+      id: 'p-review-timeout',
+      holdingId: '788',
+      holderName: 'محمد علي',
+      basinName: 'البشيط',
+      nationalId: '12345678901234',
+      cropType: 'قمح',
+    );
+
+    late _FakeHoldingsApi holdingsApi;
+
+    setUp(() async {
+      await getIt.reset();
+      getIt.registerLazySingleton<AuthRepository>(_FakeAuthRepository.new);
+      holdingsApi = _FakeHoldingsApi()
+        ..markCompletedError = app_exceptions.TimeoutException();
+      final HoldingsRepository repository = HoldingsRepository(
+        editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
+        holdingsApi: holdingsApi,
+      );
+      await repository.loadParcelsForCity('city-1', const <Parcel>[reviewParcel]);
+      getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+    });
+
+    tearDown(() async {
+      await getIt.reset();
+    });
+
+    testWidgets(
+      'a timeout that turns out to have actually succeeded reconciles to '
+      "reviewed, via onCompleted, instead of leaving the user stuck on a "
+      "plain error with no idea whether their tap worked",
+      (final tester) async {
+        holdingsApi.fetchParcelByIdResult = (
+          row: <String, dynamic>{
+            'id': reviewParcel.id,
+            'holding_id_number': reviewParcel.holdingId,
+            'holder_name': reviewParcel.holderName,
+            'completed_at': DateTime.now().toIso8601String(),
+            'completed_by': 'user-1',
+          },
+          isFieldAdded: false,
+        );
+
+        Parcel? completedResult;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) {},
+            onCompleted: (final updated) => completedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'تم نسخ المعرّف. انتهت مهلة الاتصال، لكن التحقق أكّد أن المراجعة تمت بنجاح',
+          ),
+          findsOneWidget,
+          reason: 'must show the confirmed-after-timeout message, not a '
+              'plain failure, once reconciliation finds the write actually '
+              'succeeded.',
+        );
+        expect(
+          completedResult,
+          isNotNull,
+          reason: 'the card must reflect the reconciled reviewed state via '
+              'onCompleted, same as a normal successful review.',
+        );
+        expect(completedResult!.completedAt, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'a timeout that genuinely did not go through shows the still-uncertain '
+      'message, not a false success',
+      (final tester) async {
+        holdingsApi.fetchParcelByIdResult = null;
+
+        Parcel? completedResult;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) {},
+            onCompleted: (final updated) => completedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'تم نسخ المعرّف، لكن تعذّر التأكد من حالة المراجعة بسبب مشكلة في الاتصال — تحقق من الحالة لاحقًا',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          completedResult,
+          isNull,
+          reason: 'must never claim the parcel is reviewed when '
+              'reconciliation could not confirm it.',
+        );
       },
     );
   });

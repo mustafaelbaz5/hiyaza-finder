@@ -57,6 +57,18 @@ class _FakeHoldingsApi implements HoldingsApi {
       searchRemote({required final String cityId, required final String query}) async =>
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
 
+  /// Configurable result for [fetchParcelById] — lets a test simulate the
+  /// reconciliation read after a timeout finding the write already
+  /// committed server-side (or not).
+  ({Map<String, dynamic> row, bool isFieldAdded})? fetchParcelByIdResult;
+
+  @override
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async =>
+      fetchParcelByIdResult;
+
   @override
   Future<void> markCompleted({
     required final String parcelId,

@@ -158,6 +158,51 @@ class HoldingsApi {
     }
   }
 
+  /// Reads the current server state of a single parcel by [id] — used to
+  /// reconcile after a write whose outcome is genuinely unknown (a timed-out
+  /// `markCompleted` call, `REFACTOR_ROADMAP.md` Phase 25): the RPC may have
+  /// actually committed before the client gave up waiting for the response,
+  /// so the only way to know for sure is to re-read the row rather than
+  /// guess from the failure alone. Tries `holdings` first, then
+  /// `added_holdings` — [isFieldAdded] (when the caller already knows which
+  /// table the parcel was in before the write) narrows this to a single
+  /// query; `null` checks both, in case the write's `isFieldAdded` was
+  /// itself the stale value that caused the ambiguity being reconciled.
+  /// Returns `null` if the row isn't found in either table (never throws —
+  /// a failed reconciliation read is reported to the caller as "still
+  /// uncertain," not as its own separate error). Returns raw rows, same
+  /// "mapping stays out of this class" split as [searchRemote].
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async {
+    Future<Map<String, dynamic>?> tryTable(final String table) async {
+      try {
+        final List<Map<String, dynamic>> rows = await _client
+            .from(table)
+            .select()
+            .eq('id', id)
+            .limit(1)
+            .timeout(_requestTimeout);
+        return rows.isEmpty ? null : rows.first;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (isFieldAdded != true) {
+      final Map<String, dynamic>? holdingsRow = await tryTable('holdings');
+      if (holdingsRow != null) {
+        return (row: holdingsRow, isFieldAdded: false);
+      }
+    }
+    if (isFieldAdded != false) {
+      final Map<String, dynamic>? addedRow = await tryTable('added_holdings');
+      if (addedRow != null) return (row: addedRow, isFieldAdded: true);
+    }
+    return null;
+  }
+
   /// Sets/clears field-worker completion (`completed_at`/`completed_by`) —
   /// distinct from `reviewed`/`reviewed_at`/`reviewed_by`, which this app
   /// never writes (staff/Dashboard-only, `SYSTEM_DESIGN.md` §10,

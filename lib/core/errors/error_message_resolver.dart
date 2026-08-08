@@ -15,12 +15,28 @@ import 'exceptions.dart';
 /// [fallback] is action-specific text used only for the "genuinely
 /// server-rejected, no more specific type available" case — every other
 /// branch below already has its own accurate, shared message.
+///
+/// [timeoutOutcomeUncertain] (`REFACTOR_ROADMAP.md` Phase 25) opts a
+/// [TimeoutException] into `errors.timeout_uncertain` instead of the plain
+/// `errors.timeout` string — only for write actions where a `.timeout()`
+/// firing does NOT mean the request definitely failed, because the RPC/write
+/// may have already committed server-side by the time the client gave up
+/// waiting (e.g. `HoldingsRepository.setParcelCompleted`'s
+/// `mark_parcel_completed` RPC). Most write actions (an edit, a delete) are
+/// NOT idempotent-safe to reconcile this way and should keep the plain,
+/// unambiguous "try again" wording — this only applies where the caller is
+/// also following up with an actual reconciliation read (see
+/// `HoldingsRepository.refreshParcel`), not just wherever a timeout might
+/// theoretically be retried.
 String resolveWriteErrorMessage(
   final Object error, {
   required final String fallback,
+  final bool timeoutOutcomeUncertain = false,
 }) {
   if (error is NetworkException) return 'errors.no_internet'.tr();
-  if (error is TimeoutException) return 'errors.timeout'.tr();
+  if (error is TimeoutException) {
+    return (timeoutOutcomeUncertain ? 'errors.timeout_uncertain' : 'errors.timeout').tr();
+  }
   if (error is ConflictException) return 'errors.conflict'.tr();
   if (error is ValidationException) return 'errors.validation'.tr();
   if (error is ForbiddenException) return 'errors.forbidden'.tr();

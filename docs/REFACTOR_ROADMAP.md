@@ -1346,6 +1346,64 @@ flutter analyze: clean. flutter test: 318/318 passing.
 
 ---
 
+## Phase 25 — Copy ID/mark-reviewed: honest messaging + reconciliation on an uncertain timeout
+
+**Problem:** field-reported — the red snackbar "تم نسخ المعرّف، لكن تعذّر تحديث حالة المراجعة — حاول
+مرة أخرى" (generic Copy ID failure) kept appearing, inconsistently: "sometimes it gives the same
+message but the button logic work[s] and sometimes not." Verified via the live Supabase project
+(`bbahuyqjptojlighriyy`, `get_logs`/`execute_sql`) that: the six Phase 24 fixes are present and match
+the live `mark_parcel_completed` RPC exactly (ruling out a regression); every logged
+`POST /rest/v1/rpc/mark_parcel_completed` call returns HTTP 200 (Postgrest never surfaces a
+server-side error for this RPC — success/conflict/not-found are all in the JSON body, not the status
+code). Combined with the exact snackbar text being `_copyId`'s generic fallback (only reached when the
+caught error isn't `ConflictException` and isn't a type `resolveWriteErrorMessage` recognizes), and the
+user confirming this happens on repeated taps/multiple devices, the root cause is
+`HoldingsApi._requestTimeout` (15s) firing on slow/unstable field connectivity **after the RPC has
+already committed server-side**: the client throws, shows an error, but the write already succeeded —
+exactly "sometimes it works anyway even though it shows an error."
+
+**Fix:**
+1. New `HoldingsApi.fetchParcelById(id, {isFieldAdded})` — reads a single row's current server state
+   from `holdings`/`added_holdings` (tries the table matching the last-known `isFieldAdded` first, both
+   if unknown), returning `null` (never throwing) if not found in either — a failed reconciliation read
+   is "still uncertain," not its own separate error.
+2. New `HoldingsRepository.refreshParcel(parcelId)` — calls `fetchParcelById` and applies whatever it
+   finds via the existing `applyRemoteChange` upsert path, same reconciliation shape Phase 24 already
+   uses for Realtime echoes.
+3. `resolveWriteErrorMessage` gained an opt-in `timeoutOutcomeUncertain` parameter — when `true`, a
+   `TimeoutException` resolves to a new `errors.timeout_uncertain` string ("انتهت مهلة الاتصال، لكن
+   العملية قد تكون قد تمت بالفعل") instead of the plain `errors.timeout` "try again" wording, which
+   would be actively misleading for a write that might have already succeeded. Deliberately opt-in, not
+   a blanket change to every write's timeout message — most writes (edit, delete) aren't idempotent-safe
+   to reconcile this way and should keep the unambiguous "try again" wording.
+4. `ParcelDetailCard._copyId` gained an `on TimeoutException` branch (previously falling into the
+   generic `catch`): shows the uncertain-outcome message, then awaits `refreshParcel` — if it confirms
+   `completedAt` is now set, reflects the reviewed state via `onCompleted` (same as a normal success)
+   and shows a "confirmed after timeout" success message; if the parcel still isn't found reviewed (or
+   the reconciliation read itself fails, e.g. still offline), shows a "still uncertain, check later"
+   message and leaves local state untouched — never guesses or forces a false reviewed state.
+
+**Dependencies:** Phase 24's `applyRemoteChange`/upsert reconciliation path (reused directly, not
+duplicated). **Complexity:** medium — touches four files plus 7 test-double fakes that needed the new
+`HoldingsApi.fetchParcelById` member added (a plain concrete class, so every `implements HoldingsApi`
+fake needed an explicit override).
+
+**Risks:** low. `refreshParcel` never throws and never asserts a positive result on failure to read —
+the worst case on a still-genuinely-offline device is the same "still uncertain" message as before,
+never a false "reviewed" claim. The `ConflictException` path (a real conflict — someone else already
+completed it) is untouched, still its own distinct, already-accurate message.
+
+Regression tests added: `error_message_resolver_test.dart` (1 new test: `timeoutOutcomeUncertain: true`
+resolves to the new string, not plain `errors.timeout`), `parcel_detail_card_test.dart` (2 new tests: a
+timeout that turns out to have succeeded reconciles to reviewed via `onCompleted`; a timeout that
+genuinely didn't go through shows the uncertain message and never claims success) — plus a no-op
+`fetchParcelById` override added to the `_FakeHoldingsApi` in every other repository test file so they
+keep compiling against the now-larger `HoldingsApi` interface.
+
+flutter analyze: clean. flutter test: 321/321 passing.
+
+---
+
 ## Sequencing summary
 
 Phases 1 and 3 can start immediately and run in parallel. Phase 2 — the highest-risk, highest-value

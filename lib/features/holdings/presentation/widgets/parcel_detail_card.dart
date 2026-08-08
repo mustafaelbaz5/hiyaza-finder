@@ -519,6 +519,28 @@ class ParcelDetailCard extends StatelessWidget {
           'holdings.detail.already_reviewed_elsewhere'.tr(),
         );
       }
+    } on TimeoutException {
+      // A timed-out mark_parcel_completed call may have already committed
+      // server-side — "try again" here would be actively misleading, since
+      // the write might have succeeded and a retry would just hit
+      // ConflictException (harmless, but confusing: "already reviewed
+      // elsewhere" when it was this exact tap that did it).
+      // `REFACTOR_ROADMAP.md` Phase 25: reconcile by re-reading the actual
+      // server state instead of guessing.
+      if (context.mounted) {
+        context.showErrorSnackBar('errors.timeout_uncertain'.tr());
+      }
+      final Parcel? reconciled =
+          await getIt<HoldingsRepository>().refreshParcel(parcel.id);
+      if (!context.mounted) return;
+      if (reconciled?.completedAt != null) {
+        (onCompleted ?? onFieldChanged)(reconciled!);
+        context.showSuccessSnackBar(
+          'holdings.detail.review_confirmed_after_timeout'.tr(),
+        );
+      } else {
+        context.showErrorSnackBar('holdings.detail.review_still_uncertain'.tr());
+      }
     } catch (error) {
       if (context.mounted) {
         context.showErrorSnackBar(

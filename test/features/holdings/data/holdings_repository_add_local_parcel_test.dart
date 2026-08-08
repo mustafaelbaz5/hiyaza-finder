@@ -52,6 +52,13 @@ class _FakeHoldingsApi implements HoldingsApi {
       searchRemote({required final String cityId, required final String query}) async =>
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
 
+  @override
+  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
+    final String id, {
+    final bool? isFieldAdded,
+  }) async =>
+      null;
+
   /// Configurable return values for [addRecord], mirroring
   /// `added_holdings.promoted_holding_id` — mimics the real
   /// `added_holdings_auto_approve` trigger returning a *fresh* promoted

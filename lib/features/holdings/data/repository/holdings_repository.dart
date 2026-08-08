@@ -593,6 +593,33 @@ class HoldingsRepository
     return updated;
   }
 
+  /// Re-reads [parcelId] from the server and applies whatever it finds via
+  /// [applyRemoteChange] — the reconciliation step for a write whose local
+  /// outcome is genuinely unknown (`REFACTOR_ROADMAP.md` Phase 25), e.g.
+  /// [setParcelCompleted] timing out after the RPC may have already
+  /// committed server-side. Returns the reconciled [Parcel] if found, or
+  /// `null` if the row couldn't be read (still offline, or genuinely not
+  /// found) — a `null` here means "still uncertain," not "confirmed absent,"
+  /// so callers must not treat it as a negative result.
+  Future<Parcel?> refreshParcel(final String parcelId) async {
+    if (holdingsApi == null) return null;
+    final bool wasFieldAdded = _dataset.parcels
+            .cast<Parcel?>()
+            .firstWhere((final Parcel? p) => p?.id == parcelId, orElse: () => null)
+            ?.isFieldAdded ??
+        false;
+    final result = await holdingsApi!.fetchParcelById(
+      parcelId,
+      isFieldAdded: wasFieldAdded,
+    );
+    if (result == null) return null;
+    final Parcel refreshed = result.isFieldAdded
+        ? addedHoldingRowToParcel(result.row)
+        : holdingRowToParcel(result.row);
+    applyRemoteChange(refreshed);
+    return refreshed;
+  }
+
   void _applyCompletedLocally(
     final String parcelId,
     final int idx,
