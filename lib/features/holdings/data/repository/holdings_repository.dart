@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:get_it/get_it.dart' show GetIt;
 import 'package:uuid/uuid.dart';
 
@@ -326,17 +327,20 @@ class HoldingsRepository
     // `added_holdings.parent_holding_id` is a foreign key into the
     // canonical `holdings` table, not into `added_holdings` — it's only
     // ever valid once a record has been reviewed/promoted server-side.
-    // `parent.isFieldAdded` (durable, persisted on every parcel — set here
-    // and in the row mappers) is true for exactly the parcels whose `id`
-    // lives in `added_holdings`, not `holdings`: `downloadHoldings` only
-    // ever fetches unpromoted `added_holdings` rows (`promoted_holding_id
-    // is null`), so a promoted record is never re-delivered as
-    // `isFieldAdded: true` — it arrives as an ordinary `holdings` row
-    // instead. Sending an `added_holdings.id` as `parent_holding_id` would
-    // be rejected with a permanent FK violation, so it's sent as `null`
-    // instead — same as a brand-new person with no known parent.
+    // Uses `parent.isCurrentlyInAddedHoldings`, not `parent.isFieldAdded` —
+    // the latter is a permanent provenance marker (`REFACTOR_ROADMAP.md`
+    // Phase 24/25: `holdings.is_field_added` stays `true` forever once a
+    // row is promoted, for the "مضافة من التطبيق" badge), so it can no
+    // longer tell "still in added_holdings" from "already promoted into
+    // holdings" — `isCurrentlyInAddedHoldings` is the field that actually
+    // flips at promotion. Sending an `added_holdings.id` as
+    // `parent_holding_id` would be rejected with a permanent FK violation,
+    // so it's sent as `null` instead — same as a brand-new person with no
+    // known parent.
     final String? safeParentHoldingId =
-        (parent != null && parent.isFieldAdded) ? null : parentHoldingId;
+        (parent != null && parent.isCurrentlyInAddedHoldings)
+            ? null
+            : parentHoldingId;
 
     void applyLocally(final Parcel finalParcel) {
       // Keep عدد القطع في الحيازة consistent across every parcel that shares
@@ -546,28 +550,55 @@ class HoldingsRepository
     final String parcelId, {
     required final bool completed,
   }) async {
+    debugPrint(
+      '[setParcelCompleted] called: parcelId=$parcelId, completed=$completed',
+    );
     final int idx = _dataset.indexOf(parcelId);
-    if (idx < 0) return null;
-
-    final bool isFieldAdded = _dataset.parcels[idx].isFieldAdded;
-
-    if (_syncRunner == null || await _isOnline()) {
-      final Parcel updated = await _syncService.syncMarkCompleted(
-        parcelId: parcelId,
-        isFieldAdded: isFieldAdded,
-        completed: completed,
-        parcel: _dataset.parcels[idx],
+    if (idx < 0) {
+      debugPrint(
+        '[setParcelCompleted] parcelId=$parcelId not found in local dataset '
+        '— returning null (no-op)',
       );
-      // Re-resolves the index rather than reusing the pre-await [idx]: a
-      // Realtime event can append/remove entries in [_dataset.parcels]
-      // while this RPC is in flight, which would shift every later index —
-      // applying at a stale position could silently overwrite an unrelated
-      // parcel. `indexOf` is cheap (id equality scan) and this write is not
-      // hot-path-frequent enough for it to matter.
-      final int freshIdx = _dataset.indexOf(parcelId);
-      if (freshIdx < 0) return updated;
-      _applyCompletedLocally(parcelId, freshIdx, updated);
-      return updated;
+      return null;
+    }
+
+    // `Parcel.isFieldAdded` is provenance, not live table location — it
+    // stays `true` forever on a promoted parcel (see its doc). What the RPC
+    // actually needs is `isCurrentlyInAddedHoldings`, which correctly
+    // flips to `false` the moment a row is promoted.
+    final bool inAddedHoldings = _dataset.parcels[idx].isCurrentlyInAddedHoldings;
+    final bool online = _syncRunner == null || await _isOnline();
+    debugPrint(
+      '[setParcelCompleted] parcelId=$parcelId inAddedHoldings=$inAddedHoldings '
+      'online=$online',
+    );
+
+    if (online) {
+      try {
+        final Parcel updated = await _syncService.syncMarkCompleted(
+          parcelId: parcelId,
+          isFieldAdded: inAddedHoldings,
+          completed: completed,
+          parcel: _dataset.parcels[idx],
+        );
+        debugPrint('[setParcelCompleted] parcelId=$parcelId RPC confirmed');
+        // Re-resolves the index rather than reusing the pre-await [idx]: a
+        // Realtime event can append/remove entries in [_dataset.parcels]
+        // while this RPC is in flight, which would shift every later index —
+        // applying at a stale position could silently overwrite an unrelated
+        // parcel. `indexOf` is cheap (id equality scan) and this write is not
+        // hot-path-frequent enough for it to matter.
+        final int freshIdx = _dataset.indexOf(parcelId);
+        if (freshIdx < 0) return updated;
+        _applyCompletedLocally(parcelId, freshIdx, updated);
+        return updated;
+      } catch (error) {
+        debugPrint(
+          '[setParcelCompleted] parcelId=$parcelId threw '
+          '${error.runtimeType}: $error',
+        );
+        rethrow;
+      }
     }
 
     final DateTime? completedAt = completed ? DateTime.now() : null;
@@ -584,7 +615,7 @@ class HoldingsRepository
         operationId: _uuid.v4(),
         createdAt: DateTime.now(),
         parcelId: parcelId,
-        isFieldAdded: isFieldAdded,
+        isFieldAdded: inAddedHoldings,
         completed: completed,
         completedAt: completedAt,
         completedByUserId: currentUserId ?? '',
@@ -602,20 +633,31 @@ class HoldingsRepository
   /// found) — a `null` here means "still uncertain," not "confirmed absent,"
   /// so callers must not treat it as a negative result.
   Future<Parcel?> refreshParcel(final String parcelId) async {
-    if (holdingsApi == null) return null;
-    final bool wasFieldAdded = _dataset.parcels
-            .cast<Parcel?>()
-            .firstWhere((final Parcel? p) => p?.id == parcelId, orElse: () => null)
-            ?.isFieldAdded ??
-        false;
-    final result = await holdingsApi!.fetchParcelById(
-      parcelId,
-      isFieldAdded: wasFieldAdded,
-    );
-    if (result == null) return null;
+    debugPrint('[refreshParcel] reconciling parcelId=$parcelId');
+    if (holdingsApi == null) {
+      debugPrint('[refreshParcel] no holdingsApi configured — returning null');
+      return null;
+    }
+    // Deliberately does NOT pass the local dataset's `isFieldAdded` as a
+    // hint — reconciliation exists precisely because that locally-cached
+    // flag might be the stale value that caused the ambiguity in the first
+    // place (e.g. a parcel promoted from `added_holdings` into `holdings`
+    // whose local `isFieldAdded` never got flipped to `false`). Passing
+    // `null` makes `fetchParcelById` check both tables rather than only the
+    // one the stale flag points at, same failure this was meant to recover
+    // from otherwise repeating itself.
+    final result = await holdingsApi!.fetchParcelById(parcelId);
+    if (result == null) {
+      debugPrint('[refreshParcel] parcelId=$parcelId still not found — uncertain');
+      return null;
+    }
     final Parcel refreshed = result.isFieldAdded
         ? addedHoldingRowToParcel(result.row)
         : holdingRowToParcel(result.row);
+    debugPrint(
+      '[refreshParcel] parcelId=$parcelId reconciled, '
+      'completedAt=${refreshed.completedAt}',
+    );
     applyRemoteChange(refreshed);
     return refreshed;
   }

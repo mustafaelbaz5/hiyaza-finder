@@ -109,10 +109,17 @@ class Parcel {
   final DateTime? completedAt;
   final String? completedBy; // profiles.id (uuid), null if not completed
 
-  /// Discriminates which table this parcel lives in — `false` for an
-  /// imported `holdings` row, `true` for a field-created `added_holdings`
-  /// row. Structural/origin metadata, never user-edited; needed so
-  /// `setParcelReviewed`/`pushMarkReviewed` know which table to UPDATE.
+  /// Whether this parcel *originated* as a field-created record — `false`
+  /// for a genuinely imported `holdings` row, `true` for anything created
+  /// via the app, including once it's been promoted from `added_holdings`
+  /// into `holdings` (`supabase/migrations
+  /// /20260808000001_preserve_added_provenance_on_promotion.sql`:
+  /// `holdings.is_field_added` is a **permanent provenance marker**, not a
+  /// live "which table" flag — it stays `true` forever after promotion, so
+  /// the badge/تمت الإضافة UI can still tell an added record apart from a
+  /// genuine import). **Do not use this to decide which table a write
+  /// targets** — that changes exactly once, at promotion, independently of
+  /// this value; use [isCurrentlyInAddedHoldings] instead for that.
   final bool isFieldAdded;
 
   /// `added_holdings.created_by` (`profiles.id`, uuid) — who added this
@@ -150,6 +157,26 @@ class Parcel {
   final bool
       isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
   final String usageType; // نوع الاستخدام
+
+  /// Whether this row currently lives in `added_holdings` (`true`) or has
+  /// already been promoted into `holdings` — including a genuine import,
+  /// which was never in `added_holdings` at all (`false`). The live signal
+  /// [isFieldAdded] can no longer provide "which table" on its own once a
+  /// row is promoted (see its doc) — but a row that was never field-added
+  /// in the first place ([isFieldAdded] `false`) is unambiguous: it's
+  /// always in `holdings`, so that check short-circuits first. For a
+  /// field-added row, `addedHoldingRowToParcel` always sets
+  /// [sourceAddedHoldingId] to the row's own [id] (so they're equal); once
+  /// promoted, `holdingRowToParcel` sets [sourceAddedHoldingId] to the
+  /// *original* `added_holdings.id`, which differs from the new, promoted
+  /// [id]. A brand-new, not-yet-synced local field-added parcel has
+  /// [sourceAddedHoldingId] `null` — still correctly "in added_holdings"
+  /// (nothing has promoted it yet). Use this, not [isFieldAdded], anywhere
+  /// a write needs to know which table to target
+  /// (`HoldingsRepository.setParcelCompleted`'s `mark_parcel_completed` RPC
+  /// in particular).
+  bool get isCurrentlyInAddedHoldings =>
+      isFieldAdded && (sourceAddedHoldingId == null || sourceAddedHoldingId == id);
 
   /// Whether رقم الحيازة hasn't been officially assigned yet — true for a
   /// brand-new person added in the field whose display value is still one
@@ -198,16 +225,23 @@ class Parcel {
     return RegExp(r'^\d{14}$').hasMatch(trimmed);
   }
 
-  /// اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly filled/chosen
-  /// (see [isValueFilled]), and [nationalId] must be a valid format if
-  /// present. Shared by `AddRecordScreen`'s save gate and the review-
-  /// completion gate (`ParcelDetailCard`'s Copy ID action, per
-  /// `REFACTOR_ROADMAP.md` Phase 7) so "what counts as a complete record"
-  /// can't drift between the two flows. Per-field message strings live in
-  /// the UI layer (`.tr()` needs `easy_localization`, unavailable to this
-  /// pure-Dart entity) — see `requiredFieldGaps` in
+  /// رقم الحيازة, اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly
+  /// filled/chosen (see [isValueFilled]/[isHoldingIdPending]), and
+  /// [nationalId] must be a valid format if present. Shared by
+  /// `AddRecordScreen`'s save gate and the review-completion gate
+  /// (`ParcelDetailCard`'s Copy ID action, per `REFACTOR_ROADMAP.md` Phase
+  /// 7) so "what counts as a complete record" can't drift between the two
+  /// flows. رقم الحيازة was added to this gate in Phase 25's follow-up: a
+  /// field worker leaving it at the `"-1"` placeholder was the root
+  /// condition every pending-parcel promotion/reconciliation bug this phase
+  /// fixed traced back to — requiring a real value up front removes that
+  /// whole class of ambiguity at the source, rather than continuing to
+  /// paper over it downstream. Per-field message strings live in the UI
+  /// layer (`.tr()` needs `easy_localization`, unavailable to this pure-Dart
+  /// entity) — see `requiredFieldGaps` in
   /// `ui/widgets/parcel_detail_card.dart`/`add_record_screen.dart`.
   bool get hasRequiredFieldsFilled =>
+      !isHoldingIdPending &&
       isValueFilled(holderName) &&
       isValueFilled(basinName) &&
       isValueFilled(cropType) &&

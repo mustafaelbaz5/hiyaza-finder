@@ -47,6 +47,52 @@ void main() {
     });
   });
 
+  group('isCurrentlyInAddedHoldings (REFACTOR_ROADMAP.md Phase 25 follow-up)', () {
+    test(
+        'false for a genuine import — isFieldAdded false short-circuits '
+        'regardless of sourceAddedHoldingId', () {
+      const Parcel imported = Parcel(id: 'h1', holdingId: '101', isFieldAdded: false);
+      expect(imported.isCurrentlyInAddedHoldings, isFalse);
+    });
+
+    test(
+        'true for a brand-new, not-yet-synced field-added parcel — '
+        'sourceAddedHoldingId is null', () {
+      const Parcel brandNew = Parcel(
+        id: 'client-generated-id',
+        holdingId: '-1',
+        isFieldAdded: true,
+      );
+      expect(brandNew.isCurrentlyInAddedHoldings, isTrue);
+    });
+
+    test(
+        'true for a synced-but-not-yet-promoted added_holdings row — '
+        'sourceAddedHoldingId equals its own id', () {
+      const Parcel addedRow = Parcel(
+        id: 'added-holdings-id',
+        holdingId: '-1',
+        isFieldAdded: true,
+        sourceAddedHoldingId: 'added-holdings-id',
+      );
+      expect(addedRow.isCurrentlyInAddedHoldings, isTrue);
+    });
+
+    test(
+        'false for a promoted row — id has moved on from '
+        'sourceAddedHoldingId, even though isFieldAdded stays true forever '
+        '(REFACTOR_ROADMAP.md: holdings.is_field_added is a permanent '
+        'provenance marker, not a live table-location flag)', () {
+      const Parcel promoted = Parcel(
+        id: 'promoted-holdings-id',
+        holdingId: '788',
+        isFieldAdded: true,
+        sourceAddedHoldingId: 'pre-promotion-added-holdings-id',
+      );
+      expect(promoted.isCurrentlyInAddedHoldings, isFalse);
+    });
+  });
+
   group('copyWith(holdingId:)', () {
     test('overrides holdingId when given', () {
       const Parcel p = Parcel(id: '1', holdingId: '-1');

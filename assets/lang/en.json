@@ -293,6 +293,7 @@
       "new_parcel_title": "Add",
       "for_person": "Add a new parcel for {name}",
       "land_number_hint": "Enter the correct land number",
+      "holding_id_required": "Enter a valid holding number",
       "save": "Save",
       "saved": "Saved successfully",
       "saving_in_progress": "Saving new record…",

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/error_handler.dart';
@@ -176,6 +177,10 @@ class HoldingsApi {
     final String id, {
     final bool? isFieldAdded,
   }) async {
+    debugPrint(
+      '[fetchParcelById] → reconciliation read for id=$id, '
+      'isFieldAdded=$isFieldAdded',
+    );
     Future<Map<String, dynamic>?> tryTable(final String table) async {
       try {
         final List<Map<String, dynamic>> rows = await _client
@@ -185,7 +190,8 @@ class HoldingsApi {
             .limit(1)
             .timeout(_requestTimeout);
         return rows.isEmpty ? null : rows.first;
-      } catch (_) {
+      } catch (error) {
+        debugPrint('[fetchParcelById] query against $table failed: $error');
         return null;
       }
     }
@@ -193,13 +199,24 @@ class HoldingsApi {
     if (isFieldAdded != true) {
       final Map<String, dynamic>? holdingsRow = await tryTable('holdings');
       if (holdingsRow != null) {
+        debugPrint(
+          '[fetchParcelById] ← found id=$id in holdings, '
+          'completed_at=${holdingsRow['completed_at']}',
+        );
         return (row: holdingsRow, isFieldAdded: false);
       }
     }
     if (isFieldAdded != false) {
       final Map<String, dynamic>? addedRow = await tryTable('added_holdings');
-      if (addedRow != null) return (row: addedRow, isFieldAdded: true);
+      if (addedRow != null) {
+        debugPrint(
+          '[fetchParcelById] ← found id=$id in added_holdings, '
+          'completed_at=${addedRow['completed_at']}',
+        );
+        return (row: addedRow, isFieldAdded: true);
+      }
     }
+    debugPrint('[fetchParcelById] ← id=$id not found in either table');
     return null;
   }
 
@@ -238,8 +255,20 @@ class HoldingsApi {
     required final DateTime? completedAt,
     required final String completedByUserId,
   }) async {
+    debugPrint(
+      '[markCompleted] → calling mark_parcel_completed RPC: '
+      'parcelId=$parcelId, isFieldAdded=$isFieldAdded, completed=$completed',
+    );
     try {
-      final List<Map<String, dynamic>> rows = await _client.rpc(
+      // `.rpc()` returns `dynamic` — Postgrest deserializes the JSON array
+      // response as a plain `List<dynamic>` whose elements happen to be
+      // `Map<String, dynamic>`, but the outer list itself isn't statically
+      // typed as such. Casting straight to `List<Map<String, dynamic>>` via
+      // a type annotation throws a runtime `_TypeError` on every single
+      // call (`List<dynamic> is not a subtype of List<Map<String,
+      // dynamic>>`) even though the actual data is shaped correctly —
+      // mapping each element explicitly avoids that mismatch.
+      final dynamic rawResult = await _client.rpc(
         'mark_parcel_completed',
         params: <String, dynamic>{
           'p_parcel_id': parcelId,
@@ -247,9 +276,17 @@ class HoldingsApi {
           'p_completed': completed,
         },
       ).timeout(_requestTimeout);
+      final List<Map<String, dynamic>> rows = (rawResult as List)
+          .map((final dynamic row) => Map<String, dynamic>.from(row as Map))
+          .toList();
 
       final Map<String, dynamic> result = rows.first;
+      debugPrint('[markCompleted] ← RPC result for parcelId=$parcelId: $result');
       if (completed && result['conflict'] == true) {
+        debugPrint(
+          '[markCompleted] parcelId=$parcelId already completed by someone '
+          'else — throwing ConflictException',
+        );
         throw ConflictException(
           message: 'This parcel was already marked reviewed by another user.',
         );
@@ -266,16 +303,24 @@ class HoldingsApi {
       // a silent no-op makes this class of stale-id bug visible instead of
       // masked.
       if (result['found'] != true) {
+        debugPrint(
+          '[markCompleted] parcelId=$parcelId not found in the targeted '
+          'table (isFieldAdded=$isFieldAdded) — throwing NotFoundException',
+        );
         throw NotFoundException(
           message: 'This record could not be found — it may have just been '
               'updated elsewhere. Refresh and try again.',
         );
       }
+      debugPrint('[markCompleted] parcelId=$parcelId succeeded');
     } on ConflictException {
       rethrow;
     } on NotFoundException {
       rethrow;
     } catch (error) {
+      debugPrint(
+        '[markCompleted] parcelId=$parcelId threw ${error.runtimeType}: $error',
+      );
       ErrorHandler.handleException(error);
     }
   }

@@ -490,9 +490,15 @@ class ParcelDetailCard extends StatelessWidget {
   /// misleading "save failed" message for an action that actually
   /// succeeded.
   Future<void> _copyId(final BuildContext context) async {
+    debugPrint(
+      '[_copyId] tapped: parcelId=${parcel.id} isNew=$isNew '
+      'completedAt=${parcel.completedAt} isFieldAdded=${parcel.isFieldAdded} '
+      'isCurrentlyInAddedHoldings=${parcel.isCurrentlyInAddedHoldings}',
+    );
     final bool isCompleted = parcel.completedAt != null;
     if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
       final List<String> gaps = requiredFieldGapMessages(parcel);
+      debugPrint('[_copyId] blocked — missing required fields: $gaps');
       context.showErrorSnackBar(gaps.first);
       return;
     }
@@ -502,24 +508,31 @@ class ParcelDetailCard extends StatelessWidget {
     HapticFeedback.mediumImpact();
 
     if (isNew || isCompleted) {
+      debugPrint(
+        '[_copyId] parcelId=${parcel.id} already new/completed — '
+        'clipboard-only copy, no server write',
+      );
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
       return;
     }
 
     try {
+      debugPrint('[_copyId] parcelId=${parcel.id} calling setParcelCompleted');
       final Parcel? updated = await getIt<HoldingsRepository>()
           .setParcelCompleted(parcel.id, completed: true);
       if (!context.mounted) return;
       final Parcel confirmed = updated ?? parcel.copyWith(completedAt: DateTime.now());
+      debugPrint('[_copyId] parcelId=${parcel.id} confirmed reviewed');
       (onCompleted ?? onFieldChanged)(confirmed);
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
-    } on ConflictException {
+    } on ConflictException catch (error) {
+      debugPrint('[_copyId] parcelId=${parcel.id} ConflictException: $error');
       if (context.mounted) {
         context.showErrorSnackBar(
           'holdings.detail.already_reviewed_elsewhere'.tr(),
         );
       }
-    } on TimeoutException {
+    } on TimeoutException catch (error) {
       // A timed-out mark_parcel_completed call may have already committed
       // server-side — "try again" here would be actively misleading, since
       // the write might have succeeded and a retry would just hit
@@ -527,6 +540,10 @@ class ParcelDetailCard extends StatelessWidget {
       // elsewhere" when it was this exact tap that did it).
       // `REFACTOR_ROADMAP.md` Phase 25: reconcile by re-reading the actual
       // server state instead of guessing.
+      debugPrint(
+        '[_copyId] parcelId=${parcel.id} TimeoutException: $error — '
+        'reconciling via refreshParcel',
+      );
       if (context.mounted) {
         context.showErrorSnackBar('errors.timeout_uncertain'.tr());
       }
@@ -534,14 +551,77 @@ class ParcelDetailCard extends StatelessWidget {
           await getIt<HoldingsRepository>().refreshParcel(parcel.id);
       if (!context.mounted) return;
       if (reconciled?.completedAt != null) {
+        debugPrint(
+          '[_copyId] parcelId=${parcel.id} reconciliation confirmed the '
+          'write DID succeed despite the timeout',
+        );
         (onCompleted ?? onFieldChanged)(reconciled!);
         context.showSuccessSnackBar(
           'holdings.detail.review_confirmed_after_timeout'.tr(),
         );
       } else {
+        debugPrint(
+          '[_copyId] parcelId=${parcel.id} reconciliation still '
+          'inconclusive (reconciled=$reconciled)',
+        );
         context.showErrorSnackBar('holdings.detail.review_still_uncertain'.tr());
       }
+    } on NotFoundException catch (error) {
+      // The RPC's `p_is_field_added`/id pairing didn't match any row in the
+      // table it targeted — this device's local dataset believed the
+      // parcel was still in `added_holdings` (`REFACTOR_ROADMAP.md` Phase
+      // 25 follow-up: `Parcel.isFieldAdded` alone can't tell, since it's a
+      // permanent provenance marker; `HoldingsRepository.setParcelCompleted`
+      // now derives the actual table from `Parcel.isCurrentlyInAddedHoldings`
+      // instead — but this branch exists for whenever that's still wrong,
+      // e.g. right after a promotion this device hasn't reconciled yet).
+      // Unlike a timeout, `found: false` means the write definitely did NOT
+      // happen — so once `refreshParcel` corrects the local dataset (via
+      // `applyRemoteChange` inside it, which also fixes
+      // `sourceAddedHoldingId`/`id`), retry the completion once; it reads
+      // `isCurrentlyInAddedHoldings` fresh from the now-corrected dataset.
+      debugPrint(
+        '[_copyId] parcelId=${parcel.id} NotFoundException: $error — '
+        'stale table assumption, reconciling then retrying once',
+      );
+      await getIt<HoldingsRepository>().refreshParcel(parcel.id);
+      if (!context.mounted) return;
+      try {
+        final Parcel? retried = await getIt<HoldingsRepository>()
+            .setParcelCompleted(parcel.id, completed: true);
+        if (!context.mounted) return;
+        final Parcel confirmed =
+            retried ?? parcel.copyWith(completedAt: DateTime.now());
+        debugPrint(
+          '[_copyId] parcelId=${parcel.id} retry after reconciliation succeeded',
+        );
+        (onCompleted ?? onFieldChanged)(confirmed);
+        context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
+      } on ConflictException {
+        if (context.mounted) {
+          context.showErrorSnackBar(
+            'holdings.detail.already_reviewed_elsewhere'.tr(),
+          );
+        }
+      } catch (retryError) {
+        debugPrint(
+          '[_copyId] parcelId=${parcel.id} retry after reconciliation also '
+          'failed: ${retryError.runtimeType}: $retryError',
+        );
+        if (context.mounted) {
+          context.showErrorSnackBar(
+            resolveWriteErrorMessage(
+              retryError,
+              fallback: 'holdings.detail.copy_and_review_failed'.tr(),
+            ),
+          );
+        }
+      }
     } catch (error) {
+      debugPrint(
+        '[_copyId] parcelId=${parcel.id} UNCLASSIFIED error '
+        '${error.runtimeType}: $error',
+      );
       if (context.mounted) {
         context.showErrorSnackBar(
           resolveWriteErrorMessage(

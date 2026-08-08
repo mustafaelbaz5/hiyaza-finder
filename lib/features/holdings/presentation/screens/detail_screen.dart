@@ -149,11 +149,45 @@ class _DetailScreenState extends State<DetailScreen>
   /// successful write this screen makes (so the new/changed state is
   /// visible immediately, without requiring the user to leave and return)
   /// and on every incoming Realtime event.
+  ///
+  /// A remote change this screen didn't cause (e.g. another parcel entirely
+  /// being reconciled/promoted elsewhere, which still fires the same shared
+  /// `onRemoteChange` stream) can occasionally follow a captured [_groupKey]
+  /// that's gone stale in ways this screen has no direct way to detect —
+  /// falls back to re-deriving it from any currently-shown parcel's own
+  /// (possibly now-different) `groupKey` before giving up and showing an
+  /// empty list, so a spurious unrelated notification never blanks a
+  /// holding that's still genuinely there.
   void _refreshFromRepository() {
     final String? groupKey = _groupKey;
     if (groupKey == null || !mounted) return;
+    List<Parcel> result = _repository.parcelsForHolding(groupKey);
+    if (result.isEmpty && _parcels.isNotEmpty) {
+      debugPrint(
+        '[DetailScreen] _refreshFromRepository: groupKey=$groupKey '
+        'returned 0 parcels but screen previously showed '
+        '${_parcels.length} — attempting to re-derive groupKey from a '
+        'currently-known parcel id instead of showing empty.',
+      );
+      for (final Parcel p in _parcels) {
+        final Parcel? fresh = _repository.parcels
+            .cast<Parcel?>()
+            .firstWhere((final Parcel? c) => c?.id == p.id, orElse: () => null);
+        if (fresh == null) continue;
+        final List<Parcel> retry = _repository.parcelsForHolding(fresh.groupKey);
+        debugPrint(
+          '[DetailScreen] tried parcel id=${p.id}, current groupKey='
+          '${fresh.groupKey} (was ${p.groupKey}) → ${retry.length} results',
+        );
+        if (retry.isNotEmpty) {
+          _groupKey = fresh.groupKey;
+          result = retry;
+          break;
+        }
+      }
+    }
     setState(() {
-      _parcels = _repository.parcelsForHolding(groupKey);
+      _parcels = result;
     });
   }
 

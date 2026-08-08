@@ -342,7 +342,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                         ResponsiveFieldsWrap(
                           children: [
                             FieldRow(
-                              label: 'holdings.fields.holding_id'.tr(),
+                              label: '${'holdings.fields.holding_id'.tr()} *',
                               value: _parcel.holdingId,
                               isModified: _isModified((final p) => p.holdingId),
                               onEdit: () => _editText(

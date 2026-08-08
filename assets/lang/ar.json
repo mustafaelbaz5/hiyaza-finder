@@ -293,6 +293,7 @@
       "new_parcel_title": "إضافة ",
       "for_person": "إضافة قطعة أرض جديدة لـ {name}",
       "land_number_hint": "يجب إدخال رقم الأرض الصحيح",
+      "holding_id_required": "أدخل رقم الحيازة الصحيح",
       "save": "حفظ",
       "saved": "تم الحفظ بنجاح",
       "saving_in_progress": "جارِ حفظ السجل الجديد…",

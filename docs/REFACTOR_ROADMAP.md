@@ -1402,6 +1402,176 @@ keep compiling against the now-larger `HoldingsApi` interface.
 
 flutter analyze: clean. flutter test: 321/321 passing.
 
+**Follow-up (same phase): the actual root cause, found via debug logging added on request.**
+
+Phase 25's reconciliation logic above was built on a hypothesis (a 15s timeout racing a
+server-side-committed write) that turned out to be wrong — added `debugPrint` tracing through the whole
+`_copyId` → `setParcelCompleted` → `markCompleted` chain, and the very first real device log showed the
+true cause immediately:
+
+```
+[markCompleted] parcelId=... threw _TypeError: type 'List<dynamic>' is not a subtype of type
+'List<Map<String, dynamic>>'
+```
+
+**Root cause:** `HoldingsApi.markCompleted` declared `final List<Map<String, dynamic>> rows =
+await _client.rpc('mark_parcel_completed', ...)`. Supabase's `.rpc()` call returns `dynamic` — the
+underlying JSON array deserializes as a plain `List<dynamic>` whose *elements* happen to be
+`Map<String, dynamic>`, but the outer `List` itself is never statically typed as
+`List<Map<String, dynamic>>`. Assigning it directly to that typed variable throws a runtime
+`_TypeError` on **every single call**, unconditionally — not a race, not a timeout, not something that
+only happens on slow connections. This explains why the error was so persistent and (from the user's
+perspective) inconsistent: the RPC itself always succeeded server-side (confirmed earlier via Supabase
+logs, Phase 25's first pass), so the *review status* was frequently already correct by the time the
+user re-checked, while the *client* threw on every call — exactly "sometimes it works anyway even
+though it shows an error."
+
+**Fix:** cast the RPC result explicitly — `(rawResult as List).map((row) =>
+Map<String, dynamic>.from(row as Map)).toList()` — instead of relying on an implicit type-annotation
+cast. Checked every other query in `holdings_api.dart` for the same pattern: all other call sites use
+`.from(table).select()`, which returns Supabase's own properly-typed `PostgrestList`
+(`List<Map<String, dynamic>>`) already — `.rpc()` was the only call using the unsafe direct-cast shape.
+
+The Phase 25 reconciliation logic (timeout → `refreshParcel` → confirm-or-uncertain messaging) is left
+in place even though the originally-hypothesized timeout race turns out to be rare in practice — it's
+still correct, harmless, low-risk behavior for the genuine case of a slow/unstable connection, just no
+longer the primary explanation for what the user was hitting on every tap.
+
+flutter analyze: clean. flutter test: 321/321 passing (no test changes needed for this fix — the bug
+was in an implicit-cast type declaration no fake/mock reproduces, since test doubles return
+already-correctly-typed `List<Map<String, dynamic>>` literals directly).
+
+**Second follow-up (same phase): the actual real-world case caught live via debug logging —
+`NotFoundException` from a stale `isFieldAdded` never reached the reconciliation path at all.**
+
+With the type-cast crash fixed, the very next real device log showed the RPC now running cleanly and
+returning a legitimate `found: false, conflict: false` — confirmed against the live DB
+(`bbahuyqjptojlighriyy`) that the parcel genuinely existed, just in `holdings`, not `added_holdings`:
+a field-added record that had already been promoted server-side (`REFACTOR_ROADMAP.md` Phase 24's
+promotion area), whose local `Parcel.isFieldAdded` on this device was still `true`. `markCompleted`
+correctly threw `NotFoundException` for this (Phase 24's fix), but two things then went wrong:
+
+1. `_copyId`'s catch chain only special-cased `ConflictException`/`TimeoutException` —
+   `NotFoundException` fell into the generic `catch`, showing the same unhelpful fallback message this
+   whole phase was meant to eliminate.
+2. `HoldingsRepository.refreshParcel` passed the local dataset's (stale) `isFieldAdded` as a hint into
+   `fetchParcelById`, which made it search only the wrong table — repeating the exact mistake
+   reconciliation exists to correct.
+
+**Fix:**
+1. `refreshParcel` no longer passes the local `isFieldAdded` hint at all — `fetchParcelById(parcelId)`
+   with no hint checks both `holdings` and `added_holdings`, so a stale local flag can no longer point
+   the reconciliation read at the wrong table.
+2. `_copyId` gained an `on NotFoundException` branch: unlike a timeout (where the write's outcome is
+   genuinely unknown), `found: false` means the write definitely did **not** happen — so after
+   `refreshParcel` corrects the local dataset's `isFieldAdded` (via the `applyRemoteChange` call inside
+   it), `_copyId` retries `setParcelCompleted` once with the now-correct value. `setParcelCompleted`
+   always reads `isFieldAdded` fresh from the dataset at call time, so the retry automatically uses the
+   corrected flag. A `ConflictException` on the retry (someone else completed it in the meantime) shows
+   its own accurate message; any other retry failure falls back to the standard
+   `resolveWriteErrorMessage` path. From the user's perspective this self-heals and completes
+   transparently — no second tap required.
+
+**Dependencies:** the type-cast fix above (without it, `NotFoundException` was never reliably
+distinguishable from the crash). **Complexity:** low-medium — one repository-level parameter removed,
+one new catch branch with its own nested try/retry.
+
+**Risks:** low. The retry only fires for the specific case where the server has just told us,
+authoritatively, that the write didn't happen — never a blind retry on an ambiguous failure.
+
+Regression test added: `parcel_detail_card_test.dart` — a parcel whose local `isFieldAdded: true` is
+stale (the row actually lives in `holdings`) throws `NotFoundException` on the first `markCompleted`
+call, reconciles, and the retry (now with `isFieldAdded: false`) succeeds — asserts exactly 2
+`markCompleted` calls and the normal success message, not a manual-retry-required error.
+
+flutter analyze: clean. flutter test: 322/322 passing.
+
+**Third follow-up (same phase): the NotFoundException retry looped forever — `Parcel.isFieldAdded`
+doesn't mean what its own doc comment claimed.**
+
+The very next real device log (after the type-cast and NotFoundException-retry fixes above both
+landed) showed the retry loop still failing on the *second* attempt too, with the exact same
+`isFieldAdded=true` sent both times — even though `refreshParcel`'s reconciliation read had correctly
+found the row in `holdings`. Tapping Copy ID again made the parcel disappear from the list entirely
+(a downstream symptom of the repeated `NotFoundException` never resolving).
+
+**Root cause:** `Parcel.isFieldAdded`'s doc comment (written well before Phase 24's
+`preserve_added_provenance_on_promotion` migration) claimed it "discriminates which table this parcel
+lives in." That was true once, but Phase 24 deliberately made `holdings.is_field_added` a **permanent
+provenance marker** that stays `true` forever after promotion (so the "مضافة من التطبيق" badge keeps
+working on a promoted row) — nothing ever updated this doc comment or the code that still relied on the
+old contract. `holdingRowToParcel` correctly reads the raw (now-permanent) `is_field_added` column, so
+`refreshParcel`'s reconciled `Parcel` still had `isFieldAdded: true` even though the row was
+unambiguously in `holdings` — the retry read the same wrong signal and failed identically, forever.
+
+**Fix:** added `Parcel.isCurrentlyInAddedHoldings` — the actually-correct "which table" signal,
+short-circuiting `false` for a genuine import (`isFieldAdded == false`, always unambiguous), otherwise
+derived from `sourceAddedHoldingId`: `null` or equal to `id` means still in `added_holdings`
+(unsynced-local or synced-unpromoted); different from `id` means promoted into `holdings`. Replaced
+every table-routing use of `isFieldAdded` with this new getter: `setParcelCompleted`'s RPC parameter
+and outbox-enqueue payload, and `addLocalParcel`'s `safeParentHoldingId` FK-safety check (which had the
+identical bug — a promoted parent's `id` could get wrongly treated as still needing to be nulled out).
+`Parcel.isFieldAdded`'s doc comment was corrected to state its actual, current meaning (permanent
+provenance) and explicitly warn against using it for table routing.
+
+**Dependencies:** the two fixes immediately above (this was blocking their retry logic from ever
+actually working). **Complexity:** low — one new getter, three call-site swaps, one doc correction.
+
+**Risks:** low, but required fixing two existing test fixtures whose `Parcel(...)` literals had no
+`sourceAddedHoldingId` set while intending to represent genuine imports — under the getter's first
+version (before the `isFieldAdded` short-circuit was added), those fixtures were indistinguishable from
+a brand-new unsynced field-added parcel. Corrected by adding the `isFieldAdded` short-circuit rather
+than patching the fixtures, since the getter's original logic was the actual bug the fixtures exposed.
+
+Regression tests added: `parcel_pending_test.dart` (4 new tests covering all four
+`isCurrentlyInAddedHoldings` cases: genuine import, brand-new unsynced, synced-unpromoted, promoted).
+
+flutter analyze: clean. flutter test: 326/326 passing.
+
+**Fourth follow-up (same phase): a successful Copy ID could make the whole detail screen go blank
+immediately after — `DetailScreen`'s captured `_groupKey` can go stale mid-session.**
+
+With the retry loop now actually resolving, the next real device log showed Copy ID succeeding cleanly
+— but the detail screen it was tapped from immediately showed "لا توجد بيانات لهذه الحيازة" (no data
+for this holding) on every tab, even though the person genuinely still had data server-side.
+
+**Root cause:** `DetailScreen._groupKey` is captured once at `initState` from the first parcel in the
+list it was opened with, and every subsequent `_refreshFromRepository()` call (on this screen's own
+writes and on every incoming `onRemoteChange` event, including ones this screen didn't cause) re-queries
+`_repository.parcelsForHolding(_groupKey)` using that fixed value. `Parcel.groupKey` for a still-pending
+record (`holdingId` placeholder) is derived from `personId ?? pendingGroupId ?? id` — stable as long as
+`personId` doesn't change. Traced via the live DB (`bbahuyqjptojlighriyy`): the specific parcel that
+went through the `NotFoundException`-then-retry cycle had a `person_id` populated server-side that this
+device's local copy apparently hadn't captured yet (most plausible for an older locally-cached parcel
+predating `person_id` being consistently populated) — `refreshParcel`'s reconciliation read pulled the
+authoritative row, and `applyRemoteChange`'s "prefer the existing local value, fall back to the incoming
+one" merge (`_dataset.parcels[idx].personId ?? updated.personId`) then adopted the server's `person_id`
+since the local one was `null`. That's correct behavior for the dataset itself, but it means the
+parcel's `groupKey` legitimately changed mid-session (`'pending:<id>'` → `'pending:<personId>'`) — and
+`DetailScreen`'s `_groupKey`, captured before that change, silently stopped matching anything.
+
+**Fix:** `_refreshFromRepository()` now falls back to re-deriving `_groupKey` when a query against the
+currently-held one returns zero results but the screen previously had parcels: it re-reads each
+currently-shown parcel's *current* `groupKey` from the repository and retries the query with that,
+adopting it as the new `_groupKey` the moment one produces results. Added `debugPrint` tracing at each
+step so the exact trigger is fully visible if this recurs. Deliberately reactive (only kicks in on an
+otherwise-would-be-empty result) rather than proactively re-syncing `_groupKey` on every refresh, so an
+unrelated update elsewhere can't cause `_groupKey` to visibly ping-pong.
+
+**Dependencies:** none — self-contained to `DetailScreen`. **Complexity:** low.
+
+**Risks:** low. The fallback only ever activates when the primary query would otherwise show an empty
+screen (a strictly worse outcome), and only ever adopts a `groupKey` that a currently-known parcel id
+genuinely still has server-side.
+
+**Not yet covered by an automated test** — `DetailScreen` has no existing widget-test harness (routing/DI
+scaffolding not yet built for it), and reproducing this specific mid-session `personId`-population race
+in a unit test would need the same scaffolding. Left as a manual-verification item; the debug logging
+added here will confirm on the next occurrence whether this exact mechanism is what's firing.
+
+flutter analyze: clean. flutter test: 326/326 passing (no test count change — this fix has no
+automated coverage yet, see above).
+
 ---
 
 ## Sequencing summary

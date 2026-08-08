@@ -110,6 +110,13 @@ class _FakeHoldingsApi implements HoldingsApi {
   /// used to simulate a timed-out `mark_parcel_completed` RPC call.
   Object? markCompletedError;
 
+  /// How many of the next [markCompleted] calls should throw
+  /// [markCompletedError] before calls start succeeding — lets a test
+  /// simulate the NotFoundException-then-retry-succeeds sequence.
+  int markCompletedErrorCount = 1 << 30;
+
+  int markCompletedCallCount = 0;
+
   @override
   Future<void> markCompleted({
     required final String parcelId,
@@ -118,7 +125,11 @@ class _FakeHoldingsApi implements HoldingsApi {
     required final DateTime? completedAt,
     required final String completedByUserId,
   }) async {
-    if (markCompletedError != null) throw markCompletedError!;
+    markCompletedCallCount++;
+    if (markCompletedError != null &&
+        markCompletedCallCount <= markCompletedErrorCount) {
+      throw markCompletedError!;
+    }
   }
 
   @override
@@ -550,6 +561,107 @@ void main() {
           reason: 'must never claim the parcel is reviewed when '
               'reconciliation could not confirm it.',
         );
+      },
+    );
+  });
+
+  group('Copy ID stale isFieldAdded reconciliation (REFACTOR_ROADMAP.md Phase 25 follow-up)', () {
+    // Reproduces the real device log: a field-added parcel this device
+    // still believes is unpromoted/local-only (`sourceAddedHoldingId` null
+    // — the same shape a brand-new, not-yet-synced local parcel has) but
+    // which the server has, in fact, already promoted into `holdings`.
+    // `HoldingsRepository.setParcelCompleted`'s `isCurrentlyInAddedHoldings`
+    // reads `true` from this stale local state (correctly, per its own
+    // documented "null means still unsynced" rule — it just doesn't know
+    // this parcel was actually already synced by another path), sends
+    // `isFieldAdded: true`, and the RPC reports `found: false` for a row
+    // that actually exists — just in `holdings`, not `added_holdings`.
+    // holdingId is a real number (not the "-1" pending placeholder) —
+    // REFACTOR_ROADMAP.md Phase 25's later requirement that a new
+    // person/parcel must have a real هيazة number before it can even be
+    // saved means a genuinely-promoted parcel reaching this reconciliation
+    // path always has one; this fixture matches that, so the test exercises
+    // the reconciliation/retry logic specifically, not the separate
+    // required-fields gate.
+    const Parcel staleParcel = Parcel(
+      id: 'p-stale-field-added',
+      holdingId: '788',
+      holderName: 'Ahmed',
+      basinName: 'البشيط',
+      nationalId: '12345678901234',
+      cropType: 'قمح',
+      landNumber: '-1',
+      isFieldAdded: true,
+    );
+
+    late _FakeHoldingsApi holdingsApi;
+
+    setUp(() async {
+      await getIt.reset();
+      getIt.registerLazySingleton<AuthRepository>(_FakeAuthRepository.new);
+      holdingsApi = _FakeHoldingsApi()
+        ..markCompletedError = app_exceptions.NotFoundException()
+        ..markCompletedErrorCount = 1;
+      final HoldingsRepository repository = HoldingsRepository(
+        editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
+        holdingsApi: holdingsApi,
+      );
+      await repository.loadParcelsForCity('city-1', const <Parcel>[staleParcel]);
+      getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+    });
+
+    tearDown(() async {
+      await getIt.reset();
+    });
+
+    testWidgets(
+      'a NotFoundException from a stale isFieldAdded reconciles the local '
+      'flag and retries once, completing transparently without the user '
+      'having to tap again',
+      (final tester) async {
+        // The reconciliation read finds the row under the OTHER table
+        // (isFieldAdded: false) — this is what corrects the stale flag.
+        holdingsApi.fetchParcelByIdResult = (
+          row: <String, dynamic>{
+            'id': staleParcel.id,
+            'holding_id_number': staleParcel.holdingId,
+            'holder_name': staleParcel.holderName,
+          },
+          isFieldAdded: false,
+        );
+
+        Parcel? completedResult;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: staleParcel,
+            onFieldChanged: (final _) {},
+            onCompleted: (final updated) => completedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(
+          holdingsApi.markCompletedCallCount,
+          2,
+          reason: 'must retry markCompleted once after reconciling the '
+              'stale isFieldAdded flag.',
+        );
+        expect(
+          find.text('تم نسخ المعرّف وتحديد الحيازة كمُراجعة'),
+          findsOneWidget,
+          reason: 'the retry succeeding should show the normal success '
+              'message, same as a first-try success.',
+        );
+        expect(completedResult, isNotNull);
+        expect(completedResult!.completedAt, isNotNull);
       },
     );
   });
