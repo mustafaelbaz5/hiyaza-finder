@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_status_filter.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart'
+    show InternetConnectionStatus;
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/networking/network_info.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../sync/domain/services/sync_runner.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
 import '../widgets/detail_screen_header.dart';
@@ -60,6 +64,19 @@ class _DetailScreenState extends State<DetailScreen>
 
   late final StreamSubscription<void> _remoteChangesSub;
 
+  /// Flushes the outbox (`SyncRunner.flush`) the moment connectivity comes
+  /// back while this screen is open, instead of relying on the user to
+  /// navigate to `HomeScreen`, background/foreground the app, or make an
+  /// unrelated write elsewhere — none of which are guaranteed to happen
+  /// while a field worker stays on `DetailScreen` after reconnecting.
+  /// Reuses the exact same `SyncRunner` singleton/outbox `HomeScreen`'s own
+  /// resume-triggered flush already goes through — no new sync mechanism.
+  /// `SyncRunner.flush()` is idempotent/re-entrant-safe on its own (a
+  /// `_isFlushing` guard, plus per-operation backoff), so this can't itself
+  /// cause duplicate operations even if a `connected` event fires more than
+  /// once in a row.
+  StreamSubscription<InternetConnectionStatus>? _connectivitySub;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +94,13 @@ class _DetailScreenState extends State<DetailScreen>
     // already open.
     _remoteChangesSub = _repository.onRemoteChange
         .listen((final _) => _refreshFromRepository());
+    _connectivitySub =
+        getIt<NetworkInfo>().onStatusChange.listen((final InternetConnectionStatus status) {
+      if (status == InternetConnectionStatus.connected ||
+          status == InternetConnectionStatus.slow) {
+        unawaited(getIt<SyncRunner>().flush());
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -101,6 +125,7 @@ class _DetailScreenState extends State<DetailScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _remoteChangesSub.cancel();
+    unawaited(_connectivitySub?.cancel());
     _tabController.dispose();
     super.dispose();
   }
