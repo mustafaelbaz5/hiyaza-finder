@@ -183,8 +183,18 @@ void main() {
       expect(state.parcels.single.id, '2');
     });
 
-    test('removeWhereIdOrSource also removes by sourceAddedHoldingId '
-        '(the promoted-record case)', () async {
+    // A promoted parcel's `id` has already moved on from the pre-promotion
+    // `added_holdings` id (still carried as `sourceAddedHoldingId`) — the
+    // `added_holdings` UPDATE Realtime event that fires when the promotion
+    // trigger sets `promoted_holding_id` must NOT delete this entry just
+    // because it matches on `sourceAddedHoldingId`, or a device that already
+    // applied its own promoted write locally (`HoldingsRepository
+    // .addLocalParcel`'s online path) loses that parcel the moment the
+    // trigger's own `added_holdings` echo arrives — the exact "add a person,
+    // open their details, no data" bug this guards against.
+    test(
+        'removeWhereIdOrSource does NOT remove an already-promoted parcel '
+        'by its old sourceAddedHoldingId', () async {
       const List<Parcel> parcels = <Parcel>[
         Parcel(id: 'promoted-id', holdingId: '101', sourceAddedHoldingId: 'pre-promotion-id'),
       ];
@@ -192,10 +202,12 @@ void main() {
 
       state.removeWhereIdOrSource('pre-promotion-id');
 
-      expect(state.parcels, isEmpty);
+      expect(state.parcels, hasLength(1));
+      expect(state.parcels.single.id, 'promoted-id');
     });
 
-    test('findByIdOrSource matches either id or sourceAddedHoldingId', () async {
+    test('findByIdOrSource matches only by id, not sourceAddedHoldingId',
+        () async {
       const Parcel p = Parcel(
         id: 'promoted-id',
         holdingId: '101',
@@ -204,7 +216,7 @@ void main() {
       await state.adopt('city-1', const <Parcel>[p]);
 
       expect(state.findByIdOrSource('promoted-id')?.id, 'promoted-id');
-      expect(state.findByIdOrSource('pre-promotion-id')?.id, 'promoted-id');
+      expect(state.findByIdOrSource('pre-promotion-id'), isNull);
       expect(state.findByIdOrSource('missing'), isNull);
     });
   });

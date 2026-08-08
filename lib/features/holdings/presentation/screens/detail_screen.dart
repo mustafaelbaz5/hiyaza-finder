@@ -14,6 +14,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../../../sync/domain/services/sync_runner.dart';
 import '../../data/repository/holdings_repository.dart';
 import '../../domain/entities/parcel.dart';
@@ -58,7 +59,14 @@ class _DetailScreenState extends State<DetailScreen>
   /// deleting one parcel must not block reopening a different one.
   final Set<String> _busyParcelIds = <String>{};
 
-  bool _isParcelBusy(final String parcelId) => _busyParcelIds.contains(parcelId);
+  bool _isParcelBusy(final String parcelId) =>
+      _busyParcelIds.contains(parcelId);
+
+  /// Drives the screen-wide [BlockingLoadingOverlay] while any write is in
+  /// flight — set to the action-specific message right before the awaited
+  /// repository call and cleared in every `finally`, so the message on
+  /// screen always matches the action actually running.
+  String? _busyMessage;
 
   /// Exactly three tabs — الكل/المضافة/تمت المراجعة (`REFACTOR_ROADMAP.md`
   /// Phase 11 §11), always shown (unlike the filter-chip row this replaced,
@@ -84,10 +92,11 @@ class _DetailScreenState extends State<DetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: DetailScreenTab.values.length, vsync: this)
-      ..addListener(() {
-        if (!_tabController.indexIsChanging) setState(() {});
-      });
+    _tabController =
+        TabController(length: DetailScreenTab.values.length, vsync: this)
+          ..addListener(() {
+            if (!_tabController.indexIsChanging) setState(() {});
+          });
     _parcels = List<Parcel>.of(widget.parcels);
     _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
     // A Realtime event (e.g. this exact person's newly-added parcel being
@@ -98,8 +107,9 @@ class _DetailScreenState extends State<DetailScreen>
     // already open.
     _remoteChangesSub = _repository.onRemoteChange
         .listen((final _) => _refreshFromRepository());
-    _connectivitySub =
-        getIt<NetworkInfo>().onStatusChange.listen((final InternetConnectionStatus status) {
+    _connectivitySub = getIt<NetworkInfo>()
+        .onStatusChange
+        .listen((final InternetConnectionStatus status) {
       if (status == InternetConnectionStatus.connected ||
           status == InternetConnectionStatus.slow) {
         unawaited(getIt<SyncRunner>().flush());
@@ -149,7 +159,10 @@ class _DetailScreenState extends State<DetailScreen>
 
   Future<void> _deleteParcel(final Parcel parcel) async {
     if (_isParcelBusy(parcel.id)) return;
-    setState(() => _busyParcelIds.add(parcel.id));
+    setState(() {
+      _busyParcelIds.add(parcel.id);
+      _busyMessage = 'holdings.detail.deleting_in_progress'.tr();
+    });
     try {
       final bool deleted = await _repository.deleteLocalParcel(parcel.id);
       if (!mounted) return;
@@ -172,7 +185,12 @@ class _DetailScreenState extends State<DetailScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _busyParcelIds.remove(parcel.id));
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(parcel.id);
+          _busyMessage = null;
+        });
+      }
     }
   }
 
@@ -180,7 +198,10 @@ class _DetailScreenState extends State<DetailScreen>
   /// no snackbar (decision #2: deliberate user-initiated undo).
   Future<void> _reopenParcel(final Parcel parcel) async {
     if (_isParcelBusy(parcel.id)) return;
-    setState(() => _busyParcelIds.add(parcel.id));
+    setState(() {
+      _busyParcelIds.add(parcel.id);
+      _busyMessage = 'holdings.detail.reopening_in_progress'.tr();
+    });
     try {
       await _repository.setParcelCompleted(parcel.id, completed: false);
       if (!mounted) return;
@@ -201,7 +222,12 @@ class _DetailScreenState extends State<DetailScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _busyParcelIds.remove(parcel.id));
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(parcel.id);
+          _busyMessage = null;
+        });
+      }
     }
   }
 
@@ -239,7 +265,10 @@ class _DetailScreenState extends State<DetailScreen>
   /// wins (it's the more specific, actionable one).
   Future<void> _updateField(final Parcel updated) async {
     if (_isParcelBusy(updated.id)) return;
-    setState(() => _busyParcelIds.add(updated.id));
+    setState(() {
+      _busyParcelIds.add(updated.id);
+      _busyMessage = 'holdings.detail.saving_field'.tr();
+    });
     try {
       final int idx = _parcels.indexWhere(
         (final Parcel p) => p.id == updated.id,
@@ -277,7 +306,12 @@ class _DetailScreenState extends State<DetailScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _busyParcelIds.remove(updated.id));
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(updated.id);
+          _busyMessage = null;
+        });
+      }
     }
   }
 
@@ -338,99 +372,108 @@ class _DetailScreenState extends State<DetailScreen>
 
     final bool showAddFab = _parcels.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: SafeArea(
-        child: Stack(
-          children: <Widget>[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return PopScope(
+      canPop: _busyMessage == null,
+      child: BlockingLoadingOverlay(
+        visible: _busyMessage != null,
+        message: _busyMessage,
+        child: Scaffold(
+          backgroundColor: colors.background,
+          body: SafeArea(
+            child: Stack(
               children: <Widget>[
-                DetailScreenHeader(
-                  holdingId: holdingId,
-                  parcelCount: _parcels.length,
-                ),
-                // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
-                // Phase 11 §11) — unlike the filter-chip row this replaced,
-                // which only appeared once a holding had more than one
-                // parcel; a fixed tab bar is part of the screen's layout
-                // regardless of how many parcels are on it.
-                TabBar(
-                  controller: _tabController,
-                  labelColor: AppColors.primary200,
-                  unselectedLabelColor: colors.textSecondary,
-                  indicatorColor: AppColors.primary200,
-                  tabs: [
-                    for (final DetailScreenTab tab in DetailScreenTab.values)
-                      Tab(text: tab.label()),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    DetailScreenHeader(
+                      holdingId: holdingId,
+                      parcelCount: _parcels.length,
+                    ),
+                    // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
+                    // Phase 11 §11) — unlike the filter-chip row this replaced,
+                    // which only appeared once a holding had more than one
+                    // parcel; a fixed tab bar is part of the screen's layout
+                    // regardless of how many parcels are on it.
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.primary200,
+                      unselectedLabelColor: colors.textSecondary,
+                      indicatorColor: AppColors.primary200,
+                      tabs: [
+                        for (final DetailScreenTab tab
+                            in DetailScreenTab.values)
+                          Tab(text: tab.label()),
+                      ],
+                    ),
+                    verticalSpacing(8),
+                    Expanded(
+                      child: visibleParcels.isEmpty
+                          ? Center(
+                              child: Text(
+                                'holdings.detail.empty'.tr(),
+                                style: AppTextStyles.font16Regular.copyWith(
+                                  color: colors.textHint,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: rw(16),
+                              ).copyWith(
+                                  bottom: rh(16 + (showAddFab ? 64 : 0))),
+                              itemCount: visibleParcels.length,
+                              itemBuilder:
+                                  (final BuildContext context, final int i) {
+                                final Parcel parcel = visibleParcels[i];
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: rh(16)),
+                                  child: ParcelDetailCard(
+                                    parcel: parcel,
+                                    originalParcel:
+                                        _repository.originalParcel(parcel.id),
+                                    // "New / unsynced" no longer applies once
+                                    // every write is confirmed-or-failed
+                                    // synchronously — there is no more window
+                                    // where a record is visible but not yet on
+                                    // the server.
+                                    isNew: false,
+                                    hideCreditType: _repository.hideCreditType,
+                                    associationType:
+                                        _repository.activeAssociationType,
+                                    onFieldChanged: _updateField,
+                                    onCompleted: _onParcelCompleted,
+                                    animationDelay:
+                                        Duration(milliseconds: i * 80),
+                                    resolveBorderMatch:
+                                        _repository.findByBorderText,
+                                    onDelete:
+                                        parcel.sourceAddedHoldingId != null &&
+                                                parcel.completedAt == null
+                                            ? () => _deleteParcel(parcel)
+                                            : null,
+                                    onReopen: () => _reopenParcel(parcel),
+                                    isDeleting: _isParcelBusy(parcel.id),
+                                    isReopening: _isParcelBusy(parcel.id),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
                   ],
                 ),
-                verticalSpacing(8),
-                Expanded(
-                  child: visibleParcels.isEmpty
-                      ? Center(
-                          child: Text(
-                            'holdings.detail.empty'.tr(),
-                            style: AppTextStyles.font16Regular.copyWith(
-                              color: colors.textHint,
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: rw(16),
-                          ).copyWith(bottom: rh(16 + (showAddFab ? 64 : 0))),
-                          itemCount: visibleParcels.length,
-                          itemBuilder:
-                              (final BuildContext context, final int i) {
-                            final Parcel parcel = visibleParcels[i];
-                            return Padding(
-                              padding: EdgeInsets.only(bottom: rh(16)),
-                              child: ParcelDetailCard(
-                                parcel: parcel,
-                                originalParcel:
-                                    _repository.originalParcel(parcel.id),
-                                // "New / unsynced" no longer applies once
-                                // every write is confirmed-or-failed
-                                // synchronously — there is no more window
-                                // where a record is visible but not yet on
-                                // the server.
-                                isNew: false,
-                                hideCreditType: _repository.hideCreditType,
-                                associationType:
-                                    _repository.activeAssociationType,
-                                onFieldChanged: _updateField,
-                                onCompleted: _onParcelCompleted,
-                                animationDelay:
-                                    Duration(milliseconds: i * 80),
-                                resolveBorderMatch:
-                                    _repository.findByBorderText,
-                                onDelete:
-                                    parcel.sourceAddedHoldingId != null &&
-                                            parcel.completedAt == null
-                                        ? () => _deleteParcel(parcel)
-                                        : null,
-                                onReopen: () => _reopenParcel(parcel),
-                                isDeleting: _isParcelBusy(parcel.id),
-                                isReopening: _isParcelBusy(parcel.id),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+                if (showAddFab)
+                  PositionedDirectional(
+                    bottom: rh(20),
+                    end: rw(20),
+                    child: FloatingActionButton.extended(
+                      onPressed: () => _addParcelForPerson(_parcels.first),
+                      icon: const Icon(Icons.add_location_alt_rounded),
+                      label: Text('holdings.add.new_parcel_title'.tr()),
+                    ),
+                  ),
               ],
             ),
-            if (showAddFab)
-              PositionedDirectional(
-                bottom: rh(20),
-                end: rw(20),
-                child: FloatingActionButton.extended(
-                  onPressed: () => _addParcelForPerson(_parcels.first),
-                  icon: const Icon(Icons.add_location_alt_rounded),
-                  label: Text('holdings.add.new_parcel_title'.tr()),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );

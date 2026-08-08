@@ -334,7 +334,15 @@ class HoldingsRepository
               p,
         ]);
       }
-      _dataset.append(finalParcel);
+      // upsert, not append: a synchronously-promoted parcel races its own
+      // Realtime echo (the `added_holdings` INSERT and/or the promoted
+      // `holdings` INSERT for the exact same underlying row) — if that echo
+      // is processed on this device before this awaited call returns,
+      // `applyRemoteChange` will have already added an entry for it under
+      // either the pre-promotion or promoted id. A blind append here would
+      // then leave two entries for the same parcel instead of reconciling
+      // with whichever arrived first.
+      _dataset.upsert(finalParcel);
       _dataset.setOriginal(finalParcel.id, finalParcel);
       _dataset.rebuildBorderIndex();
     }

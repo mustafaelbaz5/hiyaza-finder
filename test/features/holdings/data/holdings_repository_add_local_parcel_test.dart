@@ -419,6 +419,95 @@ void main() {
     expect(repository.parcels.single.createdBy, 'user-1');
   });
 
+  test(
+      "REGRESSION: the added_holdings UPDATE echo (promoted_holding_id now "
+      "set) that fires in the SAME transaction as an immediate, "
+      "synchronous promotion must not delete the parcel this device already "
+      "applied locally under its new, promoted id — reproduces 'add a "
+      "person, open their details screen, no data shown': addLocalParcel's "
+      "online path already swaps in the promoted holdings.id "
+      "(added.id == promotedHoldingsId) while sourceAddedHoldingId still "
+      "points at the original added_holdings row; applyRemoteDelete(id) is "
+      "then called with that original added_holdings.id when its own "
+      "UPDATE echoes back, and must be a no-op here since the entry it "
+      "would have superseded no longer exists under that id.", () async {
+    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+    );
+    expect(added, isNotNull);
+    expect(repository.parcels, hasLength(1));
+    expect(repository.parcels.single.id, 'promoted-holdings-id');
+
+    // The added_holdings row's own id (pre-promotion) — this is what
+    // RealtimePayloadDispatcher.handleAddedHoldingsPayload passes to
+    // applyRemoteDelete once promoted_holding_id is observed set on it.
+    repository.applyRemoteDelete(added!.sourceAddedHoldingId!);
+
+    expect(
+      repository.parcels,
+      hasLength(1),
+      reason: 'the already-promoted parcel must survive the supersede-echo '
+          'delete for its old pre-promotion id.',
+    );
+    expect(repository.parcels.single.id, 'promoted-holdings-id');
+  });
+
+  test(
+      "REGRESSION: if the added_holdings INSERT Realtime echo for this "
+      "device's own write is processed BEFORE addLocalParcel's awaited "
+      "HTTP response returns, the eventual local upsert must reconcile "
+      "with it — not append a second, duplicate parcel. Reproduces "
+      "'add a new person, search for them, two cards show up — one with "
+      "the parcel, one empty': the echo (pre-promotion row, `groupKey` "
+      "'pending:<personId>') and the awaited response's own local write "
+      "(post-promotion row, different `id`, same `sourceAddedHoldingId`) "
+      "raced, and the local write used to blindly `append` instead of "
+      'reconciling by sourceAddedHoldingId like applyRemoteChange does.',
+      () async {
+    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
+
+    // Simulate the Realtime echo of this device's own added_holdings INSERT
+    // landing first — same shape addedHoldingRowToParcel would build: the
+    // pre-promotion id, still unpromoted (isFieldAdded true).
+    const String preEchoId = 'client-generated-id-does-not-matter-here';
+    repository.applyRemoteChange(
+      const Parcel(
+        id: preEchoId,
+        holdingId: '-1',
+        holderName: 'Ahmed',
+        landNumber: '-1',
+        isFieldAdded: true,
+        sourceAddedHoldingId: preEchoId,
+        personId: 'person-1',
+      ),
+    );
+    expect(repository.parcels, hasLength(1));
+
+    // Now the awaited addLocalParcel call "returns" with the server having
+    // promoted it — same personId (as the real client-generated id would
+    // be, had the echo carried this exact write's own id), proving the
+    // upsert reconciles by sourceAddedHoldingId/groupKey rather than
+    // blindly appending a second entry.
+    final Parcel? added = await repository.addLocalParcel(
+      const Parcel(
+        id: preEchoId,
+        holdingId: '-1',
+        holderName: 'Ahmed',
+        landNumber: '-1',
+        personId: 'person-1',
+      ),
+    );
+    expect(added, isNotNull);
+
+    expect(
+      repository.parcels,
+      hasLength(1),
+      reason: 'the racing echo and the awaited response describe the same '
+          'underlying parcel and must reconcile to one entry, not two.',
+    );
+  });
+
   test('a failed addRecord call leaves the in-memory dataset untouched and rethrows', () async {
     holdingsApi.addRecordError = Exception('network down');
 

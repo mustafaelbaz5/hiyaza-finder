@@ -278,7 +278,11 @@
       "delete_error": "Couldn't delete the record — check your connection and try again",
       "reopen_failed": "Couldn't reopen the record — check your connection and try again",
       "copy_and_review_failed": "ID copied, but couldn't update the review status — try again",
-      "already_reviewed_elsewhere": "ID copied, but this parcel was already reviewed from another device"
+      "already_reviewed_elsewhere": "ID copied, but this parcel was already reviewed from another device",
+      "saving_field": "Saving change…",
+      "deleting_in_progress": "Deleting record…",
+      "reopening_in_progress": "Reopening record…",
+      "reviewing_in_progress": "Confirming review…"
     },
     "add": {
       "new_person_cta": "Add",
@@ -287,7 +291,8 @@
       "for_person": "Add a new parcel for {name}",
       "land_number_hint": "Enter the correct land number",
       "save": "Save",
-      "saved": "Saved — will upload once you're online",
+      "saved": "Saved successfully",
+      "saving_in_progress": "Saving new record…",
       "holder_required": "Holder name is required",
       "basin_required": "Please select a basin",
       "crop_type_required": "Please select a crop type",

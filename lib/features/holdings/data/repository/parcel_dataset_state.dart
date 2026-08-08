@@ -170,16 +170,53 @@ class ParcelDatasetState {
     _parcels = <Parcel>[..._parcels, parcel];
   }
 
+  /// Inserts [parcel], or replaces an existing entry [indexOfForRemoteChange]
+  /// finds for it (same `id`, or tied together by `sourceAddedHoldingId`) —
+  /// used everywhere a new-or-promoted parcel is being added to the dataset,
+  /// not just [append]'s "definitely doesn't exist yet" case. Needed because
+  /// a brand-new field-added parcel that gets synchronously promoted
+  /// (`added_holdings_auto_approve`) races its own Realtime echo: whichever
+  /// of "the awaited HTTP response" and "the Realtime INSERT/UPDATE for the
+  /// same underlying row" is processed second must reconcile with — not
+  /// blindly duplicate — whatever the first one already put in [_parcels].
+  /// Returns the index the parcel ended up at.
+  int upsert(final Parcel parcel) {
+    final int idx = indexOfForRemoteChange(parcel);
+    if (idx >= 0) {
+      _parcels[idx] = parcel;
+    } else {
+      _parcels = <Parcel>[..._parcels, parcel];
+    }
+    return idx >= 0 ? idx : _parcels.length - 1;
+  }
+
+  /// Removes the entry matching [id] directly, or (for the
+  /// promotion-superseded `added_holdings` case) the entry still living
+  /// under its pre-promotion id — but never an entry whose `id` has already
+  /// moved on to something else. Without the `p.id == id` requirement on the
+  /// `sourceAddedHoldingId` branch, this would also match — and wrongly
+  /// delete — a parcel that's already been promoted locally (its `id` is now
+  /// the new `holdings` row's id, `sourceAddedHoldingId` still the old
+  /// `added_holdings` id) the moment that same promotion's `added_holdings`
+  /// UPDATE (`promoted_holding_id` now set) echoes back over Realtime —
+  /// exactly the "add a person, open their details, no data" bug: the local
+  /// write already applied the promoted parcel correctly, then this
+  /// "supersede the old added_holdings row" delete removed it again because
+  /// it matched by `sourceAddedHoldingId` alone.
   void removeWhereIdOrSource(final String id) {
     _parcels = <Parcel>[
       for (final Parcel p in _parcels)
-        if (p.id != id && p.sourceAddedHoldingId != id) p,
+        if (p.id != id) p,
     ];
   }
 
+  /// Kept in lockstep with [removeWhereIdOrSource]'s exact match rule (`id`
+  /// only) — this is only ever used as that method's "does anything actually
+  /// need removing" guard, so the two must always agree on what counts as a
+  /// match.
   Parcel? findByIdOrSource(final String id) =>
       _parcels.cast<Parcel?>().firstWhere(
-            (final Parcel? p) => p?.id == id || p?.sourceAddedHoldingId == id,
+            (final Parcel? p) => p?.id == id,
             orElse: () => null,
           );
 
