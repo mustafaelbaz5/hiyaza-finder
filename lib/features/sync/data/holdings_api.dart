@@ -209,7 +209,26 @@ class HoldingsApi {
           message: 'This parcel was already marked reviewed by another user.',
         );
       }
+      // `found: false` (with `conflict: false`) means p_parcel_id/
+      // p_is_field_added didn't match any row in the table the RPC
+      // targeted — the client's `isFieldAdded`/id pairing was stale (e.g.
+      // read from a `Parcel` whose id has since moved on to a different
+      // table after server-side promotion, per REFACTOR_ROADMAP.md Phase
+      // 24). Previously this silently returned "success" with nothing
+      // actually written, the exact "ID copied, but couldn't update the
+      // review status" / "review confirmed but never actually saved"
+      // failure mode — surfacing it as a real, caught exception instead of
+      // a silent no-op makes this class of stale-id bug visible instead of
+      // masked.
+      if (result['found'] != true) {
+        throw NotFoundException(
+          message: 'This record could not be found — it may have just been '
+              'updated elsewhere. Refresh and try again.',
+        );
+      }
     } on ConflictException {
+      rethrow;
+    } on NotFoundException {
       rethrow;
     } catch (error) {
       ErrorHandler.handleException(error);

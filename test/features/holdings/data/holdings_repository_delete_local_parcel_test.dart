@@ -168,6 +168,40 @@ void main() {
     expect(holdingsApi.deletedIds, isEmpty);
   });
 
+  test(
+      "REGRESSION: deleting one parcel must not remove a different parcel "
+      "that happens to share the same sourceAddedHoldingId — "
+      "deleteLocalParcel's local filter used to match by "
+      "sourceAddedHoldingId in addition to id, the same unsafe wildcard "
+      'pattern ParcelDatasetState.removeWhereIdOrSource was narrowed away '
+      'from. Only the exact targeted id should ever be removed.', () async {
+    await repository.loadParcelsForCity('city-1', <Parcel>[
+      const Parcel(
+        id: 'parcel-1',
+        holdingId: '-1',
+        landNumber: '-1',
+        isFieldAdded: true,
+        sourceAddedHoldingId: 'shared-source-id',
+      ),
+      // Contrived (a real dataset wouldn't naturally produce two rows
+      // sharing one sourceAddedHoldingId), but this is exactly the
+      // wildcard-match shape being guarded against — a future bug
+      // upstream that let this happen must not also delete the wrong row.
+      const Parcel(
+        id: 'parcel-2',
+        holdingId: '-1',
+        landNumber: '-1',
+        isFieldAdded: true,
+        sourceAddedHoldingId: 'shared-source-id',
+      ),
+    ]);
+
+    expect(await repository.deleteLocalParcel('parcel-1'), isTrue);
+
+    expect(repository.parcels, hasLength(1));
+    expect(repository.parcels.single.id, 'parcel-2');
+  });
+
   test('a failed server delete leaves the local dataset untouched and rethrows', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),

@@ -25,5 +25,6 @@ String resolveWriteErrorMessage(
   if (error is ValidationException) return 'errors.validation'.tr();
   if (error is ForbiddenException) return 'errors.forbidden'.tr();
   if (error is UnauthorizedException) return 'errors.unauthorized'.tr();
+  if (error is NotFoundException) return 'errors.not_found'.tr();
   return fallback;
 }

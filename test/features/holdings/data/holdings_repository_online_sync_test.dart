@@ -42,6 +42,11 @@ class _RecordingHoldingsApi implements HoldingsApi {
   final List<String> markCompletedCalls = <String>[];
   Object? errorFor;
 
+  /// Fires synchronously, mid-`editHolding`, before it returns — lets a
+  /// test simulate a Realtime event mutating the repository's dataset
+  /// while this call is still in flight.
+  void Function()? onEditHolding;
+
   @override
   Future<String?> addRecord({
     required final String id,
@@ -76,6 +81,7 @@ class _RecordingHoldingsApi implements HoldingsApi {
   }) async {
     if (errorFor == 'edit') throw Exception('network down');
     editCalls.add(holdingId);
+    onEditHolding?.call();
   }
 
   @override
@@ -254,6 +260,36 @@ void main() {
       );
       expect(repository.parcels.single.holderName, 'محمد');
       expect(syncRunner.operations, isEmpty);
+    });
+
+    test(
+        'REGRESSION: a Realtime event that shifts array positions while '
+        'editHolding is in flight must not cause the eventual local apply '
+        'to land on the wrong parcel', () async {
+      final Parcel? added = await repository.addLocalParcel(
+        const Parcel(holdingId: '', holderName: 'محمد'),
+      );
+
+      holdingsApi.onEditHolding = () {
+        repository.applyRemoteChange(
+          const Parcel(id: 'unrelated-new-id', holdingId: '999'),
+        );
+      };
+
+      await repository.updateParcel(added!.copyWith(holderName: 'أحمد'));
+
+      final Parcel unrelated = repository.parcels
+          .firstWhere((final Parcel p) => p.id == 'unrelated-new-id');
+      final Parcel editedAfter =
+          repository.parcels.firstWhere((final Parcel p) => p.id == added.id);
+
+      expect(
+        unrelated.holderName,
+        isNull,
+        reason: 'the unrelated parcel that raced in via Realtime must not '
+            'have received the edit.',
+      );
+      expect(editedAfter.holderName, 'أحمد');
     });
   });
 

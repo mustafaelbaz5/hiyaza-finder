@@ -47,6 +47,11 @@ class _FakeHoldingsApi implements HoldingsApi {
   final List<_MarkCompletedCall> markCompletedCalls = <_MarkCompletedCall>[];
   Object? markCompletedError;
 
+  /// Fires synchronously, mid-`markCompleted`, before it returns — lets a
+  /// test simulate a Realtime event mutating the repository's dataset
+  /// (shifting array positions) while this RPC call is still in flight.
+  void Function()? onMarkCompleted;
+
   @override
   Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
       searchRemote({required final String cityId, required final String query}) async =>
@@ -70,6 +75,7 @@ class _FakeHoldingsApi implements HoldingsApi {
         completedByUserId: completedByUserId,
       ),
     );
+    onMarkCompleted?.call();
   }
 
   @override
@@ -222,6 +228,53 @@ void main() {
       throwsA(isA<Exception>()),
     );
     expect(repository.parcels.single.completedAt, isNull);
+  });
+
+  test(
+      "REGRESSION: a Realtime event that shifts array positions while "
+      "markCompleted's RPC is in flight must not cause the eventual local "
+      "apply to land on the wrong parcel — setParcelCompleted used to "
+      "capture `idx` once before the await and reuse it afterward via "
+      "_applyCompletedLocally, so if a new entry got appended ahead of the "
+      "target parcel's position during the await (via applyRemoteChange, "
+      "e.g. another device's own add arriving over Realtime), the stale "
+      'index would write the completion onto a completely different, '
+      'unrelated parcel.', () async {
+    const Parcel target = Parcel(id: 'target-id', holdingId: '101');
+    await repository.loadParcelsForCity('city-1', const <Parcel>[target]);
+
+    // While markCompleted is "in flight," a Realtime event inserts a new
+    // parcel at the FRONT of the array by replacing the whole list —
+    // simulated here by removing target and re-adding it after a new
+    // unrelated entry, which is exactly what applyRemoteChange's
+    // append-when-not-found path would produce for a genuinely new row.
+    holdingsApi.onMarkCompleted = () {
+      repository.applyRemoteChange(
+        const Parcel(id: 'unrelated-new-id', holdingId: '999'),
+      );
+    };
+
+    final Parcel? updated =
+        await repository.setParcelCompleted('target-id', completed: true);
+
+    expect(updated, isNotNull);
+    final Parcel unrelated = repository.parcels
+        .firstWhere((final Parcel p) => p.id == 'unrelated-new-id');
+    final Parcel targetAfter = repository.parcels
+        .firstWhere((final Parcel p) => p.id == 'target-id');
+
+    expect(
+      unrelated.completedAt,
+      isNull,
+      reason: 'the unrelated parcel that raced in via Realtime must not '
+          'have been the one that got marked completed.',
+    );
+    expect(
+      targetAfter.completedAt,
+      isNotNull,
+      reason: 'the actually-targeted parcel must be the one marked '
+          'completed, regardless of what index it ended up at.',
+    );
   });
 
   group('applyRemoteChange', () {

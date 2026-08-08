@@ -60,6 +60,12 @@ class _FakeHoldingsApi implements HoldingsApi {
   /// call to exercise the immediate-promotion path across multiple adds.
   final List<String?> promotedHoldingIds = <String?>[];
 
+  /// Fires synchronously, mid-`addRecord`, before the promoted id is
+  /// returned to the awaiting caller — lets a test simulate a Realtime echo
+  /// of this exact write landing on the client before `addLocalParcel`'s own
+  /// await resolves.
+  void Function(_AddRecordCall call)? onAddRecord;
+
   @override
   Future<String?> addRecord({
     required final String id,
@@ -69,15 +75,15 @@ class _FakeHoldingsApi implements HoldingsApi {
     required final String createdByUserId,
   }) async {
     if (addRecordError != null) throw addRecordError!;
-    addRecordCalls.add(
-      _AddRecordCall(
-        id: id,
-        cityId: cityId,
-        record: record,
-        parentHoldingId: parentHoldingId,
-        createdByUserId: createdByUserId,
-      ),
+    final _AddRecordCall call = _AddRecordCall(
+      id: id,
+      cityId: cityId,
+      record: record,
+      parentHoldingId: parentHoldingId,
+      createdByUserId: createdByUserId,
     );
+    addRecordCalls.add(call);
+    onAddRecord?.call(call);
     return promotedHoldingIds.isEmpty ? null : promotedHoldingIds.removeAt(0);
   }
 
@@ -309,6 +315,44 @@ void main() {
     );
   });
 
+  test(
+      "REGRESSION: parentHoldingId falls back to a sourceAddedHoldingId "
+      "match when the exact id isn't found in the current dataset — "
+      "reproduces a caller (DetailScreen._addParcelForPerson) holding a "
+      "stale, pre-promotion parent id (its own local `_parcels` list "
+      "hadn't refreshed yet) after the parent parcel was synchronously "
+      "promoted server-side. Without the fallback, this silently creates "
+      'an unrelated second person instead of joining the existing one\'s '
+      'group, with no error surfaced.', () async {
+    // Parent gets synchronously promoted — same shape as every other test
+    // here: addLocalParcel returns the promoted id, not the pre-promotion
+    // one the caller generated.
+    holdingsApi.promotedHoldingIds.add('parent-promoted-id');
+    final Parcel? parent = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+    );
+    expect(parent!.id, 'parent-promoted-id');
+    final String staleParentId = parent.sourceAddedHoldingId!;
+
+    // Caller passes the STALE (pre-promotion) id, as if it had captured
+    // `parent.id` before the promotion swap was visible to it.
+    holdingsApi.promotedHoldingIds.add('child-promoted-id');
+    final Parcel? child = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+      parentHoldingId: staleParentId,
+    );
+
+    expect(child, isNotNull);
+    expect(
+      child!.groupKey,
+      parent.groupKey,
+      reason: 'the child must still join the parent\'s group via the '
+          'sourceAddedHoldingId fallback, not become an unrelated new '
+          'person just because the exact stale id no longer matches.',
+    );
+    expect(repository.parcels, hasLength(2));
+  });
+
   test('calls addRecord with a null parentHoldingId for a new person', () async {
     await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
@@ -459,44 +503,35 @@ void main() {
       "HTTP response returns, the eventual local upsert must reconcile "
       "with it — not append a second, duplicate parcel. Reproduces "
       "'add a new person, search for them, two cards show up — one with "
-      "the parcel, one empty': the echo (pre-promotion row, `groupKey` "
-      "'pending:<personId>') and the awaited response's own local write "
-      "(post-promotion row, different `id`, same `sourceAddedHoldingId`) "
-      "raced, and the local write used to blindly `append` instead of "
+      "the parcel, one empty': the echo (pre-promotion row, same client-"
+      "generated id/sourceAddedHoldingId as this exact write) and the "
+      "awaited response's own local write (post-promotion row, a "
+      'different, server-generated id, tied back via sourceAddedHoldingId) '
+      'raced, and the local write used to blindly `append` instead of '
       'reconciling by sourceAddedHoldingId like applyRemoteChange does.',
       () async {
+    // The fake API simulates the Realtime echo of this exact write's own
+    // added_holdings INSERT landing WHILE the "HTTP request" is still in
+    // flight — i.e. before addLocalParcel's await returns — by calling back
+    // into the repository from inside addRecord itself, using the same `id`
+    // the repository just generated and sent as this call's `client_id`.
+    holdingsApi.onAddRecord = (final _AddRecordCall call) {
+      repository.applyRemoteChange(
+        Parcel(
+          id: call.id,
+          holdingId: '-1',
+          holderName: 'Ahmed',
+          landNumber: '-1',
+          isFieldAdded: true,
+          sourceAddedHoldingId: call.id,
+          personId: call.record['person_id'] as String?,
+        ),
+      );
+    };
     holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
 
-    // Simulate the Realtime echo of this device's own added_holdings INSERT
-    // landing first — same shape addedHoldingRowToParcel would build: the
-    // pre-promotion id, still unpromoted (isFieldAdded true).
-    const String preEchoId = 'client-generated-id-does-not-matter-here';
-    repository.applyRemoteChange(
-      const Parcel(
-        id: preEchoId,
-        holdingId: '-1',
-        holderName: 'Ahmed',
-        landNumber: '-1',
-        isFieldAdded: true,
-        sourceAddedHoldingId: preEchoId,
-        personId: 'person-1',
-      ),
-    );
-    expect(repository.parcels, hasLength(1));
-
-    // Now the awaited addLocalParcel call "returns" with the server having
-    // promoted it — same personId (as the real client-generated id would
-    // be, had the echo carried this exact write's own id), proving the
-    // upsert reconciles by sourceAddedHoldingId/groupKey rather than
-    // blindly appending a second entry.
     final Parcel? added = await repository.addLocalParcel(
-      const Parcel(
-        id: preEchoId,
-        holdingId: '-1',
-        holderName: 'Ahmed',
-        landNumber: '-1',
-        personId: 'person-1',
-      ),
+      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
     );
     expect(added, isNotNull);
 
@@ -506,6 +541,7 @@ void main() {
       reason: 'the racing echo and the awaited response describe the same '
           'underlying parcel and must reconcile to one entry, not two.',
     );
+    expect(repository.parcels.single.id, 'promoted-holdings-id');
   });
 
   test('a failed addRecord call leaves the in-memory dataset untouched and rethrows', () async {

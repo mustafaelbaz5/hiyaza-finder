@@ -1018,6 +1018,332 @@ flutter analyze: clean. flutter test: 287/287 passing (no new tests — these ar
 inline-validation-message changes, matching the existing pattern of not unit-testing that category
 of change in this codebase; validated by re-running the full suite for regressions).
 
+## Phase 19 — online-first-when-possible writes, review-conflict guard (2026-08-09/10)
+
+**Status: done.** Reworked every write in `HoldingsRepository` (`addLocalParcel`, `deleteLocalParcel`,
+`updateParcel`, `setParcelCompleted`, `bulkApplyField`) to check `_isOnline()` (new — backed by
+`NetworkInfo`) first: when online, the write calls straight into `ParcelSyncService`/`HoldingsApi`
+and **awaits** it before applying anything locally or returning — a caller only sees success once the
+server has genuinely confirmed the write, and a failure throws instead of silently landing in the
+optimistic-apply-then-enqueue outbox path with the UI already showing success. Only when genuinely
+offline (or no `SyncRunner`/`NetworkInfo` configured, e.g. most repository tests) does a write fall
+back to the original Phase 9 #9 optimistic path. Offline-first is fully preserved — a queued write is
+never blocked on network — this only changes what "success" means while online.
+
+**`mark_parcel_completed` RPC** (new, `security definer`): the one sanctioned way to write
+`completed_at`/`completed_by`. Two real bugs found and fixed along the way:
+- `holdings_write` RLS only allowed admin/editor — a `field`-role user (the app's actual field
+  workers) had no RLS path to write these columns on a promoted `holdings` row at all;
+  `added_holdings_update_own` only covers rows still `status = 'pending'`, a narrow window since
+  promotion is near-instant. The RPC runs with the function owner's privileges, scoped to exactly
+  these two columns.
+- The RPC's first version had its `completed_at`/`completed_by` OUT parameters shadowing the real
+  table columns of the same name, causing every call to fail with "column reference completed_at is
+  ambiguous" — a genuine SQL bug, not a client issue. Fixed by renaming the OUT parameters to
+  `out_completed_at`/`out_completed_by` (required a drop+recreate since Postgres rejects an
+  OUT-parameter shape change via `create or replace`).
+
+Marking completed (`p_completed = true`) is conditioned atomically on `completed_at is null` — the
+one place two devices can genuinely race each other over the same parcel. Losing that race returns
+`conflict = true`, surfaced client-side as `ConflictException`/"already reviewed by another device"
+instead of silently succeeding. Reopening stays unconditional (single-actor undo, not a race target).
+
+**Dependencies:** none. **Complexity:** medium-high (RLS gap + RPC ambiguity bug both needed
+diagnosing from live Supabase logs, not just code review). **Risks:** low — additive DB objects, no
+existing column/policy removed; `HoldingsApi.markCompleted`'s RPC result only reads `conflict`, so
+the OUT-parameter rename needed no Flutter-side follow-up change.
+
+flutter analyze: clean. flutter test: 295/295 passing (8 new: `holdings_repository_online_sync_test.dart`
+covers the online/awaited path directly for every write type; `holdings_repository_outbox_test.dart`
+updated with an explicit offline `NetworkInfo` fake so it keeps exercising the path it's named for).
+
+## Phase 20 — Copy ID review-status bug, field-added-parcel dedup false positive (2026-08-10)
+
+**Status: done.** Investigated two reports without assuming the cause; both had a real, specific root
+cause, not a repeat of Phase 19's work.
+
+**Copy ID sometimes not reflecting "تمت المراجعة".** Root cause: `ParcelDetailCard._copyId` called
+`setParcelCompleted` (genuinely server-confirms `completed_at`/`completed_by` — Phase 19's RPC is
+correct), then reflected the result via `onFieldChanged`, which `DetailScreen` wires to `_updateField`
+— a handler built for **editable-field edits**. `_updateField` issued its own separate
+`_repository.updateParcel(toSave)` call (the edit-overlay/`holding_edits` path), which doesn't carry
+`completedAt` at all (`Parcel.toEditableJson` never included it — pure redundant risk). If that second,
+unrelated write failed for any reason, `_updateField`'s `catch` fired before `_parcels[idx] = toSave`
+ever ran, so the local UI never picked up a review that had already succeeded, and the user saw a
+misleading "save failed" message for an action that actually worked — plus two competing snackbars on
+the success path.
+
+Fixed by giving `ParcelDetailCard` a dedicated `onCompleted` callback (falls back to `onFieldChanged`
+if unset), wired in `DetailScreen` to `_onParcelCompleted` — a `setState`-only handler, no repository
+call, no `updateParcel`, no dependency on an unrelated write succeeding. `_copyId` now uses the
+server-confirmed `Parcel` returned by `setParcelCompleted` directly.
+
+**Multiple field-added parcels for the same person rejected as duplicates.** Root cause:
+`holdings_active_dedup_key_unique` (`(city_id, dedup_key) WHERE is_stale = false`) was built
+specifically to stop a re-uploaded Excel file from duplicating rows (`composite_dedup_key`'s own
+migration comment says so) — its fallback fingerprint
+(`holder_name|national_id|land_number|page_number|basin_code|basin_name`) assumes `land_number`
+uniquely distinguishes rows within an import, true for an Excel sheet but not for field-added parcels,
+whose `land_number` defaults to the placeholder `'-1'` (`DetailScreen._addParcelForPerson`) until
+corrected. Two genuinely different parcels for the same person, both still `'-1'`, produce an
+identical `dedup_key` and collide. `auto_approve_added_holding()` copies these fields verbatim on
+promotion, so the same index applied there too, even though it was never designed for that path.
+
+Fixed with a 1-predicate index change: `... where is_stale = false and is_field_added = false` —
+narrows the constraint to exactly the rows it was ever meant to protect (imports). Field-added
+parcels already have a real, enforced identity (`id`/`source_added_holding_id`, primary/foreign-keyed)
+and were never at risk of the kind of silent duplication a re-imported row was.
+
+**Verification against the live database (not just code review):**
+- Two `holdings` inserts with `is_field_added = true` and an identical fingerprint (same holder,
+  national ID, `land_number = '-1'`, basin) — both succeed. (Ran inside a transaction, rolled back —
+  no data left behind.)
+- Two `holdings` inserts with `is_field_added = false` and an identical fingerprint — second one still
+  rejected with `holdings_active_dedup_key_unique` violation, confirming import-duplicate protection
+  is untouched.
+- Confirmed zero existing imported rows (`is_field_added = false`) currently share a `(city_id,
+  dedup_key)` pair — the narrower index applies with zero pre-existing violations.
+
+**Dependencies:** the dedup fix depends on Phase 14's `holdings.is_field_added` column already being
+live and reliably populated for promoted parcels.
+
+**Complexity:** medium — required tracing `_copyId`'s callback wiring across two files for issue 1,
+and reading the full migration history (`composite_dedup_key` → `dedup_holdings` →
+`dedup_key_unique_constraint`) to understand issue 2's original intent before narrowing it.
+
+**Risks:** low for both. Issue 1's fix is additive (new optional callback, old behavior preserved when
+unset). Issue 2's fix only *removes* rows from an index's scope — it cannot cause a previously-caught
+import duplicate to slip through, since imports are still fully covered.
+
+flutter analyze: clean. flutter test: 297/297 passing (2 new in `parcel_detail_card_test.dart`,
+covering both the new `onCompleted` path and the `onFieldChanged` fallback for callers that haven't
+adopted it yet — includes a genuine test-infra fix: `Clipboard.setData` needs an explicit mock method
+handler in this test environment, or it hangs indefinitely and silently stalls `_copyId` before it
+ever reaches the repository call, which is worth knowing for any future test tapping a
+clipboard-writing action).
+
+## Phase 21 — loading indicators + accurate error messages for every write action (2026-08-10)
+
+**Status: done.** Surveyed all six write actions (add person/parcel, edit field, delete, reopen,
+copy-ID/review, bulk edit) before changing anything. Found: only add and bulk-edit had any loading UI
+at all (`CustomTextButton.isLoading`); delete/reopen/edit/copy-ID had none, despite `DetailScreen`
+already tracking a screen-wide `_isBusy` flag that drove no visible feedback. Error messages were
+inconsistent in both specificity (copy-ID/bulk-edit differentiate causes; edit/delete/reopen don't)
+and key namespace (`holdings.detail.*_failed` vs `holdings.add.*_failed` vs bare `errors.unknown`) —
+and, more importantly, **inaccurate**: every generic catch fell through to `ErrorHandler`'s
+`ServerException` fallback regardless of whether the failure was a real server rejection or the
+device genuinely being offline, since raw `SocketException`/`HandshakeException`/`dart:async`'s
+`TimeoutException` were never classified into `AppException` subtypes at all.
+
+**`ErrorHandler.handleException`/`_toException`** (`core/errors/error_handler.dart`): now classify
+`SocketException`/`HandshakeException` (no route/DNS/TLS — the request never got a response) into
+`NetworkException`, and `dart:async`'s `TimeoutException` (name collision with this app's own
+`TimeoutException` in `exceptions.dart` — handled via an aliased import) into it. `http.ClientException`
+(connection refused/reset) is matched by runtime-type-name string rather than a direct import, since
+`http` is only a transitive dependency via `supabase`/`gotrue`/`postgrest`, not a direct one this app
+should couple to.
+
+**`resolveWriteErrorMessage`** (new, `core/errors/error_message_resolver.dart`): the single place
+every write-action `catch` block now goes through — maps `NetworkException`/`TimeoutException`/
+`ConflictException`/`ValidationException`/`ForbiddenException`/`UnauthorizedException` to their real,
+already-existing `errors.*` translations, falling back to the caller's action-specific message only
+for a genuinely unclassified error. Wired into `add_record_screen.dart`, `detail_screen.dart`
+(`_updateField`/`_deleteParcel`/`_reopenParcel`), `parcel_detail_card.dart` (`_copyId`), and
+`file_status_screen.dart` (replacing its stray `errors.unknown`-only catch).
+
+**Loading indicators** for the four actions that had none:
+- `ParcelIdChip` (copy-ID/review) gained `isLoading` — spinner replaces the fingerprint icon, tap
+  disabled. `ParcelDetailCard` itself stays a `StatelessWidget` (converting the whole ~600-line card
+  would be a much larger, unrelated diff); a new small `_ReviewIdChip` wrapper owns the in-flight
+  state locally instead.
+- `ParcelDetailTopRow` gained `isDeleting`/`isReopening` — same icon-swap treatment on the delete
+  `IconButton` and reopen `FilledButton`.
+- `DetailScreen._isBusy` (a single screen-wide bool, driving no UI) became `_busyParcelIds` (a
+  `Set<String>`, keyed by parcel id) — necessary since several parcel cards are on screen at once and
+  deleting one must not visually block reopening a different one. Threaded into `ParcelDetailCard`'s
+  new `isDeleting`/`isReopening` props.
+- Add/bulk-edit already had loading UI via `CustomTextButton.isLoading` — untouched, just had their
+  error-catch blocks routed through the same resolver for consistency.
+
+**Dependencies:** none. **Complexity:** medium — required surveying all 6 write actions first
+(delegated to an Explore agent) to design one consistent solution instead of patching each in
+isolation, then reasoning through which raw exception types Supabase/Dart actually throw for a true
+offline failure vs. a server rejection.
+
+**Risks:** low. `ErrorHandler`'s new classification only adds new `if` branches ahead of the existing
+fallback — no existing classification path changed. Loading-state props all default to `false`,
+matching prior behavior exactly when unset. `resolveWriteErrorMessage`'s fallback parameter means
+every call site keeps its own accurate action-specific message for the truly-unknown case, not a
+blanket generic string.
+
+flutter analyze: clean. flutter test: 312/312 passing (15 new: `error_message_resolver_test.dart`
+(6, using the real `assets/lang/ar.json` strings via the shared `pumpLocalized` harness, not `.tr()`'s
+silent raw-key fallback), `error_handler_test.dart` (7, verifying the actual exception→type
+classification), and 2 new widget tests in `parcel_detail_card_test.dart` for the delete/reopen
+spinner states — needed an explicit timer-flush pattern since `CircularProgressIndicator`'s
+indeterminate animation never lets `pumpAndSettle` complete on its own).
+
+## Phase 22 — revert Supabase-domain connectivity check (2026-08-10)
+
+**Status: done.** Phase 16's connectivity check pinged the bare Supabase domain
+(`https://<project>.supabase.co`, no path) directly, reasoning that checking the app's actual
+backend is more accurate than an arbitrary public host. In practice: that domain is
+Cloudflare-fronted with bot management (a `__cf_bm` cookie on every response) and returns a bare
+`404` to a plain HEAD request (`curl -I` confirmed this directly) — behavior an Android emulator's
+network stack apparently handled inconsistently, since the app-launch "no internet" dialog started
+firing on every attempt even though the rest of the app could reach Supabase's real REST API fine
+and had real data loaded on screen.
+
+**Fix:** `core_module.dart`'s `_connectivityCheckAddresses()` no longer includes the Supabase URL at
+all — reverted to checking only `one.one.one.one`/`dns.google`, the two well-known hosts that behave
+predictably everywhere. `AppConfig.supabaseUrl` (the getter added for this) is left in place since
+it's a small, correctly-named, potentially-useful-later utility — just no longer wired into the
+connectivity check.
+
+**Dependencies:** none. **Complexity:** low — the fix is a straightforward revert once the actual
+`curl` response revealed what was different about the bare domain vs. `one.one.one.one`/`dns.google`.
+
+**Risks:** low. This is a net-narrower check (fewer addresses = less surface for a false negative on
+an unrelated host), and matches what worked reliably before Phase 16.
+
+flutter analyze: clean. flutter test: 312/312 passing (no test change needed — no test asserted on
+the specific address list, only on `NetworkInfo`'s behavior given a fake, which is unaffected).
+
+---
+
+## Phase 23 — Blocking UI during critical, server-confirmed writes
+
+**Problem:** Phase 19 already made every critical write (add parcel, edit field, mark reviewed/
+reopen, delete) online-first-when-possible: when online, each method awaits the real Supabase
+round-trip before mutating local state or returning, so success is never shown before the server has
+actually confirmed the write, and a failure throws a real, classified error instead of landing
+silently in the outbox (`HoldingsRepository` class doc, `holdings_repository.dart:41-60`). What was
+still missing: nothing stopped the user from navigating away (back gesture/button) or interacting with
+other on-screen controls while one of these awaits was in flight — only same-row double-tap was
+guarded (`_busyParcelIds`, `_isSaving`).
+
+**Fix:** added `BlockingLoadingOverlay` (`core/widgets/ui/loaders/blocking_loading_overlay.dart`) — a
+reusable full-screen modal veil (opaque barrier + centered spinner + message) that also disables the
+system back gesture via an internal `PopScope`. Wired into:
+- `AddRecordScreen.build` — visible for the duration of `_save`'s awaited `addLocalParcel` call, with
+  an outer `PopScope.canPop` now also gated on `!_isSaving` (previously only unsaved-changes-gated).
+- `DetailScreen.build` — a new `_busyMessage` string (action-specific: saving/deleting/reopening) set
+  right before each of `_updateField`/`_deleteParcel`/`_reopenParcel`'s awaited repository call and
+  cleared in every `finally`, driving both the overlay and a `PopScope` that blocks navigation while
+  any one of them is in flight.
+- Copy ID/review (`ParcelDetailCard._copyId`/`_ReviewIdChip`) deliberately kept as its own per-card
+  inline spinner rather than escalated to the screen-wide overlay — it already fully awaits server
+  confirmation with an accurate loading/error state, and is scoped to the one card being reviewed;
+  forcing every other card and the whole screen to block for an idempotent, low-risk action would be
+  over-blocking relative to the actual risk of interruption.
+
+Also corrected a now-misleading string: `holdings.add.saved` was `"تم الحفظ، سيتم رفعها عند توفر
+الاتصال"` / `"Saved — will upload once you're online"` — a leftover from the pre-Phase-19 pure-outbox
+model. Since the online path now already confirms the write before this message ever shows, it now
+reads `"تم الحفظ بنجاح"` / `"Saved successfully"`. Added matching `*_in_progress` strings for each
+action's overlay message.
+
+**Dependencies:** Phase 19 (the awaited-write behavior this overlay makes visible/uninterruptible).
+**Complexity:** low — one new stateless widget, three call sites wired.
+
+**Risks:** low. The offline fallback path (genuinely offline, `_syncRunner != null && !await
+_isOnline()`) is untouched — it still applies locally and enqueues instantly, so the overlay is only
+ever visible for the duration of a real, brief network round-trip, never for an indefinite queued
+write.
+
+flutter analyze: clean. flutter test: 312/312 passing.
+
+---
+
+## Phase 24 — Add-person/add-parcel promotion-race bugs (duplicate/empty cards, orphaned second parcel)
+
+**Problem:** field-reported — "add a new person, search for them, details screen shows no data" and
+later "search shows two cards, one with the parcel, one empty." Root cause: `added_holdings_auto_approve`
+(the DB trigger) promotes every field-created record into `holdings` synchronously, in the same
+transaction as the insert. That means the awaited HTTP response (`addLocalParcel`'s online path) and
+up to three independent Realtime events for the exact same underlying write (`added_holdings` INSERT,
+`added_holdings` UPDATE setting `promoted_holding_id`, `holdings` INSERT) can arrive in almost any
+order relative to each other. Four distinct bugs fell out of this:
+
+1. `ParcelDatasetState.removeWhereIdOrSource`/`findByIdOrSource` matched by `sourceAddedHoldingId` as
+   well as exact `id` — the "this added_holdings row is now superseded, remove it" handling
+   (`handleAddedHoldingsPayload` in `realtime_payload_dispatcher.dart`) fires an `applyRemoteDelete`
+   keyed on the *pre-promotion* `added_holdings.id`. If that echo arrived after the local device had
+   already applied the promoted parcel (now living under a *different* `id`, with the old id only
+   surviving as `sourceAddedHoldingId`), the wildcard match deleted it anyway — the empty-details bug.
+2. `HoldingsRepository.addLocalParcel`'s local `applyLocally` used to blindly `_dataset.append(...)`
+   instead of reconciling with an entry a racing Realtime echo might already have added for the exact
+   same write — the two-cards-one-empty duplicate bug, when the `added_holdings` INSERT echo (still
+   under the pre-promotion id) was processed before the awaited HTTP response returned.
+3. `deleteLocalParcel`'s own local filter mirrored the same unsafe `sourceAddedHoldingId`-or-`id`
+   match `removeWhereIdOrSource` was just narrowed away from — not currently exploitable (each row's
+   `sourceAddedHoldingId` is unique today) but the same risky pattern, left in a second place.
+4. `addLocalParcel`'s `parentHoldingId` → parent lookup matched only by exact `id` against the live
+   dataset. `DetailScreen._addParcelForPerson` passes `source.id` from its own screen-local `_parcels`
+   snapshot; if the parent had already been promoted (id changed) before this add's `parentHoldingId`
+   was captured, the lookup silently missed and the new parcel got its own fresh `personId`/`groupKey`
+   instead of joining the intended person — appearing as an unrelated new person in search, no error
+   shown anywhere.
+
+**Fix:**
+1. `removeWhereIdOrSource`/`findByIdOrSource` now match only by exact `id` — a
+   `sourceAddedHoldingId`-based supersede-delete can never remove an entry that's already moved on to
+   a different id.
+2. Added `ParcelDatasetState.upsert()` (same id-or-`sourceAddedHoldingId` matching
+   `applyRemoteChange`/`indexOfForRemoteChange` already used) and switched `addLocalParcel`'s
+   `applyLocally` to use it instead of `append` — whichever of the awaited response and the Realtime
+   echo lands second now reconciles with the first instead of duplicating it.
+3. `deleteLocalParcel`'s local filter now matches by exact `id` only, same as (1).
+4. `addLocalParcel`'s parent lookup now falls back to a `sourceAddedHoldingId` match when the exact
+   `parentHoldingId` isn't found in the live dataset — the promoted entry's `sourceAddedHoldingId`
+   still equals the pre-promotion id the caller may be holding.
+
+**Dependencies:** none — all four are self-contained fixes inside `HoldingsRepository`/
+`ParcelDatasetState`. **Complexity:** low per fix, but required a careful skeptical re-audit (a
+dedicated read-only Explore pass) of every write path for the same race shape before considering this
+closed — (3) and (4) were found only by that follow-up audit, not the initial fix.
+
+**Risks:** low. Each fix narrows an overly-broad match to an exact one, or adds a narrowly-scoped
+fallback (4) — none change behavior for the non-racing, already-correct common case.
+
+Regression tests added: `parcel_dataset_state_test.dart` (2 tests corrected — they'd encoded the old,
+buggy match behavior as expected), `holdings_repository_add_local_parcel_test.dart` (2 new tests:
+promoted-parcel survives its own supersede-echo delete; racing INSERT echo reconciles instead of
+duplicating; 1 new test: stale parentHoldingId falls back correctly),
+`holdings_repository_delete_local_parcel_test.dart` (1 new test: delete never wildcard-matches a
+different parcel sharing a `sourceAddedHoldingId`).
+
+**Follow-up (same phase): two more bugs found in the same skeptical re-audit, plus a stale-index race
+in `setParcelCompleted`/`updateParcel`.**
+
+5. `HoldingsApi.markCompleted` never checked the `mark_parcel_completed` RPC's `found` column — when
+   the client's `isFieldAdded`/`parcelId` pairing was stale (pointed at the wrong table after a
+   promotion the local dataset hadn't reconciled yet), the RPC ran its `UPDATE ... WHERE id = ...`
+   against zero matching rows, returned `found: false, conflict: false`, and the client treated that
+   as success. Field symptom: "Copy ID / mark reviewed" on a still-pending record throwing a generic
+   "couldn't update the review status" error, or — worse, before this fix — silently reporting success
+   with nothing actually written server-side.
+6. `HoldingsRepository.setParcelCompleted`/`updateParcel` each captured `_dataset.indexOf(...)` once
+   *before* their awaited network call, then reused that numeric index afterward to apply the local
+   write (`_applyCompletedLocally`/`applyLocally`'s `_dataset.replaceAt(idx, ...)`). If a Realtime
+   event appended or removed an entry in `_dataset.parcels` while the await was in flight — shifting
+   every later array position — the stale index could apply the confirmed write onto a completely
+   unrelated parcel.
+
+**Fix (5):** `markCompleted` now throws `NotFoundException` when `found != true`, wired through
+`resolveWriteErrorMessage` to the existing `errors.not_found` string — this class of stale-id bug is
+now a visible, accurate error instead of a silent no-op or a generic message. **Fix (6):**
+`setParcelCompleted`/`updateParcel` now re-resolve the index by id (`_dataset.indexOf(parcelId)`)
+immediately before applying the local write, instead of trusting the pre-await snapshot; a lookup miss
+after the await (the entry having been removed entirely by a Realtime event in between) is treated as
+a no-op rather than applying to whatever now occupies that stale position.
+
+Regression tests added: `holdings_repository_set_parcel_completed_test.dart` (1 new test: a Realtime
+insert during the RPC await must not redirect the completion onto the new, unrelated entry),
+`holdings_repository_online_sync_test.dart` (1 new test: same shape for `updateParcel`).
+
+flutter analyze: clean. flutter test: 318/318 passing.
+
 ---
 
 ## Sequencing summary

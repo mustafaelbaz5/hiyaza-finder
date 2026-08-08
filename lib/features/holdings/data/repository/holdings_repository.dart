@@ -275,11 +275,28 @@ class HoldingsRepository
     final String? cityId = _dataset.activeCityId;
     if (cityId == null) return null;
 
+    // Falls back to a sourceAddedHoldingId match when the exact id isn't
+    // found — [parentHoldingId] is a snapshot of the parent's id taken by
+    // the caller (e.g. `DetailScreen._addParcelForPerson`'s own, possibly
+    // stale `_parcels` list) at some point before this call; if that parent
+    // was synchronously promoted server-side in between (its `id` changing
+    // from the pre-promotion `added_holdings` id to the new `holdings` id),
+    // an exact-id-only lookup would miss it entirely and this call would
+    // silently treat the new parcel as belonging to a brand-new, unrelated
+    // person instead of joining the existing one's group — with no error
+    // surfaced anywhere. The promoted entry still carries the pre-promotion
+    // id as its `sourceAddedHoldingId`, which is exactly what
+    // [parentHoldingId] would equal in that case.
     final Parcel? parent = parentHoldingId == null
         ? null
         : _dataset.parcels.cast<Parcel?>().firstWhere(
             (final Parcel? p) => p?.id == parentHoldingId,
-            orElse: () => null);
+            orElse: () => _dataset.parcels.cast<Parcel?>().firstWhere(
+                  (final Parcel? p) =>
+                      p?.sourceAddedHoldingId == parentHoldingId,
+                  orElse: () => null,
+                ),
+          );
 
     // A sibling parcel added under a still-pending person (no real رقم
     // الحيازة yet) must join the *same* pending group as its parent —
@@ -399,9 +416,18 @@ class HoldingsRepository
     if (addedHoldingId == null) return false;
 
     Future<void> applyLocally() async {
+      // Matches by exact `id` only — deliberately not also by
+      // `sourceAddedHoldingId`, the same unsafe wildcard-match shape
+      // `ParcelDatasetState.removeWhereIdOrSource` was narrowed away from
+      // (see its doc comment): a promoted parcel's `sourceAddedHoldingId`
+      // still points at its pre-promotion `added_holdings` row, and nothing
+      // guarantees that value stays unique to just the one row being
+      // deleted here forever, so matching on it as a second, broader
+      // condition risks silently deleting an unrelated parcel that happens
+      // to share it.
       _dataset.replaceAll(<Parcel>[
         for (final Parcel p in _dataset.parcels)
-          if (p.id != id && p.sourceAddedHoldingId != addedHoldingId)
+          if (p.id != id)
             // Mirrors addLocalParcel's bump: undo it for any sibling parcel
             // still sharing this holding.
             (p.groupKey == removed.groupKey && p.holdingsCount != null)
@@ -451,12 +477,20 @@ class HoldingsRepository
     final Map<String, dynamic> snapshot = _dataset.editSnapshot(edited);
     final String? cityId = _dataset.activeCityId;
 
-    void applyLocally() {
-      _dataset.replaceAt(idx, edited);
+    // Re-resolves the index rather than closing over a fixed one — a
+    // Realtime event can append/remove entries in the dataset while an
+    // awaited network call above is in flight, shifting every later
+    // position; applying at a stale index could silently overwrite an
+    // unrelated parcel.
+    bool applyLocally() {
+      final int freshIdx = _dataset.indexOf(edited.id);
+      if (freshIdx < 0) return false;
+      _dataset.replaceAt(freshIdx, edited);
       // A single-field edit can change حائز/مالك name — rebuild so a fresh
       // الحدود lookup elsewhere in the city sees the update immediately.
       _dataset.rebuildBorderIndex();
       _dataset.setEdit(edited.id, snapshot);
+      return true;
     }
 
     if (cityId != null && _syncRunner != null && await _isOnline()) {
@@ -524,7 +558,15 @@ class HoldingsRepository
         completed: completed,
         parcel: _dataset.parcels[idx],
       );
-      _applyCompletedLocally(parcelId, idx, updated);
+      // Re-resolves the index rather than reusing the pre-await [idx]: a
+      // Realtime event can append/remove entries in [_dataset.parcels]
+      // while this RPC is in flight, which would shift every later index —
+      // applying at a stale position could silently overwrite an unrelated
+      // parcel. `indexOf` is cheap (id equality scan) and this write is not
+      // hot-path-frequent enough for it to matter.
+      final int freshIdx = _dataset.indexOf(parcelId);
+      if (freshIdx < 0) return updated;
+      _applyCompletedLocally(parcelId, freshIdx, updated);
       return updated;
     }
 
