@@ -3,10 +3,18 @@ import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/storage/key_value_store.dart';
+import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
+import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
+import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
+import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/parcel_detail_card.dart';
+import 'package:hiyaza_finder/features/sync/data/holdings_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Reads the real translation file straight off disk instead of through
@@ -59,12 +67,116 @@ Future<void> _pump(final WidgetTester tester, final Widget child) async {
   await tester.pumpAndSettle();
 }
 
+/// A no-op-by-default [HoldingsApi] fake for the [_copyId]/[onCompleted]
+/// regression test below — only `markCompleted` needs real behavior.
+class _FakeHoldingsApi implements HoldingsApi {
+  @override
+  Future<String?> addRecord({
+    required final String id,
+    required final String cityId,
+    required final Map<String, dynamic> record,
+    required final String? parentHoldingId,
+    required final String createdByUserId,
+  }) async =>
+      null;
+
+  @override
+  Future<void> deleteAddedHolding(final String id) async {}
+
+  @override
+  Future<Map<String, String>> fetchProfileEmails(
+    final Iterable<String> profileIds,
+  ) async =>
+      const <String, String>{};
+
+  @override
+  Future<void> editHolding({
+    required final String holdingId,
+    required final String cityId,
+    required final Map<String, dynamic> payload,
+    required final String editedByUserId,
+  }) async {}
+
+  @override
+  Future<List<String>> bulkEditHoldings({
+    required final String cityId,
+    required final Map<String, Map<String, dynamic>> payloadsByHoldingId,
+    required final String editedByUserId,
+  }) async =>
+      const <String>[];
+
+  @override
+  Future<void> markCompleted({
+    required final String parcelId,
+    required final bool isFieldAdded,
+    required final bool completed,
+    required final DateTime? completedAt,
+    required final String completedByUserId,
+  }) async {}
+
+  @override
+  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
+      searchRemote({required final String cityId, required final String query}) async =>
+          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
+}
+
+class _FakeAuthRepository implements AuthRepository {
+  @override
+  AppUser? get currentUser => const AppUser(
+        id: 'user-1',
+        email: 'field@example.com',
+        displayName: 'Field Worker',
+        role: UserRole.field,
+      );
+
+  @override
+  Stream<AppUser?> get userChanges => const Stream<AppUser?>.empty();
+
+  @override
+  Future<AppUser> signInWithPassword({
+    required final String email,
+    required final String password,
+  }) async =>
+      currentUser!;
+
+  @override
+  Future<void> signOut() async {}
+}
+
+class _InMemoryKeyValueStore implements KeyValueStore {
+  final Map<String, String> _store = <String, String>{};
+
+  @override
+  Future<String?> getString(final String key) async => _store[key];
+
+  @override
+  Future<void> remove(final String key) async => _store.remove(key);
+
+  @override
+  Future<void> setString(final String key, final String value) async {
+    _store[key] = value;
+  }
+}
+
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  final TestWidgetsFlutterBinding binding =
+      TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await EasyLocalization.ensureInitialized();
+    // Explicit clipboard mock — `Clipboard.setData` inside `_copyId` hangs
+    // without one in some environments (no default handler is guaranteed),
+    // silently stalling the whole Copy ID flow before it ever reaches
+    // `setParcelCompleted`.
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (final MethodCall call) async {
+        if (call.method == 'Clipboard.setData') return null;
+        if (call.method == 'HapticFeedback.vibrate') return null;
+        return null;
+      },
+    );
   });
 
   const Parcel parcel = Parcel(
@@ -183,5 +295,123 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsWidgets);
+  });
+
+  group('Copy ID / review (REFACTOR_ROADMAP.md Phase 20)', () {
+    setUp(() async {
+      await getIt.reset();
+      getIt.registerLazySingleton<AuthRepository>(_FakeAuthRepository.new);
+      final HoldingsRepository repository = HoldingsRepository(
+        editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
+        holdingsApi: _FakeHoldingsApi(),
+      );
+      // No `syncRunner`/`networkInfo` configured — exercises the
+      // synchronous await-then-mutate path (same as "no outbox" / online),
+      // matching how `setParcelCompleted` behaves in production once
+      // server-confirmed.
+      await repository.loadParcelsForCity('city-1', const <Parcel>[
+        Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+        ),
+      ]);
+      getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+    });
+
+    tearDown(() async {
+      await getIt.reset();
+    });
+
+    testWidgets(
+      'tapping Copy ID fires onCompleted with the confirmed parcel, not onFieldChanged',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+        );
+
+        Parcel? completedResult;
+        bool fieldChangedCalled = false;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) => fieldChangedCalled = true,
+            onCompleted: (final updated) => completedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        expect(idChip, findsOneWidget);
+
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(
+          completedResult,
+          isNotNull,
+          reason: 'onCompleted must fire once setParcelCompleted is '
+              'server-confirmed — the whole point of Phase 20 is that this '
+              "path no longer depends on onFieldChanged/updateParcel's "
+              'unrelated edit-overlay write.',
+        );
+        expect(completedResult!.completedAt, isNotNull);
+        expect(
+          fieldChangedCalled,
+          isFalse,
+          reason: 'onFieldChanged (routed to DetailScreen._updateField in '
+              'production) must never be invoked by the review action — '
+              'that was the actual bug: a redundant, unrelated write whose '
+              'failure could mask an already-successful review.',
+        );
+        expect(find.text('تم نسخ المعرّف وتحديد الحيازة كمُراجعة'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'falls back to onFieldChanged when onCompleted is not provided',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+        );
+
+        Parcel? fieldChangedResult;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final updated) => fieldChangedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(fieldChangedResult, isNotNull);
+        expect(fieldChangedResult!.completedAt, isNotNull);
+      },
+    );
   });
 }

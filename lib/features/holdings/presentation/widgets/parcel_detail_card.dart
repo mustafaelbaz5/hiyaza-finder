@@ -41,6 +41,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.resolveBorderMatch,
     this.onDelete,
     this.onReopen,
+    this.onCompleted,
   });
 
   final Parcel parcel;
@@ -53,6 +54,16 @@ class ParcelDetailCard extends StatelessWidget {
   final Duration animationDelay;
   final Parcel? Function(String? borderText)? resolveBorderMatch;
   final VoidCallback? onReopen;
+
+  /// Fired by [_copyId] once `setParcelCompleted` is server-confirmed —
+  /// deliberately separate from [onFieldChanged] (`REFACTOR_ROADMAP.md`
+  /// Phase 20): reflecting a completion into the caller's local state must
+  /// never depend on a second, unrelated `updateParcel`/edit-overlay write
+  /// succeeding, or route through a handler built for field edits (wrong
+  /// snackbar, wrong `_isBusy` coupling, and a failure there could mask an
+  /// already-successful review). Falls back to [onFieldChanged] if unset,
+  /// so callers that haven't been updated yet keep working.
+  final void Function(Parcel updated)? onCompleted;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -455,6 +466,17 @@ class ParcelDetailCard extends StatelessWidget {
   /// ([ConflictException], from `mark_parcel_completed`'s atomic guard),
   /// surfaced with its own distinct message rather than the generic
   /// failure one.
+  ///
+  /// Reflects the confirmed result via [onCompleted], never [onFieldChanged]
+  /// (`REFACTOR_ROADMAP.md` Phase 20) — [onFieldChanged] routes to
+  /// `DetailScreen._updateField`, which issues its own separate
+  /// `updateParcel` (edit-overlay) write. That write doesn't carry
+  /// `completedAt` at all (`Parcel.toEditableJson` never included it) and
+  /// was pure redundant risk: if it failed for any unrelated reason, the
+  /// local UI would never pick up the review this method already
+  /// successfully confirmed with the server, and the user would see a
+  /// misleading "save failed" message for an action that actually
+  /// succeeded.
   Future<void> _copyId(final BuildContext context) async {
     final bool isCompleted = parcel.completedAt != null;
     if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
@@ -476,9 +498,8 @@ class ParcelDetailCard extends StatelessWidget {
       final Parcel? updated = await getIt<HoldingsRepository>()
           .setParcelCompleted(parcel.id, completed: true);
       if (!context.mounted) return;
-      onFieldChanged(
-        updated ?? parcel.copyWith(completedAt: DateTime.now()),
-      );
+      final Parcel confirmed = updated ?? parcel.copyWith(completedAt: DateTime.now());
+      (onCompleted ?? onFieldChanged)(confirmed);
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
     } on ConflictException {
       if (context.mounted) {

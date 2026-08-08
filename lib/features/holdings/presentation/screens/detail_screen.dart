@@ -187,6 +187,19 @@ class _DetailScreenState extends State<DetailScreen>
     }
   }
 
+  /// Reflects a `ParcelDetailCard._copyId`-confirmed review into local state
+  /// (`REFACTOR_ROADMAP.md` Phase 20) — deliberately just `setState`, no
+  /// repository call. By the time this fires, `setParcelCompleted` has
+  /// already been awaited and server-confirmed inside the card; issuing a
+  /// second write here (the old `onFieldChanged`/`_updateField` path) would
+  /// be redundant at best and, if it failed for an unrelated reason, could
+  /// mask an already-successful review behind a "save failed" message.
+  void _onParcelCompleted(final Parcel updated) {
+    if (!mounted) return;
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
+    if (idx >= 0) setState(() => _parcels[idx] = updated);
+  }
+
   /// الملاحظات default used when a brand-new parcel is created (Add Parcel/
   /// Add Person) — still freely user-editable in the form before saving.
   static const String _needsSurveyNote = 'نقص بيانات الحصر';
@@ -362,6 +375,7 @@ class _DetailScreenState extends State<DetailScreen>
                                 associationType:
                                     _repository.activeAssociationType,
                                 onFieldChanged: _updateField,
+                                onCompleted: _onParcelCompleted,
                                 animationDelay:
                                     Duration(milliseconds: i * 80),
                                 resolveBorderMatch:
