@@ -10,6 +10,7 @@ enum BulkEditableField {
   reformType,
   usageType,
   isInheritance,
+  growthStages,
 }
 
 extension BulkEditableFieldX on BulkEditableField {
@@ -25,6 +26,7 @@ extension BulkEditableFieldX on BulkEditableField {
         BulkEditableField.reformType => Parcel.reformTypeOptions,
         BulkEditableField.usageType => Parcel.usageTypeOptions,
         BulkEditableField.isInheritance => const <String>[],
+        BulkEditableField.growthStages => Parcel.growthStageOptions,
       };
 
   /// Whether the picker offers a "—" (clear/unset) option.

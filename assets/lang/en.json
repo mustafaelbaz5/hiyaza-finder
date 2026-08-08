@@ -277,7 +277,8 @@
       "save_failed": "Couldn't save the change — check your connection and try again",
       "delete_error": "Couldn't delete the record — check your connection and try again",
       "reopen_failed": "Couldn't reopen the record — check your connection and try again",
-      "copy_and_review_failed": "ID copied, but couldn't update the review status — try again"
+      "copy_and_review_failed": "ID copied, but couldn't update the review status — try again",
+      "already_reviewed_elsewhere": "ID copied, but this parcel was already reviewed from another device"
     },
     "add": {
       "new_person_cta": "Add",

@@ -17,6 +17,7 @@ import '../../../features/sync/data/holdings_api.dart';
 import '../../../features/sync/data/realtime_sync_service.dart';
 import '../../../features/sync/domain/entities/sync_operation.dart';
 import '../../../features/sync/domain/services/sync_runner.dart';
+import '../../networking/network_info.dart';
 import '../../storage/key_value_store.dart';
 
 /// The holdings feature's data layer: the domain services `HoldingsRepository`
@@ -72,6 +73,7 @@ void registerHoldingsModule(final GetIt getIt) {
       realtimeSyncService: getIt<RealtimeSyncService>(),
       syncService: getIt<ParcelSyncService>(),
       syncRunner: getIt<SyncRunner>(),
+      networkInfo: getIt<NetworkInfo>(),
     ),
   );
   getIt.registerLazySingleton<HoldingsReader>(() => getIt<HoldingsRepository>());

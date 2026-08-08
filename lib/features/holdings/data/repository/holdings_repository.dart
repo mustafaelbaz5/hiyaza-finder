@@ -8,6 +8,7 @@ import '../../../cities/data/holding_row_mapper.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../../core/networking/network_info.dart';
 import '../../../sync/data/holdings_api.dart';
 import '../../../sync/data/realtime_sync_service.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
@@ -37,19 +38,26 @@ import 'parcel_edits_store.dart';
 /// state itself, keeping its own responsibility to "know how to perform
 /// each write/realtime-apply operation," not "be the dataset."
 ///
-/// **Outbox model (`REFACTOR_ROADMAP.md` Phase 9 #9, rebuilt per explicit
-/// sign-off — reverses the online-first-only design this class's docs
-/// previously described):** every write method (`addLocalParcel`,
-/// `deleteLocalParcel`, `updateParcel`, `setParcelCompleted`,
-/// `bulkApplyField`) mutates the in-memory dataset **immediately**
-/// (optimistic — the UI reflects the change before the server has seen it)
-/// and enqueues a durable [SyncOperation] in the same call via [_syncRunner]
-/// — it does not await the network round-trip. [_syncRunner] executes and
-/// retries operations in the background (`SyncRunner.flush`, triggered on
-/// enqueue and on reconnect/app-resume); a permanently-failed operation
-/// (past `SyncRunner.maxAttempts`) stays visible in
+/// **Online-first-when-possible, outbox-when-offline (`REFACTOR_ROADMAP.md`
+/// Phase 19, revising Phase 9 #9's pure-outbox model):** every write method
+/// (`addLocalParcel`, `deleteLocalParcel`, `updateParcel`,
+/// `setParcelCompleted`, `bulkApplyField`) checks [_isOnline] first. When
+/// online, it calls straight into [_syncService] and **awaits** the
+/// network round-trip before applying anything locally or returning — a
+/// caller only sees success once the server has actually confirmed the
+/// write, and a failure throws instead of silently landing in the outbox
+/// with the UI already showing success. Only when genuinely offline (or no
+/// [_syncRunner]/[_networkInfo] configured at all, e.g. most repository
+/// tests) does a write fall back to the old optimistic
+/// apply-then-enqueue-via-[_syncRunner] path — mutating the in-memory
+/// dataset immediately and enqueuing a durable [SyncOperation] for
+/// [_syncRunner] to execute and retry in the background (`SyncRunner.flush`,
+/// triggered on enqueue and on reconnect/app-resume). A permanently-failed
+/// queued operation (past `SyncRunner.maxAttempts`) stays visible in
 /// `SyncRunner.operations` for a "failed syncs" UI to surface and let the
-/// user retry or discard, rather than being silently dropped.
+/// user retry or discard, rather than being silently dropped. This
+/// preserves offline-first (a queued write is never blocked on network)
+/// while making the common online case honest about what "success" means.
 class HoldingsRepository
     implements HoldingsReader, HoldingsWriter, ParcelChangeHandler {
   HoldingsRepository({
@@ -63,13 +71,15 @@ class HoldingsRepository
     final Uuid uuid = const Uuid(),
     final ParcelSyncService? syncService,
     final SyncRunner? syncRunner,
+    final NetworkInfo? networkInfo,
   })  : _dataset = datasetState ??
             ParcelDatasetState(editsStore: editsStore, editOverlay: editOverlay),
         _queryService = queryService,
         _bulkEditService = bulkEditService,
         _uuid = uuid,
         _syncService = syncService ?? ParcelSyncService(holdingsApi: holdingsApi),
-        _syncRunner = syncRunner;
+        _syncRunner = syncRunner,
+        _networkInfo = networkInfo;
 
   final ParcelDatasetState _dataset;
   final ParcelQueryService _queryService;
@@ -83,6 +93,30 @@ class HoldingsRepository
   /// is unset, so existing repository tests that assert on immediate local
   /// state don't need an outbox double just to construct the repository.
   final SyncRunner? _syncRunner;
+
+  /// `null` in tests that construct this repository without a real network
+  /// dependency — [_isOnline] treats a `null` [_networkInfo] as "online"
+  /// (matching the prior always-optimistic behavior), so existing tests
+  /// that assert on the optimistic/outbox path keep working unchanged.
+  final NetworkInfo? _networkInfo;
+
+  /// Whether a write should attempt the synchronous, awaited path
+  /// (`REFACTOR_ROADMAP.md` Phase 19) instead of the optimistic
+  /// apply-then-enqueue one. Every write method below checks this — when
+  /// `true`, it calls straight into [_syncService] and only shows success
+  /// to the caller once that `Future` resolves, so a failure surfaces as a
+  /// real thrown error instead of silently landing in the outbox with a
+  /// success snackbar already shown. When `false` (genuinely offline, or no
+  /// [_syncRunner] configured to fall back to at all), the existing
+  /// optimistic-apply-and-enqueue path is unchanged — offline-first is
+  /// fully preserved, this only changes what happens when a network call
+  /// could actually have been made.
+  Future<bool> _isOnline() async {
+    if (_syncRunner == null) return true;
+    final NetworkInfo? info = _networkInfo;
+    if (info == null) return true;
+    return info.isConnected;
+  }
 
   /// Enqueues [operation] and kicks off a best-effort immediate flush —
   /// fire-and-forget on purpose (`REFACTOR_ROADMAP.md` Phase 9 #9): the
@@ -305,11 +339,11 @@ class HoldingsRepository
       _dataset.rebuildBorderIndex();
     }
 
-    if (_syncRunner != null) {
-      // Optimistic: apply locally first, enqueue, return without awaiting
-      // the network. The server-side promotion swap the old synchronous
-      // path did here now arrives later via Realtime — see this method's
-      // doc.
+    if (_syncRunner != null && !await _isOnline()) {
+      // Genuinely offline: apply locally first, enqueue, return without
+      // awaiting the network. The server-side promotion swap the online
+      // path below does synchronously now arrives later via Realtime —
+      // see this method's doc.
       applyLocally(withId);
       _enqueue(
         AddParcelOperation(
@@ -323,12 +357,13 @@ class HoldingsRepository
       return withId;
     }
 
-    // No outbox configured (test-mode/no-network path, mirrors the old
-    // `holdingsApi == null` convention) — preserve the original
-    // await-then-mutate behavior exactly: a failed write must leave the
-    // dataset completely untouched, and a synchronously-promoted row must
-    // be shown under its final id immediately, never briefly under the
-    // pre-promotion one.
+    // Online (or no outbox configured — test-mode/no-network path, mirrors
+    // the old `holdingsApi == null` convention): await-then-mutate — a
+    // failed write must leave the dataset completely untouched, and a
+    // synchronously-promoted row must be shown under its final id
+    // immediately, never briefly under the pre-promotion one. A caller only
+    // sees success once the server has actually confirmed the insert
+    // (`REFACTOR_ROADMAP.md` Phase 19).
     final String? promotedHoldingId = await _syncService.syncAddParcel(
       parcelId: withId.id,
       cityId: cityId,
@@ -371,9 +406,9 @@ class HoldingsRepository
       _dataset.rebuildBorderIndex();
     }
 
-    if (_syncRunner != null) {
-      // Optimistic: apply locally first, enqueue, return without awaiting
-      // the network.
+    if (_syncRunner != null && !await _isOnline()) {
+      // Genuinely offline: apply locally first, enqueue, return without
+      // awaiting the network.
       await applyLocally();
       _enqueue(
         DeleteParcelOperation(
@@ -385,16 +420,21 @@ class HoldingsRepository
       return true;
     }
 
-    // No outbox configured — preserve the original await-then-mutate
-    // behavior: a failed server delete must leave local state untouched.
+    // Online (or no outbox configured): await-then-mutate — a failed server
+    // delete must leave local state untouched, and the caller only sees
+    // success once the server has confirmed it (`REFACTOR_ROADMAP.md`
+    // Phase 19).
     await _syncService.syncDeleteParcel(addedHoldingId);
     await applyLocally();
     return true;
   }
 
-  /// Persists an edited parcel — applies it to the dataset immediately
-  /// (optimistic) and enqueues an [EditParcelOperation] rather than
-  /// awaiting the Supabase `holding_edits` insert.
+  /// Persists an edited parcel (`REFACTOR_ROADMAP.md` Phase 19). When
+  /// online, awaits the Supabase `holding_edits` insert *before* applying
+  /// the edit to the local dataset/overlay — a failure throws and leaves
+  /// the dataset untouched, instead of showing the edit as saved before the
+  /// server has confirmed it. Only when genuinely offline does this apply
+  /// optimistically and enqueue an [EditParcelOperation] for later.
   @override
   Future<void> updateParcel(final Parcel rawEdited) async {
     final Parcel edited = _withDerivedFarmerCardNames(rawEdited);
@@ -403,11 +443,26 @@ class HoldingsRepository
     final Map<String, dynamic> snapshot = _dataset.editSnapshot(edited);
     final String? cityId = _dataset.activeCityId;
 
-    _dataset.replaceAt(idx, edited);
-    // A single-field edit can change حائز/مالك name — rebuild so a fresh
-    // الحدود lookup elsewhere in the city sees the update immediately.
-    _dataset.rebuildBorderIndex();
-    _dataset.setEdit(edited.id, snapshot);
+    void applyLocally() {
+      _dataset.replaceAt(idx, edited);
+      // A single-field edit can change حائز/مالك name — rebuild so a fresh
+      // الحدود lookup elsewhere in the city sees the update immediately.
+      _dataset.rebuildBorderIndex();
+      _dataset.setEdit(edited.id, snapshot);
+    }
+
+    if (cityId != null && _syncRunner != null && await _isOnline()) {
+      await _syncService.syncEditParcel(
+        holdingId: edited.id,
+        cityId: cityId,
+        payload: snapshot,
+      );
+      applyLocally();
+      await _dataset.persistEdits();
+      return;
+    }
+
+    applyLocally();
     await _dataset.persistEdits();
 
     if (cityId == null) return;
@@ -432,12 +487,19 @@ class HoldingsRepository
   }
 
   /// Marks [parcelId] completed/reopened — the field-worker signal
-  /// (`SYSTEM_DESIGN.md` §10; `REFACTOR_ROADMAP.md` Phase 9 #12) — applies
-  /// the change to the dataset immediately (optimistic) and enqueues a
-  /// [CompleteParcelOperation]. Writes `completed_at`/`completed_by`, never
-  /// `reviewed`/`reviewed_at`/`reviewed_by` (staff/Dashboard-only). Unlike
-  /// [updateParcel] this never touches the edit overlay: completion status
-  /// is not part of the editable-field overlay.
+  /// (`SYSTEM_DESIGN.md` §10; `REFACTOR_ROADMAP.md` Phase 9 #12/Phase 19).
+  /// Writes `completed_at`/`completed_by`, never `reviewed`/`reviewed_at`/
+  /// `reviewed_by` (staff/Dashboard-only). Unlike [updateParcel] this never
+  /// touches the edit overlay: completion status is not part of the
+  /// editable-field overlay.
+  ///
+  /// When online (`_isOnline`), calls straight into [_syncService] and
+  /// awaits it — a caller only sees this return once the server has
+  /// actually confirmed the write, and a failure (including
+  /// [ConflictException] from `mark_parcel_completed`'s atomic guard when
+  /// another device already completed this parcel) throws instead of
+  /// silently applying locally. Only when genuinely offline does this fall
+  /// back to the optimistic apply-then-enqueue path.
   Future<Parcel?> setParcelCompleted(
     final String parcelId, {
     required final bool completed,
@@ -447,7 +509,7 @@ class HoldingsRepository
 
     final bool isFieldAdded = _dataset.parcels[idx].isFieldAdded;
 
-    if (_syncRunner == null) {
+    if (_syncRunner == null || await _isOnline()) {
       final Parcel updated = await _syncService.syncMarkCompleted(
         parcelId: parcelId,
         isFieldAdded: isFieldAdded,
@@ -787,7 +849,12 @@ class HoldingsRepository
       for (final Parcel p in inScope) p.id: _dataset.editSnapshot(p),
     };
 
-    if (_syncRunner == null) {
+    if (_syncRunner == null || await _isOnline()) {
+      // Online (or no outbox configured): awaits each row's Supabase
+      // insert and reports the real per-row outcome
+      // (`REFACTOR_ROADMAP.md` Phase 19) — this was already the honest
+      // behavior on the no-outbox path, just not reached when a
+      // `_syncRunner` was configured and the device was actually online.
       final BulkSyncResult syncResult = await _syncService.syncBulkEdit(
         parcels: inScope,
         cityId: cityId,

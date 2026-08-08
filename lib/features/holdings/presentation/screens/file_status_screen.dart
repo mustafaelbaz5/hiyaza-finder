@@ -31,6 +31,7 @@ String bulkEditableFieldLabel(final BulkEditableField field) => switch (field) {
       BulkEditableField.reformType => 'holdings.fields.reform_type'.tr(),
       BulkEditableField.usageType => 'holdings.fields.usage_type'.tr(),
       BulkEditableField.isInheritance => 'holdings.fields.inheritance'.tr(),
+      BulkEditableField.growthStages => 'holdings.fields.growth_stages'.tr(),
     };
 
 /// Overview of the active city's data — holding counts per حوض — plus a

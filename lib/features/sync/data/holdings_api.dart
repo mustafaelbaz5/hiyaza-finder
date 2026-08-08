@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/errors/error_handler.dart';
+import '../../../core/errors/exceptions.dart';
 
 /// The single seam between "what Supabase call does this write make" and
 /// "when it's invoked" — every write in the app goes through here,
@@ -161,6 +162,30 @@ class HoldingsApi {
   /// distinct from `reviewed`/`reviewed_at`/`reviewed_by`, which this app
   /// never writes (staff/Dashboard-only, `SYSTEM_DESIGN.md` §10,
   /// `REFACTOR_ROADMAP.md` Phase 9 #12).
+  ///
+  /// Goes through the `mark_parcel_completed` RPC (`REFACTOR_ROADMAP.md`
+  /// Phase 19) rather than a direct table `UPDATE`, for two reasons:
+  /// - `holdings_write` RLS only allows admin/editor, and
+  ///   `added_holdings_update_own` only covers rows still `status =
+  ///   'pending'` (a narrow window — `auto_approve_added_holding` promotes
+  ///   almost immediately) — a field-role user had no RLS path to write
+  ///   these two columns on a promoted `holdings` row at all. The RPC is
+  ///   `security definer`, scoped to exactly `completed_at`/`completed_by`.
+  /// - Marking completed ([completed] `true`) needs to be conditioned on
+  ///   `completed_at is null` — the one place two devices can genuinely
+  ///   race each other over the same parcel: both might read "not yet
+  ///   reviewed" locally, then both call this within the same window. The
+  ///   RPC does the condition-then-update atomically in one transaction,
+  ///   closing the race window a client-side check-then-update from
+  ///   PostgREST (`.eq(...).isFilter(...).select()`) would still have.
+  ///   Losing that race throws [ConflictException] instead of silently
+  ///   succeeding, so the caller can tell that user their action didn't
+  ///   actually take effect.
+  ///
+  /// Reopening ([completed] `false`) stays unconditional — it's a
+  /// single-actor, user-initiated undo (`DetailScreen._reopenParcel`'s own
+  /// doc), not a race two devices are plausibly both attempting on the same
+  /// parcel at once the way "mark reviewed" is.
   Future<void> markCompleted({
     required final String parcelId,
     required final bool isFieldAdded,
@@ -168,12 +193,24 @@ class HoldingsApi {
     required final DateTime? completedAt,
     required final String completedByUserId,
   }) async {
-    final String table = isFieldAdded ? 'added_holdings' : 'holdings';
     try {
-      await _client.from(table).update(<String, dynamic>{
-        'completed_at': completedAt?.toIso8601String(),
-        'completed_by': completed ? completedByUserId : null,
-      }).eq('id', parcelId).timeout(_requestTimeout);
+      final List<Map<String, dynamic>> rows = await _client.rpc(
+        'mark_parcel_completed',
+        params: <String, dynamic>{
+          'p_parcel_id': parcelId,
+          'p_is_field_added': isFieldAdded,
+          'p_completed': completed,
+        },
+      ).timeout(_requestTimeout);
+
+      final Map<String, dynamic> result = rows.first;
+      if (completed && result['conflict'] == true) {
+        throw ConflictException(
+          message: 'This parcel was already marked reviewed by another user.',
+        );
+      }
+    } on ConflictException {
+      rethrow;
     } catch (error) {
       ErrorHandler.handleException(error);
     }

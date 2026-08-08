@@ -6,6 +6,7 @@ import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/see_more_section.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -446,6 +447,14 @@ class ParcelDetailCard extends StatelessWidget {
   /// (re-marking an already-completed parcel via Copy ID would be a
   /// surprising side effect of an action the user takes repeatedly while
   /// working, e.g. to paste the id elsewhere after completion).
+  ///
+  /// `setParcelCompleted` now awaits server confirmation when online
+  /// (`REFACTOR_ROADMAP.md` Phase 19), so the success snackbar below only
+  /// shows once the write has actually landed — including the case where
+  /// another device already completed this exact parcel first
+  /// ([ConflictException], from `mark_parcel_completed`'s atomic guard),
+  /// surfaced with its own distinct message rather than the generic
+  /// failure one.
   Future<void> _copyId(final BuildContext context) async {
     final bool isCompleted = parcel.completedAt != null;
     if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
@@ -464,11 +473,19 @@ class ParcelDetailCard extends StatelessWidget {
     }
 
     try {
-      await getIt<HoldingsRepository>()
+      final Parcel? updated = await getIt<HoldingsRepository>()
           .setParcelCompleted(parcel.id, completed: true);
       if (!context.mounted) return;
-      onFieldChanged(parcel.copyWith(completedAt: DateTime.now()));
+      onFieldChanged(
+        updated ?? parcel.copyWith(completedAt: DateTime.now()),
+      );
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
+    } on ConflictException {
+      if (context.mounted) {
+        context.showErrorSnackBar(
+          'holdings.detail.already_reviewed_elsewhere'.tr(),
+        );
+      }
     } catch (_) {
       if (context.mounted) {
         context.showErrorSnackBar('holdings.detail.copy_and_review_failed'.tr());

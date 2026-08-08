@@ -5,25 +5,36 @@ import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
 import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/add_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/bulk_edit_sync_handler.dart';
+import 'package:hiyaza_finder/features/holdings/data/services/complete_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/delete_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/edit_parcel_sync_handler.dart';
-import 'package:hiyaza_finder/features/holdings/data/services/complete_parcel_sync_handler.dart';
 import 'package:hiyaza_finder/features/holdings/data/services/parcel_sync_service.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/bulk_editable_field.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/sync/data/holdings_api.dart';
 import 'package:hiyaza_finder/features/sync/domain/entities/sync_operation.dart';
 import 'package:hiyaza_finder/features/sync/domain/services/sync_runner.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 
-/// Records every network call the outbox handlers make once
-/// `SyncRunner.flush()` actually executes an operation — separate from the
-/// `HoldingsRepository` mutation itself, which happens synchronously before
-/// any of these run (`REFACTOR_ROADMAP.md` Phase 9 #9's optimistic-write
-/// contract).
+/// `REFACTOR_ROADMAP.md` Phase 19: when a `_syncRunner` IS configured (the
+/// real app's shape) but the device is online, every write must call
+/// straight into the network and await it — never apply optimistically or
+/// enqueue. This is the actual behavior change this phase delivers;
+/// `holdings_repository_outbox_test.dart` covers the offline fallback,
+/// `holdings_repository_add_local_parcel_test.dart`/others cover the
+/// no-`_syncRunner`-configured path. This file is the missing third case:
+/// `_syncRunner` present AND online.
+class _OnlineNetworkInfo implements NetworkInfo {
+  @override
+  Future<bool> get isConnected async => true;
+
+  @override
+  Stream<InternetConnectionStatus> get onStatusChange => const Stream.empty();
+}
+
 class _RecordingHoldingsApi implements HoldingsApi {
   final List<String> addRecordCalls = <String>[];
   final List<String> deleteCalls = <String>[];
@@ -93,21 +104,6 @@ class _RecordingHoldingsApi implements HoldingsApi {
           (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
 }
 
-/// This entire test file exercises the *offline* outbox path
-/// (`REFACTOR_ROADMAP.md` Phase 19) — every write here is expected to
-/// apply optimistically and enqueue, never await the network directly.
-/// Without an explicit offline signal, `HoldingsRepository._isOnline`
-/// defaults to `true` (matching the real app's normal, connected case) and
-/// these writes would instead take the online/awaited path, silently
-/// testing the wrong thing.
-class _OfflineNetworkInfo implements NetworkInfo {
-  @override
-  Future<bool> get isConnected async => false;
-
-  @override
-  Stream<InternetConnectionStatus> get onStatusChange => const Stream.empty();
-}
-
 class _FakeAuthRepository implements AuthRepository {
   @override
   AppUser? get currentUser => const AppUser(
@@ -169,7 +165,7 @@ void main() {
       holdingsApi: holdingsApi,
       syncService: syncService,
       syncRunner: syncRunner,
-      networkInfo: _OfflineNetworkInfo(),
+      networkInfo: _OnlineNetworkInfo(),
     );
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
   });
@@ -178,99 +174,109 @@ void main() {
     await getIt.reset();
   });
 
-  group('addLocalParcel (outbox)', () {
-    test('mutates the local dataset before any network call is made', () async {
-      // No await on flush — the assertion runs synchronously right after
-      // addLocalParcel returns, proving the write didn't wait on the
-      // network.
+  group('addLocalParcel (online)', () {
+    test('calls the network directly — never enqueues on SyncRunner', () async {
       final Parcel? added = await repository.addLocalParcel(
         const Parcel(holdingId: '', holderName: 'محمد'),
       );
 
       expect(added, isNotNull);
-      expect(repository.parcels, hasLength(1));
-      expect(repository.parcels.single.holderName, 'محمد');
-    });
-
-    test('enqueues an AddParcelOperation that flush() later executes', () async {
-      await repository.addLocalParcel(
-        const Parcel(holdingId: '', holderName: 'محمد'),
-      );
-      // addLocalParcel's own fire-and-forget flush may already be in
-      // flight; awaiting flush() again is idempotent (SyncRunner guards
-      // re-entrant flushes) and guarantees completion before asserting.
-      await syncRunner.flush();
-
       expect(holdingsApi.addRecordCalls, hasLength(1));
+      expect(syncRunner.operations, isEmpty);
     });
 
-    test('a failed network call does not undo the optimistic local write', () async {
+    test('a failed network call throws and leaves the dataset untouched', () async {
       holdingsApi.errorFor = 'add';
-      await repository.addLocalParcel(
-        const Parcel(holdingId: '', holderName: 'محمد'),
+
+      await expectLater(
+        repository.addLocalParcel(const Parcel(holdingId: '', holderName: 'محمد')),
+        throwsA(isA<Exception>()),
       );
-      await syncRunner.flush();
-
-      // Still present locally — the outbox model's whole point is that a
-      // background failure doesn't retroactively undo what the user
-      // already saw succeed.
-      expect(repository.parcels, hasLength(1));
-      expect(syncRunner.operations, hasLength(1));
-      expect(syncRunner.operations.single.lastError, isNotNull);
-    });
-  });
-
-  group('deleteLocalParcel (outbox)', () {
-    test('removes locally before any network call, enqueues a delete', () async {
-      final Parcel? added = await repository.addLocalParcel(
-        const Parcel(holdingId: '', holderName: 'محمد'),
-      );
-      await syncRunner.flush();
-      holdingsApi.addRecordCalls.clear();
-
-      final bool deleted = await repository.deleteLocalParcel(added!.id);
-      expect(deleted, isTrue);
       expect(repository.parcels, isEmpty);
-
-      await syncRunner.flush();
-      expect(holdingsApi.deleteCalls, hasLength(1));
+      expect(syncRunner.operations, isEmpty);
     });
   });
 
-  group('setParcelCompleted (outbox)', () {
-    test('applies completed state locally before any network call', () async {
+  group('setParcelCompleted (online)', () {
+    test('calls markCompleted directly and awaits it before returning', () async {
       final Parcel? added = await repository.addLocalParcel(
         const Parcel(holdingId: '', holderName: 'محمد'),
       );
-      await syncRunner.flush();
 
       final Parcel? updated =
           await repository.setParcelCompleted(added!.id, completed: true);
 
       expect(updated!.completedAt, isNotNull);
-      expect(repository.parcels.single.completedAt, isNotNull);
-      expect(repository.parcels.single.completedBy, 'user-1');
+      expect(holdingsApi.markCompletedCalls, contains(added.id));
+      expect(syncRunner.operations, isEmpty);
     });
 
-    test('enqueues and eventually calls markCompleted', () async {
+    test(
+      'a failed network call throws and leaves completedAt unset locally',
+      () async {
+        final Parcel? added = await repository.addLocalParcel(
+          const Parcel(holdingId: '', holderName: 'محمد'),
+        );
+        holdingsApi.errorFor = 'completed';
+
+        await expectLater(
+          repository.setParcelCompleted(added!.id, completed: true),
+          throwsA(isA<Exception>()),
+        );
+        expect(repository.parcels.single.completedAt, isNull);
+        expect(syncRunner.operations, isEmpty);
+      },
+    );
+  });
+
+  group('updateParcel (online)', () {
+    test('calls editHolding directly before applying the edit locally', () async {
       final Parcel? added = await repository.addLocalParcel(
         const Parcel(holdingId: '', holderName: 'محمد'),
       );
-      await syncRunner.flush();
 
-      await repository.setParcelCompleted(added!.id, completed: true);
-      await syncRunner.flush();
+      await repository.updateParcel(added!.copyWith(holderName: 'أحمد'));
 
-      expect(holdingsApi.markCompletedCalls, contains(added.id));
+      expect(holdingsApi.editCalls, contains(added.id));
+      expect(repository.parcels.single.holderName, 'أحمد');
+      expect(syncRunner.operations, isEmpty);
+    });
+
+    test('a failed network call throws and leaves the parcel unedited', () async {
+      final Parcel? added = await repository.addLocalParcel(
+        const Parcel(holdingId: '', holderName: 'محمد'),
+      );
+      holdingsApi.errorFor = 'edit';
+
+      await expectLater(
+        repository.updateParcel(added!.copyWith(holderName: 'أحمد')),
+        throwsA(isA<Exception>()),
+      );
+      expect(repository.parcels.single.holderName, 'محمد');
+      expect(syncRunner.operations, isEmpty);
     });
   });
 
-  group('bulkApplyField (outbox)', () {
-    test('applies changes locally and reports them as queued', () async {
+  group('deleteLocalParcel (online)', () {
+    test('calls deleteAddedHolding directly before removing locally', () async {
+      final Parcel? added = await repository.addLocalParcel(
+        const Parcel(holdingId: '', holderName: 'محمد'),
+      );
+
+      final bool deleted = await repository.deleteLocalParcel(added!.id);
+
+      expect(deleted, isTrue);
+      expect(holdingsApi.deleteCalls, contains(added.id));
+      expect(repository.parcels, isEmpty);
+      expect(syncRunner.operations, isEmpty);
+    });
+  });
+
+  group('bulkApplyField (online)', () {
+    test('reports the real per-row outcome, not a queued count', () async {
       await repository.addLocalParcel(
         const Parcel(holdingId: '1', holderName: 'محمد', cropType: 'قمح'),
       );
-      await syncRunner.flush();
 
       final outcome = await repository.bulkApplyField(
         field: BulkEditableField.cropType,
@@ -280,6 +286,7 @@ void main() {
       expect(outcome.succeeded, 1);
       expect(outcome.failed, 0);
       expect(repository.parcels.single.cropType, 'ذرة');
+      expect(syncRunner.operations, isEmpty);
     });
   });
 }

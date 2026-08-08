@@ -49,5 +49,7 @@ class BulkEditService {
         BulkEditableField.usageType => p.copyWith(usageType: value as String),
         BulkEditableField.isInheritance =>
           p.copyWith(isInheritance: value as bool),
+        BulkEditableField.growthStages =>
+          p.copyWith(growthStages: value as String),
       };
 }
