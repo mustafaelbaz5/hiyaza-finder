@@ -23,6 +23,7 @@ class City {
     this.administration,
     this.associationType,
     this.associationSubtype,
+    this.code,
   });
 
   final String id;
@@ -30,6 +31,11 @@ class City {
   final String? directorate;
   final String? administration;
   final CityStatus status;
+
+  /// Free-text short reference code the association uses internally
+  /// (`cities.code`) — distinct from [id] (uuid) and unrelated to
+  /// `Parcel.basinCode`. `null` until set from "أدوات المدينة".
+  final String? code;
 
   /// Bumped by the server on any data change for this city — compared
   /// against a locally cached snapshot's stored version to detect

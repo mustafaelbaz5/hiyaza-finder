@@ -63,6 +63,13 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<void> deleteCachedCity(final String cityId) async {}
+
+  @override
+  Future<City> fetchCity(final String cityId) => throw UnimplementedError();
+
+  @override
+  Future<void> updateCityCode(final String cityId, final String? code) =>
+      throw UnimplementedError();
 }
 
 void main() {

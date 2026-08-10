@@ -77,4 +77,11 @@ class CityRepositoryImpl implements CityRepository {
       await _keyValueStore.remove(_activeCityIdKey);
     }
   }
+
+  @override
+  Future<City> fetchCity(final String cityId) => _dataSource.fetchCity(cityId);
+
+  @override
+  Future<void> updateCityCode(final String cityId, final String? code) =>
+      _dataSource.updateCityCode(cityId, code);
 }

@@ -176,28 +176,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     setState(() => _parcel = apply(value));
   }
 
-  Future<void> _editDropdown(
-    final BuildContext context, {
-    required final String title,
-    required final String? initialValue,
-    required final List<String> options,
-    required final Parcel Function(String? value) apply,
-    final bool allowClear = true,
-  }) async {
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
-      context,
-      title: title,
-      options: [
-        for (final String option in options)
-          ChoiceOption<String>(value: option, label: option),
-      ],
-      selected: initialValue,
-      clearLabel: allowClear ? '—' : null,
-    );
-    if (result == null) return;
-    setState(() => _parcel = apply(result.isClear ? null : result.value));
-  }
-
   Future<void> _editCropType(final BuildContext context) async {
     final ChoiceDialogResult<String>? result = await pickCropType(
       context,
@@ -303,7 +281,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final bool hideCreditType = getIt<HoldingsRepository>().hideCreditType;
     final String title = widget.parentHoldingId == null
         ? 'holdings.add.new_person_title'.tr()
         : 'holdings.add.new_parcel_title'.tr();
@@ -361,11 +338,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                     _parcel.copyWith(holdingId: v),
                               ),
                             ),
-                            if (_parcel.holdingsCount != null)
-                              FieldRow(
-                                label: 'holdings.detail.holdings_count'.tr(),
-                                value: _parcel.holdingsCount.toString(),
-                              ),
                             FieldRow(
                               label: '${'holdings.fields.holder_name'.tr()} *',
                               value: _parcel.holderName,
@@ -377,34 +349,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 initialValue: _parcel.holderName ?? '',
                                 apply: (final String v) => _parcel.copyWith(
                                   holderName: v.isEmpty ? null : v,
-                                ),
-                              ),
-                            ),
-                            FieldRow(
-                              label: 'holdings.fields.owner_name'.tr(),
-                              value: _parcel.ownerName,
-                              isModified: _isModified((final p) => p.ownerName),
-                              onEdit: () => _editText(
-                                context,
-                                title: 'holdings.fields.owner_name'.tr(),
-                                initialValue: _parcel.ownerName ?? '',
-                                apply: (final String v) => _parcel.copyWith(
-                                  ownerName: v.isEmpty ? null : v,
-                                ),
-                              ),
-                            ),
-                            FieldRow(
-                              label: 'holdings.fields.national_id'.tr(),
-                              value: _parcel.nationalId,
-                              isModified:
-                                  _isModified((final p) => p.nationalId),
-                              onEdit: () => _editText(
-                                context,
-                                title: 'holdings.fields.national_id'.tr(),
-                                initialValue: _parcel.nationalId ?? '',
-                                keyboardType: TextInputType.number,
-                                apply: (final String v) => _parcel.copyWith(
-                                  nationalId: v.isEmpty ? null : v,
                                 ),
                               ),
                             ),
@@ -460,38 +404,22 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               isModified: _isModified((final p) => p.notes),
                               onEdit: () => _editNotes(context),
                             ),
-                            if (!hideCreditType)
+                            if (widget.parentHoldingId == null)
                               FieldRow(
-                                label: 'holdings.fields.credit_type'.tr(),
-                                value: _parcel.creditType,
+                                label: 'holdings.fields.national_id'.tr(),
+                                value: _parcel.nationalId,
                                 isModified:
-                                    _isModified((final p) => p.creditType),
-                                onEdit: () => _editDropdown(
+                                    _isModified((final p) => p.nationalId),
+                                onEdit: () => _editText(
                                   context,
-                                  title: 'holdings.fields.credit_type'.tr(),
-                                  initialValue: _parcel.creditType,
-                                  options: Parcel.creditTypeOptions,
-                                  allowClear: false,
-                                  apply: (final String? v) => _parcel.copyWith(
-                                    creditType: v ?? Parcel.defaultCreditType,
+                                  title: 'holdings.fields.national_id'.tr(),
+                                  initialValue: _parcel.nationalId ?? '',
+                                  keyboardType: TextInputType.number,
+                                  apply: (final String v) => _parcel.copyWith(
+                                    nationalId: v.isEmpty ? null : v,
                                   ),
                                 ),
                               ),
-                            FieldRow(
-                              label: 'holdings.fields.usage_type'.tr(),
-                              value: _parcel.usageType,
-                              isModified: _isModified((final p) => p.usageType),
-                              onEdit: () => _editDropdown(
-                                context,
-                                title: 'holdings.fields.usage_type'.tr(),
-                                initialValue: _parcel.usageType,
-                                options: Parcel.usageTypeOptions,
-                                allowClear: false,
-                                apply: (final String? v) => _parcel.copyWith(
-                                  usageType: v ?? Parcel.defaultUsageType,
-                                ),
-                              ),
-                            ),
                             ToggleFieldRow(
                               label: 'holdings.fields.inheritance'.tr(),
                               value: _parcel.isInheritance,
@@ -511,22 +439,21 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 () => _parcel = _parcel.copyWith(isDelegate: v),
                               ),
                             ),
-                            FieldRow(
-                              label: 'holdings.fields.growth_stages'.tr(),
-                              value: _parcel.growthStages,
-                              isModified:
-                                  _isModified((final p) => p.growthStages),
-                              onEdit: () => _editDropdown(
-                                context,
-                                title: 'holdings.fields.growth_stages'.tr(),
-                                initialValue: _parcel.growthStages,
-                                options: Parcel.growthStageOptions,
-                                allowClear: false,
-                                apply: (final String? v) => _parcel.copyWith(
-                                  growthStages: v ?? Parcel.defaultGrowthStage,
+                            if (_parcel.isDelegate)
+                              FieldRow(
+                                label: 'holdings.fields.owner_name'.tr(),
+                                value: _parcel.ownerName,
+                                isModified:
+                                    _isModified((final p) => p.ownerName),
+                                onEdit: () => _editText(
+                                  context,
+                                  title: 'holdings.fields.owner_name'.tr(),
+                                  initialValue: _parcel.ownerName ?? '',
+                                  apply: (final String v) => _parcel.copyWith(
+                                    ownerName: v.isEmpty ? null : v,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                         verticalSpacing(24),

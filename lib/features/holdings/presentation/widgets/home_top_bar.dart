@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/core/config/app_config.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
@@ -66,6 +67,12 @@ class HomeTopBar extends StatelessWidget {
               ],
             ),
           ),
+          TopBarIconButton(
+            icon: Icons.build_outlined,
+            tooltip: 'cities.tools.entry'.tr(),
+            onTap: () => context.pushNamed(Routes.cityTools),
+          ),
+          horizontalSpacing(8),
           const _PendingSyncsButton(),
         ],
       ),

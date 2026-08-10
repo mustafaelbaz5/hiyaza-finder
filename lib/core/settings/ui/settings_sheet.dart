@@ -140,24 +140,6 @@ class _SettingsSheet extends StatelessWidget {
               _SectionLabel('settings.more'.tr()),
               verticalSpacing(10),
               _SettingsRow(
-                icon: Icons.folder_delete_outlined,
-                label: 'cities.manage.entry'.tr(),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.pushNamed(Routes.manageCities);
-                },
-              ),
-              verticalSpacing(10),
-              _SettingsRow(
-                icon: Icons.build_outlined,
-                label: 'cities.tools.entry'.tr(),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.pushNamed(Routes.cityTools);
-                },
-              ),
-              verticalSpacing(10),
-              _SettingsRow(
                 icon: Icons.info_outline_rounded,
                 label: 'settings.about'.tr(),
                 onTap: () {

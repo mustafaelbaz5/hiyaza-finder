@@ -172,6 +172,29 @@ class SupabaseCityDataSource {
     }
   }
 
+  /// Fetches a single city by id — used by "أدوات المدينة" -> كود المدينة
+  /// to read the active city's current code before editing it.
+  Future<City> fetchCity(final String cityId) async {
+    try {
+      final Map<String, dynamic> row =
+          await _client.from('cities').select().eq('id', cityId).single();
+      return _cityFromRow(row);
+    } catch (error) {
+      ErrorHandler.handleException(error);
+    }
+  }
+
+  /// Writes [code] as `cities.code` for [cityId] — admin/editor-only per
+  /// `cities_write` RLS (`20260731000009_rls_policies.sql`), same as any
+  /// other `cities` column write.
+  Future<void> updateCityCode(final String cityId, final String? code) async {
+    try {
+      await _client.from('cities').update({'code': code}).eq('id', cityId);
+    } catch (error) {
+      ErrorHandler.handleException(error);
+    }
+  }
+
   City _cityFromRow(final Map<String, dynamic> row) => City(
         id: row['id'] as String,
         name: row['name'] as String,
@@ -182,5 +205,6 @@ class SupabaseCityDataSource {
         associationType:
             associationTypeFromString(row['association_type'] as String?),
         associationSubtype: row['association_subtype'] as String?,
+        code: row['code'] as String?,
       );
 }

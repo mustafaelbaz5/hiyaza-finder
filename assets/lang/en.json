@@ -123,6 +123,15 @@
         "empty": "No crop types added for this city yet",
         "no_active_city": "Can't manage without a loaded city",
         "remove_confirm": "This removes \"{name}\" from this city's crop-type list. It won't affect parcels already saved with this type. Continue?"
+      },
+      "manage_cities": {
+        "subtitle": "View and delete cities downloaded on this device"
+      },
+      "city_code": {
+        "title": "City code",
+        "subtitle": "View and edit the city's reference code",
+        "edit_title": "Enter the city code",
+        "saved": "City code saved"
       }
     }
   },

@@ -30,4 +30,12 @@ abstract class CityRepository {
   /// If [cityId] is the active city, also clears the active-city marker
   /// so the app doesn't think a deleted city is still loaded.
   Future<void> deleteCachedCity(final String cityId);
+
+  /// Fetches a single city by id — used by "أدوات المدينة" -> كود المدينة
+  /// to read the current code before editing it. Online-required.
+  Future<City> fetchCity(final String cityId);
+
+  /// Writes [code] as `cities.code` for [cityId] — admin/editor-only,
+  /// online-required, same as any other "أدوات المدينة" write.
+  Future<void> updateCityCode(final String cityId, final String? code);
 }
