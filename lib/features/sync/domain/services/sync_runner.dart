@@ -98,16 +98,22 @@ class SyncRunner {
   /// backoff timing — the failed-syncs UI's explicit "retry" action on a
   /// parked item. An explicit user tap should never be silently ignored
   /// because the backoff clock hasn't elapsed yet.
-  Future<void> retry(final String operationId) async {
+  ///
+  /// Returns whether the retry actually succeeded — the pending-syncs sheet
+  /// needs this to show an accurate result instead of a blanket "success"
+  /// message regardless of outcome (a real bug: the operation staying stuck
+  /// with the exact same `لا يوجد اتصال` error after a failed retry, while
+  /// the UI claimed it worked).
+  Future<bool> retry(final String operationId) async {
     final int idx = _queue.indexWhere((final SyncOperation o) => o.operationId == operationId);
-    if (idx < 0) return;
-    await _attempt(idx, respectBackoff: false);
+    if (idx < 0) return false;
+    return _attempt(idx, respectBackoff: false);
   }
 
-  Future<void> _attempt(final int idx, {required final bool respectBackoff}) async {
+  Future<bool> _attempt(final int idx, {required final bool respectBackoff}) async {
     final SyncOperation op = _queue[idx];
     final SyncOperationHandler? handler = _handlers[op.runtimeType];
-    if (handler == null) return;
+    if (handler == null) return false;
 
     // A retry that's due for backoff is skipped this round rather than
     // forced — `flush()` may be called far more often than any individual
@@ -115,18 +121,20 @@ class SyncRunner {
     // reconnect). Explicit manual retries ([retry]) bypass this check.
     if (respectBackoff && op.attempts > 0 && op.lastAttemptAt != null) {
       final Duration elapsed = DateTime.now().difference(op.lastAttemptAt!);
-      if (elapsed < _backoff.delayFor(op.attempts)) return;
+      if (elapsed < _backoff.delayFor(op.attempts)) return false;
     }
 
     try {
       await handler.execute(op);
       _queue.removeAt(idx);
       _notify();
+      return true;
     } catch (error) {
       if (idx < _queue.length && _queue[idx].operationId == op.operationId) {
         _queue[idx] = op.withAttempt(error: error.toString());
         _notify();
       }
+      return false;
     }
   }
 

@@ -97,6 +97,45 @@ void main() {
       expect(runner.operations, isEmpty);
     });
 
+    // REFACTOR_ROADMAP.md Phase 26: retry() previously returned void, so a
+    // caller (the pending-syncs sheet's retry button) had no way to know
+    // whether the retry actually succeeded — it showed a success message
+    // unconditionally, even when the retry failed for the exact same reason
+    // as before (e.g. still offline). retry() now reports its real outcome.
+    test('retry() returns true when the retry succeeds', () async {
+      final SyncRunner runner = SyncRunner(maxAttempts: 1);
+      final _RecordingHandler handler = _RecordingHandler();
+      runner.registerHandler(AddParcelOperation, handler);
+
+      final AddParcelOperation exhausted = _addOp('op1').withAttempt(error: 'e1');
+      runner.restore(<SyncOperation>[exhausted]);
+
+      expect(await runner.retry('op1'), isTrue);
+    });
+
+    test('retry() returns false when the handler still fails', () async {
+      final SyncRunner runner = SyncRunner(maxAttempts: 1);
+      final _RecordingHandler handler = _RecordingHandler()
+        ..errorToThrow = Exception('still offline');
+      runner.registerHandler(AddParcelOperation, handler);
+
+      final AddParcelOperation exhausted = _addOp('op1').withAttempt(error: 'e1');
+      runner.restore(<SyncOperation>[exhausted]);
+
+      expect(await runner.retry('op1'), isFalse);
+      expect(runner.operations, hasLength(1));
+      expect(runner.operations.first.lastError, contains('still offline'));
+    });
+
+    test('retry() returns false for an operation id that is no longer queued',
+        () async {
+      final SyncRunner runner = SyncRunner();
+      final _RecordingHandler handler = _RecordingHandler();
+      runner.registerHandler(AddParcelOperation, handler);
+
+      expect(await runner.retry('missing-id'), isFalse);
+    });
+
     test('remove() drops an operation without executing it', () async {
       final SyncRunner runner = SyncRunner();
       final _RecordingHandler handler = _RecordingHandler();

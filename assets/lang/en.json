@@ -60,6 +60,8 @@
       "result_all_synced": "Everything synced successfully",
       "result_partial": "{synced} synced, {remaining} still pending",
       "result_none": "Sync failed — check your internet connection and try again",
+      "retry_succeeded": "Synced successfully",
+      "retry_failed": "Retry failed — check your internet connection",
       "discard": "Discard",
       "discard_confirm": "This removes the item from the queue without uploading it. This can't be undone. Continue?",
       "discarded": "Item discarded"

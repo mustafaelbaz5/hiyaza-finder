@@ -104,13 +104,9 @@ class _PendingSyncsSheet extends StatelessWidget {
                     children: [
                       for (final (int i, SyncOperation op) in ops.indexed)
                         _PendingSyncTile(
+                          key: ValueKey<String>(op.operationId),
                           operation: op,
-                          onRetry: () async {
-                            await syncRunner.retry(op.operationId);
-                            if (context.mounted) {
-                              context.showSuccessSnackBar('sync.status.tap_to_sync'.tr());
-                            }
-                          },
+                          onRetry: () => syncRunner.retry(op.operationId),
                           onDiscard: () => _confirmDiscard(context, syncRunner, op),
                         ).animate(delay: (i * 25).ms).fadeIn(duration: 180.ms),
                     ],
@@ -154,18 +150,48 @@ class _PendingSyncsSheet extends StatelessWidget {
   }
 }
 
-class _PendingSyncTile extends StatelessWidget {
+/// Owns its own in-flight state for the retry button (`REFACTOR_ROADMAP.md`
+/// Phase 26) — previously this was a `StatelessWidget` whose "retry" button
+/// called `SyncRunner.retry` and then *unconditionally* showed a success
+/// snackbar, regardless of whether the retry actually worked. A retry that
+/// fails (e.g. still offline) left the tile showing the exact same
+/// unchanged error, while the button appeared to do nothing — no loading
+/// feedback, and a misleading "success" message on top of a silent failure.
+/// Now: a spinner replaces the button label while the retry is in flight,
+/// and the result snackbar reflects [SyncRunner.retry]'s real return value.
+class _PendingSyncTile extends StatefulWidget {
   const _PendingSyncTile({
+    super.key,
     required this.operation,
     required this.onRetry,
     required this.onDiscard,
   });
 
   final SyncOperation operation;
-  final VoidCallback onRetry;
+  final Future<bool> Function() onRetry;
   final VoidCallback onDiscard;
 
-  bool get _isFailed => operation.attempts > 0;
+  @override
+  State<_PendingSyncTile> createState() => _PendingSyncTileState();
+}
+
+class _PendingSyncTileState extends State<_PendingSyncTile> {
+  bool _isRetrying = false;
+
+  bool get _isFailed => widget.operation.attempts > 0;
+
+  Future<void> _handleRetry() async {
+    if (_isRetrying) return;
+    setState(() => _isRetrying = true);
+    final bool succeeded = await widget.onRetry();
+    if (!mounted) return;
+    setState(() => _isRetrying = false);
+    if (succeeded) {
+      context.showSuccessSnackBar('sync.details.retry_succeeded'.tr());
+    } else {
+      context.showErrorSnackBar('sync.details.retry_failed'.tr());
+    }
+  }
 
   @override
   Widget build(final BuildContext context) {
@@ -196,7 +222,7 @@ class _PendingSyncTile extends StatelessWidget {
               horizontalSpacing(8),
               Expanded(
                 child: Text(
-                  syncOperationSummary(operation),
+                  syncOperationSummary(widget.operation),
                   style: AppTextStyles.font14SemiBold.copyWith(
                     color: colors.textPrimary,
                   ),
@@ -220,14 +246,15 @@ class _PendingSyncTile extends StatelessWidget {
                   text: 'sync.details.discard'.tr(),
                   size: CustomButtonSize.small,
                   isFullWidth: false,
-                  onPressed: onDiscard,
+                  onPressed: _isRetrying ? null : widget.onDiscard,
                 ),
                 horizontalSpacing(8),
                 CustomTextButton.outlined(
                   text: 'errors.retry'.tr(),
                   size: CustomButtonSize.small,
                   isFullWidth: false,
-                  onPressed: onRetry,
+                  isLoading: _isRetrying,
+                  onPressed: _isRetrying ? null : _handleRetry,
                 ),
               ],
             ),
