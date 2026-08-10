@@ -51,6 +51,7 @@ void main() {
       basinName: 'السرو',
       cropType: 'قمح',
       nationalId: '12345678901234',
+      feddan: 2,
     );
 
     test('true when holderName/basinName/cropType are filled and '
@@ -133,6 +134,56 @@ void main() {
         complete.copyWith(holdingId: '229').hasRequiredFieldsFilled,
         isTrue,
       );
+    });
+
+    test('false when feddan/qirat/sahm are all null (area not entered)', () {
+      expect(
+        complete
+            .copyWith(feddan: null, qirat: null, sahm: null)
+            .hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('false when feddan/qirat/sahm are all zero', () {
+      expect(
+        complete
+            .copyWith(feddan: 0.0, qirat: 0.0, sahm: 0.0)
+            .hasRequiredFieldsFilled,
+        isFalse,
+      );
+    });
+
+    test('true when only qirat is a positive value', () {
+      expect(
+        complete
+            .copyWith(feddan: null, qirat: 5.0, sahm: null)
+            .hasRequiredFieldsFilled,
+        isTrue,
+      );
+    });
+
+    test('true when only sahm is a positive value', () {
+      expect(
+        complete
+            .copyWith(feddan: null, qirat: null, sahm: 3.0)
+            .hasRequiredFieldsFilled,
+        isTrue,
+      );
+    });
+  });
+
+  group('Parcel.isAreaFilled', () {
+    test('false when all three are null', () {
+      expect(Parcel.isAreaFilled(), isFalse);
+    });
+
+    test('false when all three are zero', () {
+      expect(Parcel.isAreaFilled(feddan: 0, qirat: 0, sahm: 0), isFalse);
+    });
+
+    test('true when feddan is positive', () {
+      expect(Parcel.isAreaFilled(feddan: 1), isTrue);
     });
   });
 }

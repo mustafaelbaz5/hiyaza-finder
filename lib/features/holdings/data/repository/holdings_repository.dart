@@ -150,6 +150,11 @@ class HoldingsRepository
   @override
   List<Parcel> get parcels => _dataset.parcels;
 
+  /// The currently loaded city's id — `null` until a city is loaded.
+  /// Exposed for city-scoped maintenance screens (e.g. per-city نوع الزرع
+  /// management) that need it but aren't part of the parcel-sync flow.
+  String? get activeCityId => _dataset.activeCityId;
+
   /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
   /// dataset. [associationType]/[associationSubtype] come straight from the
   /// `CitySnapshot` (itself read from `cities.association_type`/

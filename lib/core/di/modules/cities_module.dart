@@ -3,8 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../features/cities/data/city_repository_impl.dart';
 import '../../../features/cities/data/city_snapshot_cache.dart';
+import '../../../features/cities/data/crop_type_repository_impl.dart';
 import '../../../features/cities/data/supabase_city_data_source.dart';
 import '../../../features/cities/domain/repositories/city_repository.dart';
+import '../../../features/cities/domain/repositories/crop_type_repository.dart';
 import '../../../features/cities/presentation/cubit/city_picker_cubit.dart';
 import '../../../features/holdings/data/repository/holdings_repository.dart';
 import '../../storage/key_value_store.dart';
@@ -14,6 +16,9 @@ void registerCitiesModule(final GetIt getIt) {
     () => SupabaseCityDataSource(Supabase.instance.client),
   );
   getIt.registerLazySingleton<CitySnapshotCache>(CitySnapshotCache.new);
+  getIt.registerLazySingleton<CropTypeRepository>(
+    () => CropTypeRepositoryImpl(Supabase.instance.client),
+  );
 
   getIt.registerLazySingleton<CityRepository>(
     () => CityRepositoryImpl(

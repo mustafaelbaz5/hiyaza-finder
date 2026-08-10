@@ -18,16 +18,41 @@ void main() {
   ];
 
   group('numeric queries', () {
-    test('exact match scores 100', () {
+    test('exact match scores 100 (tier 1)', () {
       final results = service.search(parcels, '001117');
       expect(results.first.holdingId, '001117');
       expect(results.first.score, 100);
       expect(results.first.parcelCount, 2);
     });
 
-    test('partial digits (prefix or substring) do not match', () {
-      expect(service.search(parcels, '0011'), isEmpty);
-      expect(service.search(parcels, '117'), isEmpty);
+    test('prefix match scores 80 (tier 2)', () {
+      final results = service.search(parcels, '0011');
+      expect(results.map((final r) => r.holdingId), contains('001117'));
+      final match = results.firstWhere((final r) => r.holdingId == '001117');
+      expect(match.score, 80);
+    });
+
+    test('mid-string match scores 40 (tier 3, contains)', () {
+      final results = service.search(parcels, '117');
+      expect(results.map((final r) => r.holdingId), contains('001117'));
+      final match = results.firstWhere((final r) => r.holdingId == '001117');
+      expect(match.score, 40);
+    });
+
+    test(
+        'exact match ranks above a holding number that merely contains the '
+        'same digits (e.g. typing "7" ranks holding "7" above "470")', () {
+      final withSevens = <Parcel>[
+        _parcel('470', 'فلان الأول'),
+        _parcel('7', 'فلان الثاني'),
+        _parcel('71', 'فلان الثالث'),
+      ];
+      final results = service.search(withSevens, '7');
+      expect(results.map((final r) => r.holdingId).toList(), [
+        '7', // exact -> 100
+        '71', // starts with -> 80
+        '470', // contains -> 40
+      ]);
     });
 
     test('no digit match returns empty', () {

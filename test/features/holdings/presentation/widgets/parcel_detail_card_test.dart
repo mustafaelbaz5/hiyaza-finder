@@ -364,6 +364,7 @@ void main() {
           basinName: 'البشيط',
           nationalId: '12345678901234',
           cropType: 'قمح',
+          feddan: 2,
         );
 
         Parcel? completedResult;
@@ -418,6 +419,7 @@ void main() {
           basinName: 'البشيط',
           nationalId: '12345678901234',
           cropType: 'قمح',
+          feddan: 2,
         );
 
         Parcel? fieldChangedResult;
@@ -451,6 +453,7 @@ void main() {
       basinName: 'البشيط',
       nationalId: '12345678901234',
       cropType: 'قمح',
+      feddan: 2,
     );
 
     late _FakeHoldingsApi holdingsApi;
@@ -592,6 +595,7 @@ void main() {
       cropType: 'قمح',
       landNumber: '-1',
       isFieldAdded: true,
+      feddan: 2,
     );
 
     late _FakeHoldingsApi holdingsApi;

@@ -149,6 +149,15 @@ class _SettingsSheet extends StatelessWidget {
               ),
               verticalSpacing(10),
               _SettingsRow(
+                icon: Icons.build_outlined,
+                label: 'cities.tools.entry'.tr(),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.pushNamed(Routes.cityTools);
+                },
+              ),
+              verticalSpacing(10),
+              _SettingsRow(
                 icon: Icons.info_outline_rounded,
                 label: 'settings.about'.tr(),
                 onTap: () {

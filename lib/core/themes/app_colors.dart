@@ -28,6 +28,21 @@ class AppColors {
   static const Color grey800 = Color(0xff262730);
   static const Color black = Color(0xff000000);
 
+  // ##Dark-mode-only neutrals — kept separate from the shared grey50-800
+  // scale above (which light mode also reads from) because dark mode needs
+  // wider steps between adjacent surfaces to stay distinguishable: the
+  // original scale put backgroundDark/grey800/grey700 within ~1.1:1 of each
+  // other (WCAG contrast), so cards, borders, and dividers were nearly
+  // invisible against their neighbors, and darkTextHint (grey500 on
+  // grey800) sat at 2.87:1, under the 4.5:1 body-text minimum.
+  static const Color darkBackground = Color(0xff16171b);
+  static const Color darkSurface = Color(0xff232430);
+  static const Color darkSurfaceVariant = Color(0xff323442);
+  static const Color darkBorder = Color(0xff3a3c4a);
+  static const Color darkDivider = Color(0xff323442);
+  static const Color darkTextHint = Color(0xff7d8298);
+  static const Color darkTextDisabled = Color(0xff585c6e);
+
   //  ##GREEN — Success
   static const Color green0 = Color(0xfff0fdf4);
   static const Color green50 = Color(0xffdcfce7);

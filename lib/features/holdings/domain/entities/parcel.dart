@@ -225,6 +225,20 @@ class Parcel {
     return RegExp(r'^\d{14}$').hasMatch(trimmed);
   }
 
+  /// المساحة is entered as [feddan]/[qirat]/[sahm] (the area-entry dialog
+  /// always writes all three together via `AreaCalculator`, never one in
+  /// isolation) — "filled" means at least one of the three is a positive
+  /// value, not merely non-null (a saved `0` is indistinguishable from
+  /// "never entered" otherwise).
+  static bool isAreaFilled({
+    final double? feddan,
+    final double? qirat,
+    final double? sahm,
+  }) =>
+      (feddan != null && feddan > 0) ||
+      (qirat != null && qirat > 0) ||
+      (sahm != null && sahm > 0);
+
   /// رقم الحيازة must be explicitly typed by the user — blank or
   /// whitespace-only counts as "not filled," same as [isValueFilled] — but
   /// unlike [isValueFilled]/[isHoldingIdPending], the literal `"-1"` value
@@ -246,8 +260,9 @@ class Parcel {
     return trimmed.isNotEmpty;
   }
 
-  /// رقم الحيازة, اسم الحائز, اسم الحوض, and نوع الزرع must all be explicitly
-  /// filled/chosen (see [isHoldingIdExplicitlyEntered]/[isValueFilled]), and
+  /// رقم الحيازة, اسم الحائز, اسم الحوض, نوع الزرع, and المساحة must all be
+  /// explicitly filled/chosen (see
+  /// [isHoldingIdExplicitlyEntered]/[isValueFilled]/[isAreaFilled]), and
   /// [nationalId] must be a valid format if present. Shared by
   /// `AddRecordScreen`'s save gate and the review-completion gate
   /// (`ParcelDetailCard`'s Copy ID action, per `REFACTOR_ROADMAP.md` Phase
@@ -261,6 +276,7 @@ class Parcel {
       isValueFilled(holderName) &&
       isValueFilled(basinName) &&
       isValueFilled(cropType) &&
+      isAreaFilled(feddan: feddan, qirat: qirat, sahm: sahm) &&
       isNationalIdValid(nationalId);
 
   static const String defaultCreditType = 'ملك';

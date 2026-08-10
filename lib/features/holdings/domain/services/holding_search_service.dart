@@ -38,8 +38,11 @@ class SearchResult {
   final bool isFieldAdded;
 }
 
-/// Numeric queries rank by holding-ID prefix/contains match. Text queries
-/// rank holder names in two tiers against the normalized name:
+/// Numeric queries rank by holding-ID match in three tiers — exact match
+/// highest, then prefix, then contains-anywhere lowest — so typing "7" ranks
+/// a holding whose number *is* "7" above one merely containing a "7" (e.g.
+/// "470"). Text queries rank holder names in two tiers against the
+/// normalized name:
 ///
 /// - Tier 1 ("starts with", high priority): the full name starts with the
 ///   query, or — a more precise variant of the same rule — an individual
@@ -104,21 +107,26 @@ class HoldingSearchService {
     return _groupAndRank(scored, parcelCountsByHolding, completedCountsByHolding);
   }
 
-  /// Exact match only — a digits-only query must equal رقم الحيازة exactly,
-  /// not merely contain/start with it (searching "2" must not return every
-  /// holding whose number happens to contain a "2"). [Parcel.holdingId] is
-  /// trimmed defensively before comparing, mirroring the same precedent in
-  /// [Parcel.isHoldingIdPending] — it's never guaranteed pre-trimmed at
-  /// storage time. No leading-zero stripping on either side: holding
-  /// numbers like "001117" are opaque strings, not parsed integers.
+  /// Three tiers, exact match ranked highest — searching "7" must surface
+  /// the holding whose number *is* "7" above one that merely contains a "7"
+  /// (e.g. "470"). [Parcel.holdingId] is trimmed defensively before
+  /// comparing, mirroring the same precedent in [Parcel.isHoldingIdPending]
+  /// — it's never guaranteed pre-trimmed at storage time. No leading-zero
+  /// stripping on either side: holding numbers like "001117" are opaque
+  /// strings, not parsed integers.
   List<_ScoredParcel> _scoreByHoldingId(
     final List<Parcel> parcels,
     final String query,
   ) {
     final List<_ScoredParcel> results = <_ScoredParcel>[];
     for (final Parcel parcel in parcels) {
-      if (parcel.holdingId.trim() == query) {
-        results.add(_ScoredParcel(parcel, 100));
+      final String holdingId = parcel.holdingId.trim();
+      if (holdingId == query) {
+        results.add(_ScoredParcel(parcel, _fullNameStartScore));
+      } else if (holdingId.startsWith(query)) {
+        results.add(_ScoredParcel(parcel, _wordStartScore));
+      } else if (holdingId.contains(query)) {
+        results.add(_ScoredParcel(parcel, _containsScore));
       }
     }
     return results;

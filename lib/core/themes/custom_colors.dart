@@ -111,26 +111,26 @@ class CustomColors {
       // Text
       textPrimary: AppColors.white,
       textSecondary: AppColors.grey300,
-      textHint: AppColors.grey500,
-      textDisabled: AppColors.grey600,
+      textHint: AppColors.darkTextHint,
+      textDisabled: AppColors.darkTextDisabled,
       textInverse: AppColors.black,
 
       // Background
-      background: AppColors.backgroundDark,
-      backgroundSecondary: AppColors.grey800,
+      background: AppColors.darkBackground,
+      backgroundSecondary: AppColors.darkSurface,
       backgroundInverse: AppColors.white,
 
       // Surface
-      surface: AppColors.grey800,
-      surfaceVariant: AppColors.grey700,
+      surface: AppColors.darkSurface,
+      surfaceVariant: AppColors.darkSurfaceVariant,
 
       // Border & Divider
-      border: AppColors.grey600,
-      divider: AppColors.grey700,
+      border: AppColors.darkBorder,
+      divider: AppColors.darkDivider,
 
       // Icon
       iconPrimary: AppColors.grey200,
-      iconSecondary: AppColors.grey500,
+      iconSecondary: AppColors.darkTextHint,
 
       // Status
       success: AppColors.green200,

@@ -99,6 +99,31 @@
       "delete_confirm": "This deletes \"{name}\"'s data from this device only. You can download it again later. Continue?",
       "delete_confirm_active": "\"{name}\" is the current city. Its data will be deleted from this device only (it stays on the server), but it will disappear from the home screen until downloaded again. Continue?",
       "deleted": "City data deleted from this device"
+    },
+    "tools": {
+      "entry": "City tools",
+      "title": "City tools",
+      "missing_holding_id": {
+        "title": "Records missing a holding number",
+        "subtitle": "View and fill in holdings with no رقم الحيازة entered",
+        "search_hint": "Search by name or ID …",
+        "empty": "No records missing a holding number",
+        "empty_hint": "Every holding in this city already has a number",
+        "no_results": "No results",
+        "results_count": "{count} holdings",
+        "filter_all_basins": "All basins",
+        "filter_basin": "Filter by basin",
+        "pending_badge": "No number"
+      },
+      "crop_types": {
+        "title": "Crop types",
+        "subtitle": "Manage this city's نوع الزرع option list",
+        "add": "Add type",
+        "add_title": "Enter a crop type",
+        "empty": "No crop types added for this city yet",
+        "no_active_city": "Can't manage without a loaded city",
+        "remove_confirm": "This removes \"{name}\" from this city's crop-type list. It won't affect parcels already saved with this type. Continue?"
+      }
     }
   },
   "auth": {
@@ -302,6 +327,7 @@
       "holder_required": "Holder name is required",
       "basin_required": "Please select a basin",
       "crop_type_required": "Please select a crop type",
+      "area_required": "Enter the area (feddan/qirat/sahm)",
       "national_id_invalid": "National ID must be 14 digits",
       "no_active_city": "Can't add without a loaded city",
       "discard_confirm": "Your changes will be lost. Leave anyway?",

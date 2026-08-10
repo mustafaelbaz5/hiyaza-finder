@@ -33,6 +33,7 @@ void main() {
     basinName: 'السرو',
     cropType: 'قمح',
     nationalId: '12345678901234',
+    feddan: 2,
   );
 
   testWidgets('a blank holdingId shows the holding-id-required message',
@@ -53,6 +54,17 @@ void main() {
       _GapMessagesProbe(complete.copyWith(holdingId: '-1')),
     );
     expect(find.text('أدخل رقم الحيازة الصحيح'), findsNothing);
+  });
+
+  testWidgets('a missing area (feddan/qirat/sahm all null) shows the '
+      'area-required message', (final tester) async {
+    await pumpLocalized(
+      tester,
+      _GapMessagesProbe(
+        complete.copyWith(feddan: null, qirat: null, sahm: null),
+      ),
+    );
+    expect(find.text('أدخل المساحة (فدان/قيراط/سهم)'), findsOneWidget);
   });
 
   testWidgets('a complete parcel shows no gap messages at all', (final tester) async {

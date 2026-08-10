@@ -7,4 +7,7 @@ class Routes {
   static const String addRecord = '/addRecord';
   static const String fileStatus = '/fileStatus';
   static const String manageCities = '/manageCities';
+  static const String cityTools = '/cityTools';
+  static const String missingHoldingId = '/missingHoldingId';
+  static const String cropTypeSettings = '/cropTypeSettings';
 }

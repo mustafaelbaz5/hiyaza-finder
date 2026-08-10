@@ -16,16 +16,18 @@ const String cropTypeOtherOption = 'اخرى';
 ///
 /// Returns `null` if dismissed without any choice (no change), otherwise a
 /// [ChoiceDialogResult] — `isClear` for "—", or a value that's either one
-/// of [Parcel.cropTypeOptions] or the custom text typed for "اخرى".
+/// of [options] (defaults to [Parcel.cropTypeOptions]) or the custom text
+/// typed for "اخرى".
 Future<ChoiceDialogResult<String>?> pickCropType(
   final BuildContext context, {
   required final String? selected,
+  final List<String> options = Parcel.cropTypeOptions,
 }) async {
   final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
     context,
     title: 'holdings.fields.crop_type'.tr(),
     options: [
-      for (final String option in Parcel.cropTypeOptions)
+      for (final String option in options)
         ChoiceOption<String>(value: option, label: option),
     ],
     selected: selected,

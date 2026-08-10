@@ -17,6 +17,12 @@ List<String> requiredFieldGapMessages(final Parcel parcel) => <String>[
         'holdings.add.basin_required'.tr(),
       if (!Parcel.isValueFilled(parcel.cropType))
         'holdings.add.crop_type_required'.tr(),
+      if (!Parcel.isAreaFilled(
+        feddan: parcel.feddan,
+        qirat: parcel.qirat,
+        sahm: parcel.sahm,
+      ))
+        'holdings.add.area_required'.tr(),
       if (!Parcel.isNationalIdValid(parcel.nationalId))
         'holdings.add.national_id_invalid'.tr(),
     ];
