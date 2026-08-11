@@ -63,8 +63,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('a retry that still fails shows the accurate failure message,'
-      ' not a false success', (final tester) async {
+  testWidgets('a retry that still fails shows the real failure reason, not '
+      'a hardcoded connectivity message', (final tester) async {
     handler.shouldSucceed = false;
     await pumpSheet(tester);
 
@@ -72,7 +72,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('تعذّرت إعادة المحاولة — تحقق من اتصالك بالإنترنت'), findsOneWidget);
+    // `_ControllableHandler.execute` throws `Exception('still offline')` —
+    // its `toString()` is what SyncRunner captures as `lastError`, and that
+    // real reason must be what the user sees, not a hardcoded generic
+    // "check your internet connection" regardless of what actually failed.
+    expect(find.textContaining('still offline'), findsWidgets);
     expect(find.text('تمت المزامنة بنجاح'), findsNothing);
     // The operation must still be visible in the queue — the retry did not
     // silently drop it despite failing.

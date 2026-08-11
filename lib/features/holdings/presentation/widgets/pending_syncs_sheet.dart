@@ -189,7 +189,16 @@ class _PendingSyncTileState extends State<_PendingSyncTile> {
     if (succeeded) {
       context.showSuccessSnackBar('sync.details.retry_succeeded'.tr());
     } else {
-      context.showErrorSnackBar('sync.details.retry_failed'.tr());
+      // `widget.onRetry` mutates the same SyncRunner queue this tile's
+      // `operation` was built from, so by the time the awaited retry
+      // returns, `widget.operation.lastError` already holds the *real*
+      // reason this specific attempt failed (set via `op.withAttempt` in
+      // `SyncRunner._attempt`) — showing a hardcoded "check your internet
+      // connection" regardless of cause is exactly what previously made a
+      // stale-record failure look like a connectivity problem.
+      context.showErrorSnackBar(
+        widget.operation.lastError ?? 'sync.details.retry_failed'.tr(),
+      );
     }
   }
 
@@ -234,7 +243,7 @@ class _PendingSyncTileState extends State<_PendingSyncTile> {
           if (_isFailed) ...[
             verticalSpacing(6),
             Text(
-              'sync.details.result_none'.tr(),
+              widget.operation.lastError ?? 'sync.details.result_none'.tr(),
               style: AppTextStyles.font12Regular.copyWith(color: colors.textHint),
               textAlign: TextAlign.right,
             ),

@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import '../../features/sync/data/sync_queue_store.dart';
 import '../../features/sync/domain/entities/sync_operation.dart' show SyncOperation;
 import '../../features/sync/domain/services/sync_runner.dart';
+import '../networking/connection_quality_service.dart';
 import 'modules/auth_module.dart';
 import 'modules/cities_module.dart';
 import 'modules/core_module.dart';
@@ -19,6 +20,11 @@ Future<void> setUpDependencies() async {
   registerSyncModule(getIt);
   registerHoldingsModule(getIt);
   registerCitiesModule(getIt);
+
+  // Starts polling immediately so the top-bar connectivity badge
+  // (`HomeTopBar`) has a real classification on the very first frame,
+  // instead of waiting for the first screen that happens to touch it.
+  getIt<ConnectionQualityService>().start();
 
   // Restores any operations left pending from a previous app session
   // (`REFACTOR_ROADMAP.md` Phase 9 #9) — must run after `registerHoldingsModule`

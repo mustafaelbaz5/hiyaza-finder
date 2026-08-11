@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/core/config/app_config.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/networking/connection_quality_service.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
@@ -37,6 +38,8 @@ class HomeTopBar extends StatelessWidget {
             tooltip: 'settings.title'.tr(),
             onTap: onSettings,
           ),
+          horizontalSpacing(8),
+          const _ConnectionQualityBadge(),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -75,6 +78,67 @@ class HomeTopBar extends StatelessWidget {
           horizontalSpacing(8),
           const _PendingSyncsButton(),
         ],
+      ),
+    );
+  }
+}
+
+/// Shows the device's current connectivity at a glance — a green wifi icon
+/// when [ConnectionQuality.strong], an amber wifi icon with a small dot
+/// badge when [ConnectionQuality.weak] (connected, but the reachability
+/// check is responding slowly), and a red wifi-off icon when
+/// [ConnectionQuality.offline]. Tapping it shows the same classification as
+/// a tooltip/snackbar, since a fixed icon alone doesn't explain *why* it
+/// changed color.
+class _ConnectionQualityBadge extends StatelessWidget {
+  const _ConnectionQualityBadge();
+
+  @override
+  Widget build(final BuildContext context) {
+    final ConnectionQualityService service = getIt<ConnectionQualityService>();
+
+    return SizedBox(
+      width: HomeTopBar._iconButtonFootprint,
+      height: HomeTopBar._iconButtonFootprint,
+      child: StreamBuilder<ConnectionQuality>(
+        stream: service.onQualityChanged,
+        initialData: service.current,
+        builder: (final BuildContext context, final snapshot) {
+          final ConnectionQuality quality = snapshot.data ?? ConnectionQuality.strong;
+          final (IconData icon, Color color, String label) = switch (quality) {
+            ConnectionQuality.strong => (
+                Icons.wifi_rounded,
+                AppColors.green200,
+                'connectivity.strong'.tr(),
+              ),
+            ConnectionQuality.weak => (
+                Icons.wifi_rounded,
+                AppColors.amber300,
+                'connectivity.weak'.tr(),
+              ),
+            ConnectionQuality.offline => (
+                Icons.wifi_off_rounded,
+                AppColors.red200,
+                'connectivity.offline'.tr(),
+              ),
+          };
+
+          return Tooltip(
+            message: label,
+            child: InkWell(
+              onTap: () => context.showSnackBar(label),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: context.customColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 22),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,6 +1,11 @@
 {
   "app_title": "My App",
   "welcome": "Welcome",
+  "connectivity": {
+    "strong": "Connected to the internet",
+    "weak": "Connected — connection is slow",
+    "offline": "No internet connection"
+  },
   "errors": {
     "no_internet": "No internet connection. Please check your network.",
     "timeout": "Request timeout. Please try again.",
