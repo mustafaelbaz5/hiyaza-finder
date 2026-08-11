@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exceptions.dart';
@@ -15,11 +16,23 @@ import 'session_state.dart';
 /// here without any screen having to notice on its own.
 class SessionCubit extends Cubit<SessionState> {
   SessionCubit(this._authRepository) : super(_initialState(_authRepository)) {
-    _subscription = _authRepository.userChanges.listen((final AppUser? user) {
-      emit(
-        user == null ? SessionState.unauthenticated() : SessionState.authenticated(user),
-      );
-    });
+    _subscription = _authRepository.userChanges.listen(
+      (final AppUser? user) {
+        emit(
+          user == null ? SessionState.unauthenticated() : SessionState.authenticated(user),
+        );
+      },
+      // GoTrue's own background token-refresh timer can fail (e.g. no
+      // network) and surface as an error event on this stream rather than a
+      // thrown exception any of our own code catches — without this handler
+      // it has nowhere to land and is dumped as a raw "Unhandled Exception"
+      // to the console. A refresh failure doesn't mean the session is gone
+      // (supabase_flutter keeps retrying on its own), so this only logs; it
+      // deliberately does not force a sign-out here.
+      onError: (final Object error, final StackTrace stackTrace) {
+        debugPrint('SessionCubit: userChanges stream error: $error');
+      },
+    );
   }
 
   final AuthRepository _authRepository;

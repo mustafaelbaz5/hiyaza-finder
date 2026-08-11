@@ -190,6 +190,20 @@ class Parcel {
     return trimmed.isEmpty || trimmed == '-' || trimmed == '-1';
   }
 
+  /// Broader than [isHoldingIdPending] — also flags a literal `"0"`
+  /// رقم الحيازة as missing/lost data (a field worker reported this counts
+  /// as data loss, distinct from `"-1"`'s deliberate "I don't have the
+  /// number yet" meaning). Used only by the "missing رقم الحيازة" worklist
+  /// screen — [isHoldingIdPending]/[groupKey] intentionally stay unchanged
+  /// everywhere else (search grouping, the pending badge, sibling-parcel
+  /// grouping), since `"0"` is still a normal, non-shared value for those
+  /// purposes and grouping by it as if it were a placeholder would wrongly
+  /// merge unrelated people who happen to share the literal value `"0"`.
+  bool get isHoldingIdMissingOrZero {
+    if (isHoldingIdPending) return true;
+    return holdingId.trim() == '0';
+  }
+
   /// What actually identifies "one holding" for search grouping and the
   /// detail-screen lookup. For a confirmed record this is just
   /// [holdingId] (unchanged behavior). For a pending one, [holdingId] is

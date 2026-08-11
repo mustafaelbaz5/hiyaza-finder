@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
 import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
@@ -139,19 +140,72 @@ void main() {
   });
 
   testWidgets(
-      'lists only parcels whose holdingId is blank or "-1", not real numbers',
-      (final tester) async {
+      'lists only parcels whose holdingId is blank, "-1", or "0" — not real '
+      'numbers', (final tester) async {
     await _registerRepository(const <Parcel>[
       Parcel(id: 'p1', holdingId: '101', holderName: 'أحمد كامل'),
       Parcel(id: 'p2', holdingId: '', holderName: 'سعيد فتحي'),
       Parcel(id: 'p3', holdingId: '-1', holderName: 'ياسر عادل'),
+      Parcel(id: 'p4', holdingId: '0', holderName: 'كريم سالم'),
     ]);
 
     await pumpLocalizedScreen(tester, const MissingHoldingIdScreen());
 
     expect(find.textContaining('سعيد فتحي'), findsOneWidget);
     expect(find.textContaining('ياسر عادل'), findsOneWidget);
+    expect(find.textContaining('كريم سالم'), findsOneWidget);
     expect(find.textContaining('أحمد كامل'), findsNothing);
+  });
+
+  testWidgets(
+      'two different people who both have holdingId "0" are NOT merged '
+      'into one result — "0" is not treated as a shared placeholder',
+      (final tester) async {
+    await _registerRepository(const <Parcel>[
+      Parcel(id: 'p1', holdingId: '0', holderName: 'الأول'),
+      Parcel(id: 'p2', holdingId: '0', holderName: 'الثاني'),
+    ]);
+
+    await pumpLocalizedScreen(tester, const MissingHoldingIdScreen());
+
+    expect(find.textContaining('الأول'), findsOneWidget);
+    expect(find.textContaining('الثاني'), findsOneWidget);
+    expect(find.text('2 حيازة'), findsOneWidget);
+  });
+
+  testWidgets(
+      'tapping a "0"-holdingId result opens the detail screen with only '
+      'that person\'s own parcel(s)', (final tester) async {
+    await _registerRepository(const <Parcel>[
+      Parcel(id: 'p1', holdingId: '0', holderName: 'الأول'),
+      Parcel(id: 'p2', holdingId: '0', holderName: 'الثاني'),
+    ]);
+
+    final List<String?> pushedRoutes = <String?>[];
+    List<Parcel>? pushedArgs;
+
+    await tester.pumpWidget(
+      wrapLocalizedScreen(
+        Navigator(
+          onGenerateRoute: (final RouteSettings settings) {
+            pushedRoutes.add(settings.name);
+            pushedArgs = settings.arguments as List<Parcel>?;
+            return MaterialPageRoute<void>(
+              settings: settings,
+              builder: (final _) => const MissingHoldingIdScreen(),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('الأول'));
+    await tester.pumpAndSettle();
+
+    expect(pushedRoutes, contains(Routes.holdingDetail));
+    expect(pushedArgs, isNotNull);
+    expect(pushedArgs!.map((final Parcel p) => p.id), <String>['p1']);
   });
 
   testWidgets('typing in the search field filters the list by name',

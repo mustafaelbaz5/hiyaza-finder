@@ -15,12 +15,12 @@ import '../../domain/services/arabic_normalizer.dart';
 import '../../domain/services/holding_search_service.dart';
 import '../widgets/recommendation_tile.dart';
 
-/// Lists every parcel whose رقم الحيازة hasn't been explicitly entered yet
-/// (blank or the literal "-1" placeholder, see
-/// [Parcel.isHoldingIdExplicitlyEntered]) — the field-worker worklist for
-/// going back and filling in a value, reachable from "أدوات المدينة".
-/// Reuses [RecommendationTile] and the existing [Routes.holdingDetail] flow
-/// so filling in the missing value uses the same field-edit UI as anywhere
+/// Lists every parcel whose رقم الحيازة is missing/lost data — blank, the
+/// "-"/"-1" pending placeholders, or a literal "0" (see
+/// [Parcel.isHoldingIdMissingOrZero]) — the field-worker worklist for going
+/// back and filling in a real value, reachable from "أدوات المدينة". Reuses
+/// [RecommendationTile] and the existing [Routes.holdingDetail] flow so
+/// filling in the missing value uses the same field-edit UI as anywhere
 /// else in the app.
 class MissingHoldingIdScreen extends StatefulWidget {
   const MissingHoldingIdScreen({super.key});
@@ -44,14 +44,32 @@ class _MissingHoldingIdScreenState extends State<MissingHoldingIdScreen> {
   }
 
   List<Parcel> get _missingParcels => _repository.parcels
-      .where((final Parcel p) => p.isHoldingIdPending)
+      .where((final Parcel p) => p.isHoldingIdMissingOrZero)
       .toList();
+
+  /// [Parcel.groupKey] treats a literal `"0"` رقم الحيازة as a normal,
+  /// non-shared value (by design — see [Parcel.isHoldingIdMissingOrZero]),
+  /// so grouping by it directly here would wrongly merge every unrelated
+  /// person who happens to have `"0"` into one result. Falls back to the
+  /// parcel's own [Parcel.id] for that one case; [Parcel.groupKey] already
+  /// handles the pending-placeholder case (blank/"-"/"-1") correctly.
+  String _worklistGroupKey(final Parcel parcel) =>
+      parcel.holdingId.trim() == '0' ? parcel.id : parcel.groupKey;
+
+  /// Keyed by [_worklistGroupKey] so [_openDetail] can look parcels up
+  /// directly instead of going through `HoldingsRepository.parcelsForHolding`
+  /// — that method matches on `Parcel.groupKey`, which (by design, see
+  /// [Parcel.isHoldingIdMissingOrZero]'s doc) does NOT special-case a
+  /// literal `"0"` رقم الحيازة, so it can't resolve the [Parcel.id]-based
+  /// key this screen uses for that one case.
+  Map<String, List<Parcel>> _groupsByKey = <String, List<Parcel>>{};
 
   List<SearchResult> _groupResults(final List<Parcel> parcels) {
     final Map<String, List<Parcel>> byGroup = <String, List<Parcel>>{};
     for (final Parcel parcel in parcels) {
-      (byGroup[parcel.groupKey] ??= <Parcel>[]).add(parcel);
+      (byGroup[_worklistGroupKey(parcel)] ??= <Parcel>[]).add(parcel);
     }
+    _groupsByKey = byGroup;
 
     return byGroup.entries.map((final MapEntry<String, List<Parcel>> entry) {
       final List<Parcel> group = entry.value;
@@ -71,10 +89,8 @@ class _MissingHoldingIdScreenState extends State<MissingHoldingIdScreen> {
   }
 
   void _openDetail(final SearchResult result) {
-    context.pushNamed(
-      Routes.holdingDetail,
-      arguments: _repository.parcelsForHolding(result.groupKey),
-    );
+    final List<Parcel> parcels = _groupsByKey[result.groupKey] ?? const <Parcel>[];
+    context.pushNamed(Routes.holdingDetail, arguments: parcels);
   }
 
   @override

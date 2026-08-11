@@ -27,6 +27,50 @@ void main() {
       const Parcel p = Parcel(id: '1', holdingId: '101');
       expect(p.isHoldingIdPending, isFalse);
     });
+
+    test('false for a literal "0" — distinct from the pending placeholders',
+        () {
+      const Parcel p = Parcel(id: '1', holdingId: '0');
+      expect(p.isHoldingIdPending, isFalse);
+    });
+  });
+
+  group('isHoldingIdMissingOrZero', () {
+    test('true for everything isHoldingIdPending already covers', () {
+      for (final String value in <String>['', '   ', '-', '-1']) {
+        expect(
+          Parcel(id: '1', holdingId: value).isHoldingIdMissingOrZero,
+          isTrue,
+          reason: 'holdingId="$value"',
+        );
+      }
+    });
+
+    test('true for a literal "0"', () {
+      const Parcel p = Parcel(id: '1', holdingId: '0');
+      expect(p.isHoldingIdMissingOrZero, isTrue);
+    });
+
+    test('true for "0" with surrounding whitespace', () {
+      const Parcel p = Parcel(id: '1', holdingId: ' 0 ');
+      expect(p.isHoldingIdMissingOrZero, isTrue);
+    });
+
+    test('false for a real holding number, including one containing a 0',
+        () {
+      expect(
+        const Parcel(id: '1', holdingId: '101').isHoldingIdMissingOrZero,
+        isFalse,
+      );
+      expect(
+        const Parcel(id: '2', holdingId: '10').isHoldingIdMissingOrZero,
+        isFalse,
+      );
+      expect(
+        const Parcel(id: '3', holdingId: '00').isHoldingIdMissingOrZero,
+        isFalse,
+      );
+    });
   });
 
   group('groupKey', () {

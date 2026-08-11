@@ -23,6 +23,7 @@ class _FakeAuthRepository implements AuthRepository {
   Stream<AppUser?> get userChanges => _controller.stream;
 
   void emitUser(final AppUser? user) => _controller.add(user);
+  void emitError(final Object error) => _controller.addError(error);
 
   @override
   Future<AppUser> signInWithPassword({
@@ -129,6 +130,31 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(cubit.state.status, SessionStatus.unauthenticated);
+    cubit.close();
+    repo.dispose();
+  });
+
+  test(
+      'an error on the userChanges stream (e.g. a background token-refresh '
+      'failure) does not crash and leaves the current session state '
+      'unchanged', () async {
+    const AppUser user = AppUser(
+      id: 'u1',
+      email: 'a@b.com',
+      displayName: 'A',
+      role: UserRole.field,
+    );
+    final _FakeAuthRepository repo = _FakeAuthRepository(initialUser: user);
+    final SessionCubit cubit = SessionCubit(repo);
+    expect(cubit.state.status, SessionStatus.authenticated);
+
+    repo.emitError(Exception('SocketException: Failed host lookup'));
+    await Future<void>.delayed(Duration.zero);
+
+    // Still authenticated — a refresh-timer failure while offline must not
+    // be mistaken for a forced sign-out (unlike userChanges emitting null,
+    // which genuinely does mean "session ended").
+    expect(cubit.state.status, SessionStatus.authenticated);
     cubit.close();
     repo.dispose();
   });
