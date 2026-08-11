@@ -9,6 +9,7 @@ import '../../../cities/data/holding_row_mapper.dart';
 import '../../../cities/domain/entities/association_type.dart';
 import '../../../cities/domain/entities/city.dart';
 import '../../../cities/domain/repositories/city_repository.dart';
+import '../../../../core/errors/exceptions.dart';
 import '../../../../core/networking/network_info.dart';
 import '../../../sync/data/holdings_api.dart';
 import '../../../sync/data/realtime_sync_service.dart';
@@ -665,6 +666,37 @@ class HoldingsRepository
     );
     applyRemoteChange(refreshed);
     return refreshed;
+  }
+
+  /// [setParcelCompleted], but reconciles-and-retries once on
+  /// [NotFoundException] instead of surfacing it straight to the caller —
+  /// shared by Copy ID (`ParcelDetailCard._copyId`) and إعادة الفتح
+  /// (`DetailScreen._reopenParcel`), which both hit the exact same failure
+  /// mode: the RPC's `p_is_field_added`/id pairing not matching any row in
+  /// the table it targeted, because this device's cached
+  /// [Parcel.isCurrentlyInAddedHoldings] is stale (the parcel was promoted
+  /// between `added_holdings`/`holdings` server-side after this screen
+  /// loaded). A timeout means the write may have already committed — reconcile
+  /// but the outcome is genuinely unknown — is left to the caller and
+  /// deliberately NOT retried here. [ConflictException] (another device
+  /// already applied the same value) is also left to the caller, since both
+  /// callers show different, action-specific messages for these two cases and
+  /// don't want a generic shared one.
+  Future<Parcel?> setParcelCompletedWithReconciliation(
+    final String parcelId, {
+    required final bool completed,
+  }) async {
+    try {
+      return await setParcelCompleted(parcelId, completed: completed);
+    } on NotFoundException catch (error) {
+      debugPrint(
+        '[setParcelCompletedWithReconciliation] parcelId=$parcelId '
+        'NotFoundException: $error — stale table assumption, reconciling '
+        'then retrying once',
+      );
+      await refreshParcel(parcelId);
+      return setParcelCompleted(parcelId, completed: completed);
+    }
   }
 
   void _applyCompletedLocally(

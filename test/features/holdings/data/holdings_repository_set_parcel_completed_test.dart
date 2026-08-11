@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/errors/exceptions.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
 import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
@@ -287,6 +288,110 @@ void main() {
       reason: 'the actually-targeted parcel must be the one marked '
           'completed, regardless of what index it ended up at.',
     );
+  });
+
+  group('setParcelCompletedWithReconciliation', () {
+    test('behaves exactly like setParcelCompleted on a normal success — no '
+        'reconciliation needed', () async {
+      const Parcel parcel = Parcel(id: 'p-6', holdingId: '106');
+      await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
+
+      final Parcel? updated = await repository
+          .setParcelCompletedWithReconciliation('p-6', completed: true);
+
+      expect(updated, isNotNull);
+      expect(updated!.completedAt, isNotNull);
+      expect(holdingsApi.markCompletedCalls, hasLength(1));
+    });
+
+    test(
+        'a NotFoundException (stale isFieldAdded) reconciles via '
+        'fetchParcelById and retries setParcelCompleted once, succeeding '
+        'transparently — this is the fix for إعادة الفتح\'s "المورد غير '
+        'موجود" bug: the exact same reconcile-and-retry Copy ID already had, '
+        'now shared by both call sites', () async {
+      const Parcel staleParcel = Parcel(
+        id: 'p-stale',
+        holdingId: '107',
+        isFieldAdded: true, // stale — this device thinks it's still added
+      );
+      await repository.loadParcelsForCity('city-1', const <Parcel>[staleParcel]);
+
+      // First markCompleted call (isFieldAdded: true, from the stale local
+      // flag) fails with NotFoundException; refreshParcel's fetchParcelById
+      // finds it under holdings (isFieldAdded: false) instead.
+      holdingsApi.markCompletedError = NotFoundException();
+      holdingsApi.fetchParcelByIdResult = (
+        row: <String, dynamic>{
+          'id': 'p-stale',
+          'holding_id_number': '107',
+          'completed_at': null,
+        },
+        isFieldAdded: false,
+      );
+
+      final Future<Parcel?> pending = repository
+          .setParcelCompletedWithReconciliation('p-stale', completed: true);
+
+      // The retry (after reconciliation) should succeed — clear the error
+      // so the second markCompleted call goes through. Since
+      // setParcelCompletedWithReconciliation awaits synchronously in
+      // sequence (no concurrent races here), clearing before awaiting the
+      // whole thing is safe: the first call already threw and was recorded
+      // as a failed attempt before this line runs.
+      holdingsApi.markCompletedError = null;
+      final Parcel? updated = await pending;
+
+      expect(updated, isNotNull);
+      expect(
+        updated!.completedAt,
+        isNotNull,
+        reason: 'the retry after reconciliation must have actually applied '
+            'the completion, not just silently given up.',
+      );
+    });
+
+    test(
+        'a NotFoundException that still fails after reconciliation propagates '
+        'the second failure to the caller, not a false success', () async {
+      const Parcel parcel = Parcel(id: 'p-still-missing', holdingId: '108');
+      await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
+
+      holdingsApi.markCompletedError = NotFoundException();
+      holdingsApi.fetchParcelByIdResult = null; // reconciliation finds nothing
+
+      await expectLater(
+        repository.setParcelCompletedWithReconciliation(
+          'p-still-missing',
+          completed: true,
+        ),
+        throwsA(isA<NotFoundException>()),
+      );
+    });
+
+    test('a ConflictException is NOT retried — propagates straight through, '
+        'since a genuine conflict would just fail again identically',
+        () async {
+      const Parcel parcel = Parcel(id: 'p-conflict', holdingId: '109');
+      await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
+      holdingsApi.markCompletedError = ConflictException();
+
+      await expectLater(
+        repository.setParcelCompletedWithReconciliation(
+          'p-conflict',
+          completed: true,
+        ),
+        throwsA(isA<ConflictException>()),
+      );
+      expect(
+        holdingsApi.markCompletedCalls,
+        isEmpty,
+        reason: 'markCompletedCalls only records successful (non-throwing) '
+            'calls in this fake — a single throwing attempt with no retry '
+            'confirms setParcelCompletedWithReconciliation did not loop on '
+            'a ConflictException.',
+      );
+    });
   });
 
   group('applyRemoteChange', () {

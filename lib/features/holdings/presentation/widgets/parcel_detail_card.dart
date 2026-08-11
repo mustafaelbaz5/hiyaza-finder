@@ -45,6 +45,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.onCompleted,
     this.isDeleting = false,
     this.isReopening = false,
+    this.onReviewBusyChanged,
   });
 
   final Parcel parcel;
@@ -74,6 +75,15 @@ class ParcelDetailCard extends StatelessWidget {
   /// already-successful review). Falls back to [onFieldChanged] if unset,
   /// so callers that haven't been updated yet keep working.
   final void Function(Parcel updated)? onCompleted;
+
+  /// Reports when [_copyId]'s server write starts/stops being in flight —
+  /// lets `DetailScreen` fold Copy ID's busy window into the same
+  /// `_busyParcelIds` tracking `isDeleting`/`isReopening` already use, so a
+  /// same-parcel Reopen/Delete tap can't race a Copy ID write still in
+  /// flight. The chip's own spinner (driven by [_ReviewIdChipState]'s local
+  /// `_isLoading`) is unaffected — this is purely so the *parent* can see
+  /// the same window, not a replacement for the chip's own feedback.
+  final void Function(bool isBusy)? onReviewBusyChanged;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -146,7 +156,11 @@ class ParcelDetailCard extends StatelessWidget {
                       resolveBorderMatch!(borderText) != null,
             ),
             verticalSpacing(10),
-            _ReviewIdChip(id: parcel.id, onCopy: _copyId),
+            _ReviewIdChip(
+              id: parcel.id,
+              onCopy: _copyId,
+              onBusyChanged: onReviewBusyChanged,
+            ),
             verticalSpacing(10),
             CopyAllButton(onTap: () => _copyAll(context)),
             verticalSpacing(12),
@@ -517,9 +531,19 @@ class ParcelDetailCard extends StatelessWidget {
     }
 
     try {
-      debugPrint('[_copyId] parcelId=${parcel.id} calling setParcelCompleted');
+      debugPrint(
+        '[_copyId] parcelId=${parcel.id} calling '
+        'setParcelCompletedWithReconciliation',
+      );
+      // Reconciles-and-retries once on its own if the RPC's
+      // `p_is_field_added`/id pairing turns out to be stale
+      // (`NotFoundException`) — see
+      // `HoldingsRepository.setParcelCompletedWithReconciliation`'s doc.
+      // `ConflictException`/`TimeoutException` still propagate to the
+      // catches below unchanged, since this card shows its own
+      // action-specific messages for those.
       final Parcel? updated = await getIt<HoldingsRepository>()
-          .setParcelCompleted(parcel.id, completed: true);
+          .setParcelCompletedWithReconciliation(parcel.id, completed: true);
       if (!context.mounted) return;
       final Parcel confirmed = updated ?? parcel.copyWith(completedAt: DateTime.now());
       debugPrint('[_copyId] parcelId=${parcel.id} confirmed reviewed');
@@ -566,58 +590,12 @@ class ParcelDetailCard extends StatelessWidget {
         );
         context.showErrorSnackBar('holdings.detail.review_still_uncertain'.tr());
       }
-    } on NotFoundException catch (error) {
-      // The RPC's `p_is_field_added`/id pairing didn't match any row in the
-      // table it targeted — this device's local dataset believed the
-      // parcel was still in `added_holdings` (`REFACTOR_ROADMAP.md` Phase
-      // 25 follow-up: `Parcel.isFieldAdded` alone can't tell, since it's a
-      // permanent provenance marker; `HoldingsRepository.setParcelCompleted`
-      // now derives the actual table from `Parcel.isCurrentlyInAddedHoldings`
-      // instead — but this branch exists for whenever that's still wrong,
-      // e.g. right after a promotion this device hasn't reconciled yet).
-      // Unlike a timeout, `found: false` means the write definitely did NOT
-      // happen — so once `refreshParcel` corrects the local dataset (via
-      // `applyRemoteChange` inside it, which also fixes
-      // `sourceAddedHoldingId`/`id`), retry the completion once; it reads
-      // `isCurrentlyInAddedHoldings` fresh from the now-corrected dataset.
-      debugPrint(
-        '[_copyId] parcelId=${parcel.id} NotFoundException: $error — '
-        'stale table assumption, reconciling then retrying once',
-      );
-      await getIt<HoldingsRepository>().refreshParcel(parcel.id);
-      if (!context.mounted) return;
-      try {
-        final Parcel? retried = await getIt<HoldingsRepository>()
-            .setParcelCompleted(parcel.id, completed: true);
-        if (!context.mounted) return;
-        final Parcel confirmed =
-            retried ?? parcel.copyWith(completedAt: DateTime.now());
-        debugPrint(
-          '[_copyId] parcelId=${parcel.id} retry after reconciliation succeeded',
-        );
-        (onCompleted ?? onFieldChanged)(confirmed);
-        context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
-      } on ConflictException {
-        if (context.mounted) {
-          context.showErrorSnackBar(
-            'holdings.detail.already_reviewed_elsewhere'.tr(),
-          );
-        }
-      } catch (retryError) {
-        debugPrint(
-          '[_copyId] parcelId=${parcel.id} retry after reconciliation also '
-          'failed: ${retryError.runtimeType}: $retryError',
-        );
-        if (context.mounted) {
-          context.showErrorSnackBar(
-            resolveWriteErrorMessage(
-              retryError,
-              fallback: 'holdings.detail.copy_and_review_failed'.tr(),
-            ),
-          );
-        }
-      }
     } catch (error) {
+      // `NotFoundException` reaching here means
+      // `setParcelCompletedWithReconciliation`'s own reconcile-and-retry
+      // already ran once and STILL got `found: false` — a second stale
+      // attempt, not the common case. `resolveWriteErrorMessage` already
+      // maps it to an accurate message; no further special-casing needed.
       debugPrint(
         '[_copyId] parcelId=${parcel.id} UNCLASSIFIED error '
         '${error.runtimeType}: $error',
@@ -723,13 +701,21 @@ class _AddedByBannerState extends State<_AddedByBanner> {
 /// `setParcelCompleted` is awaiting the server, instead of the silent wait
 /// the user previously had no feedback for at all.
 class _ReviewIdChip extends StatefulWidget {
-  const _ReviewIdChip({required this.id, required this.onCopy});
+  const _ReviewIdChip({
+    required this.id,
+    required this.onCopy,
+    this.onBusyChanged,
+  });
 
   final String id;
 
   /// `ParcelDetailCard._copyId` — already handles its own snackbars/error
   /// classification; this wrapper only needs to know when it starts/ends.
   final Future<void> Function(BuildContext context) onCopy;
+
+  /// See `ParcelDetailCard.onReviewBusyChanged` — forwarded straight
+  /// through, called around the same window as [_isLoading] below.
+  final void Function(bool isBusy)? onBusyChanged;
 
   @override
   State<_ReviewIdChip> createState() => _ReviewIdChipState();
@@ -741,10 +727,12 @@ class _ReviewIdChipState extends State<_ReviewIdChip> {
   Future<void> _handleTap(final BuildContext context) async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
+    widget.onBusyChanged?.call(true);
     try {
       await widget.onCopy(context);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+      widget.onBusyChanged?.call(false);
     }
   }
 

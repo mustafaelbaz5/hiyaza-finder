@@ -30,19 +30,3 @@ extension DetailScreenTabMatch on DetailScreenTab {
       };
 }
 
-/// Display order for the الكل tab: original (imported) parcels first, then
-/// parcels added through the app, with reviewed parcels of either kind
-/// sunk to the very end regardless of origin — a reviewed record is done,
-/// so it shouldn't compete with what still needs attention for the top of
-/// the list.
-int compareParcelsForDisplay(final Parcel a, final Parcel b) {
-  final bool aReviewed = a.completedAt != null;
-  final bool bReviewed = b.completedAt != null;
-  if (aReviewed != bReviewed) return aReviewed ? 1 : -1;
-
-  final bool aAdded = a.isFieldAdded || a.sourceAddedHoldingId != null;
-  final bool bAdded = b.isFieldAdded || b.sourceAddedHoldingId != null;
-  if (aAdded != bAdded) return aAdded ? 1 : -1;
-
-  return 0;
-}

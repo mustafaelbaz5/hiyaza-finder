@@ -443,6 +443,44 @@ void main() {
         expect(fieldChangedResult!.completedAt, isNotNull);
       },
     );
+
+    testWidgets(
+      'onReviewBusyChanged reports true then false around the Copy ID '
+      'write — lets DetailScreen fold this into the same _busyParcelIds '
+      'tracking used for Reopen/Delete, so a same-parcel Reopen tap while '
+      'Copy ID is still in flight can be blocked',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+          feddan: 2,
+        );
+
+        final List<bool> busyEvents = <bool>[];
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) {},
+            onReviewBusyChanged: busyEvents.add,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(busyEvents, <bool>[true, false]);
+      },
+    );
   });
 
   group('Copy ID timeout reconciliation (REFACTOR_ROADMAP.md Phase 25)', () {

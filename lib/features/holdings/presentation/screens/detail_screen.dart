@@ -62,6 +62,24 @@ class _DetailScreenState extends State<DetailScreen>
   bool _isParcelBusy(final String parcelId) =>
       _busyParcelIds.contains(parcelId);
 
+  /// Folds `ParcelDetailCard`'s Copy ID busy window into [_busyParcelIds] —
+  /// see `ParcelDetailCard.onReviewBusyChanged`'s doc. Deliberately does NOT
+  /// set [_busyMessage]/the screen-wide overlay the way delete/reopen/edit
+  /// do: Copy ID already has its own local spinner via `_ReviewIdChip`, and
+  /// this screen only needs to know the window exists so it can disable
+  /// this same parcel's Reopen/Delete for its duration — not to duplicate
+  /// the loading UI itself.
+  void _setReviewBusy(final String parcelId, final bool isBusy) {
+    if (!mounted) return;
+    setState(() {
+      if (isBusy) {
+        _busyParcelIds.add(parcelId);
+      } else {
+        _busyParcelIds.remove(parcelId);
+      }
+    });
+  }
+
   /// Drives the screen-wide [BlockingLoadingOverlay] while any write is in
   /// flight — set to the action-specific message right before the awaited
   /// repository call and cleared in every `finally`, so the message on
@@ -230,6 +248,16 @@ class _DetailScreenState extends State<DetailScreen>
 
   /// Un-marks [parcel] completed — user-initiated, no confirmation dialog,
   /// no snackbar (decision #2: deliberate user-initiated undo).
+  ///
+  /// Goes through [HoldingsRepository.setParcelCompletedWithReconciliation]
+  /// (not the plain [HoldingsRepository.setParcelCompleted] this used to
+  /// call directly) — this parcel's cached `isCurrentlyInAddedHoldings` can
+  /// be stale if it was promoted between `added_holdings`/`holdings`
+  /// server-side after this screen loaded, which previously surfaced as a
+  /// bare "المورد غير موجود" (`NotFoundException`) with no recovery, even
+  /// though `ParcelDetailCard._copyId` already had this exact
+  /// reconcile-and-retry-once handling for the identical failure mode on
+  /// the completion side.
   Future<void> _reopenParcel(final Parcel parcel) async {
     if (_isParcelBusy(parcel.id)) return;
     setState(() {
@@ -237,13 +265,14 @@ class _DetailScreenState extends State<DetailScreen>
       _busyMessage = 'holdings.detail.reopening_in_progress'.tr();
     });
     try {
-      await _repository.setParcelCompleted(parcel.id, completed: false);
+      final Parcel? updated = await _repository
+          .setParcelCompletedWithReconciliation(parcel.id, completed: false);
       if (!mounted) return;
       final int idx =
           _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
       if (idx >= 0) {
         setState(() {
-          _parcels[idx] = _parcels[idx].copyWith(completedAt: null);
+          _parcels[idx] = updated ?? _parcels[idx].copyWith(completedAt: null);
         });
       }
     } catch (error) {
@@ -399,10 +428,13 @@ class _DetailScreenState extends State<DetailScreen>
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
     final DetailScreenTab activeTab =
         DetailScreenTab.values[_tabController.index];
-    final List<Parcel> visibleParcels = _parcels
-        .where((final Parcel p) => activeTab.matches(p))
-        .toList()
-      ..sort(compareParcelsForDisplay);
+    // Deliberately NOT re-sorted by completion state — a parcel keeps its
+    // original position after being reviewed/reopened instead of jumping
+    // elsewhere in the list, so it stays easy to visually track. Combined
+    // with the ValueKey below, this is what stops the card from tearing
+    // down and re-playing its entrance animation on a state-only update.
+    final List<Parcel> visibleParcels =
+        _parcels.where((final Parcel p) => activeTab.matches(p)).toList();
 
     final bool showAddFab = _parcels.isNotEmpty;
 
@@ -460,6 +492,7 @@ class _DetailScreenState extends State<DetailScreen>
                                   (final BuildContext context, final int i) {
                                 final Parcel parcel = visibleParcels[i];
                                 return Padding(
+                                  key: ValueKey<String>(parcel.id),
                                   padding: EdgeInsets.only(bottom: rh(16)),
                                   child: ParcelDetailCard(
                                     parcel: parcel,
@@ -488,6 +521,8 @@ class _DetailScreenState extends State<DetailScreen>
                                     onReopen: () => _reopenParcel(parcel),
                                     isDeleting: _isParcelBusy(parcel.id),
                                     isReopening: _isParcelBusy(parcel.id),
+                                    onReviewBusyChanged: (final bool isBusy) =>
+                                        _setReviewBusy(parcel.id, isBusy),
                                   ),
                                 );
                               },
