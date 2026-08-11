@@ -14,21 +14,28 @@ class CompleteParcelSyncHandler implements SyncOperationHandler {
     final CompleteParcelOperation op = operation as CompleteParcelOperation;
 
     // Reconciles before writing — this operation can end up queued (and
-    // retried) for a parcel someone else (another device, a prior attempt
-    // whose response was lost) already marked reviewed. Retrying blindly
-    // guarantees `markCompleted`'s server-side conflict check rejects it
-    // every single time, which looks to the user like a permanently broken
-    // sync (`لا يوجد اتصال بالإنترنت` was previously shown for this exact
-    // case, misleadingly framing a real conflict as a connectivity
-    // problem). Checking first means: if the server already reflects what
-    // this operation wants, treat it as already-done and let it succeed
-    // (removing itself from the queue) instead of throwing — the eventual
-    // consistency this outbox exists for was already achieved by another
-    // path.
-    final result = await _api?.fetchParcelById(
-      op.parcelId,
-      isFieldAdded: op.isFieldAdded,
-    );
+    // retried) for a parcel that's already in its desired state, for two
+    // different reasons that both surface as a doomed retry loop if not
+    // checked first:
+    //  1. Someone else (another device, a prior attempt whose response was
+    //     lost) already applied the same completed/not-completed value —
+    //     `markCompleted`'s conflict check rejects a redundant write.
+    //  2. `op.isFieldAdded` is stale — the parcel was promoted between
+    //     `added_holdings` and `holdings` after this operation was queued,
+    //     so `markCompleted`'s RPC (which trusts the caller's isFieldAdded
+    //     to pick the table) looks in the wrong one and reports
+    //     `found: false`, surfaced to the user as "couldn't find this
+    //     record" even though the parcel is perfectly fine — just in the
+    //     other table now.
+    // Passing `isFieldAdded: null` (not `op.isFieldAdded`) checks BOTH
+    // tables — deliberately not trusting the same cached flag that may be
+    // the actual cause of the ambiguity being reconciled, mirroring
+    // `HoldingsRepository.refreshParcel`'s identical reasoning. Whatever
+    // table this finds the row in becomes the resolved `isFieldAdded` used
+    // for the eventual write below, correcting the stale value instead of
+    // repeating it.
+    final result = await _api?.fetchParcelById(op.parcelId);
+    final bool resolvedIsFieldAdded = result?.isFieldAdded ?? op.isFieldAdded;
     if (result != null) {
       final bool alreadyCompleted = result.row['completed_at'] != null;
       if (op.completed == alreadyCompleted) {
@@ -43,7 +50,7 @@ class CompleteParcelSyncHandler implements SyncOperationHandler {
 
     await _api?.markCompleted(
       parcelId: op.parcelId,
-      isFieldAdded: op.isFieldAdded,
+      isFieldAdded: resolvedIsFieldAdded,
       completed: op.completed,
       completedAt: op.completedAt,
       completedByUserId: op.completedByUserId,

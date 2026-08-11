@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/presentation/widgets/pending_syncs_sheet.dart';
 import 'package:hiyaza_finder/features/sync/domain/entities/sync_operation.dart';
@@ -43,6 +44,7 @@ void main() {
     runner = SyncRunner()..registerHandler(AddParcelOperation, handler);
     runner.restore(<SyncOperation>[_failedOp()]);
     getIt.registerSingleton<SyncRunner>(runner);
+    getIt.registerLazySingleton<HoldingsRepository>(HoldingsRepository.new);
   });
 
   tearDown(() async {
@@ -96,4 +98,56 @@ void main() {
     expect(runner.operations, isEmpty);
   });
 
+  testWidgets('the tile shows a detail line with the queued-at time',
+      (final tester) async {
+    handler.shouldSucceed = false;
+    await pumpSheet(tester);
+
+    expect(find.textContaining('أُضيف في'), findsOneWidget);
+    expect(find.textContaining('1 محاولة'), findsOneWidget);
+  });
+
+  group('CompleteParcelOperation retry — already-synced messaging', () {
+    late SyncRunner completeRunner;
+    late _ControllableHandler completeHandler;
+
+    CompleteParcelOperation failedCompleteOp() => CompleteParcelOperation(
+          operationId: 'op-complete',
+          createdAt: DateTime.now(),
+          parcelId: 'p1',
+          isFieldAdded: false,
+          completed: true,
+          completedAt: DateTime.now(),
+          completedByUserId: 'user-1',
+        ).withAttempt(error: 'conflict');
+
+    setUp(() async {
+      await getIt.reset();
+      completeHandler = _ControllableHandler();
+      completeRunner = SyncRunner()
+        ..registerHandler(CompleteParcelOperation, completeHandler);
+      completeRunner.restore(<SyncOperation>[failedCompleteOp()]);
+      getIt.registerSingleton<SyncRunner>(completeRunner);
+      getIt.registerLazySingleton<HoldingsRepository>(HoldingsRepository.new);
+    });
+
+    testWidgets(
+        'a successful retry after a prior failure shows the '
+        '"already synced" message instead of the generic success one — '
+        'this is the case where CompleteParcelSyncHandler quietly found '
+        'the server already matched and skipped the write', (final tester) async {
+      completeHandler.shouldSucceed = true;
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('إعادة المحاولة'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(
+        find.text('تم رفع هذا التغيير بالفعل — تمت إزالته من قائمة الانتظار'),
+        findsOneWidget,
+      );
+      expect(find.text('تمت المزامنة بنجاح'), findsNothing);
+    });
+  });
 }

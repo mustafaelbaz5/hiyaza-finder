@@ -69,7 +69,11 @@
       "retry_failed": "Retry failed — check your internet connection",
       "discard": "Discard",
       "discard_confirm": "This removes the item from the queue without uploading it. This can't be undone. Continue?",
-      "discarded": "Item discarded"
+      "discarded": "Item discarded",
+      "queued_at": "Queued {time}",
+      "attempts": "{count} attempts",
+      "already_synced": "This change was already uploaded — removed from the queue",
+      "checking": "Checking..."
     },
     "operation": {
       "edit_holding": "Holding edit",

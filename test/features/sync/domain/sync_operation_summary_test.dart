@@ -128,4 +128,112 @@ void main() {
 
     expect(find.text('تعديل جماعي (1 سجل)'), findsOneWidget);
   });
+
+  group('syncOperationTargetParcel', () {
+    test(
+        'returns null for AddParcelOperation — it already carries the full '
+        'Parcel itself, so callers should read op.parcel directly instead '
+        'of going through this dataset lookup', () {
+      final AddParcelOperation op = AddParcelOperation(
+        operationId: 'op1',
+        createdAt: now,
+        cityId: 'city1',
+        parcel: const Parcel(id: 'p1', holdingId: '101', holderName: 'محمد'),
+        parentHoldingId: null,
+      );
+
+      expect(syncOperationTargetParcel(op, const <Parcel>[]), isNull);
+    });
+
+    test('looks up CompleteParcelOperation.parcelId in the given dataset',
+        () {
+      final CompleteParcelOperation op = CompleteParcelOperation(
+        operationId: 'op4',
+        createdAt: now,
+        parcelId: 'p1',
+        isFieldAdded: false,
+        completed: true,
+        completedAt: now,
+        completedByUserId: 'user1',
+      );
+      const List<Parcel> dataset = <Parcel>[
+        Parcel(id: 'p1', holdingId: '101', holderName: 'سعيد'),
+        Parcel(id: 'p2', holdingId: '102', holderName: 'ياسر'),
+      ];
+
+      final Parcel? target = syncOperationTargetParcel(op, dataset);
+      expect(target?.holderName, 'سعيد');
+    });
+
+    test('returns null when the target parcel is not in the given dataset '
+        '(e.g. a different city is now loaded)', () {
+      final CompleteParcelOperation op = CompleteParcelOperation(
+        operationId: 'op4',
+        createdAt: now,
+        parcelId: 'missing',
+        isFieldAdded: false,
+        completed: true,
+        completedAt: now,
+        completedByUserId: 'user1',
+      );
+
+      expect(syncOperationTargetParcel(op, const <Parcel>[]), isNull);
+    });
+  });
+
+  group('syncOperationDetailLine', () {
+    testWidgets(
+        'includes the holder name, holding id, queued-at time, and attempt '
+        'count', (final tester) async {
+      final CompleteParcelOperation op = CompleteParcelOperation(
+        operationId: 'op4',
+        createdAt: DateTime(2026, 8, 6, 14, 30),
+        parcelId: 'p1',
+        isFieldAdded: false,
+        completed: true,
+        completedAt: now,
+        completedByUserId: 'user1',
+      ).withAttempt(error: 'conflict');
+      const List<Parcel> dataset = <Parcel>[
+        Parcel(id: 'p1', holdingId: '101', holderName: 'سعيد'),
+      ];
+
+      await pumpLocalized(
+        tester,
+        Builder(
+          builder: (final BuildContext context) =>
+              Text(syncOperationDetailLine(op, dataset)),
+        ),
+      );
+
+      expect(find.textContaining('سعيد'), findsOneWidget);
+      expect(find.textContaining('#101'), findsOneWidget);
+      expect(find.textContaining('2026-08-06 14:30'), findsOneWidget);
+      expect(find.textContaining('1 محاولة'), findsOneWidget);
+    });
+
+    testWidgets('falls back to "unnamed" and omits the holding id when the '
+        'target parcel cannot be found', (final tester) async {
+      final CompleteParcelOperation op = CompleteParcelOperation(
+        operationId: 'op4',
+        createdAt: now,
+        parcelId: 'missing',
+        isFieldAdded: false,
+        completed: true,
+        completedAt: now,
+        completedByUserId: 'user1',
+      );
+
+      await pumpLocalized(
+        tester,
+        Builder(
+          builder: (final BuildContext context) =>
+              Text(syncOperationDetailLine(op, const <Parcel>[])),
+        ),
+      );
+
+      expect(find.textContaining('بدون اسم'), findsOneWidget);
+      expect(find.textContaining('#'), findsNothing);
+    });
+  });
 }

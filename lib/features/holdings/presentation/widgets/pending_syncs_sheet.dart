@@ -10,6 +10,8 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../sync/domain/entities/sync_operation.dart';
 import '../../../sync/domain/services/sync_runner.dart';
+import '../../data/repository/holdings_repository.dart';
+import '../../domain/entities/parcel.dart';
 import 'sync_operation_summary.dart';
 
 /// Shows the outbox's queued/parked writes (`REFACTOR_ROADMAP.md` Phase 9
@@ -108,6 +110,7 @@ class _PendingSyncsSheet extends StatelessWidget {
                           operation: op,
                           onRetry: () => syncRunner.retry(op.operationId),
                           onDiscard: () => _confirmDiscard(context, syncRunner, op),
+                          parcels: getIt<HoldingsRepository>().parcels,
                         ).animate(delay: (i * 25).ms).fadeIn(duration: 180.ms),
                     ],
                   );
@@ -165,11 +168,17 @@ class _PendingSyncTile extends StatefulWidget {
     required this.operation,
     required this.onRetry,
     required this.onDiscard,
+    required this.parcels,
   });
 
   final SyncOperation operation;
   final Future<bool> Function() onRetry;
   final VoidCallback onDiscard;
+
+  /// The current dataset — used only to enrich the detail line (holder
+  /// name, رقم الحيازة) for operation types that carry just an id, see
+  /// `syncOperationDetailLine`.
+  final List<Parcel> parcels;
 
   @override
   State<_PendingSyncTile> createState() => _PendingSyncTileState();
@@ -182,12 +191,24 @@ class _PendingSyncTileState extends State<_PendingSyncTile> {
 
   Future<void> _handleRetry() async {
     if (_isRetrying) return;
+    // `widget.operation` is read before the retry mutates the queue — used
+    // below to tell "this had already failed at least once before, and now
+    // quietly succeeded" (almost always the reconciliation pre-check in
+    // `CompleteParcelSyncHandler` finding the server already matches what
+    // this write wanted, e.g. someone else already completed it) apart from
+    // "this is the very first attempt and it just worked normally".
+    final bool hadPriorFailure = widget.operation.attempts > 0;
     setState(() => _isRetrying = true);
     final bool succeeded = await widget.onRetry();
     if (!mounted) return;
     setState(() => _isRetrying = false);
     if (succeeded) {
-      context.showSuccessSnackBar('sync.details.retry_succeeded'.tr());
+      context.showSuccessSnackBar(
+        (hadPriorFailure && widget.operation is CompleteParcelOperation
+                ? 'sync.details.already_synced'
+                : 'sync.details.retry_succeeded')
+            .tr(),
+      );
     } else {
       // `widget.onRetry` mutates the same SyncRunner queue this tile's
       // `operation` was built from, so by the time the awaited retry
@@ -239,6 +260,12 @@ class _PendingSyncTileState extends State<_PendingSyncTile> {
                 ),
               ),
             ],
+          ),
+          verticalSpacing(4),
+          Text(
+            syncOperationDetailLine(widget.operation, widget.parcels),
+            style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+            textAlign: TextAlign.right,
           ),
           if (_isFailed) ...[
             verticalSpacing(6),
