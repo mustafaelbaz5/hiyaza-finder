@@ -62,6 +62,7 @@ class CityPickerCubit extends Cubit<CityPickerState> {
         administration: snapshot.administration,
         associationType: snapshot.associationType,
         associationSubtype: snapshot.associationSubtype,
+        dataVersion: snapshot.dataVersion,
       );
       return snapshot;
     } on AppException catch (e) {

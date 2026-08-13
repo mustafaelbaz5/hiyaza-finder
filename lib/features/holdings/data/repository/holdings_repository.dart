@@ -160,6 +160,13 @@ class HoldingsRepository
   /// dataset. [associationType]/[associationSubtype] come straight from the
   /// `CitySnapshot` (itself read from `cities.association_type`/
   /// `association_subtype`) — never re-derived from [parcels].
+  ///
+  /// [dataVersion], when provided, is remembered as [_activeDataVersion] so
+  /// [syncNow] can compare it against the server's current version before
+  /// deciding whether a full re-download is actually needed (see that
+  /// method's doc comment) — every call site already has a `CitySnapshot`
+  /// in hand at the point it calls this, so threading the version through
+  /// costs nothing extra there.
   Future<List<Parcel>> loadParcelsForCity(
     final String cityId,
     final List<Parcel> parcels, {
@@ -168,6 +175,7 @@ class HoldingsRepository
     final String? administration,
     final AssociationType? associationType,
     final String? associationSubtype,
+    final int? dataVersion,
   }) async {
     final List<Parcel> result = await _dataset.adopt(
       cityId,
@@ -178,6 +186,7 @@ class HoldingsRepository
       associationType: associationType,
       associationSubtype: associationSubtype,
     );
+    if (dataVersion != null) _activeDataVersion = dataVersion;
     // Realtime tracks exactly one active city, same as this repository —
     // re-subscribing here (rather than at the CityPickerCubit call site)
     // means it also fires for a cache-loaded city at app start, not just a
@@ -185,6 +194,13 @@ class HoldingsRepository
     realtimeSyncService?.subscribeToCity(cityId);
     return result;
   }
+
+  /// The data_version the active city's dataset was last loaded/refreshed
+  /// at, as of the most recent [loadParcelsForCity] call that passed one —
+  /// `null` until then (e.g. tests that call [loadParcelsForCity] without
+  /// it). Used only to decide whether [syncNow] can skip a redundant
+  /// re-download; never gates a write.
+  int? _activeDataVersion;
 
   /// The active city's جمعية system, read from `cities.association_type` —
   /// `null` until a city is loaded or if the dashboard hasn't set it yet.
@@ -221,6 +237,14 @@ class HoldingsRepository
   /// queue to flush; this simply re-syncs the local cache with the server,
   /// same "re-fetch, then adopt" shape as `HomeCubit.refreshActiveCity`.
   /// No-op if no city is active.
+  ///
+  /// Skips the actual re-download when the server's `data_version` hasn't
+  /// advanced past [_activeDataVersion] — otherwise every pull-to-refresh
+  /// re-transfers the entire city (thousands of rows) even when nothing
+  /// changed, which is exactly what was driving this project's Supabase
+  /// egress usage before this guard existed. A write (add/edit/delete/
+  /// complete) never goes through this path at all — those always call
+  /// straight into `_syncService`/`_syncRunner` and are never skipped.
   Future<void> syncNow() async {
     final String? cityId = _dataset.activeCityId;
     final String? cityName = _dataset.activeCityName;
@@ -228,6 +252,9 @@ class HoldingsRepository
 
     final CityRepository cityRepository = GetIt.instance<CityRepository>();
     final int remoteVersion = await cityRepository.remoteDataVersion(cityId);
+    final int? localVersion = _activeDataVersion;
+    if (localVersion != null && remoteVersion <= localVersion) return;
+
     final City city = City(
       id: cityId,
       name: cityName,
@@ -247,6 +274,7 @@ class HoldingsRepository
       administration: fresh.administration,
       associationType: fresh.associationType,
       associationSubtype: fresh.associationSubtype,
+      dataVersion: fresh.dataVersion,
     );
   }
 

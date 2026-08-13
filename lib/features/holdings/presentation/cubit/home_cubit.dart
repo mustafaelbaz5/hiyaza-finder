@@ -56,6 +56,7 @@ class HomeCubit extends Cubit<HomeState> {
         administration: snapshot.administration,
         associationType: snapshot.associationType,
         associationSubtype: snapshot.associationSubtype,
+        dataVersion: snapshot.dataVersion,
       );
       return snapshot;
     } catch (_) {
@@ -103,6 +104,15 @@ class HomeCubit extends Cubit<HomeState> {
 
     final int remoteVersion =
         await _cityRepository.remoteDataVersion(current.cityId);
+    if (remoteVersion <= current.dataVersion) {
+      // Nothing changed server-side since the last download — a full
+      // re-fetch here would just re-transfer the same rows for no reason
+      // (this was previously unconditional and a significant driver of
+      // egress: every pull-to-refresh/banner tap re-downloaded the whole
+      // city regardless of whether anything actually changed).
+      emit(state.copyWith(isCityDataStale: false));
+      return;
+    }
     final CitySnapshot fresh = await _cityRepository.downloadCity(
       City(
         id: current.cityId,
@@ -128,6 +138,7 @@ class HomeCubit extends Cubit<HomeState> {
       administration: fresh.administration,
       associationType: fresh.associationType,
       associationSubtype: fresh.associationSubtype,
+      dataVersion: fresh.dataVersion,
     );
     _activeCitySnapshot = fresh;
     emit(state.copyWith(isCityDataStale: false));
