@@ -122,7 +122,8 @@ class SupabaseCityDataSource {
 
       final Map<String, int> countByHoldingId = <String, int>{
         for (final Map<String, dynamic> row in countRows)
-          row['holding_id_number'] as String: row['holdings_count'] as int,
+          if (row['holding_id_number'] != null)
+            row['holding_id_number'] as String: row['holdings_count'] as int,
       };
 
       final Map<String, Map<String, dynamic>> latestEditByHoldingId =

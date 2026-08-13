@@ -106,6 +106,25 @@ class HoldingsApi {
         'created_by': createdByUserId,
       }).select('promoted_holding_id').timeout(_requestTimeout);
       return rows.isEmpty ? null : rows.first['promoted_holding_id'] as String?;
+    } on PostgrestException catch (error) {
+      // `id`/`client_id` is this exact retry's own idempotency key (see
+      // comment above) — a 23505 unique violation on it means a previous
+      // attempt's INSERT already committed server-side and only the
+      // response was lost (e.g. connection dropped right after commit).
+      // Treat that as the success it actually is instead of surfacing a
+      // "duplicate key" error to the user on what is, from their
+      // perspective, a normal sync retry.
+      if (error.code == '23505') {
+        final List<Map<String, dynamic>> existing = await _client
+            .from('added_holdings')
+            .select('promoted_holding_id')
+            .eq('id', id)
+            .timeout(_requestTimeout);
+        if (existing.isNotEmpty) {
+          return existing.first['promoted_holding_id'] as String?;
+        }
+      }
+      ErrorHandler.handleException(error);
     } catch (error) {
       ErrorHandler.handleException(error);
     }
@@ -139,6 +158,7 @@ class HoldingsApi {
           .from('holdings')
           .select()
           .eq('city_id', cityId)
+          .eq('is_stale', false)
           .or('holding_id_number.eq.$query,holder_name.ilike.%$query%')
           .limit(20)
           .timeout(_requestTimeout);
