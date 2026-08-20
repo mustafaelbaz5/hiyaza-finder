@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import '../data/repo/holdings_repository.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
