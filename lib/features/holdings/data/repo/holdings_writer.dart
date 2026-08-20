@@ -1,7 +1,7 @@
 
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_edit_outcome.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/bulk_edit_outcome.dart';
+import '../model/bulk_editable_field.dart';
+import '../model/parcel.dart';
 
 /// Write-side contract for holdings data, kept separate from
 /// [HoldingsReader] (interface segregation) — screens that only edit

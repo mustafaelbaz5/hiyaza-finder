@@ -1,28 +1,23 @@
 import 'package:get_it/get_it.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 
-import '../../../features/cities/data/city_repository_impl.dart';
-import '../../../features/cities/data/city_snapshot_cache.dart';
-import '../../../features/cities/data/crop_type_repository_impl.dart';
-import '../../../features/cities/data/supabase_city_data_source.dart';
-import '../../../features/cities/domain/repositories/city_repository.dart';
-import '../../../features/cities/domain/repositories/crop_type_repository.dart';
-import '../../../features/cities/presentation/cubit/city_picker_cubit.dart';
-import '../../../features/holdings/data/repository/holdings_repository.dart';
+import '../../../features/cities/data/local/city_snapshot_cache.dart';
+import '../../../features/cities/data/remote/city_remote_ds.dart';
+import '../../../features/cities/data/repo/city_repo.dart';
+import '../../../features/cities/data/repo/city_repo_impl.dart';
+import '../../../features/cities/logic/cubit/city_picker_cubit.dart';
+import '../../../features/holdings/data/repo/holdings_repository.dart';
 import '../../storage/key_value_store.dart';
 
 void registerCitiesModule(final GetIt getIt) {
-  getIt.registerLazySingleton<SupabaseCityDataSource>(
-    () => SupabaseCityDataSource(Supabase.instance.client),
+  getIt.registerLazySingleton<CityRemoteDataSource>(
+    () => CityRemoteDataSource(getIt<http.Client>()),
   );
   getIt.registerLazySingleton<CitySnapshotCache>(CitySnapshotCache.new);
-  getIt.registerLazySingleton<CropTypeRepository>(
-    () => CropTypeRepositoryImpl(Supabase.instance.client),
-  );
 
-  getIt.registerLazySingleton<CityRepository>(
-    () => CityRepositoryImpl(
-      dataSource: getIt<SupabaseCityDataSource>(),
+  getIt.registerLazySingleton<CityRepo>(
+    () => CityRepoImpl(
+      dataSource: getIt<CityRemoteDataSource>(),
       cache: getIt<CitySnapshotCache>(),
       keyValueStore: getIt<KeyValueStore>(),
     ),
@@ -31,6 +26,6 @@ void registerCitiesModule(final GetIt getIt) {
   // Factory, not a singleton — a fresh cubit (fresh loading state) each
   // time the city picker screen opens.
   getIt.registerFactory<CityPickerCubit>(
-    () => CityPickerCubit(getIt<CityRepository>(), getIt<HoldingsRepository>()),
+    () => CityPickerCubit(getIt<CityRepo>(), getIt<HoldingsRepository>()),
   );
 }

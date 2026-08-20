@@ -1,25 +1,25 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/crop_type/ui/widgets/crop_type_picker.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/picker_row.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/section_card.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/specify_other_picker.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/status_summary_cards.dart';
+import '../../crop_type/ui/widgets/crop_type_picker.dart';
 
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/errors/error_message_resolver.dart';
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
-import '../../../../core/widgets/screen_header.dart';
-import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import '../../domain/entities/bulk_edit_outcome.dart';
-import '../../domain/entities/bulk_editable_field.dart';
-import '../../domain/entities/parcel.dart';
-import '../../data/repository/holdings_repository.dart';
+import '../../../core/di/dependency_injection.dart';
+import '../../../core/errors/error_message_resolver.dart';
+import '../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_text_styles.dart';
+import '../../../core/utils/extensions/context_ext.dart';
+import '../../../core/utils/spacing.dart';
+import '../../../core/widgets/custom_text_button.dart';
+import '../../../core/widgets/screen_header.dart';
+import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../data/model/bulk_edit_outcome.dart';
+import '../data/model/bulk_editable_field.dart';
+import '../data/model/parcel.dart';
+import '../data/repo/holdings_repository.dart';
+import 'widgets/picker_row.dart';
+import 'widgets/section_card.dart';
+import 'widgets/specify_other_picker.dart';
+import 'widgets/status_summary_cards.dart';
 
 /// Localized display label for a [BulkEditableField] — kept here (UI layer)
 /// rather than as a `.label` getter on the enum itself, since

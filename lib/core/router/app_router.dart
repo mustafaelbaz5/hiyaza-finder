@@ -5,22 +5,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/presentation/about_screen.dart';
-import 'package:hiyaza_finder/features/auth/presentation/screens/login_screen.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
-import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
-import 'package:hiyaza_finder/features/cities/presentation/cubit/city_picker_cubit.dart';
-import 'package:hiyaza_finder/features/cities/presentation/screens/city_picker_screen.dart';
-import 'package:hiyaza_finder/features/cities/presentation/screens/city_tools_screen.dart';
-import 'package:hiyaza_finder/features/cities/presentation/screens/crop_type_settings_screen.dart';
-import 'package:hiyaza_finder/features/cities/presentation/screens/manage_cities_screen.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/cubit/home_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/screens/add_record_screen.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/screens/detail_screen.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/screens/file_status_screen.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/screens/home_screen.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/screens/missing_holding_id_screen.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
+import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
+import 'package:hiyaza_finder/features/cities/logic/cubit/city_picker_cubit.dart';
+import 'package:hiyaza_finder/features/cities/ui/city_picker_screen.dart';
+import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
+import 'package:hiyaza_finder/features/cities/ui/manage_cities_screen.dart';
+import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/detail_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/file_status_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/home_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -29,8 +28,6 @@ class AppRouter {
     switch (settings.name) {
       case Routes.aboutScreen:
         return _buildRoute(const AboutScreen(), settings);
-      case Routes.login:
-        return _buildRoute(const LoginScreen(), settings);
       case Routes.cityPicker:
         return _buildRoute<CitySnapshot>(
           BlocProvider<CityPickerCubit>(
@@ -43,7 +40,7 @@ class AppRouter {
         return _buildRoute(
           BlocProvider<HomeCubit>(
             create: (final _) =>
-                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepository>())..init(),
+                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepo>())..init(),
             child: const HomeScreen(),
           ),
           settings,

@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Pure merge logic for the "original parcel + saved edit snapshot" overlay
 /// pattern: given a freshly parsed [Parcel] and a saved

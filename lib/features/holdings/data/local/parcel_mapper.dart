@@ -1,6 +1,6 @@
 
 
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Converts one raw `holdings` table row (Postgrest's
 /// `Map&lt;String, dynamic&gt;` shape, snake_case columns) into the base

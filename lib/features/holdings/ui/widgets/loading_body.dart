@@ -1,15 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
-import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_state.dart';
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/custom_text_form_.dart';
+import '../../data/local/holding_search_service.dart';
+import '../../data/model/parcel.dart';
+import '../../data/repo/holdings_repository.dart';
+import '../../logic/cubit/home_cubit.dart';
+import '../../logic/cubit/home_state.dart';
+import '../add_record_screen.dart';
+
+import 'file_info_card.dart';
+import 'recommendation_list.dart';
 
 class LoadingBody extends StatelessWidget {
   const LoadingBody({super.key});
@@ -26,8 +32,9 @@ class LoadingBody extends StatelessWidget {
 /// Search bar (and the file-info card above it) stay pinned at the top —
 /// only the results list below scrolls — so the user never has to scroll
 /// up just to search again.
-class _LoadedBody extends StatefulWidget {
-  const _LoadedBody({
+class LoadedBody extends StatefulWidget {
+  const LoadedBody({
+    super.key,
     required this.state,
     required this.controller,
     required this.cubit,
@@ -46,10 +53,10 @@ class _LoadedBody extends StatefulWidget {
   final VoidCallback onChangeCity;
 
   @override
-  State<_LoadedBody> createState() => _LoadedBodyState();
+  State<LoadedBody> createState() => LoadedBodyState();
 }
 
-class _LoadedBodyState extends State<_LoadedBody> {
+class LoadedBodyState extends State<LoadedBody> {
   void _openDetail(final BuildContext context, final SearchResult result) {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
     context.pushNamed(

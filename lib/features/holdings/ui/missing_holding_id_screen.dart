@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/arabic_normalizer.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/basin_filter_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/recommendation_tile.dart';
+import '../data/local/arabic_normalizer.dart';
+import '../data/local/holding_search_service.dart';
+import '../data/model/parcel.dart';
+import '../data/repo/holdings_repository.dart';
+import 'widgets/basin_filter_row.dart';
+import 'widgets/recommendation_tile.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';

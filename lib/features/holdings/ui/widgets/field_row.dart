@@ -1,7 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/tile_icon_button.dart';
+import 'tile_icon_button.dart';
 
 
 import '../../../../core/themes/app_colors.dart';

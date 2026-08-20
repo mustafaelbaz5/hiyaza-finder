@@ -1,8 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
 
 
 /// A boolean-valued sibling to [FieldRow] — same tile styling, but the

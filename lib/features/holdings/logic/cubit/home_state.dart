@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../../data/local/holding_search_service.dart';
+import '../../data/model/parcel.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
 

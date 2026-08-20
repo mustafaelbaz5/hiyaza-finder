@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 import '../../../cities/data/model/association_type.dart';
 

@@ -1,5 +1,5 @@
 
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../../../holdings/data/model/parcel.dart';
 
 import 'association_type.dart';
 

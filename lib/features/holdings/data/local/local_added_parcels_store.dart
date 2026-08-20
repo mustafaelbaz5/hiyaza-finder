@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 import '../../../../core/storage/key_value_store.dart';
 

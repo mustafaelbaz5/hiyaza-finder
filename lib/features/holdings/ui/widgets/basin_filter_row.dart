@@ -1,7 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
+import '../../../../core/utils/spacing.dart';
+
+import 'basin_chip.dart';
 
 class BasinFilterRow extends StatelessWidget {
   const BasinFilterRow({
@@ -23,14 +24,14 @@ class BasinFilterRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         reverse: true,
         children: [
-          _BasinChip(
+          BasinChip(
             label: 'cities.tools.missing_holding_id.filter_all_basins'.tr(),
             isSelected: selected == null,
             onTap: () => onChanged(null),
           ),
           for (final String basin in basins) ...[
             horizontalSpacing(8),
-            _BasinChip(
+            BasinChip(
               label: basin,
               isSelected: selected == basin,
               onTap: () => onChanged(basin),

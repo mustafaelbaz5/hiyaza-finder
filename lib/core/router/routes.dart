@@ -1,6 +1,5 @@
 class Routes {
   static const String aboutScreen = '/aboutScreen';
-  static const String login = '/login';
   static const String cityPicker = '/cityPicker';
   static const String home = '/home';
   static const String holdingDetail = '/holdingDetail';

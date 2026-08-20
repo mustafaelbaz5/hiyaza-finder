@@ -1,7 +1,7 @@
 import 'dart:async' as async_lib;
 import 'dart:io';
 
-import 'package:hiyaza_finder/core/errors/failure.dart';
+import 'failure.dart';
 
 import 'exceptions.dart';
 

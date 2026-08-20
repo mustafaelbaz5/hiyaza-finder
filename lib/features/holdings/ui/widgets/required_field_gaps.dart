@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 
-import '../../domain/entities/parcel.dart';
+import '../../data/model/parcel.dart';
 
 /// One localized line per required field [parcel] is still missing, in the
 /// same order as [Parcel.hasRequiredFieldsFilled]'s checks. Shared by

@@ -1,15 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/choice_dialog.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../data/local/field_change_tracker.dart';
+import '../../data/model/parcel.dart';
+import 'field_row.dart';
+import 'toggle_field_row.dart';
 
 
 /// Collapsed-by-default section for the less-frequently-needed fields

@@ -1,5 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../../data/model/parcel.dart';
 
 /// The details screen's tab dimensions (`REFACTOR_ROADMAP.md` Phase 11
 /// §11) — exactly three, replacing the previous six-option filter-chip row

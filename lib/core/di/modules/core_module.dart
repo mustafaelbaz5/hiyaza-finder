@@ -1,11 +1,11 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
+import 'package:http/http.dart' as http;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../networking/connection_quality_service.dart';
 import '../../networking/network_info.dart';
 import '../../service/secure_storage.dart';
-import '../../service/voice_search_service.dart';
 import '../../storage/key_value_store.dart';
 
 /// Hosts [NetworkInfo] checks for reachability. Checks two well-known,
@@ -54,5 +54,5 @@ Future<void> registerCoreModule(final GetIt getIt) async {
     () => ConnectionQualityService(getIt()),
   );
 
-  getIt.registerLazySingleton<VoiceSearchService>(VoiceSearchService.new);
+  getIt.registerLazySingleton<http.Client>(http.Client.new);
 }

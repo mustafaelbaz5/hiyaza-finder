@@ -1,9 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/detail_screen_header.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_detail_card.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_status_filter.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
@@ -13,8 +10,11 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
-
+import '../data/model/parcel.dart';
 import 'add_record_screen.dart';
+import 'widgets/detail_screen_header.dart';
+import 'widgets/parcel_detail_card.dart';
+import 'widgets/parcel_status_filter.dart';
 
 /// Full record for one holding. If the holding has multiple parcels they
 /// are all stacked in one scrollable view, each with its own compass and
@@ -134,7 +134,8 @@ class _DetailScreenState extends State<DetailScreen>
             .cast<Parcel?>()
             .firstWhere((final Parcel? c) => c?.id == p.id, orElse: () => null);
         if (fresh == null) continue;
-        final List<Parcel> retry = _repository.parcelsForHolding(fresh.groupKey);
+        final List<Parcel> retry =
+            _repository.parcelsForHolding(fresh.groupKey);
         debugPrint(
           '[DetailScreen] tried parcel id=${p.id}, current groupKey='
           '${fresh.groupKey} (was ${p.groupKey}) → ${retry.length} results',
@@ -197,8 +198,8 @@ class _DetailScreenState extends State<DetailScreen>
       _busyMessage = 'holdings.detail.reopening_in_progress'.tr();
     });
     try {
-      final Parcel? updated = await _repository
-          .setParcelCompleted(parcel.id, completed: false);
+      final Parcel? updated =
+          await _repository.setParcelCompleted(parcel.id, completed: false);
       if (!mounted) return;
       final int idx =
           _parcels.indexWhere((final Parcel p) => p.id == parcel.id);

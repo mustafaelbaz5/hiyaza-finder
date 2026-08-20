@@ -1,6 +1,6 @@
-import 'package:hiyaza_finder/features/holdings/data/local/arabic_normalizer.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'arabic_normalizer.dart';
+import 'holding_search_service.dart';
+import '../model/parcel.dart';
 import 'border_name_index.dart';
 
 /// Pure read-side queries over an in-memory parcel list: search, basin

@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import '../../../holdings/data/repo/holdings_repository.dart';
 
 import '../../../../core/errors/exceptions.dart';
 

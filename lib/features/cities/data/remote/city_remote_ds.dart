@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edit_overlay.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_mapper.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../../../holdings/data/local/parcel_edit_overlay.dart';
+import '../../../holdings/data/local/parcel_mapper.dart';
+import '../../../holdings/data/model/parcel.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/config/app_config.dart';

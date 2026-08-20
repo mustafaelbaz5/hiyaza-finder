@@ -2,13 +2,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/area_calculator.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/clipboard_formatter.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart';
+import '../../../../core/router/routes.dart';
+import '../../data/local/area_calculator.dart';
+import '../../data/local/clipboard_formatter.dart';
+import '../../data/local/field_change_tracker.dart';
+import '../../data/model/parcel.dart';
+import '../../data/repo/holdings_repository.dart';
+import 'see_more_section.dart';
 
 
 import '../../../../core/di/dependency_injection.dart';
@@ -555,43 +555,13 @@ class ParcelDetailCard extends StatelessWidget {
   }
 }
 
-/// The single "added" badge (`REFACTOR_ROADMAP.md` Phase 11 §12) — resolves
-/// [Parcel.createdBy] to an email via `HoldingsRepository.resolveCreatorEmails`
-/// (cached, so repeated cards for the same creator only hit the network
-/// once) and shows it as a third line once known. Renders the banner
-/// immediately without waiting on the lookup — the creator line simply
-/// appears once resolved, never blocking the rest of the card.
-class _AddedByBanner extends StatefulWidget {
+/// The single "added" badge — the app no longer has a server-side profile
+/// table to resolve [Parcel.createdBy] against, so this shows the badge
+/// without a creator line.
+class _AddedByBanner extends StatelessWidget {
   const _AddedByBanner({required this.parcel});
 
   final Parcel parcel;
-
-  @override
-  State<_AddedByBanner> createState() => _AddedByBannerState();
-}
-
-class _AddedByBannerState extends State<_AddedByBanner> {
-  String? _creatorEmail;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolve();
-  }
-
-  @override
-  void didUpdateWidget(final _AddedByBanner oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.parcel.createdBy != widget.parcel.createdBy) _resolve();
-  }
-
-  Future<void> _resolve() async {
-    final String? createdBy = widget.parcel.createdBy;
-    if (createdBy == null) return;
-    final Map<String, String> emails =
-        await getIt<HoldingsRepository>().resolveCreatorEmails([createdBy]);
-    if (mounted) setState(() => _creatorEmail = emails[createdBy]);
-  }
 
   @override
   Widget build(final BuildContext context) {
@@ -600,9 +570,7 @@ class _AddedByBannerState extends State<_AddedByBanner> {
       label: 'holdings.detail.added_badge'.tr(),
       subtitle: 'holdings.detail.added_badge_hint'.tr(),
       color: AppColors.blue200,
-      creatorLine: _creatorEmail == null
-          ? null
-          : 'holdings.detail.added_by'.tr(namedArgs: {'email': _creatorEmail!}),
+      creatorLine: null,
     );
   }
 }

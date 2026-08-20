@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import '../../data/local/holding_search_service.dart';
+import '../../data/model/parcel.dart';
+import '../../data/repo/holdings_repository.dart';
 
 import '../../../cities/data/model/city_snapshot.dart';
 import '../../../cities/data/repo/city_repo.dart';

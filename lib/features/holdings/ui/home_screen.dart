@@ -1,29 +1,21 @@
 import 'dart:async';
 
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_state.dart';
-import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/basin_filter_sheet.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/empty_body.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/error_body.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/home_top_bar.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/loading_body.dart';
+import '../../cities/data/model/city_snapshot.dart';
+import '../data/repo/holdings_repository.dart';
+import '../logic/cubit/home_cubit.dart';
+import '../logic/cubit/home_state.dart';
+import 'widgets/basin_filter_sheet.dart';
+import 'widgets/empty_body.dart';
+import 'widgets/error_body.dart';
+import 'widgets/home_top_bar.dart';
+import 'widgets/loading_body.dart';
 
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/router/routes.dart';
-import '../../../../core/settings/ui/settings_sheet.dart';
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_form_.dart';
+import '../../../core/di/dependency_injection.dart';
+import '../../../core/router/routes.dart';
+import '../../../core/settings/ui/settings_sheet.dart';
+import '../../../core/utils/extensions/context_ext.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -119,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             state: state,
                             onPickFile: () => _openCityPicker(cubit),
                           ),
-                        HomeStatus.loaded => _LoadedBody(
+                        HomeStatus.loaded => LoadedBody(
                             state: state,
                             controller: _controller,
                             cubit: cubit,

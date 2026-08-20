@@ -1,6 +1,6 @@
 
-import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../local/holding_search_service.dart';
+import '../model/parcel.dart';
 
 /// Read-side contract for holdings data, kept separate from
 /// [HoldingsWriter] (interface segregation) — a widget that only searches

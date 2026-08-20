@@ -1,28 +1,29 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/crop_type/ui/widgets/crop_type_picker.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/area_calculator.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/add_record_header.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_edit_dialogs.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/required_field_gaps.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/specify_other_picker.dart';
+import '../../crop_type/ui/widgets/crop_type_picker.dart';
+import '../data/local/area_calculator.dart';
+import '../data/local/field_change_tracker.dart';
+import '../data/model/parcel.dart';
+import '../data/repo/holdings_repository.dart';
+import 'widgets/add_record_header.dart';
+import 'widgets/field_edit_dialogs.dart';
+import 'widgets/field_row.dart';
+import 'widgets/required_field_gaps.dart';
+import 'widgets/responsive_fields_wrap.dart';
+import 'widgets/specify_other_picker.dart';
+import 'widgets/toggle_field_row.dart';
 
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/errors/error_message_resolver.dart';
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
-import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
-import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../core/di/dependency_injection.dart';
+import '../../../core/errors/error_message_resolver.dart';
+import '../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_text_styles.dart';
+import '../../../core/utils/extensions/context_ext.dart';
+import '../../../core/utils/spacing.dart';
+import '../../../core/widgets/custom_text_button.dart';
+import '../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
+import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 
 
 /// Navigation arguments for the add-record route.

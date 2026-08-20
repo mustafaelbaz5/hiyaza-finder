@@ -1,6 +1,6 @@
 
 
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Builds the `added_holdings` insert shape (snake_case columns) from a
 /// [Parcel] built in the add-person/add-parcel form. Excludes columns the

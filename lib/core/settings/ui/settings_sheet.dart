@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../features/auth/domain/entities/app_user.dart';
-import '../../../features/auth/presentation/cubit/session_cubit.dart';
 import '../../router/routes.dart';
 import '../../themes/app_colors.dart';
 import '../../themes/app_text_styles.dart';
@@ -29,7 +27,6 @@ class _SettingsSheet extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final AppUser? user = context.read<SessionCubit>().state.user;
 
     return SafeArea(
       child: Container(
@@ -76,10 +73,6 @@ class _SettingsSheet extends StatelessWidget {
                   ),
                 ],
               ),
-              if (user != null) ...[
-                verticalSpacing(16),
-                _UserInfoCard(user: user),
-              ],
               verticalSpacing(24),
               BlocBuilder<AppSettingsCubit, AppSettingsState>(
                 builder: (final BuildContext context, final AppSettingsState state) {
@@ -147,84 +140,11 @@ class _SettingsSheet extends StatelessWidget {
                   context.pushNamed(Routes.aboutScreen);
                 },
               ),
-              verticalSpacing(10),
-              _SettingsRow(
-                icon: Icons.logout_rounded,
-                iconColor: AppColors.red200,
-                label: 'auth.sign_out'.tr(),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.read<SessionCubit>().signOut();
-                  context.pushNamedAndRemoveAll(Routes.login);
-                },
-              ),
             ],
           ),
         ),
       ),
     ).animate().fadeIn(duration: 200.ms);
-  }
-}
-
-class _UserInfoCard extends StatelessWidget {
-  const _UserInfoCard({required this.user});
-
-  final AppUser user;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary50.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.person_rounded,
-              color: AppColors.primary200,
-            ),
-          ),
-          horizontalSpacing(14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  user.displayName,
-                  style: AppTextStyles.font16SemiBold.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  user.email,
-                  style: AppTextStyles.font12Regular.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -350,13 +270,11 @@ class _SettingsRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.iconColor,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? iconColor;
 
   @override
   Widget build(final BuildContext context) {
@@ -374,7 +292,7 @@ class _SettingsRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            Icon(icon, color: iconColor ?? AppColors.primary200),
+            Icon(icon, color: AppColors.primary200),
             horizontalSpacing(14),
             Expanded(
               child: Text(
