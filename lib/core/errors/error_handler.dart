@@ -2,19 +2,13 @@ import 'dart:async' as async_lib;
 import 'dart:io';
 
 import 'package:hiyaza_finder/core/errors/failure.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'exceptions.dart';
-import 'handlers/supabase_handler.dart';
 
 class ErrorHandler {
   /// Call this in your data sources — throws AppException
   static Never handleException(final dynamic error) {
     if (error is AppException) throw error;
-
-    if (error is AuthException || error is PostgrestException || error is StorageException) {
-      throw SupabaseHandler.handle(error);
-    }
 
     final AppException? connectivity = _classifyConnectivityError(error);
     if (connectivity != null) throw connectivity;
@@ -29,9 +23,6 @@ class ErrorHandler {
   }
 
   static AppException _toException(final dynamic error) {
-    if (error is AuthException || error is PostgrestException || error is StorageException) {
-      return SupabaseHandler.handle(error);
-    }
     final AppException? connectivity = _classifyConnectivityError(error);
     if (connectivity != null) return connectivity;
     return ServerException(message: error?.toString() ?? 'Unknown error.');
@@ -42,11 +33,10 @@ class ErrorHandler {
   /// DNS failure) or [HandshakeException] (TLS handshake never completed)
   /// only ever happens when the request never got a response, which is
   /// exactly what "check your internet connection" should mean. The
-  /// underlying `http.ClientException` (connection refused/reset) surfaces
-  /// the same way but isn't checked by type here — `http` is only a
-  /// transitive dependency via `supabase`/`gotrue`/`postgrest`, not this
-  /// app's own direct one, so it's matched by its runtime type name instead
-  /// of an import that could silently break on a Supabase package upgrade.
+  /// `http.ClientException` thrown by the `http` package (connection
+  /// refused/reset) surfaces the same way but is matched by its runtime
+  /// type name instead of an import, so a future `http` major-version bump
+  /// can't silently break this classification.
   /// `.timeout()` calls throw `dart:async`'s [async_lib.TimeoutException]
   /// (not this app's own [TimeoutException] in `exceptions.dart` — same
   /// name, different type, hence the aliased import) when the server took

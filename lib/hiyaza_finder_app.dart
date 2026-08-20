@@ -17,8 +17,7 @@ import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
 import 'core/widgets/ui/dialogs/app_dialogs.dart';
-import 'features/auth/presentation/cubit/session_cubit.dart';
-import 'features/auth/presentation/cubit/session_state.dart';
+
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
@@ -219,8 +218,6 @@ class _ClampWidth extends StatelessWidget {
   }
 }
 
-/// Lets desktop/web users drag-scroll with the mouse (touch is enabled by
-/// default), so scrollable lists feel right with a trackpad or mouse.
 class _AppScrollBehavior extends MaterialScrollBehavior {
   const _AppScrollBehavior();
 
