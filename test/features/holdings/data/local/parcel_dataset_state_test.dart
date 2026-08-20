@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/parcel_dataset_state.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/arabic_normalizer.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/arabic_normalizer.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_dataset_state.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -170,62 +170,5 @@ void main() {
       expect(state.parcels.single.id, 'new');
     });
 
-    test('removeWhereIdOrSource removes by id', () async {
-      const List<Parcel> parcels = <Parcel>[
-        Parcel(id: '1', holdingId: '101'),
-        Parcel(id: '2', holdingId: '102'),
-      ];
-      await state.adopt('city-1', parcels);
-
-      state.removeWhereIdOrSource('1');
-
-      expect(state.parcels, hasLength(1));
-      expect(state.parcels.single.id, '2');
-    });
-
-    // A promoted parcel's `id` has already moved on from the pre-promotion
-    // `added_holdings` id (still carried as `sourceAddedHoldingId`) — the
-    // `added_holdings` UPDATE Realtime event that fires when the promotion
-    // trigger sets `promoted_holding_id` must NOT delete this entry just
-    // because it matches on `sourceAddedHoldingId`, or a device that already
-    // applied its own promoted write locally (`HoldingsRepository
-    // .addLocalParcel`'s online path) loses that parcel the moment the
-    // trigger's own `added_holdings` echo arrives — the exact "add a person,
-    // open their details, no data" bug this guards against.
-    test(
-        'removeWhereIdOrSource does NOT remove an already-promoted parcel '
-        'by its old sourceAddedHoldingId', () async {
-      const List<Parcel> parcels = <Parcel>[
-        Parcel(id: 'promoted-id', holdingId: '101', sourceAddedHoldingId: 'pre-promotion-id'),
-      ];
-      await state.adopt('city-1', parcels);
-
-      state.removeWhereIdOrSource('pre-promotion-id');
-
-      expect(state.parcels, hasLength(1));
-      expect(state.parcels.single.id, 'promoted-id');
-    });
-
-    test('findByIdOrSource matches only by id, not sourceAddedHoldingId',
-        () async {
-      const Parcel p = Parcel(
-        id: 'promoted-id',
-        holdingId: '101',
-        sourceAddedHoldingId: 'pre-promotion-id',
-      );
-      await state.adopt('city-1', const <Parcel>[p]);
-
-      expect(state.findByIdOrSource('promoted-id')?.id, 'promoted-id');
-      expect(state.findByIdOrSource('pre-promotion-id'), isNull);
-      expect(state.findByIdOrSource('missing'), isNull);
-    });
-  });
-
-  group('onRemoteChange', () {
-    test('notifyRemoteChange emits an event on the stream', () async {
-      final Future<void> firstEvent = state.onRemoteChange.first;
-      state.notifyRemoteChange();
-      await expectLater(firstEvent, completes);
-    });
   });
 }

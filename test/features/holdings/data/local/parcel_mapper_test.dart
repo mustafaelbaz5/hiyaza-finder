@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/cities/data/holding_row_mapper.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_mapper.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 void main() {
   test('maps a full holdings row to the equivalent Parcel', () {

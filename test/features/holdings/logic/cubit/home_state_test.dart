@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/cubit/home_state.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/logic/cubit/home_state.dart';
 
 void main() {
   group('HomeState status counts', () {

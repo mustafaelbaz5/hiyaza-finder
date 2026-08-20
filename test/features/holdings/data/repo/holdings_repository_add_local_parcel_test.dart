@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
-import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/sync/data/holdings_api.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -23,168 +20,30 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-class _AddRecordCall {
-  _AddRecordCall({
-    required this.id,
-    required this.cityId,
-    required this.record,
-    required this.parentHoldingId,
-    required this.createdByUserId,
-  });
-
-  final String id;
-  final String cityId;
-  final Map<String, dynamic> record;
-  final String? parentHoldingId;
-  final String createdByUserId;
-}
-
-/// A hand-written fake standing in for the real Supabase-backed
-/// [HoldingsApi] — records every `addRecord` call and can be configured to
-/// throw, so tests assert against direct-call success/failure instead of
-/// enqueued outbox operations.
-class _FakeHoldingsApi implements HoldingsApi {
-  final List<_AddRecordCall> addRecordCalls = <_AddRecordCall>[];
-  Object? addRecordError;
-
-  @override
-  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
-      searchRemote({required final String cityId, required final String query}) async =>
-          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
-
-  @override
-  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
-    final String id, {
-    final bool? isFieldAdded,
-  }) async =>
-      null;
-
-  /// Configurable return values for [addRecord], mirroring
-  /// `added_holdings.promoted_holding_id` — mimics the real
-  /// `added_holdings_auto_approve` trigger returning a *fresh* promoted
-  /// `holdings.id` on every insert. Empty (the default) means "not
-  /// promoted", matching most test scenarios; queue one value per expected
-  /// call to exercise the immediate-promotion path across multiple adds.
-  final List<String?> promotedHoldingIds = <String?>[];
-
-  /// Fires synchronously, mid-`addRecord`, before the promoted id is
-  /// returned to the awaiting caller — lets a test simulate a Realtime echo
-  /// of this exact write landing on the client before `addLocalParcel`'s own
-  /// await resolves.
-  void Function(_AddRecordCall call)? onAddRecord;
-
-  @override
-  Future<String?> addRecord({
-    required final String id,
-    required final String cityId,
-    required final Map<String, dynamic> record,
-    required final String? parentHoldingId,
-    required final String createdByUserId,
-  }) async {
-    if (addRecordError != null) throw addRecordError!;
-    final _AddRecordCall call = _AddRecordCall(
-      id: id,
-      cityId: cityId,
-      record: record,
-      parentHoldingId: parentHoldingId,
-      createdByUserId: createdByUserId,
-    );
-    addRecordCalls.add(call);
-    onAddRecord?.call(call);
-    return promotedHoldingIds.isEmpty ? null : promotedHoldingIds.removeAt(0);
-  }
-
-  @override
-  Future<void> deleteAddedHolding(final String id) async {}
-
-  @override
-  Future<Map<String, String>> fetchProfileEmails(
-    final Iterable<String> profileIds,
-  ) async =>
-      const <String, String>{};
-
-  @override
-  Future<void> editHolding({
-    required final String holdingId,
-    required final String cityId,
-    required final Map<String, dynamic> payload,
-    required final String editedByUserId,
-  }) async {}
-
-  @override
-  Future<List<String>> bulkEditHoldings({
-    required final String cityId,
-    required final Map<String, Map<String, dynamic>> payloadsByHoldingId,
-    required final String editedByUserId,
-  }) async =>
-      const <String>[];
-
-  @override
-  Future<void> markCompleted({
-    required final String parcelId,
-    required final bool isFieldAdded,
-    required final bool completed,
-    required final DateTime? completedAt,
-    required final String completedByUserId,
-  }) async {}
-}
-
-class _FakeAuthRepository implements AuthRepository {
-  @override
-  AppUser? get currentUser => const AppUser(
-        id: 'user-1',
-        email: 'field@example.com',
-        displayName: 'Field Worker',
-        role: UserRole.field,
-      );
-
-  @override
-  Stream<AppUser?> get userChanges => const Stream<AppUser?>.empty();
-
-  @override
-  Future<AppUser> signInWithPassword({
-    required final String email,
-    required final String password,
-  }) async =>
-      currentUser!;
-
-  @override
-  Future<void> signOut() async {}
-}
-
 void main() {
-  late _FakeHoldingsApi holdingsApi;
   late HoldingsRepository repository;
 
   setUp(() async {
-    await getIt.reset();
-    getIt.registerLazySingleton<AuthRepository>(_FakeAuthRepository.new);
-
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    holdingsApi = _FakeHoldingsApi();
     repository = HoldingsRepository(
+      datasetState: null,
       editsStore: ParcelEditsStore(store: store),
-      holdingsApi: holdingsApi,
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
     );
     // Simulate an active city (addLocalParcel is a no-op without one).
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
   });
 
-  tearDown(() async {
-    await getIt.reset();
-  });
-
-  test('returns null and calls the API nothing when no city is active', () async {
+  test('returns null when no city is active', () async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     final HoldingsRepository noCityRepo = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
-      holdingsApi: holdingsApi,
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
     );
     final Parcel? result = await noCityRepo.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
     expect(result, isNull);
-    expect(holdingsApi.addRecordCalls, isEmpty);
   });
 
   test('appends the new parcel to the in-memory dataset with a fresh id', () async {
@@ -195,70 +54,31 @@ void main() {
     expect(added, isNotNull);
     expect(added!.id, isNotEmpty);
     expect(added.sourceAddedHoldingId, added.id);
+    expect(added.isFieldAdded, isTrue);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.holderName, 'محمد');
   });
 
   test(
       'derives holderNameFarmerCard/ownerNameFarmerCard from '
-      'holderName/ownerName (REFACTOR_ROADMAP.md Phase 10 §1) — the fields '
-      'are no longer independently user-entered', () async {
+      'holderName/ownerName — the fields are no longer independently '
+      'user-entered', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد', ownerName: 'أحمد'),
     );
 
     expect(added!.holderNameFarmerCard, 'محمد');
     expect(added.ownerNameFarmerCard, 'أحمد');
-    expect(
-      holdingsApi.addRecordCalls.single.record['holder_name_farmer_card'],
-      'محمد',
-    );
-    expect(
-      holdingsApi.addRecordCalls.single.record['owner_name_farmer_card'],
-      'أحمد',
-    );
   });
 
   test(
-      'adopts the promoted holdings.id immediately when the server reports '
-      'this add_holdings row was already promoted (added_holdings_auto_approve '
-      'trigger) — regression test: the record must never be shown, even '
-      'briefly, under its pre-promotion id, since that id gets superseded '
-      'and removed as soon as the corresponding Realtime event arrives, '
-      "which previously made a single new person look like it 'moved' or "
-      'duplicated on screen', () async {
-    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
-
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '', holderName: 'محمد'),
-    );
-
-    expect(added, isNotNull);
-    expect(added!.id, 'promoted-holdings-id');
-    expect(added.isFieldAdded, isFalse);
-    expect(added.sourceAddedHoldingId, isNotNull);
-    expect(repository.parcels, hasLength(1));
-    expect(repository.parcels.single.id, 'promoted-holdings-id');
-    expect(repository.parcels.single.sourceAddedHoldingId, added.sourceAddedHoldingId);
-  });
-
-  test(
-      'REGRESSION: two parcels added for the same new person, both '
-      'immediately promoted (as the real added_holdings_auto_approve '
-      'trigger does), must share the same groupKey — reproduces the '
-      "'appears as two separate people in search' bug report", () async {
-    // First add: brand-new person "Ahmed", no parentHoldingId yet.
-    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-1');
+      'a new parcel for an existing pending person joins the same '
+      'pendingGroupId as its parent', () async {
     final Parcel? parcelA = await repository.addLocalParcel(
       const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
     );
     expect(parcelA, isNotNull);
 
-    // Second add: "add another parcel for Ahmed" — parentHoldingId is
-    // Ahmed's current (already-promoted) id, exactly as
-    // DetailScreen._addParcelForPerson passes `source.id` after opening
-    // via a freshly re-fetched `parcelsForHolding(result.groupKey)`.
-    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-2');
     final Parcel? parcelB = await repository.addLocalParcel(
       const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
       parentHoldingId: parcelA!.id,
@@ -269,295 +89,30 @@ void main() {
       parcelB!.groupKey,
       parcelA.groupKey,
       reason: 'Both parcels belong to the same person and must group '
-          'together in search/detail, regardless of each having received '
-          'its own distinct promoted holdings.id from the server.',
+          'together in search/detail.',
     );
     expect(repository.parcels, hasLength(2));
   });
 
   test(
-      'REGRESSION: a Realtime echo of this device\'s own write '
-      '(applyRemoteChange) must not clobber pendingGroupId on a sibling '
-      'parcel — this is the actual mechanism behind the '
-      "'appears as two separate people' report: pendingGroupId has no "
-      'column in holdings/added_holdings, so any row built by '
-      'holdingRowToParcel/addedHoldingRowToParcel always has it null, and '
-      'applyRemoteChange previously replaced the whole Parcel object '
-      'wholesale on every Realtime event for this city — including the '
-      "echo of the parcel's own just-completed insert", () async {
-    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-1');
+      'adding a sibling parcel bumps holdingsCount across every parcel '
+      'sharing the same holding', () async {
     final Parcel? parcelA = await repository.addLocalParcel(
       const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
     );
-    holdingsApi.promotedHoldingIds.add('ahmed-holdings-id-2');
-    final Parcel? parcelB = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
+
+    await repository.addLocalParcel(
+      const Parcel(
+        holdingId: '-1',
+        holderName: 'Ahmed',
+        landNumber: '-1',
+        holdingsCount: 2,
+      ),
       parentHoldingId: parcelA!.id,
     );
-    expect(parcelB!.groupKey, parcelA.groupKey); // sanity check, same as above
 
-    // Simulate the Realtime channel echoing parcel B's own INSERT back —
-    // exactly what holdingRowToParcel/addedHoldingRowToParcel would build
-    // from the raw Postgres row: every editable/known field present, but
-    // NO pendingGroupId (that column doesn't exist server-side).
-    final Parcel echoedRow = Parcel(
-      id: parcelB.id,
-      holdingId: parcelB.holdingId,
-      holderName: parcelB.holderName,
-      landNumber: parcelB.landNumber,
-      isFieldAdded: false,
-      // pendingGroupId deliberately omitted — defaults to null, matching
-      // what a real row-mapper output always looks like.
-    );
-    repository.applyRemoteChange(echoedRow);
-
-    final Parcel afterEcho =
-        repository.parcels.firstWhere((final Parcel p) => p.id == parcelB.id);
-    expect(
-      afterEcho.groupKey,
-      parcelA.groupKey,
-      reason: 'parcelB must remain grouped with parcelA even after its own '
-          'Realtime echo arrives — the echo must not silently reset '
-          'pendingGroupId to null and un-group it.',
-    );
-  });
-
-  test(
-      "REGRESSION: parentHoldingId falls back to a sourceAddedHoldingId "
-      "match when the exact id isn't found in the current dataset — "
-      "reproduces a caller (DetailScreen._addParcelForPerson) holding a "
-      "stale, pre-promotion parent id (its own local `_parcels` list "
-      "hadn't refreshed yet) after the parent parcel was synchronously "
-      "promoted server-side. Without the fallback, this silently creates "
-      'an unrelated second person instead of joining the existing one\'s '
-      'group, with no error surfaced.', () async {
-    // Parent gets synchronously promoted — same shape as every other test
-    // here: addLocalParcel returns the promoted id, not the pre-promotion
-    // one the caller generated.
-    holdingsApi.promotedHoldingIds.add('parent-promoted-id');
-    final Parcel? parent = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
-    );
-    expect(parent!.id, 'parent-promoted-id');
-    final String staleParentId = parent.sourceAddedHoldingId!;
-
-    // Caller passes the STALE (pre-promotion) id, as if it had captured
-    // `parent.id` before the promotion swap was visible to it.
-    holdingsApi.promotedHoldingIds.add('child-promoted-id');
-    final Parcel? child = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
-      parentHoldingId: staleParentId,
-    );
-
-    expect(child, isNotNull);
-    expect(
-      child!.groupKey,
-      parent.groupKey,
-      reason: 'the child must still join the parent\'s group via the '
-          'sourceAddedHoldingId fallback, not become an unrelated new '
-          'person just because the exact stale id no longer matches.',
-    );
-    expect(repository.parcels, hasLength(2));
-  });
-
-  test('calls addRecord with a null parentHoldingId for a new person', () async {
-    await repository.addLocalParcel(
-      const Parcel(holdingId: '', holderName: 'محمد'),
-    );
-
-    expect(holdingsApi.addRecordCalls, hasLength(1));
-    final _AddRecordCall call = holdingsApi.addRecordCalls.single;
-    expect(call.cityId, 'city-1');
-    expect(call.parentHoldingId, isNull);
-    expect(call.record['holder_name'], 'محمد');
-  });
-
-  test('calls addRecord with the given parentHoldingId for a new parcel', () async {
-    await repository.addLocalParcel(
-      const Parcel(holdingId: '101', holderName: 'محمد', landNumber: '-1'),
-      parentHoldingId: 'existing-holding-id',
-    );
-
-    final _AddRecordCall call = holdingsApi.addRecordCalls.single;
-    expect(call.parentHoldingId, 'existing-holding-id');
-  });
-
-  test(
-      'sends the real holdings.id as parentHoldingId when the parent parcel '
-      'is an imported (not field-added) holding', () async {
-    await repository.loadParcelsForCity('city-1', const <Parcel>[
-      Parcel(id: 'imported-holding-id', holdingId: '229', holderName: 'محمد', isFieldAdded: false),
-    ]);
-
-    await repository.addLocalParcel(
-      const Parcel(holdingId: '229', holderName: 'محمد', landNumber: '-1'),
-      parentHoldingId: 'imported-holding-id',
-    );
-
-    final _AddRecordCall call = holdingsApi.addRecordCalls.single;
-    expect(call.parentHoldingId, 'imported-holding-id');
-  });
-
-  test(
-      'nulls out parentHoldingId when the parent parcel is field-added '
-      '(added_holdings-origin) — regression test for the '
-      'added_holdings_parent_holding_id_fkey violation: an added_holdings.id '
-      'is never a valid holdings.id, so it must never be sent as '
-      'parent_holding_id.', () async {
-    await repository.loadParcelsForCity('city-1', const <Parcel>[
-      Parcel(id: 'added-holdings-row-id', holdingId: '229', holderName: 'محمد', isFieldAdded: true),
-    ]);
-
-    await repository.addLocalParcel(
-      const Parcel(holdingId: '229', holderName: 'محمد', landNumber: '-1'),
-      parentHoldingId: 'added-holdings-row-id',
-    );
-
-    final _AddRecordCall call = holdingsApi.addRecordCalls.single;
-    expect(call.parentHoldingId, isNull);
-  });
-
-  test('the addRecord call id matches the new parcel\'s id (doubles as client_id)', () async {
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '', holderName: 'محمد'),
-    );
-    final _AddRecordCall call = holdingsApi.addRecordCalls.single;
-    expect(call.id, added!.id);
-  });
-
-  test(
-      'REGRESSION: a promoted holdings row arriving via applyRemoteChange '
-      '(the outbox path\'s only reconciliation mechanism — '
-      'AddParcelSyncHandler deliberately does not reconcile synchronously) '
-      'replaces the pre-promotion local entry instead of appending a '
-      'duplicate. The promoted row has a brand-new server-generated id, '
-      "different from the client-generated id addLocalParcel created — only "
-      'sourceAddedHoldingId ties them together, so matching by id alone '
-      '(as applyRemoteChange used to) misses the existing entry entirely.',
-      () async {
-    // Outbox mode: addLocalParcel applies locally and returns without a
-    // promotedHoldingId — matches the real _syncRunner != null path where
-    // reconciliation only ever happens via a later Realtime event.
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
-    );
-    expect(added, isNotNull);
-    expect(repository.parcels, hasLength(1));
-
-    // Simulate the holdings INSERT Realtime event for the now-promoted
-    // row — same shape holdingRowToParcel would build: a fresh id, plus
-    // source_added_holding_id/is_field_added/created_by (this migration's
-    // whole point) pointing back at the original added_holdings row.
-    final Parcel promotedRow = Parcel(
-      id: 'server-promoted-id',
-      holdingId: added!.holdingId,
-      holderName: added.holderName,
-      landNumber: added.landNumber,
-      personId: added.personId,
-      isFieldAdded: true,
-      sourceAddedHoldingId: added.id,
-      createdBy: 'user-1',
-    );
-    repository.applyRemoteChange(promotedRow);
-
-    expect(
-      repository.parcels,
-      hasLength(1),
-      reason: 'the promoted row must replace the pre-promotion local entry '
-          'in place, not sit alongside it as a second parcel.',
-    );
-    expect(repository.parcels.single.id, 'server-promoted-id');
-    expect(repository.parcels.single.createdBy, 'user-1');
-  });
-
-  test(
-      "REGRESSION: the added_holdings UPDATE echo (promoted_holding_id now "
-      "set) that fires in the SAME transaction as an immediate, "
-      "synchronous promotion must not delete the parcel this device already "
-      "applied locally under its new, promoted id — reproduces 'add a "
-      "person, open their details screen, no data shown': addLocalParcel's "
-      "online path already swaps in the promoted holdings.id "
-      "(added.id == promotedHoldingsId) while sourceAddedHoldingId still "
-      "points at the original added_holdings row; applyRemoteDelete(id) is "
-      "then called with that original added_holdings.id when its own "
-      "UPDATE echoes back, and must be a no-op here since the entry it "
-      "would have superseded no longer exists under that id.", () async {
-    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
-    );
-    expect(added, isNotNull);
-    expect(repository.parcels, hasLength(1));
-    expect(repository.parcels.single.id, 'promoted-holdings-id');
-
-    // The added_holdings row's own id (pre-promotion) — this is what
-    // RealtimePayloadDispatcher.handleAddedHoldingsPayload passes to
-    // applyRemoteDelete once promoted_holding_id is observed set on it.
-    repository.applyRemoteDelete(added!.sourceAddedHoldingId!);
-
-    expect(
-      repository.parcels,
-      hasLength(1),
-      reason: 'the already-promoted parcel must survive the supersede-echo '
-          'delete for its old pre-promotion id.',
-    );
-    expect(repository.parcels.single.id, 'promoted-holdings-id');
-  });
-
-  test(
-      "REGRESSION: if the added_holdings INSERT Realtime echo for this "
-      "device's own write is processed BEFORE addLocalParcel's awaited "
-      "HTTP response returns, the eventual local upsert must reconcile "
-      "with it — not append a second, duplicate parcel. Reproduces "
-      "'add a new person, search for them, two cards show up — one with "
-      "the parcel, one empty': the echo (pre-promotion row, same client-"
-      "generated id/sourceAddedHoldingId as this exact write) and the "
-      "awaited response's own local write (post-promotion row, a "
-      'different, server-generated id, tied back via sourceAddedHoldingId) '
-      'raced, and the local write used to blindly `append` instead of '
-      'reconciling by sourceAddedHoldingId like applyRemoteChange does.',
-      () async {
-    // The fake API simulates the Realtime echo of this exact write's own
-    // added_holdings INSERT landing WHILE the "HTTP request" is still in
-    // flight — i.e. before addLocalParcel's await returns — by calling back
-    // into the repository from inside addRecord itself, using the same `id`
-    // the repository just generated and sent as this call's `client_id`.
-    holdingsApi.onAddRecord = (final _AddRecordCall call) {
-      repository.applyRemoteChange(
-        Parcel(
-          id: call.id,
-          holdingId: '-1',
-          holderName: 'Ahmed',
-          landNumber: '-1',
-          isFieldAdded: true,
-          sourceAddedHoldingId: call.id,
-          personId: call.record['person_id'] as String?,
-        ),
-      );
-    };
-    holdingsApi.promotedHoldingIds.add('promoted-holdings-id');
-
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '-1', holderName: 'Ahmed', landNumber: '-1'),
-    );
-    expect(added, isNotNull);
-
-    expect(
-      repository.parcels,
-      hasLength(1),
-      reason: 'the racing echo and the awaited response describe the same '
-          'underlying parcel and must reconcile to one entry, not two.',
-    );
-    expect(repository.parcels.single.id, 'promoted-holdings-id');
-  });
-
-  test('a failed addRecord call leaves the in-memory dataset untouched and rethrows', () async {
-    holdingsApi.addRecordError = Exception('network down');
-
-    await expectLater(
-      repository.addLocalParcel(const Parcel(holdingId: '', holderName: 'محمد')),
-      throwsA(isA<Exception>()),
-    );
-    expect(repository.parcels, isEmpty);
+    for (final Parcel p in repository.parcels) {
+      expect(p.holdingsCount, 2);
+    }
   });
 }

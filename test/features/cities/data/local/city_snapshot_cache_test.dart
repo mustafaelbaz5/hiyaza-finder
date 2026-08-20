@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/cities/data/city_snapshot_cache.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/cached_city_meta.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/cities/data/local/city_snapshot_cache.dart';
+import 'package:hiyaza_finder/features/cities/data/model/cached_city_meta.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 

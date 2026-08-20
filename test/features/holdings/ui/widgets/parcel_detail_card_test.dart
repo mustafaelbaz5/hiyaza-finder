@@ -1,0 +1,470 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/core/storage/key_value_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_detail_card.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Reads the real translation file straight off disk instead of through
+/// `rootBundle` — recreating [EasyLocalization] more than once in the same
+/// test process (one `_wrap` call per test) makes the mocked
+/// `flutter/assets` channel hang on the second+ load, so this sidesteps
+/// it entirely. Two easy_localization/flutter_test pitfalls to avoid
+/// here: an already-completed `SynchronousFuture` breaks `Future.wait`'s
+/// bookkeeping inside easy_localization's loader-merge step (silently
+/// yields empty translations), while genuinely `async` real file I/O
+/// never resolves under `pump()`'s fake-async clock without
+/// `tester.runAsync()`. Reading synchronously but returning it via
+/// `Future.microtask` sidesteps both: it's a real (non-completed)
+/// `Future`, and a microtask is exactly what the fake-async pump drives.
+class _FileAssetLoader extends AssetLoader {
+  const _FileAssetLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(final String path, final Locale locale) {
+    return Future.microtask(() {
+      final File file = File('$path/${locale.languageCode}.json');
+      return jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    });
+  }
+}
+
+Widget _wrap(final Widget child) {
+  return EasyLocalization(
+    supportedLocales: const <Locale>[Locale('ar'), Locale('en')],
+    path: 'assets/lang',
+    startLocale: const Locale('ar'),
+    fallbackLocale: const Locale('ar'),
+    assetLoader: const _FileAssetLoader(),
+    child: Builder(
+      builder: (final BuildContext context) => ScreenUtilInit(
+        designSize: const Size(375, 812),
+        builder: (final BuildContext context, final Widget? _) => MaterialApp(
+          localizationsDelegates: context.localizationDelegates,
+          supportedLocales: context.supportedLocales,
+          locale: context.locale,
+          home: Scaffold(body: SingleChildScrollView(child: child)),
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _pump(final WidgetTester tester, final Widget child) async {
+  await tester.pumpWidget(_wrap(child));
+  await tester.pumpAndSettle();
+}
+
+class _InMemoryKeyValueStore implements KeyValueStore {
+  final Map<String, String> _store = <String, String>{};
+
+  @override
+  Future<String?> getString(final String key) async => _store[key];
+
+  @override
+  Future<void> remove(final String key) async => _store.remove(key);
+
+  @override
+  Future<void> setString(final String key, final String value) async {
+    _store[key] = value;
+  }
+}
+
+void main() {
+  final TestWidgetsFlutterBinding binding =
+      TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    await EasyLocalization.ensureInitialized();
+    // Explicit clipboard mock — `Clipboard.setData` inside `_copyId` hangs
+    // without one in some environments (no default handler is guaranteed),
+    // silently stalling the whole Copy ID flow before it ever reaches
+    // `setParcelCompleted`.
+    binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (final MethodCall call) async {
+        if (call.method == 'Clipboard.setData') return null;
+        if (call.method == 'HapticFeedback.vibrate') return null;
+        return null;
+      },
+    );
+  });
+
+  const Parcel parcel = Parcel(
+    id: 'p1',
+    holdingId: '101',
+    holderName: 'محمد علي',
+    basinName: 'البشيط',
+  );
+
+  testWidgets('renders the holding id and holder name', (final tester) async {
+    await _pump(
+      tester,
+      ParcelDetailCard(parcel: parcel, onFieldChanged: (final _) {}),
+    );
+
+    expect(find.text('101'), findsOneWidget);
+    // Appears twice: اسم الحائز, and اسم المالك falls back to it when unset.
+    expect(find.text('محمد علي'), findsNWidgets(2));
+  });
+
+  testWidgets(
+    'shows the pending-number placeholder when holdingId is blank',
+    (final tester) async {
+      const Parcel newPersonParcel = Parcel(
+        id: 'p2',
+        holdingId: '',
+        holderName: 'شخص جديد',
+      );
+      await _pump(
+        tester,
+        ParcelDetailCard(
+          parcel: newPersonParcel,
+          onFieldChanged: (final _) {},
+        ),
+      );
+
+      expect(find.text('101'), findsNothing);
+      expect(find.textContaining('بدون رقم'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shows a per-field "معدلة" badge only on fields that changed from the original',
+    (final tester) async {
+      // No originalParcel supplied at all — nothing should ever show as
+      // modified.
+      await _pump(
+        tester,
+        ParcelDetailCard(parcel: parcel, onFieldChanged: (final _) {}),
+      );
+      expect(find.text('تم التعديل'), findsNothing);
+
+      // holderName differs from the original; every other field matches —
+      // exactly one badge should appear, not one per field on the card.
+      const Parcel original = Parcel(
+        id: 'p1',
+        holdingId: '101',
+        holderName: 'شخص آخر',
+        basinName: 'البشيط',
+      );
+      await _pump(
+        tester,
+        ParcelDetailCard(
+          parcel: parcel,
+          originalParcel: original,
+          onFieldChanged: (final _) {},
+        ),
+      );
+      expect(find.text('تم التعديل'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shows the added badge for promoted app-created parcels even when isFieldAdded is false',
+    (final tester) async {
+      const Parcel promotedAddedParcel = Parcel(
+        id: 'p3',
+        holdingId: '101',
+        holderName: 'شخص مضاف',
+        basinName: 'البشيت',
+        sourceAddedHoldingId: 'added-1',
+        isFieldAdded: false,
+      );
+
+      await _pump(
+        tester,
+        ParcelDetailCard(
+          parcel: promotedAddedParcel,
+          onFieldChanged: (final _) {},
+        ),
+      );
+
+      expect(find.text('مضافة من التطبيق'), findsOneWidget);
+    },
+  );
+
+  testWidgets('tapping the اسم المالك pencil opens the edit dialog', (
+    final tester,
+  ) async {
+    await _pump(
+      tester,
+      ParcelDetailCard(parcel: parcel, onFieldChanged: (final _) {}),
+    );
+
+    final Finder editIcon = find.descendant(
+      of: find.byType(ParcelDetailCard),
+      matching: find.byIcon(Icons.edit_rounded),
+    );
+    expect(editIcon, findsWidgets);
+
+    await tester.tap(editIcon.first);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsWidgets);
+  });
+
+  group('Copy ID / review', () {
+    setUp(() async {
+      await getIt.reset();
+      final HoldingsRepository repository = HoldingsRepository(
+        editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
+      );
+      await repository.loadParcelsForCity('city-1', const <Parcel>[
+        Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+        ),
+      ]);
+      getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+    });
+
+    tearDown(() async {
+      await getIt.reset();
+    });
+
+    testWidgets(
+      'tapping Copy ID fires onCompleted with the confirmed parcel, not onFieldChanged',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+          feddan: 2,
+        );
+
+        Parcel? completedResult;
+        bool fieldChangedCalled = false;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) => fieldChangedCalled = true,
+            onCompleted: (final updated) => completedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        expect(idChip, findsOneWidget);
+
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(
+          completedResult,
+          isNotNull,
+          reason: 'onCompleted must fire once setParcelCompleted resolves — '
+              "this path must not depend on onFieldChanged/updateParcel's "
+              'unrelated edit-overlay write.',
+        );
+        expect(completedResult!.completedAt, isNotNull);
+        expect(
+          fieldChangedCalled,
+          isFalse,
+          reason: 'onFieldChanged (routed to DetailScreen._updateField in '
+              'production) must never be invoked by the review action.',
+        );
+        expect(find.text('تم نسخ المعرّف وتحديد الحيازة كمُراجعة'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'falls back to onFieldChanged when onCompleted is not provided',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+          feddan: 2,
+        );
+
+        Parcel? fieldChangedResult;
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final updated) => fieldChangedResult = updated,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(fieldChangedResult, isNotNull);
+        expect(fieldChangedResult!.completedAt, isNotNull);
+      },
+    );
+
+    testWidgets(
+      'onReviewBusyChanged reports true then false around the Copy ID '
+      'write — lets DetailScreen fold this into the same _busyParcelIds '
+      'tracking used for Reopen/Delete, so a same-parcel Reopen tap while '
+      'Copy ID is still in flight can be blocked',
+      (final tester) async {
+        const Parcel reviewParcel = Parcel(
+          id: 'p-review',
+          holdingId: '202',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          nationalId: '12345678901234',
+          cropType: 'قمح',
+          feddan: 2,
+        );
+
+        final List<bool> busyEvents = <bool>[];
+
+        await _pump(
+          tester,
+          ParcelDetailCard(
+            parcel: reviewParcel,
+            onFieldChanged: (final _) {},
+            onReviewBusyChanged: busyEvents.add,
+          ),
+        );
+
+        final Finder idChip = find.ancestor(
+          of: find.byIcon(Icons.fingerprint_rounded),
+          matching: find.byType(InkWell),
+        );
+        await tester.tap(idChip);
+        await tester.pumpAndSettle();
+
+        expect(busyEvents, <bool>[true, false]);
+      },
+    );
+  });
+
+  group('delete/reopen loading state', () {
+    testWidgets(
+      'isDeleting shows a spinner instead of the delete icon and disables it',
+      (final tester) async {
+        const Parcel deletableParcel = Parcel(
+          id: 'p-del',
+          holdingId: '303',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          sourceAddedHoldingId: 'added-1',
+        );
+
+        bool deleteConfirmedCalled = false;
+
+        // A CircularProgressIndicator is indeterminate — it never settles,
+        // so pumpAndSettle (used by the shared `_pump` helper) times out.
+        // Two explicit pumps are enough to build the tree and animate one
+        // frame.
+        await tester.pumpWidget(
+          _wrap(
+            ParcelDetailCard(
+              parcel: deletableParcel,
+              onFieldChanged: (final _) {},
+              onDelete: () => deleteConfirmedCalled = true,
+              isDeleting: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byIcon(Icons.delete_outline_rounded), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(IconButton),
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+
+        final IconButton deleteButton = tester.widget<IconButton>(
+          find.byType(IconButton).first,
+        );
+        expect(deleteButton.onPressed, isNull);
+
+        // Tapping a disabled IconButton is a no-op — confirms the loading
+        // state actually blocks re-entrant taps, not just visually.
+        await tester.tap(find.byType(IconButton).first, warnIfMissed: false);
+        await tester.pump();
+        expect(deleteConfirmedCalled, isFalse);
+
+        // CircularProgressIndicator's implicit animation ticker leaves a
+        // pending timer that fails the test framework's teardown invariant
+        // check unless the animating tree is torn down before the test ends.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'isReopening shows a spinner instead of the reopen icon and disables it',
+      (final tester) async {
+        final Parcel reviewedParcel = Parcel(
+          id: 'p-reopen',
+          holdingId: '404',
+          holderName: 'محمد علي',
+          basinName: 'البشيط',
+          completedAt: DateTime(2026, 8, 10),
+        );
+
+        bool reopenCalled = false;
+
+        await tester.pumpWidget(
+          _wrap(
+            ParcelDetailCard(
+              parcel: reviewedParcel,
+              onFieldChanged: (final _) {},
+              onReopen: () => reopenCalled = true,
+              isReopening: true,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byIcon(Icons.lock_open_rounded), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(FilledButton),
+            matching: find.byType(CircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+
+        final FilledButton reopenButton =
+            tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(reopenButton.onPressed, isNull);
+        expect(reopenCalled, isFalse);
+
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+      },
+    );
+  });
+}

@@ -2,15 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/cities/data/city_repository_impl.dart';
-import 'package:hiyaza_finder/features/cities/data/city_snapshot_cache.dart';
-import 'package:hiyaza_finder/features/cities/data/supabase_city_data_source.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/cached_city_meta.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/cities/data/local/city_snapshot_cache.dart';
+import 'package:hiyaza_finder/features/cities/data/model/cached_city_meta.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
+import 'package:hiyaza_finder/features/cities/data/remote/city_remote_ds.dart';
+import 'package:hiyaza_finder/features/cities/data/repo/city_repo_impl.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
   _FakePathProviderPlatform(this.tempDirPath);
@@ -39,18 +39,18 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 void main() {
   late Directory tempDir;
   late _InMemoryKeyValueStore keyValueStore;
-  late CityRepositoryImpl repository;
+  late CityRepoImpl repository;
 
   setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('city_repository_impl_test');
+    tempDir = Directory.systemTemp.createTempSync('city_repo_impl_test');
     PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
     keyValueStore = _InMemoryKeyValueStore();
-    repository = CityRepositoryImpl(
+    repository = CityRepoImpl(
       // Never exercised by the methods under test (listCachedCities /
       // deleteCachedCity work purely off the local cache + key-value
       // store) — a real client is constructed without hitting the
       // network unless a method on it is actually called.
-      dataSource: SupabaseCityDataSource(SupabaseClient('https://x.supabase.co', 'anon-key')),
+      dataSource: CityRemoteDataSource(http.Client()),
       cache: const CitySnapshotCache(),
       keyValueStore: keyValueStore,
     );

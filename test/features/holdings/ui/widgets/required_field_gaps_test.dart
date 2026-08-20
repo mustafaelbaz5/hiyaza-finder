@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/required_field_gaps.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/required_field_gaps.dart';
 
 import '../../../../support/localized_widget_test_harness.dart';
 

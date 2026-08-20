@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/auth/domain/entities/app_user.dart';
-import 'package:hiyaza_finder/features/auth/domain/repositories/auth_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/sync/data/holdings_api.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -23,141 +20,25 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-/// A hand-written fake standing in for the real Supabase-backed
-/// [HoldingsApi] — records every `deleteAddedHolding` call and can be
-/// configured to throw, so tests assert against direct-call success/
-/// failure instead of outbox side effects.
-class _FakeHoldingsApi implements HoldingsApi {
-  final List<String> deletedIds = <String>[];
-  Object? deleteError;
-  final List<String?> promotedHoldingIds = <String?>[];
-
-  @override
-  Future<({List<Map<String, dynamic>> holdings, List<Map<String, dynamic>> addedHoldings})>
-      searchRemote({required final String cityId, required final String query}) async =>
-          (holdings: const <Map<String, dynamic>>[], addedHoldings: const <Map<String, dynamic>>[]);
-
-  @override
-  Future<({Map<String, dynamic> row, bool isFieldAdded})?> fetchParcelById(
-    final String id, {
-    final bool? isFieldAdded,
-  }) async =>
-      null;
-
-  @override
-  Future<void> deleteAddedHolding(final String id) async {
-    if (deleteError != null) throw deleteError!;
-    deletedIds.add(id);
-  }
-
-  @override
-  Future<Map<String, String>> fetchProfileEmails(
-    final Iterable<String> profileIds,
-  ) async =>
-      const <String, String>{};
-
-  @override
-  Future<String?> addRecord({
-    required final String id,
-    required final String cityId,
-    required final Map<String, dynamic> record,
-    required final String? parentHoldingId,
-    required final String createdByUserId,
-  }) async =>
-      promotedHoldingIds.isEmpty ? null : promotedHoldingIds.removeAt(0);
-
-  @override
-  Future<void> editHolding({
-    required final String holdingId,
-    required final String cityId,
-    required final Map<String, dynamic> payload,
-    required final String editedByUserId,
-  }) async {}
-
-  @override
-  Future<List<String>> bulkEditHoldings({
-    required final String cityId,
-    required final Map<String, Map<String, dynamic>> payloadsByHoldingId,
-    required final String editedByUserId,
-  }) async =>
-      const <String>[];
-
-  @override
-  Future<void> markCompleted({
-    required final String parcelId,
-    required final bool isFieldAdded,
-    required final bool completed,
-    required final DateTime? completedAt,
-    required final String completedByUserId,
-  }) async {}
-}
-
-class _FakeAuthRepository implements AuthRepository {
-  @override
-  AppUser? get currentUser => const AppUser(
-        id: 'user-1',
-        email: 'field@example.com',
-        displayName: 'Field Worker',
-        role: UserRole.field,
-      );
-
-  @override
-  Stream<AppUser?> get userChanges => const Stream<AppUser?>.empty();
-
-  @override
-  Future<AppUser> signInWithPassword({
-    required final String email,
-    required final String password,
-  }) async =>
-      currentUser!;
-
-  @override
-  Future<void> signOut() async {}
-}
-
 void main() {
-  late _FakeHoldingsApi holdingsApi;
   late HoldingsRepository repository;
 
   setUp(() async {
-    await getIt.reset();
-    getIt.registerLazySingleton<AuthRepository>(_FakeAuthRepository.new);
-
-    holdingsApi = _FakeHoldingsApi();
+    final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     repository = HoldingsRepository(
-      editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
-      holdingsApi: holdingsApi,
+      editsStore: ParcelEditsStore(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
     );
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
   });
 
-  tearDown(() async {
-    await getIt.reset();
-  });
-
-  test('a field-added parcel is deleted from the server and locally', () async {
+  test('a field-added parcel is deleted locally', () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
 
     expect(await repository.deleteLocalParcel(added!.id), isTrue);
     expect(repository.parcels, isEmpty);
-    expect(holdingsApi.deletedIds, <String>[added.sourceAddedHoldingId!]);
-  });
-
-  test('a promoted field-added parcel still deletes using its original added row id', () async {
-    holdingsApi.promotedHoldingIds.add('promoted-holding-id');
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '', holderName: 'محمد'),
-    );
-
-    expect(added, isNotNull);
-    expect(added!.isFieldAdded, isFalse);
-    expect(added.sourceAddedHoldingId, isNotNull);
-
-    expect(await repository.deleteLocalParcel(added.id), isTrue);
-    expect(repository.parcels, isEmpty);
-    expect(holdingsApi.deletedIds, <String>[added.sourceAddedHoldingId!]);
   });
 
   test('an imported (not field-added) holding cannot be deleted', () async {
@@ -167,58 +48,44 @@ void main() {
 
     expect(await repository.deleteLocalParcel('imported-1'), isFalse);
     expect(repository.parcels, hasLength(1));
-    expect(holdingsApi.deletedIds, isEmpty);
   });
 
   test('a missing id is a no-op and returns false', () async {
     expect(await repository.deleteLocalParcel('missing-id'), isFalse);
-    expect(holdingsApi.deletedIds, isEmpty);
+  });
+
+  test('deleting one parcel does not remove an unrelated parcel', () async {
+    final Parcel? parcelA = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'محمد', landNumber: '-1'),
+    );
+    final Parcel? parcelB = await repository.addLocalParcel(
+      const Parcel(holdingId: '-2', holderName: 'أحمد', landNumber: '-1'),
+    );
+
+    expect(await repository.deleteLocalParcel(parcelA!.id), isTrue);
+
+    expect(repository.parcels, hasLength(1));
+    expect(repository.parcels.single.id, parcelB!.id);
   });
 
   test(
-      "REGRESSION: deleting one parcel must not remove a different parcel "
-      "that happens to share the same sourceAddedHoldingId — "
-      "deleteLocalParcel's local filter used to match by "
-      "sourceAddedHoldingId in addition to id, the same unsafe wildcard "
-      'pattern ParcelDatasetState.removeWhereIdOrSource was narrowed away '
-      'from. Only the exact targeted id should ever be removed.', () async {
-    await repository.loadParcelsForCity('city-1', <Parcel>[
-      const Parcel(
-        id: 'parcel-1',
-        holdingId: '-1',
-        landNumber: '-1',
-        isFieldAdded: true,
-        sourceAddedHoldingId: 'shared-source-id',
-      ),
-      // Contrived (a real dataset wouldn't naturally produce two rows
-      // sharing one sourceAddedHoldingId), but this is exactly the
-      // wildcard-match shape being guarded against — a future bug
-      // upstream that let this happen must not also delete the wrong row.
-      const Parcel(
-        id: 'parcel-2',
-        holdingId: '-1',
-        landNumber: '-1',
-        isFieldAdded: true,
-        sourceAddedHoldingId: 'shared-source-id',
-      ),
-    ]);
-
-    expect(await repository.deleteLocalParcel('parcel-1'), isTrue);
-
-    expect(repository.parcels, hasLength(1));
-    expect(repository.parcels.single.id, 'parcel-2');
-  });
-
-  test('a failed server delete leaves the local dataset untouched and rethrows', () async {
-    final Parcel? added = await repository.addLocalParcel(
-      const Parcel(holdingId: '', holderName: 'محمد'),
+      'deleting a sibling parcel decrements holdingsCount for the '
+      'remaining parcels sharing the same holding', () async {
+    final Parcel? parcelA = await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'محمد', landNumber: '-1'),
     );
-    holdingsApi.deleteError = Exception('network down');
-
-    await expectLater(
-      repository.deleteLocalParcel(added!.id),
-      throwsA(isA<Exception>()),
+    final Parcel? parcelB = await repository.addLocalParcel(
+      const Parcel(
+        holdingId: '-1',
+        holderName: 'محمد',
+        landNumber: '-1',
+        holdingsCount: 2,
+      ),
+      parentHoldingId: parcelA!.id,
     );
-    expect(repository.parcels, hasLength(1));
+
+    await repository.deleteLocalParcel(parcelB!.id);
+
+    expect(repository.parcels.single.holdingsCount, 1);
   });
 }
