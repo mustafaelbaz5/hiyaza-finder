@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 void main() {
   group('Parcel.isNationalIdValid', () {

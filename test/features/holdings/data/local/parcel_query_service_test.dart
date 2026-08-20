@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/border_name_index.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/parcel_query_service.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/holding_search_service.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/border_name_index.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_query_service.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/holding_search_service.dart';
 
 void main() {
   const ParcelQueryService service = ParcelQueryService();

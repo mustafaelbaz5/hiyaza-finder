@@ -4,8 +4,7 @@ import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/networking/connection_quality_service.dart';
 import 'package:hiyaza_finder/core/networking/network_info.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/presentation/widgets/home_top_bar.dart';
-import 'package:hiyaza_finder/features/sync/domain/services/sync_runner.dart';
+import 'package:hiyaza_finder/features/holdings/ui/widgets/home_top_bar.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../../../support/localized_widget_test_harness.dart';
@@ -26,7 +25,6 @@ void main() {
 
   setUp(() async {
     await getIt.reset();
-    getIt.registerLazySingleton<SyncRunner>(SyncRunner.new);
     getIt.registerLazySingleton<ConnectionQualityService>(
       () => ConnectionQualityService(_FakeNetworkInfo()),
     );
@@ -66,7 +64,6 @@ void main() {
   testWidgets('shows a wifi-off icon when the connectivity service reports '
       'offline', (final tester) async {
     await getIt.reset();
-    getIt.registerLazySingleton<SyncRunner>(SyncRunner.new);
     // Uses `checkNow()` instead of `start()` — a running `Timer.periodic`
     // would make `pumpAndSettle` (which waits out every pending timer) hang
     // forever, so this test avoids starting the poll loop entirely and just

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/arabic_normalizer.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/arabic_normalizer.dart';
 
 void main() {
   group('ArabicNormalizer.normalize', () {

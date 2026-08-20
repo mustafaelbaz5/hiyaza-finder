@@ -3,15 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/cached_city_meta.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
-import 'package:hiyaza_finder/features/cities/domain/repositories/city_repository.dart';
-import 'package:hiyaza_finder/features/cities/presentation/screens/city_tools_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/repository/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/cities/data/model/cached_city_meta.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
+import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
+import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
-import '../../../../support/localized_widget_test_harness.dart';
+import '../../../support/localized_widget_test_harness.dart';
 
 /// Consolidation regression: "إدارة المدن المحملة" used to live only in the
 /// settings sheet — it's now also (only) reachable as a tile on
@@ -31,7 +31,7 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-class _FakeCityRepository implements CityRepository {
+class _FakeCityRepo implements CityRepo {
   @override
   Future<CitySnapshot> downloadCity(final City city) => throw UnimplementedError();
 
@@ -49,13 +49,6 @@ class _FakeCityRepository implements CityRepository {
 
   @override
   Future<void> deleteCachedCity(final String cityId) async {}
-
-  @override
-  Future<City> fetchCity(final String cityId) => throw UnimplementedError();
-
-  @override
-  Future<void> updateCityCode(final String cityId, final String? code) =>
-      throw UnimplementedError();
 }
 
 void main() {
@@ -63,7 +56,7 @@ void main() {
 
   setUp(() async {
     await getIt.reset();
-    getIt.registerLazySingleton<CityRepository>(_FakeCityRepository.new);
+    getIt.registerLazySingleton<CityRepo>(_FakeCityRepo.new);
     getIt.registerLazySingleton<HoldingsRepository>(
       () => HoldingsRepository(
         editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),

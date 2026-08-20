@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/parcel_edit_overlay.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_edit_overlay.dart';
 
 void main() {
   const ParcelEditOverlay overlay = ParcelEditOverlay();
