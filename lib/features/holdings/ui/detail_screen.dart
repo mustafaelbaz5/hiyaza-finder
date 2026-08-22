@@ -94,8 +94,47 @@ class _DetailScreenState extends State<DetailScreen>
           ..addListener(() {
             if (!_tabController.indexIsChanging) setState(() {});
           });
-    _parcels = List<Parcel>.of(widget.parcels);
+    _parcels = _sortedByBasin(widget.parcels);
     _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
+  }
+
+  /// القطع مرتبة بـ اسم الحوض أبجدياً (APP_CLAUDE.md § Screen 3) — a holding
+  /// spanning several basins shows its parcels grouped alphabetically by
+  /// basin, not in whatever order the backend/local dataset happened to
+  /// return them.
+  List<Parcel> _sortedByBasin(final List<Parcel> parcels) {
+    final List<Parcel> sorted = List<Parcel>.of(parcels);
+    sorted.sort(
+      (final Parcel a, final Parcel b) =>
+          (a.basinName ?? '').compareTo(b.basinName ?? ''),
+    );
+    return sorted;
+  }
+
+  /// Previous/Next between holdings in the same basin — `null` if this
+  /// holding's parcels have no basin name, or [_repository] finds no
+  /// adjacent holding in that direction.
+  void _navigateToAdjacentHolding(final bool next) {
+    final String? basinName = _parcels.isEmpty ? null : _parcels.first.basinName;
+    final String? groupKey = _groupKey;
+    if (basinName == null || groupKey == null) return;
+
+    final String? targetGroupKey = _repository.adjacentHoldingGroupKey(
+      basinName,
+      groupKey,
+      next: next,
+    );
+    if (targetGroupKey == null) return;
+
+    final List<Parcel> targetParcels =
+        _sortedByBasin(_repository.parcelsForHolding(targetGroupKey));
+    if (targetParcels.isEmpty) return;
+
+    setState(() {
+      _groupKey = targetGroupKey;
+      _parcels = targetParcels;
+      _busyParcelIds.clear();
+    });
   }
 
   @override
@@ -148,7 +187,7 @@ class _DetailScreenState extends State<DetailScreen>
       }
     }
     setState(() {
-      _parcels = result;
+      _parcels = _sortedByBasin(result);
     });
   }
 
@@ -364,6 +403,13 @@ class _DetailScreenState extends State<DetailScreen>
     final colors = context.customColors;
     final String holdingId =
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
+    final String? basinName = _parcels.isEmpty ? null : _parcels.first.basinName;
+    final String? previousGroupKey = basinName == null || _groupKey == null
+        ? null
+        : _repository.adjacentHoldingGroupKey(basinName, _groupKey!, next: false);
+    final String? nextGroupKey = basinName == null || _groupKey == null
+        ? null
+        : _repository.adjacentHoldingGroupKey(basinName, _groupKey!, next: true);
     final DetailScreenTab activeTab =
         DetailScreenTab.values[_tabController.index];
     // Deliberately NOT re-sorted by completion state — a parcel keeps its
@@ -392,6 +438,12 @@ class _DetailScreenState extends State<DetailScreen>
                     DetailScreenHeader(
                       holdingId: holdingId,
                       parcelCount: _parcels.length,
+                      onPrevious: previousGroupKey == null
+                          ? null
+                          : () => _navigateToAdjacentHolding(false),
+                      onNext: nextGroupKey == null
+                          ? null
+                          : () => _navigateToAdjacentHolding(true),
                     ),
                     // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
                     // Phase 11 §11) — unlike the filter-chip row this replaced,

@@ -1,5 +1,6 @@
 import 'arabic_normalizer.dart';
 import 'holding_search_service.dart';
+import '../model/basin_progress.dart';
 import '../model/parcel.dart';
 import 'border_name_index.dart';
 
@@ -56,6 +57,45 @@ class ParcelQueryService {
     };
   }
 
+  /// One [BasinProgress] per distinct اسم الحوض in [parcels], sorted by
+  /// name — the basin-first home screen's progress cards. A holding counts
+  /// as completed only when every one of its parcels is
+  /// `Parcel.completedAt`-set; grouped by `groupKey`, same as
+  /// [basinHoldingCounts], so pending (not-yet-numbered) new people are
+  /// never collapsed into one another.
+  List<BasinProgress> basinSummaries(final List<Parcel> parcels) {
+    final Map<String, Map<String, List<Parcel>>> holdingsByBasin =
+        <String, Map<String, List<Parcel>>>{};
+    for (final Parcel p in parcels) {
+      final String? name = p.basinName?.trim();
+      if (name == null || name.isEmpty) continue;
+      (holdingsByBasin[name] ??= <String, List<Parcel>>{})
+          .putIfAbsent(p.groupKey, () => <Parcel>[])
+          .add(p);
+    }
+
+    final List<BasinProgress> summaries = <BasinProgress>[
+      for (final MapEntry<String, Map<String, List<Parcel>>> basinEntry
+          in holdingsByBasin.entries)
+        BasinProgress(
+          basinName: basinEntry.key,
+          totalCount: basinEntry.value.length,
+          completedCount: basinEntry.value.values
+              .where(
+                (final List<Parcel> holdingParcels) => holdingParcels.every(
+                  (final Parcel p) => p.completedAt != null,
+                ),
+              )
+              .length,
+        ),
+    ];
+    summaries.sort(
+      (final BasinProgress a, final BasinProgress b) =>
+          a.basinName.compareTo(b.basinName),
+    );
+    return summaries;
+  }
+
   /// [groupKey] is `Parcel.groupKey` (from a `SearchResult`), not the raw
   /// رقم الحيازة — see that getter's doc for why: several pending records
   /// can share the same placeholder id and must not be merged together.
@@ -64,6 +104,42 @@ class ParcelQueryService {
     final String groupKey,
   ) =>
       parcels.where((final Parcel p) => p.groupKey == groupKey).toList();
+
+  /// The `groupKey` immediately before/after [currentGroupKey] within
+  /// [basinName], ordered by رقم الحيازة ascending — the same order
+  /// `BasinScreen` lists holdings in, so Detail's Previous/Next always
+  /// matches what the user would see by going back to the basin list.
+  /// `null` if [currentGroupKey] is first/last (no previous/next), or
+  /// isn't found in [basinName] at all.
+  String? adjacentHoldingGroupKey(
+    final List<Parcel> parcels,
+    final String basinName,
+    final String currentGroupKey, {
+    required final bool next,
+  }) {
+    final Map<String, List<Parcel>> byGroup = <String, List<Parcel>>{};
+    for (final Parcel p in parcels) {
+      if (p.basinName != basinName) continue;
+      byGroup.putIfAbsent(p.groupKey, () => <Parcel>[]).add(p);
+    }
+    if (byGroup.isEmpty) return null;
+
+    double holdingNumberValue(final String holdingId) {
+      final double? parsed = double.tryParse(holdingId.trim());
+      return parsed ?? double.infinity;
+    }
+
+    final List<String> orderedKeys = byGroup.keys.toList()
+      ..sort((final String a, final String b) => holdingNumberValue(
+            byGroup[a]!.first.holdingId,
+          ).compareTo(holdingNumberValue(byGroup[b]!.first.holdingId)));
+
+    final int idx = orderedKeys.indexOf(currentGroupKey);
+    if (idx < 0) return null;
+    final int targetIdx = next ? idx + 1 : idx - 1;
+    if (targetIdx < 0 || targetIdx >= orderedKeys.length) return null;
+    return orderedKeys[targetIdx];
+  }
 
   /// Resolves free-text الحدود (border) text — e.g. "ورثة محمد علي" — to the
   /// holding it refers to, so the compass can offer "go see this person's

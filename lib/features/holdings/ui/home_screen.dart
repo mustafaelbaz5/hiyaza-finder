@@ -3,16 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../cities/data/model/city_snapshot.dart';
-import '../data/repo/holdings_repository.dart';
 import '../logic/cubit/home_cubit.dart';
 import '../logic/cubit/home_state.dart';
-import 'widgets/basin_filter_sheet.dart';
 import 'widgets/empty_body.dart';
 import 'widgets/error_body.dart';
 import 'widgets/home_top_bar.dart';
 import 'widgets/loading_body.dart';
 
-import '../../../core/di/dependency_injection.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/settings/ui/settings_sheet.dart';
 import '../../../core/utils/extensions/context_ext.dart';
@@ -42,19 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _openBasinFilter(final HomeCubit cubit) async {
-    final HomeState state = cubit.state;
-    final String? selected = await showBasinFilterSheet(
-      context,
-      basins: state.availableBasins,
-      selected: state.selectedBasin,
-      holdingCounts: getIt<HoldingsRepository>().basinHoldingCounts,
-    );
-    if (selected != state.selectedBasin) {
-      cubit.selectBasin(selected);
-    }
-  }
-
   Future<void> _openFileStatus(final HomeCubit cubit) async {
     await context.pushNamed(Routes.fileStatus);
     if (mounted) cubit.refreshData();
@@ -68,14 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Runs once right after a city finishes loading: opens the basin
-  /// filter automatically if there's more than one basin to choose from.
-  Future<void> _onCityLoaded(final HomeCubit cubit) async {
-    if (cubit.state.availableBasins.length > 1) {
-      await _openBasinFilter(cubit);
-    }
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -84,13 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: BlocConsumer<HomeCubit, HomeState>(
-          listenWhen: (final HomeState previous, final HomeState current) =>
-              current.status == HomeStatus.loaded &&
-              previous.status != HomeStatus.loaded,
-          listener: (final BuildContext context, final HomeState state) {
-            _onCityLoaded(cubit);
-          },
+        child: BlocBuilder<HomeCubit, HomeState>(
           builder: (final BuildContext context, final HomeState state) {
             return Column(
               children: <Widget>[
@@ -117,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             cubit: cubit,
                             onQueryChanged: (final String q) =>
                                 _onQueryChanged(q, cubit),
-                            onOpenBasinFilter: () => _openBasinFilter(cubit),
                             onOpenFileStatus: () => _openFileStatus(cubit),
                             onChangeCity: () => _openCityPicker(cubit),
                           ),

@@ -49,6 +49,8 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_svg: ^2.2.4
   uuid: ^4.5.1
+  excel: ^4.0.6
+  share_plus: ^11.0.0
 
 # ----------------------------------------------------------------
 # DEV DEPENDENCIES

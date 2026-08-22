@@ -1,13 +1,9 @@
 import 'package:equatable/equatable.dart';
 import '../../data/local/holding_search_service.dart';
+import '../../data/model/basin_progress.dart';
 import '../../data/model/parcel.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
-
-/// Sentinel used by [HomeState.copyWith] so `selectedBasin` can be
-/// explicitly set to `null` (meaning "focus on all basins") instead of
-/// `null` always meaning "leave the current value unchanged".
-const Object _unset = Object();
 
 class HomeState extends Equatable {
   const HomeState({
@@ -16,8 +12,7 @@ class HomeState extends Equatable {
     this.query = '',
     this.results = const <SearchResult>[],
     this.errorMessage,
-    this.availableBasins = const <String>[],
-    this.selectedBasin,
+    this.basins = const <BasinProgress>[],
     this.modifiedIds = const <String>{},
   });
 
@@ -29,11 +24,9 @@ class HomeState extends Equatable {
   final List<SearchResult> results;
   final String? errorMessage;
 
-  /// Distinct اسم الحوض values found in the loaded dataset, sorted.
-  final List<String> availableBasins;
-
-  /// The basin currently focused for search, or `null` for "all basins".
-  final String? selectedBasin;
+  /// Per-basin completion progress — basin-first home's card list. Empty
+  /// query shows these; a non-empty [query] shows [results] instead.
+  final List<BasinProgress> basins;
 
   /// `Parcel.id`s with a local edit-overlay entry
   /// (`HoldingsRepository.isParcelEdited`) — snapshotted into state
@@ -48,17 +41,6 @@ class HomeState extends Equatable {
   /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
   int get holdingCount => parcels.length;
 
-  /// Parcel-row counts by status, for the home screen's lightweight summary
-  /// cards (`REFACTOR_ROADMAP.md` Phase 7/9, `PROJECT_OBJECTIVES.md` §4's
-  /// "original / modified / added / reviewed counts" — "reviewed" there
-  /// means field-worker completion, now tracked via `Parcel.completedAt`,
-  /// not the staff/Dashboard-only `reviewed` column — see
-  /// `REFACTOR_ROADMAP.md` Phase 9 #12). Counts parcel rows, matching
-  /// [holdingCount]'s convention — not distinct holdings. There is no
-  /// separate "original" count: it's just `holdingCount - addedCount`, not
-  /// independently useful enough to a field worker to warrant its own card
-  /// (`REFACTOR_ROADMAP.md` Phase 9 #13 — deliberately kept lightweight,
-  /// not a drill-down/filterable activity center).
   int get addedCount =>
       parcels.where((final Parcel p) => p.isFieldAdded).length;
 
@@ -70,14 +52,25 @@ class HomeState extends Equatable {
   int get modifiedCount =>
       parcels.where((final Parcel p) => modifiedIds.contains(p.id)).length;
 
+  /// Total distinct holdings across every basin — the home screen's overall
+  /// progress bar denominator.
+  int get totalHoldingsCount =>
+      basins.fold(0, (final int sum, final BasinProgress b) => sum + b.totalCount);
+
+  /// Total completed holdings across every basin — the home screen's
+  /// overall progress bar numerator.
+  int get completedHoldingsCount => basins.fold(
+        0,
+        (final int sum, final BasinProgress b) => sum + b.completedCount,
+      );
+
   HomeState copyWith({
     final HomeStatus? status,
     final List<Parcel>? parcels,
     final String? query,
     final List<SearchResult>? results,
     final String? errorMessage,
-    final List<String>? availableBasins,
-    final Object? selectedBasin = _unset,
+    final List<BasinProgress>? basins,
     final Set<String>? modifiedIds,
   }) {
     return HomeState(
@@ -86,10 +79,7 @@ class HomeState extends Equatable {
       query: query ?? this.query,
       results: results ?? this.results,
       errorMessage: errorMessage,
-      availableBasins: availableBasins ?? this.availableBasins,
-      selectedBasin: identical(selectedBasin, _unset)
-          ? this.selectedBasin
-          : selectedBasin as String?,
+      basins: basins ?? this.basins,
       modifiedIds: modifiedIds ?? this.modifiedIds,
     );
   }
@@ -101,8 +91,7 @@ class HomeState extends Equatable {
         query,
         results,
         errorMessage,
-        availableBasins,
-        selectedBasin,
+        basins,
         modifiedIds,
       ];
 }

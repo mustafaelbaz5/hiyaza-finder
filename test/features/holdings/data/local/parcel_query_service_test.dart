@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/basin_progress.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/border_name_index.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_query_service.dart';
@@ -65,6 +66,98 @@ void main() {
       final List<Parcel> result = service.parcelsForHolding(pendingParcels, firstKey);
       expect(result, hasLength(1));
       expect(result.single.holderName, 'شخص أول');
+    });
+  });
+
+  group('basinSummaries', () {
+    test('counts a holding as completed only when every one of its parcels is', () {
+      final List<Parcel> mixed = <Parcel>[
+        Parcel(
+          id: '1',
+          holdingId: '101',
+          basinName: 'الباشا',
+          completedAt: DateTime(2026, 1, 1),
+        ),
+        const Parcel(id: '2', holdingId: '102', basinName: 'الباشا'), // not completed
+        const Parcel(id: '3', holdingId: '103', basinName: 'البحيره'),
+      ];
+
+      final List<BasinProgress> summaries = service.basinSummaries(mixed);
+      final BasinProgress basha =
+          summaries.firstWhere((final BasinProgress b) => b.basinName == 'الباشا');
+      expect(basha.totalCount, 2);
+      expect(basha.completedCount, 1);
+      expect(basha.isFullyCompleted, isFalse);
+
+      final BasinProgress bahira =
+          summaries.firstWhere((final BasinProgress b) => b.basinName == 'البحيره');
+      expect(bahira.isNotStarted, isTrue);
+    });
+
+    test('a multi-parcel holding only counts as completed once every parcel is', () {
+      final List<Parcel> multiParcelHolding = <Parcel>[
+        Parcel(
+          id: '1',
+          holdingId: '101',
+          basinName: 'الباشا',
+          completedAt: DateTime(2026, 1, 1),
+        ),
+        const Parcel(id: '2', holdingId: '101', basinName: 'الباشا'), // same holding, not done
+      ];
+
+      final BasinProgress basha = service.basinSummaries(multiParcelHolding).single;
+      expect(basha.totalCount, 1); // one holding
+      expect(basha.completedCount, 0); // not every parcel is completed
+    });
+
+    test('is sorted by basin name', () {
+      final List<Parcel> unordered = <Parcel>[
+        const Parcel(id: '1', holdingId: '1', basinName: 'ب'),
+        const Parcel(id: '2', holdingId: '2', basinName: 'أ'),
+      ];
+      final List<BasinProgress> summaries = service.basinSummaries(unordered);
+      expect(summaries.map((final BasinProgress b) => b.basinName), <String>['أ', 'ب']);
+    });
+  });
+
+  group('adjacentHoldingGroupKey', () {
+    final List<Parcel> basinParcels = <Parcel>[
+      const Parcel(id: 'p1', holdingId: '1', basinName: 'الباشا'),
+      const Parcel(id: 'p2', holdingId: '3', basinName: 'الباشا'),
+      const Parcel(id: 'p3', holdingId: '2', basinName: 'الباشا'),
+    ];
+
+    test('next/previous follow رقم الحيازة ascending order, not list order', () {
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'الباشا', '1', next: true),
+        '2',
+      );
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'الباشا', '2', next: true),
+        '3',
+      );
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'الباشا', '2', next: false),
+        '1',
+      );
+    });
+
+    test('returns null at either end', () {
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'الباشا', '1', next: false),
+        isNull,
+      );
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'الباشا', '3', next: true),
+        isNull,
+      );
+    });
+
+    test('returns null for a groupKey not in the given basin', () {
+      expect(
+        service.adjacentHoldingGroupKey(basinParcels, 'حوض آخر', '1', next: true),
+        isNull,
+      );
     });
   });
 

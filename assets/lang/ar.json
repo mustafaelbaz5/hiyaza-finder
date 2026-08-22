@@ -136,6 +136,9 @@
       "manage_cities": {
         "subtitle": "عرض وحذف المدن المحمّلة على هذا الجهاز"
       },
+      "export": {
+        "subtitle": "تصدير بيانات هذه المدينة إلى ملف Excel"
+      },
       "city_code": {
         "title": "كود المدينة",
         "subtitle": "عرض وتعديل كود المدينة",
@@ -278,7 +281,16 @@
       "summary_added": "مضافة",
       "summary_modified": "معدّلة",
       "summary_pending_review": "قيد المراجعة",
-      "summary_reviewed": "تمت المراجعة"
+      "summary_reviewed": "تمت المراجعة",
+      "basins_title": "الأحواض",
+      "no_basins": "لا توجد أحواض في هذه المدينة",
+      "overall_total": "الإجمالي: {completed} / {total}"
+    },
+    "basin_screen": {
+      "filter_all": "الكل",
+      "filter_pending": "ناقصة",
+      "filter_completed": "مكتملة",
+      "empty": "لا توجد حيازات في هذا الفلتر"
     },
     "search": {
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
@@ -307,6 +319,8 @@
       "new_badge": "جديد — بانتظار المزامنة",
       "parcel_count": "{count} قطعة",
       "parcel_count_suffix": " ({count} قطع)",
+      "previous_holding": "الحيازة السابقة",
+      "next_holding": "الحيازة التالية",
       "feddan": "فدان",
       "qirat": "قيراط",
       "sahm": "سهم",
@@ -372,6 +386,21 @@
       "total_preview": "الإجمالي ≈ {value} م²",
       "save": "حفظ التعديلات",
       "saved": "تم حفظ التعديلات"
+    },
+    "export": {
+      "title": "تصدير البيانات",
+      "scope_title": "البيانات المُصدَّرة",
+      "scope_all": "كل البيانات ({count} قطعة)",
+      "scope_added_only": "المضافة يدوياً فقط ({count} قطعة)",
+      "basin_title": "الحوض",
+      "all_basins": "كل الأحواض",
+      "pick_basin_title": "حوض محدد",
+      "contents_title": "الملف المُصدَّر سيحتوي على:",
+      "contents_all_sheet": "شيت \"كل البيانات\"",
+      "contents_basin_sheets": "شيت لكل حوض",
+      "preview_count": "سيتم تصدير {count} قطعة",
+      "nothing_to_export": "لا توجد بيانات لتصديرها بهذا النطاق",
+      "export_button": "تصدير Excel"
     },
     "bulk_edit": {
       "entry_pill": "أدوات المدينة",

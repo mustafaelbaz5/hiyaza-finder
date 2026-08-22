@@ -136,6 +136,9 @@
       "manage_cities": {
         "subtitle": "View and delete cities downloaded on this device"
       },
+      "export": {
+        "subtitle": "Export this city's data to an Excel file"
+      },
       "city_code": {
         "title": "City code",
         "subtitle": "View and edit the city's reference code",
@@ -278,7 +281,16 @@
       "summary_added": "Added",
       "summary_modified": "Modified",
       "summary_pending_review": "Pending review",
-      "summary_reviewed": "Reviewed"
+      "summary_reviewed": "Reviewed",
+      "basins_title": "Basins",
+      "no_basins": "No basins in this city",
+      "overall_total": "Total: {completed} / {total}"
+    },
+    "basin_screen": {
+      "filter_all": "All",
+      "filter_pending": "Pending",
+      "filter_completed": "Completed",
+      "empty": "No holdings match this filter"
     },
     "search": {
       "hint": "Search by holder name or holding number …",
@@ -307,6 +319,8 @@
       "new_badge": "New — pending sync",
       "parcel_count": "{count} parcels",
       "parcel_count_suffix": " ({count} parcels)",
+      "previous_holding": "Previous holding",
+      "next_holding": "Next holding",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
@@ -372,6 +386,21 @@
       "total_preview": "Total ≈ {value} m²",
       "save": "Save changes",
       "saved": "Changes saved"
+    },
+    "export": {
+      "title": "Export data",
+      "scope_title": "Exported data",
+      "scope_all": "All data ({count} parcels)",
+      "scope_added_only": "Manually added only ({count} parcels)",
+      "basin_title": "Basin",
+      "all_basins": "All basins",
+      "pick_basin_title": "Specific basin",
+      "contents_title": "The exported file will contain:",
+      "contents_all_sheet": "An \"All data\" sheet",
+      "contents_basin_sheets": "One sheet per basin",
+      "preview_count": "{count} parcels will be exported",
+      "nothing_to_export": "No data to export for this scope",
+      "export_button": "Export Excel"
     },
     "bulk_edit": {
       "entry_pill": "City tools",

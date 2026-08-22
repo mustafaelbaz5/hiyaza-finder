@@ -6,6 +6,7 @@ import '../local/parcel_dataset_state.dart';
 import '../local/parcel_edit_overlay.dart';
 import '../local/parcel_edits_store.dart';
 import '../local/parcel_query_service.dart';
+import '../model/basin_progress.dart';
 import '../model/bulk_edit_outcome.dart';
 import '../model/bulk_editable_field.dart';
 import '../model/parcel.dart';
@@ -291,8 +292,25 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       _queryService.basinHoldingCounts(_dataset.parcels);
 
   @override
+  List<BasinProgress> get basinSummaries =>
+      _queryService.basinSummaries(_dataset.parcels);
+
+  @override
   List<Parcel> parcelsForHolding(final String holdingId) =>
       _queryService.parcelsForHolding(_dataset.parcels, holdingId);
+
+  @override
+  String? adjacentHoldingGroupKey(
+    final String basinName,
+    final String currentGroupKey, {
+    required final bool next,
+  }) =>
+      _queryService.adjacentHoldingGroupKey(
+        _dataset.parcels,
+        basinName,
+        currentGroupKey,
+        next: next,
+      );
 
   @override
   Parcel? findByBorderText(final String? borderText) =>

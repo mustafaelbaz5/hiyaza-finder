@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
@@ -78,8 +76,7 @@ class HomeCubit extends Cubit<HomeState> {
       parcels: parcels,
       query: '',
       results: const <SearchResult>[],
-      availableBasins: _repository.availableBasins,
-      selectedBasin: null,
+      basins: _repository.basinSummaries,
       modifiedIds: _modifiedIds(parcels),
     );
   }
@@ -91,33 +88,30 @@ class HomeCubit extends Cubit<HomeState> {
           if (_repository.isParcelEdited(p.id)) p.id,
       };
 
+  /// Re-derives state from the repository's current data — used after
+  /// returning from a screen that mutated parcels directly on the
+  /// repository (e.g. the bulk-edit/file-status screen, or the Basin/
+  /// Detail screens' writes), since that mutates the same underlying list
+  /// in place without going through this cubit.
   void refreshData() {
     final List<Parcel> parcels = _repository.parcels;
     emit(
       state.copyWith(
         parcels: parcels,
-        availableBasins: _repository.availableBasins,
-        results: state.query.trim().isEmpty
-            ? state.results
-            : _repository.search(state.query, basin: state.selectedBasin),
+        basins: _repository.basinSummaries,
+        results:
+            state.query.trim().isEmpty ? state.results : _repository.search(state.query),
         modifiedIds: _modifiedIds(parcels),
       ),
     );
   }
 
+  /// Searches the whole active dataset (every basin) — the home screen's
+  /// search bar always searches globally regardless of which basin cards
+  /// are showing below it.
   void search(final String query) {
-    final List<SearchResult> results = query.trim().isEmpty
-        ? const <SearchResult>[]
-        : _repository.search(query, basin: state.selectedBasin);
+    final List<SearchResult> results =
+        query.trim().isEmpty ? const <SearchResult>[] : _repository.search(query);
     emit(state.copyWith(query: query, results: results));
-  }
-
-  /// Narrows subsequent searches to [basin] (اسم الحوض), or `null` to
-  /// search the whole loaded dataset again.
-  void selectBasin(final String? basin) {
-    final List<SearchResult> results = state.query.trim().isEmpty
-        ? const <SearchResult>[]
-        : _repository.search(state.query, basin: basin);
-    emit(state.copyWith(selectedBasin: basin, results: results));
   }
 }

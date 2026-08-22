@@ -56,6 +56,13 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                     subtitle: 'cities.tools.crop_types.subtitle'.tr(),
                     onTap: () => context.pushNamed(Routes.cropTypeSettings),
                   ),
+                  verticalSpacing(10),
+                  _ToolTile(
+                    icon: Icons.file_download_outlined,
+                    title: 'holdings.export.title'.tr(),
+                    subtitle: 'cities.tools.export.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.export),
+                  ),
                 ],
               ),
             ),

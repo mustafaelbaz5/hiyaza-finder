@@ -16,7 +16,9 @@ import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/basin_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/detail_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/export_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/file_status_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/home_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
@@ -45,6 +47,9 @@ class AppRouter {
           ),
           settings,
         );
+      case Routes.basin:
+        final String basinName = settings.arguments as String? ?? '';
+        return _buildRoute(BasinScreen(basinName: basinName), settings);
       case Routes.holdingDetail:
         final List<Parcel> parcels = (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
         return _buildRoute(DetailScreen(parcels: parcels), settings);
@@ -68,6 +73,8 @@ class AppRouter {
         return _buildRoute(const MissingHoldingIdScreen(), settings);
       case Routes.cropTypeSettings:
         return _buildRoute(const CropTypeSettingsScreen(), settings);
+      case Routes.export:
+        return _buildRoute(const ExportScreen(), settings);
       default:
         return null;
     }
