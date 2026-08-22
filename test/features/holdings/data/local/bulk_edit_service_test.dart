@@ -38,12 +38,12 @@ void main() {
     expect(
       result.parcels
           .where((final Parcel p) => p.basinName == 'البشيط')
-          .every((final Parcel p) => p.notes == 'وضع يد'),
+          .every((final Parcel p) => p.notes.contains('وضع يد')),
       isTrue,
     );
     expect(
       result.parcels.firstWhere((final Parcel p) => p.basinName == 'السواخ').notes,
-      isNull,
+      isEmpty,
     );
   });
 

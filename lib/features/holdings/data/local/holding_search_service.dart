@@ -1,6 +1,4 @@
-
 import '../model/parcel.dart';
-
 import 'arabic_normalizer.dart';
 
 class SearchResult {
@@ -26,25 +24,69 @@ class SearchResult {
   final int score;
 
   /// How many of this group's parcels are field-worker-completed
-  /// (`Parcel.completedAt` non-null — `SYSTEM_DESIGN.md` §10,
-  /// `REFACTOR_ROADMAP.md` Phase 9 #12). `parcelCount == completedCount`
-  /// means "fully done", `0` means "not started", anything between is
-  /// "partial".
+  /// (`Parcel.completedAt` non-null). `parcelCount == completedCount` means
+  /// "fully done", `0` means "not started", anything between is "partial".
   final int completedCount;
 
   /// Whether the best-scoring parcel behind this result was field-created
   /// (`Parcel.isFieldAdded`). Used as a same-score tiebreaker so freshly
-  /// added records surface ahead of imported ones (`REFACTOR_ROADMAP.md`
-  /// Phase 7) — there's no creation timestamp on [Parcel] to sort by
-  /// directly, so this is the closest signal available client-side.
+  /// added records surface ahead of imported ones — there's no creation
+  /// timestamp on [Parcel] to sort by directly, so this is the closest
+  /// signal available client-side.
   final bool isFieldAdded;
 }
 
-/// Numeric queries rank by holding-ID match in three tiers — exact match
-/// highest, then prefix, then contains-anywhere lowest — so typing "7" ranks
-/// a holding whose number *is* "7" above one merely containing a "7" (e.g.
-/// "470"). Text queries rank holder names in two tiers against the
-/// normalized name:
+/// Which of the three search modes a query is classified as — determined
+/// purely from the query's shape, never from a user-facing toggle.
+enum SearchType { holdingNumber, parcelId, holderName }
+
+/// Every character an all-digits input can be made of — Western 0-9 plus
+/// Arabic-Indic ٠-٩, so a field worker typing on an Arabic keyboard's digit
+/// row still hits the holding-number path.
+final RegExp _allDigits = RegExp(r'^[\d٠-٩]+$');
+
+/// A hex string (a UUID fragment, with or without dashes) at least 8
+/// characters long — long enough that a short numeric-looking token (e.g.
+/// "12345") doesn't get misclassified as a parcel-id fragment purely
+/// because its digits happen to also be valid hex.
+final RegExp _hexFragment = RegExp(r'^[0-9a-fA-F-]{8,}$');
+
+SearchType detectSearchType(final String query) {
+  final String trimmed = query.trim();
+  if (_allDigits.hasMatch(trimmed)) return SearchType.holdingNumber;
+  if (_hexFragment.hasMatch(trimmed)) return SearchType.parcelId;
+  return SearchType.holderName;
+}
+
+/// Maps Arabic-Indic digits (٠-٩) to their Western equivalents so a holding
+/// number typed on an Arabic keyboard still matches one stored/typed with
+/// Western digits, and vice versa.
+String _normalizeDigits(final String value) {
+  const String arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+  final StringBuffer buffer = StringBuffer();
+  for (final int codeUnit in value.codeUnits) {
+    final String char = String.fromCharCode(codeUnit);
+    final int arabicIndex = arabicIndic.indexOf(char);
+    buffer.write(arabicIndex >= 0 ? arabicIndex.toString() : char);
+  }
+  return buffer.toString();
+}
+
+/// Strips leading zeros so "007" and "7" match the same holding — holding
+/// numbers are opaque strings everywhere else in the app, but a leading
+/// zero is a formatting artifact a field worker shouldn't have to type
+/// exactly to find a record. Never strips down to an empty string (a
+/// literal "0"/"00" normalizes to "0", not "").
+String _normalizeHoldingNumber(final String value) {
+  final String digits = _normalizeDigits(value.trim());
+  final String stripped = digits.replaceFirst(RegExp(r'^0+(?=.)'), '');
+  return stripped;
+}
+
+/// Numeric queries match رقم الحيازة by **exact match only** — typing "8"
+/// finds the holding whose number *is* "8", never one that merely contains
+/// or starts with an "8" (e.g. "80" or "18"). Text queries rank holder
+/// names in two tiers against the normalized name:
 ///
 /// - Tier 1 ("starts with", high priority): the full name starts with the
 ///   query, or — a more precise variant of the same rule — an individual
@@ -60,15 +102,17 @@ class SearchResult {
 class HoldingSearchService {
   const HoldingSearchService();
 
-  static final RegExp _digitsOnly = RegExp(r'^\d+$');
+  /// Exact holding-number match score — there is only one tier for this
+  /// search type, unlike holder-name search's two.
+  static const int _holdingNumberScore = 100;
 
-  /// Tier 1 — query matches from the very start of the full name.
+  /// Parcel-id search tiers.
+  static const int _parcelIdStartScore = 100;
+  static const int _parcelIdContainsScore = 50;
+
+  /// Holder-name search tiers.
   static const int _fullNameStartScore = 100;
-
-  /// Tier 1 — query matches the start of an inner word only.
   static const int _wordStartScore = 80;
-
-  /// Tier 2 — query appears somewhere in the name, but not at a word start.
   static const int _containsScore = 40;
 
   static const int _maxResults = 10;
@@ -80,20 +124,11 @@ class HoldingSearchService {
     final String query = rawQuery.trim();
     if (query.isEmpty) return const <SearchResult>[];
 
-    // Parcel-id matching always runs alongside whichever of the two
-    // existing branches applies — a query can't be reliably classified as
-    // "id-shaped" up front (a uuid fragment like "123" is digits-only, and
-    // a fragment like "a3f" is neither digits-only nor a plausible name
-    // token), so instead of a three-way mutually-exclusive dispatch, id
-    // results are simply concatenated in; _groupAndRank already collapses
-    // to the best score per groupKey regardless of which matcher produced
-    // it.
-    final List<_ScoredParcel> scored = <_ScoredParcel>[
-      ...(_digitsOnly.hasMatch(query)
-          ? _scoreByHoldingId(parcels, query)
-          : _scoreByHolderName(parcels, query)),
-      ..._scoreByParcelId(parcels, query),
-    ];
+    final List<ScoredParcel> scored = switch (detectSearchType(query)) {
+      SearchType.holdingNumber => searchByHoldingNumber(parcels, query),
+      SearchType.parcelId => searchByParcelId(parcels, query),
+      SearchType.holderName => searchByHolderName(parcels, query),
+    };
 
     final Map<String, int> parcelCountsByHolding = <String, int>{};
     final Map<String, int> completedCountsByHolding = <String, int>{};
@@ -109,65 +144,56 @@ class HoldingSearchService {
     return _groupAndRank(scored, parcelCountsByHolding, completedCountsByHolding);
   }
 
-  /// Three tiers, exact match ranked highest — searching "7" must surface
-  /// the holding whose number *is* "7" above one that merely contains a "7"
-  /// (e.g. "470"). [Parcel.holdingId] is trimmed defensively before
-  /// comparing, mirroring the same precedent in [Parcel.isHoldingIdPending]
-  /// — it's never guaranteed pre-trimmed at storage time. No leading-zero
-  /// stripping on either side: holding numbers like "001117" are opaque
-  /// strings, not parsed integers.
-  List<_ScoredParcel> _scoreByHoldingId(
+  /// EXACT MATCH only, leading-zero-insensitive — see [_normalizeHoldingNumber].
+  List<ScoredParcel> searchByHoldingNumber(
     final List<Parcel> parcels,
     final String query,
   ) {
-    final List<_ScoredParcel> results = <_ScoredParcel>[];
+    final String normalizedQuery = _normalizeHoldingNumber(query);
+    final List<ScoredParcel> results = <ScoredParcel>[];
     for (final Parcel parcel in parcels) {
-      final String holdingId = parcel.holdingId.trim();
-      if (holdingId == query) {
-        results.add(_ScoredParcel(parcel, _fullNameStartScore));
-      } else if (holdingId.startsWith(query)) {
-        results.add(_ScoredParcel(parcel, _wordStartScore));
-      } else if (holdingId.contains(query)) {
-        results.add(_ScoredParcel(parcel, _containsScore));
+      if (_normalizeHoldingNumber(parcel.holdingId) == normalizedQuery) {
+        results.add(ScoredParcel(parcel, _holdingNumberScore));
       }
     }
     return results;
   }
 
-  /// Matches [Parcel.id] (the stable cross-system uuid) case-insensitively
-  /// — lets a field worker paste/type a full or partial parcel id (copied
-  /// from the detail card's ID chip) to jump straight to it.
-  List<_ScoredParcel> _scoreByParcelId(
+  /// Matches [Parcel.id] (the stable cross-system uuid) case-insensitively,
+  /// starts-with ranked above contains-anywhere — lets a field worker
+  /// paste/type a full or partial parcel id (copied from the detail card's
+  /// ID chip) to jump straight to it.
+  List<ScoredParcel> searchByParcelId(
     final List<Parcel> parcels,
     final String query,
   ) {
     final String q = query.toLowerCase();
-    final List<_ScoredParcel> results = <_ScoredParcel>[];
+    final List<ScoredParcel> results = <ScoredParcel>[];
     for (final Parcel parcel in parcels) {
       final String id = parcel.id.toLowerCase();
       if (id.startsWith(q)) {
-        results.add(_ScoredParcel(parcel, 100));
+        results.add(ScoredParcel(parcel, _parcelIdStartScore));
       } else if (id.contains(q)) {
-        results.add(_ScoredParcel(parcel, 50));
+        results.add(ScoredParcel(parcel, _parcelIdContainsScore));
       }
     }
     return results;
   }
 
-  List<_ScoredParcel> _scoreByHolderName(
+  List<ScoredParcel> searchByHolderName(
     final List<Parcel> parcels,
     final String query,
   ) {
     final String normalizedQuery = ArabicNormalizer.normalizeForSearch(query);
-    if (normalizedQuery.isEmpty) return const <_ScoredParcel>[];
+    if (normalizedQuery.isEmpty) return const <ScoredParcel>[];
 
-    final List<_ScoredParcel> results = <_ScoredParcel>[];
+    final List<ScoredParcel> results = <ScoredParcel>[];
     for (final Parcel parcel in parcels) {
       final String? holderName = parcel.holderName;
       if (holderName == null || holderName.isEmpty) continue;
 
       final int? score = _matchScore(normalizedQuery, holderName);
-      if (score != null) results.add(_ScoredParcel(parcel, score));
+      if (score != null) results.add(ScoredParcel(parcel, score));
     }
     return results;
   }
@@ -193,14 +219,14 @@ class HoldingSearchService {
   }
 
   List<SearchResult> _groupAndRank(
-    final List<_ScoredParcel> scored,
+    final List<ScoredParcel> scored,
     final Map<String, int> parcelCountsByHolding,
     final Map<String, int> completedCountsByHolding,
   ) {
-    final Map<String, _ScoredParcel> bestByHolding = <String, _ScoredParcel>{};
-    for (final _ScoredParcel entry in scored) {
+    final Map<String, ScoredParcel> bestByHolding = <String, ScoredParcel>{};
+    for (final ScoredParcel entry in scored) {
       final String key = entry.parcel.groupKey;
-      final _ScoredParcel? existing = bestByHolding[key];
+      final ScoredParcel? existing = bestByHolding[key];
       if (existing == null || entry.score > existing.score) {
         bestByHolding[key] = entry;
       }
@@ -208,7 +234,7 @@ class HoldingSearchService {
 
     final List<SearchResult> results = bestByHolding.values
         .map(
-          (final _ScoredParcel entry) => SearchResult(
+          (final ScoredParcel entry) => SearchResult(
             holdingId: entry.parcel.holdingId,
             groupKey: entry.parcel.groupKey,
             holderName: entry.parcel.holderName,
@@ -233,8 +259,8 @@ class HoldingSearchService {
   }
 }
 
-class _ScoredParcel {
-  const _ScoredParcel(this.parcel, this.score);
+class ScoredParcel {
+  const ScoredParcel(this.parcel, this.score);
 
   final Parcel parcel;
   final int score;

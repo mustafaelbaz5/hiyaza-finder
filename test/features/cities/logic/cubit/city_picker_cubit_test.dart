@@ -34,7 +34,7 @@ class _FakeCityRepo implements CityRepo {
   Future<List<City>> listPublishedCities() async {
     if (listError != null) throw listError!;
     return const <City>[
-      City(id: 'c1', name: 'مدينة اختبار', status: CityStatus.published, dataVersion: 1),
+      City(id: 'c1', name: 'مدينة اختبار', isPublished: true, dataVersion: 1),
     ];
   }
 
@@ -98,7 +98,7 @@ void main() {
   test('downloadAndActivate returns the snapshot and populates HoldingsRepository', () async {
     final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
     const City city =
-        City(id: 'c1', name: 'مدينة اختبار', status: CityStatus.published, dataVersion: 1);
+        City(id: 'c1', name: 'مدينة اختبار', isPublished: true, dataVersion: 1);
 
     final CitySnapshot? snapshot = await cubit.downloadAndActivate(city);
 
@@ -112,7 +112,7 @@ void main() {
     cityRepository.downloadError = UnauthorizedException(message: 'denied');
     final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
     const City city =
-        City(id: 'c1', name: 'مدينة اختبار', status: CityStatus.published, dataVersion: 1);
+        City(id: 'c1', name: 'مدينة اختبار', isPublished: true, dataVersion: 1);
 
     final CitySnapshot? snapshot = await cubit.downloadAndActivate(city);
 

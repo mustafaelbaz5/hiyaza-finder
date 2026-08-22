@@ -233,7 +233,17 @@
       "specify_title": "Specify crop type (optional)"
     },
     "notes_field": {
-      "specify_title": "Write the note (optional)"
+      "specify_title": "Write the note (optional)",
+      "add_title": "Add note",
+      "free_text_hint": "Write a note...",
+      "quick_list_title": "Common notes"
+    },
+    "delegate": {
+      "dialog_title": "Delegate",
+      "dialog_subtitle": "Enter the delegated owner's name — it must differ from the holder's name",
+      "name_required": "Owner name is required",
+      "name_must_differ": "Owner name must differ from the holder's name",
+      "auto_note": "Delegated on behalf of {holder}"
     },
     "status": {
       "added_from_app": "Added from app",

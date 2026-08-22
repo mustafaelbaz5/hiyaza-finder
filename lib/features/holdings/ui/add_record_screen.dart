@@ -6,11 +6,12 @@ import '../data/local/field_change_tracker.dart';
 import '../data/model/parcel.dart';
 import '../data/repo/holdings_repository.dart';
 import 'widgets/add_record_header.dart';
+import 'widgets/delegate_owner_dialog.dart';
 import 'widgets/field_edit_dialogs.dart';
 import 'widgets/field_row.dart';
+import 'widgets/notes_field.dart';
 import 'widgets/required_field_gaps.dart';
 import 'widgets/responsive_fields_wrap.dart';
-import 'widgets/specify_other_picker.dart';
 import 'widgets/toggle_field_row.dart';
 
 import '../../../core/di/dependency_injection.dart';
@@ -190,22 +191,25 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     );
   }
 
-  /// ملاحظات gets the same "specify other" escape hatch نوع الزرع has
-  /// (`REFACTOR_ROADMAP.md` Phase 12).
-  Future<void> _editNotes(final BuildContext context) async {
-    final ChoiceDialogResult<String>? result = await pickWithOther(
+  /// مفوض asks for the new اسم المالك up front (must differ from اسم الحائز)
+  /// and, on confirm, sets `owner_name` and appends "مفوض عنه {holder}" to
+  /// ملاحظات automatically. Cancelling the dialog leaves the toggle off.
+  Future<void> _enableDelegate(final BuildContext context) async {
+    final String? newOwnerName = await showDelegateOwnerDialog(
       context,
-      title: 'holdings.fields.notes'.tr(),
-      selected: _parcel.notes,
-      options: Parcel.notesOptions,
-      otherOption: Parcel.notesOtherOption,
-      specifyTitle: 'holdings.notes_field.specify_title'.tr(),
-      clearLabel: '—',
+      holderName: _parcel.holderName ?? '',
     );
-    if (result == null) return;
+    if (newOwnerName == null || !mounted) return;
+
+    final String delegateNote = 'holdings.delegate.auto_note'
+        .tr(namedArgs: {'holder': _parcel.holderName ?? ''});
     setState(
       () => _parcel = _parcel.copyWith(
-        notes: result.isClear ? null : result.value,
+        isDelegate: true,
+        ownerName: newOwnerName,
+        notes: _parcel.notes.contains(delegateNote)
+            ? _parcel.notes
+            : <String>[..._parcel.notes, delegateNote],
       ),
     );
   }
@@ -399,11 +403,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               isModified: _isModified((final p) => p.cropType),
                               onEdit: () => _editCropType(context),
                             ),
-                            FieldRow(
-                              label: 'holdings.fields.notes'.tr(),
-                              value: _parcel.notes,
+                            NotesField(
+                              notes: _parcel.notes,
                               isModified: _isModified((final p) => p.notes),
-                              onEdit: () => _editNotes(context),
+                              onChanged: (final List<String> notes) =>
+                                  setState(
+                                () => _parcel = _parcel.copyWith(notes: notes),
+                              ),
                             ),
                             if (widget.parentHoldingId == null)
                               FieldRow(
@@ -436,9 +442,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               value: _parcel.isDelegate,
                               isModified:
                                   _isModified((final p) => p.isDelegate),
-                              onChanged: (final bool v) => setState(
-                                () => _parcel = _parcel.copyWith(isDelegate: v),
-                              ),
+                              onChanged: (final bool v) =>
+                                  v ? _enableDelegate(context) : setState(
+                                    () => _parcel =
+                                        _parcel.copyWith(isDelegate: false),
+                                  ),
                             ),
                             if (_parcel.isDelegate)
                               FieldRow(

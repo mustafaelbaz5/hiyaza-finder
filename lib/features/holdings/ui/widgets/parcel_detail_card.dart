@@ -10,7 +10,6 @@ import '../../data/model/parcel.dart';
 import '../../data/repo/holdings_repository.dart';
 import 'see_more_section.dart';
 
-
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -26,9 +25,9 @@ import 'copy_all_button.dart';
 import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
+import 'notes_field.dart';
 import 'parcel_detail_header.dart';
 import 'required_field_gaps.dart';
-import 'specify_other_picker.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -128,192 +127,186 @@ class ParcelDetailCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            // Action-area order is fixed (`REFACTOR_ROADMAP.md` Phase 11
-            // §3): status/badges → boundaries → Copy ID → Copy All. The
-            // large "تم مراجعة القطعة" banner that used to sit here for a
-            // completed parcel was removed (`REFACTOR_ROADMAP.md` Phase 18)
-            // — the small "تم المراجعة" `StatusBadge` in [topRow] already
-            // says this, and the card's own locked styling (stronger tint/
-            // border below) carries the rest; a second full banner repeating
-            // the same fact was redundant weight on an already-done record.
-            if (isAdded) ...[
-              verticalSpacing(8),
-              _AddedByBanner(parcel: parcel),
-            ],
-            verticalSpacing(10),
-            BorderCompass(
-              holdingId: parcel.holdingId,
-              north: parcel.borderNorth,
-              south: parcel.borderSouth,
-              east: parcel.borderEast,
-              west: parcel.borderWest,
-              onTapBorder: resolveBorderMatch == null
-                  ? null
-                  : (final String? borderText) =>
-                      _openBorderPerson(context, borderText),
-              isBorderNavigable: resolveBorderMatch == null
-                  ? null
-                  : (final String? borderText) =>
-                      resolveBorderMatch!(borderText) != null,
-            ),
-            verticalSpacing(10),
-            _ReviewIdChip(
-              id: parcel.id,
-              onCopy: _copyId,
-              onBusyChanged: onReviewBusyChanged,
-            ),
-            verticalSpacing(10),
-            CopyAllButton(onTap: () => _copyAll(context)),
-            verticalSpacing(12),
+          // Action-area order is fixed (`REFACTOR_ROADMAP.md` Phase 11
+          // §3): status/badges → boundaries → Copy ID → Copy All. The
+          // large "تم مراجعة القطعة" banner that used to sit here for a
+          // completed parcel was removed (`REFACTOR_ROADMAP.md` Phase 18)
+          // — the small "تم المراجعة" `StatusBadge` in [topRow] already
+          // says this, and the card's own locked styling (stronger tint/
+          // border below) carries the rest; a second full banner repeating
+          // the same fact was redundant weight on an already-done record.
+          if (isAdded) ...[
             verticalSpacing(8),
-            // Row 1: رقم الحيازة + عدد القطع share one row (`REFACTOR_ROADMAP.md`
-            // Phase 10 §4) — every other primary field below gets its own
-            // full-width row instead of a multi-column grid, since these are
-            // the values field workers read/edit most and horizontal
-            // compression made them harder to scan and tap accurately.
-            Row(
-              children: [
-                Expanded(
-                  flex: parcel.holdingsCount != null ? 2 : 1,
-                  child: FieldRow(
-                    label: 'holdings.detail.holding_id'.tr(),
-                    value: parcel.isHoldingIdPending
-                        ? 'holdings.detail.holding_id_pending'.tr()
-                        : parcel.holdingId,
-                    isModified: _isModified((final p) => p.holdingId),
-                    onEdit: () => _editText(
-                      context,
-                      title: 'holdings.detail.holding_id'.tr(),
-                      initialValue:
-                          parcel.isHoldingIdPending ? '' : parcel.holdingId,
-                      apply: (final String v) =>
-                          parcel.copyWith(holdingId: v),
-                    ),
+            _AddedByBanner(parcel: parcel),
+          ],
+          verticalSpacing(10),
+          BorderCompass(
+            holdingId: parcel.holdingId,
+            north: parcel.borderNorth,
+            south: parcel.borderSouth,
+            east: parcel.borderEast,
+            west: parcel.borderWest,
+            onTapBorder: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) =>
+                    _openBorderPerson(context, borderText),
+            isBorderNavigable: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) =>
+                    resolveBorderMatch!(borderText) != null,
+          ),
+          verticalSpacing(10),
+          _ReviewIdChip(
+            id: parcel.id,
+            onCopy: _copyId,
+            onBusyChanged: onReviewBusyChanged,
+          ),
+          verticalSpacing(10),
+          CopyAllButton(onTap: () => _copyAll(context)),
+          verticalSpacing(12),
+          verticalSpacing(8),
+          // Row 1: رقم الحيازة + عدد القطع share one row (`REFACTOR_ROADMAP.md`
+          // Phase 10 §4) — every other primary field below gets its own
+          // full-width row instead of a multi-column grid, since these are
+          // the values field workers read/edit most and horizontal
+          // compression made them harder to scan and tap accurately.
+          Row(
+            children: [
+              Expanded(
+                flex: parcel.holdingsCount != null ? 2 : 1,
+                child: FieldRow(
+                  label: 'holdings.detail.holding_id'.tr(),
+                  value: parcel.isHoldingIdPending
+                      ? 'holdings.detail.holding_id_pending'.tr()
+                      : parcel.holdingId,
+                  isModified: _isModified((final p) => p.holdingId),
+                  onEdit: () => _editText(
+                    context,
+                    title: 'holdings.detail.holding_id'.tr(),
+                    initialValue:
+                        parcel.isHoldingIdPending ? '' : parcel.holdingId,
+                    apply: (final String v) => parcel.copyWith(holdingId: v),
                   ),
                 ),
-                if (parcel.holdingsCount != null) ...[
-                  horizontalSpacing(8),
-                  Expanded(
-                    child: FieldRow(
-                      label: 'holdings.detail.holdings_count'.tr(),
-                      value: parcel.holdingsCount.toString(),
-                    ),
+              ),
+              if (parcel.holdingsCount != null) ...[
+                horizontalSpacing(8),
+                Expanded(
+                  child: FieldRow(
+                    label: 'holdings.detail.holdings_count'.tr(),
+                    value: parcel.holdingsCount.toString(),
                   ),
-                ],
+                ),
               ],
+            ],
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.owner_name'.tr(),
+            // وراثة/مفوض prefix shown here matches `ClipboardFormatter`'s
+            // exact rule (`REFACTOR_ROADMAP.md` Phase 10 §6) — display
+            // only, the edit dialog below still opens with the raw name.
+            value: _prefixed(
+              _formatter.ownerNamePrefix(parcel),
+              _formatter.effectiveOwnerName(parcel),
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.owner_name'.tr(),
-              // وراثة/مفوض prefix shown here matches `ClipboardFormatter`'s
-              // exact rule (`REFACTOR_ROADMAP.md` Phase 10 §6) — display
-              // only, the edit dialog below still opens with the raw name.
-              value: _prefixed(
-                _formatter.ownerNamePrefix(parcel),
-                _formatter.effectiveOwnerName(parcel),
-              ),
-              isModified: _isModified((final p) => p.ownerName),
-              onEdit: () => _editText(
-                context,
-                title: 'holdings.fields.owner_name'.tr(),
-                initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                apply: (final String v) =>
-                    parcel.copyWith(ownerName: v.isEmpty ? null : v),
-              ),
+            isModified: _isModified((final p) => p.ownerName),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.owner_name'.tr(),
+              initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
+              apply: (final String v) =>
+                  parcel.copyWith(ownerName: v.isEmpty ? null : v),
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.holder_name'.tr(),
-              value: _prefixed(
-                _formatter.holderNamePrefix(parcel),
-                parcel.holderName,
-              ),
-              isModified: _isModified((final p) => p.holderName),
-              onEdit: () => _editText(
-                context,
-                title: 'holdings.fields.holder_name'.tr(),
-                initialValue: parcel.holderName ?? '',
-                apply: (final String v) =>
-                    parcel.copyWith(holderName: v.isEmpty ? null : v),
-              ),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.holder_name'.tr(),
+            value: _prefixed(
+              _formatter.holderNamePrefix(parcel),
+              parcel.holderName,
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.national_id'.tr(),
-              value: parcel.nationalId,
-              isModified: _isModified((final p) => p.nationalId),
-              onEdit: () => _editText(
-                context,
-                title: 'holdings.fields.national_id'.tr(),
-                initialValue: parcel.nationalId ?? '',
-                keyboardType: TextInputType.number,
-                apply: (final String v) =>
-                    parcel.copyWith(nationalId: v.isEmpty ? null : v),
-              ),
+            isModified: _isModified((final p) => p.holderName),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.holder_name'.tr(),
+              initialValue: parcel.holderName ?? '',
+              apply: (final String v) =>
+                  parcel.copyWith(holderName: v.isEmpty ? null : v),
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.basin_name'.tr(),
-              value: parcel.basinName,
-              isModified: _isModified((final p) => p.basinName),
-              onEdit: () => _editBasin(context),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.national_id'.tr(),
+            value: parcel.nationalId,
+            isModified: _isModified((final p) => p.nationalId),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.national_id'.tr(),
+              initialValue: parcel.nationalId ?? '',
+              keyboardType: TextInputType.number,
+              apply: (final String v) =>
+                  parcel.copyWith(nationalId: v.isEmpty ? null : v),
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.area'.tr(),
-              value: _formatter.areaFraction(parcel),
-              isModified: _isModified((final p) => p.feddan) ||
-                  _isModified((final p) => p.qirat) ||
-                  _isModified((final p) => p.sahm),
-              onEdit: () => _editArea(context),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.basin_name'.tr(),
+            value: parcel.basinName,
+            isModified: _isModified((final p) => p.basinName),
+            onEdit: () => _editBasin(context),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.area'.tr(),
+            value: _formatter.areaFraction(parcel),
+            isModified: _isModified((final p) => p.feddan) ||
+                _isModified((final p) => p.qirat) ||
+                _isModified((final p) => p.sahm),
+            onEdit: () => _editArea(context),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.area_sqm'.tr(),
+            value: _formatter.formatNumber(parcel.totalSqm),
+            isModified: _isModified((final p) => p.totalSqm),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.land_number'.tr(),
+            value: parcel.landNumber,
+            isModified: _isModified((final p) => p.landNumber),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.land_number'.tr(),
+              initialValue: parcel.landNumber ?? '',
+              apply: (final String v) =>
+                  parcel.copyWith(landNumber: v.isEmpty ? null : v),
             ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.area_sqm'.tr(),
-              value: _formatter.formatNumber(parcel.totalSqm),
-              isModified: _isModified((final p) => p.totalSqm),
-            ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.land_number'.tr(),
-              value: parcel.landNumber,
-              isModified: _isModified((final p) => p.landNumber),
-              onEdit: () => _editText(
-                context,
-                title: 'holdings.fields.land_number'.tr(),
-                initialValue: parcel.landNumber ?? '',
-                apply: (final String v) =>
-                    parcel.copyWith(landNumber: v.isEmpty ? null : v),
-              ),
-            ),
-            verticalSpacing(8),
-            FieldRow(
-              label: 'holdings.fields.crop_type'.tr(),
-              value: parcel.cropType,
-              isModified: _isModified((final p) => p.cropType),
-              onEdit: () => _editCropType(context),
-            ),
-            verticalSpacing(8),
-            // Single-line truncated row rather than a taller free-form note
-            // block (`REFACTOR_ROADMAP.md` Phase 10 §10) — notes is already
-            // a fixed-option dropdown (`Parcel.notesOptions`), so it never
-            // needs to show more than one line of text at a time; the full
-            // value is always reachable via the edit dialog.
-            FieldRow(
-              label: 'holdings.fields.notes'.tr(),
-              value: parcel.notes,
-              isModified: _isModified((final p) => p.notes),
-              onEdit: () => _editNotes(context),
-            ),
-            verticalSpacing(12),
-            verticalSpacing(8),
-            SeeMoreSection(
-              parcel: parcel,
-              onFieldChanged: onFieldChanged,
-              originalParcel: originalParcel,
-              hideCreditType: hideCreditType,
-              associationType: associationType,
-            ),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.crop_type'.tr(),
+            value: parcel.cropType,
+            isModified: _isModified((final p) => p.cropType),
+            onEdit: () => _editCropType(context),
+          ),
+          verticalSpacing(8),
+          NotesField(
+            notes: parcel.notes,
+            isModified: _isModified((final p) => p.notes),
+            onChanged: (final List<String> notes) =>
+                onFieldChanged(parcel.copyWith(notes: notes)),
+          ),
+          verticalSpacing(12),
+          verticalSpacing(8),
+          SeeMoreSection(
+            parcel: parcel,
+            onFieldChanged: onFieldChanged,
+            originalParcel: originalParcel,
+            hideCreditType: hideCreditType,
+            associationType: associationType,
+          ),
         ],
       ),
     );
@@ -384,26 +377,6 @@ class ParcelDetailCard extends StatelessWidget {
     if (result == null) return;
     onFieldChanged(
       parcel.copyWith(cropType: result.isClear ? null : result.value),
-    );
-  }
-
-  /// ملاحظات gets the same "specify other" escape hatch نوع الزرع has
-  /// (`REFACTOR_ROADMAP.md` Phase 12) — most parcels fit one of
-  /// [Parcel.notesOptions], but a field worker occasionally needs to write
-  /// something the fixed list doesn't cover.
-  Future<void> _editNotes(final BuildContext context) async {
-    final ChoiceDialogResult<String>? result = await pickWithOther(
-      context,
-      title: 'holdings.fields.notes'.tr(),
-      selected: parcel.notes,
-      options: Parcel.notesOptions,
-      otherOption: Parcel.notesOtherOption,
-      specifyTitle: 'holdings.notes_field.specify_title'.tr(),
-      clearLabel: '—',
-    );
-    if (result == null) return;
-    onFieldChanged(
-      parcel.copyWith(notes: result.isClear ? null : result.value),
     );
   }
 
@@ -511,7 +484,8 @@ class ParcelDetailCard extends StatelessWidget {
       final Parcel? updated = await getIt<HoldingsRepository>()
           .setParcelCompleted(parcel.id, completed: true);
       if (!context.mounted) return;
-      final Parcel confirmed = updated ?? parcel.copyWith(completedAt: DateTime.now());
+      final Parcel confirmed =
+          updated ?? parcel.copyWith(completedAt: DateTime.now());
       (onCompleted ?? onFieldChanged)(confirmed);
       context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
     } catch (error) {

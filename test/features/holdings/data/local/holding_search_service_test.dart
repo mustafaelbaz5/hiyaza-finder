@@ -17,47 +17,87 @@ void main() {
     _parcel('003300', 'سارة محمد'),
   ];
 
-  group('numeric queries', () {
-    test('exact match scores 100 (tier 1)', () {
+  group('numeric queries (EXACT MATCH only)', () {
+    test('exact match scores 100', () {
       final results = service.search(parcels, '001117');
       expect(results.first.holdingId, '001117');
       expect(results.first.score, 100);
       expect(results.first.parcelCount, 2);
     });
 
-    test('prefix match scores 80 (tier 2)', () {
+    test('a prefix that is not an exact match returns nothing', () {
       final results = service.search(parcels, '0011');
-      expect(results.map((final r) => r.holdingId), contains('001117'));
-      final match = results.firstWhere((final r) => r.holdingId == '001117');
-      expect(match.score, 80);
+      expect(results, isEmpty);
     });
 
-    test('mid-string match scores 40 (tier 3, contains)', () {
+    test('a mid-string match that is not an exact match returns nothing', () {
       final results = service.search(parcels, '117');
-      expect(results.map((final r) => r.holdingId), contains('001117'));
-      final match = results.firstWhere((final r) => r.holdingId == '001117');
-      expect(match.score, 40);
+      expect(results, isEmpty);
     });
 
     test(
-        'exact match ranks above a holding number that merely contains the '
-        'same digits (e.g. typing "7" ranks holding "7" above "470")', () {
+        'a query that merely contains the same digits as another holding '
+        'never matches it (typing "7" only ever matches holding "7")', () {
       final withSevens = <Parcel>[
         _parcel('470', 'فلان الأول'),
         _parcel('7', 'فلان الثاني'),
         _parcel('71', 'فلان الثالث'),
       ];
       final results = service.search(withSevens, '7');
-      expect(results.map((final r) => r.holdingId).toList(), [
-        '7', // exact -> 100
-        '71', // starts with -> 80
-        '470', // contains -> 40
-      ]);
+      expect(results, hasLength(1));
+      expect(results.first.holdingId, '7');
+    });
+
+    test('leading zeros are ignored — "7" matches holding "007"', () {
+      final results = service.search([_parcel('007', 'أحمد')], '7');
+      expect(results, hasLength(1));
+      expect(results.first.holdingId, '007');
+    });
+
+    test('Arabic-Indic digits match the same holding as Western digits', () {
+      final results = service.search(parcels, '٠٠١١١٧');
+      expect(results.map((final r) => r.holdingId), contains('001117'));
     });
 
     test('no digit match returns empty', () {
       final results = service.search(parcels, '999999');
       expect(results, isEmpty);
+    });
+  });
+
+  group('detectSearchType', () {
+    test('all-digit input (Western or Arabic-Indic) is holdingNumber', () {
+      expect(detectSearchType('48'), SearchType.holdingNumber);
+      expect(detectSearchType('٤٨'), SearchType.holdingNumber);
+    });
+
+    test('a long hex fragment is parcelId', () {
+      expect(detectSearchType('a3f5c9d2'), SearchType.parcelId);
+      expect(detectSearchType('a3f5c9d2-11ab'), SearchType.parcelId);
+    });
+
+    test('anything else is holderName', () {
+      expect(detectSearchType('محمد'), SearchType.holderName);
+      expect(detectSearchType('ahmed'), SearchType.holderName);
+    });
+  });
+
+  group('parcel id queries', () {
+    test('startsWith ranks above contains-anywhere', () {
+      final byId = <Parcel>[
+        const Parcel(id: 'abc12345-full', holdingId: '1', holderName: 'م1'),
+        const Parcel(id: 'xyz-abc12345', holdingId: '2', holderName: 'م2'),
+      ];
+      final results = service.search(byId, 'abc12345');
+      expect(results.map((final r) => r.holdingId).toList(), ['1', '2']);
+    });
+
+    test('is case-insensitive', () {
+      final byId = <Parcel>[
+        const Parcel(id: 'ABC12345-full', holdingId: '1', holderName: 'م1'),
+      ];
+      final results = service.search(byId, 'abc12345');
+      expect(results, hasLength(1));
     });
   });
 

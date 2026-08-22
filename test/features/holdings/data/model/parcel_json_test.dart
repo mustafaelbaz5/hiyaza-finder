@@ -25,7 +25,7 @@ void main() {
       ownerName: 'مالك',
       associationName: 'الدير -الائتمان الزراعي',
       cropType: 'قمح',
-      notes: 'وضع يد',
+      notes: const <String>['وضع يد'],
       creditType: 'أوقاف',
       isInheritance: true,
       isDelegate: true,

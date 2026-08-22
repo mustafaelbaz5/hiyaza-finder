@@ -46,14 +46,14 @@ void main() {
   });
 
   testWidgets(
-      'اسم المالك is hidden until مفوض is toggled on, for both new-person '
-      'and new-parcel-for-existing-person flows', (final tester) async {
+      'اسم المالك is hidden until مفوض is confirmed via its dialog, and '
+      'reappears hidden again once toggled back off', (final tester) async {
     await _registerRepository();
 
     await pumpLocalizedScreen(
       tester,
       const AddRecordScreen(
-        initialParcel: Parcel(holdingId: ''),
+        initialParcel: Parcel(holdingId: '', holderName: 'محمد'),
       ),
     );
 
@@ -61,6 +61,17 @@ void main() {
 
     final Finder delegateSwitch = find.byType(Switch).last;
     await tester.tap(delegateSwitch);
+    await tester.pumpAndSettle();
+
+    // Enabling مفوض opens a dialog asking for the new owner name — it must
+    // differ from اسم الحائز.
+    await tester.enterText(find.byType(TextField).last, 'احمد');
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.text('حفظ'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('اسم المالك'), findsOneWidget);

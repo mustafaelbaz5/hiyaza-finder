@@ -18,12 +18,12 @@ void main() {
 
   test('apply overlays a saved snapshot onto the original', () {
     final Map<String, dynamic> snapshot = overlay.snapshot(
-      original.copyWith(cropType: 'قمح', notes: 'وضع يد'),
+      original.copyWith(cropType: 'قمح', notes: <String>['وضع يد']),
     );
     final Parcel merged = overlay.apply(original, snapshot);
 
     expect(merged.cropType, 'قمح');
-    expect(merged.notes, 'وضع يد');
+    expect(merged.notes, <String>['وضع يد']);
     // Never-editable fields still come from the original, not the snapshot.
     expect(merged.id, original.id);
     expect(merged.holdingId, original.holdingId);
@@ -39,7 +39,7 @@ void main() {
       sahm: 3.0,
       ownerName: 'مالك اخر',
       cropType: 'ارز',
-      notes: 'وضع يد',
+      notes: <String>['وضع يد'],
       creditType: 'أوقاف',
       isInheritance: true,
       isDelegate: true,

@@ -16,7 +16,7 @@ void main() {
       sahm: 3,
       totalSqm: 100,
       cropType: 'قمح',
-      notes: 'وضع يد',
+      notes: <String>['وضع يد'],
       creditType: 'أوقاف',
       usageType: 'مباني',
       isInheritance: true,
@@ -36,7 +36,7 @@ void main() {
     expect(record['sahm'], 3);
     expect(record['total_sqm'], 100);
     expect(record['crop_type'], 'قمح');
-    expect(record['notes'], 'وضع يد');
+    expect(record['notes'], <String>['وضع يد']);
     expect(record['credit_type'], 'أوقاف');
     expect(record['usage_type'], 'مباني');
     expect(record['is_inheritance'], isTrue);

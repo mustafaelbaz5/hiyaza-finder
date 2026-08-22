@@ -99,13 +99,17 @@ void main() {
     });
 
     test('applyPayload merges a payload onto an original parcel', () {
-      const Parcel original = Parcel(id: '1', holdingId: '101', notes: 'قديم');
+      const Parcel original = Parcel(
+        id: '1',
+        holdingId: '101',
+        notes: <String>['قديم'],
+      );
       final Parcel merged = state.applyPayload(
         original,
-        original.copyWith(notes: 'جديد').toEditableJson(),
+        original.copyWith(notes: <String>['جديد']).toEditableJson(),
       );
 
-      expect(merged.notes, 'جديد');
+      expect(merged.notes, <String>['جديد']);
     });
   });
 

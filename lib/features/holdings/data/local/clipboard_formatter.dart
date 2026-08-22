@@ -36,6 +36,27 @@ class ClipboardFormatter {
   String? ownerNamePrefix(final Parcel p) =>
       p.isInheritance ? '(ورثة)' : null;
 
+  /// اسم الحائز as shown anywhere in the UI/copy-all/export — prefixed with
+  /// [holderNamePrefix] (مفوض overrides وراثة for الحائز specifically). The
+  /// stored [Parcel.holderName] value itself is never touched by this; only
+  /// the display/output text is.
+  String displayHolderName(final Parcel p) {
+    final String name = p.holderName?.trim() ?? '';
+    if (name.isEmpty) return name;
+    final String? prefix = holderNamePrefix(p);
+    return prefix == null ? name : '$prefix $name';
+  }
+
+  /// اسم المالك as shown anywhere in the UI/copy-all/export — same
+  /// [ownerNamePrefix] rule [format] uses, applied to [effectiveOwnerName]
+  /// (which already falls back to اسم الحائز when اسم المالك isn't set).
+  String displayOwnerName(final Parcel p) {
+    final String name = effectiveOwnerName(p) ?? '';
+    if (name.isEmpty) return name;
+    final String? prefix = ownerNamePrefix(p);
+    return prefix == null ? name : '$prefix $name';
+  }
+
   /// One "label: value," field per line (blank slots kept, never skipped)
   /// so the pasted text both reads clearly on its own and lines up
   /// row-for-row when pasted into an external spreadsheet template.
@@ -51,26 +72,10 @@ class ClipboardFormatter {
     String slot(final String? v) =>
         (v == null || v.trim().isEmpty) ? emptyPlaceholder : v.trim();
 
-    // اسم المالك only ever gets "(ورثة)" (مفوض doesn't touch it). اسم الحائز
-    // gets "(مفوض عنه)" whenever مفوض is on — overriding "(ورثة)" there
-    // specifically — otherwise "(ورثة)" if وراثة alone is on.
-    String withPrefix(final String? prefixLabel, final String name) {
-      final String display = name.isEmpty ? emptyPlaceholder : name;
-      return prefixLabel == null ? display : '$prefixLabel $display';
-    }
-
-    final String holderName = p.holderName?.trim() ?? '';
-    final String? holderPrefix =
-        p.isDelegate ? '(مفوض عنه)' : (p.isInheritance ? '(ورثة)' : null);
-    final String holderSlot = holderPrefix == null
-        ? slot(p.holderName)
-        : withPrefix(holderPrefix, holderName);
-
-    final String ownerName = effectiveOwnerName(p) ?? '';
-    final String? ownerPrefix = p.isInheritance ? '(ورثة)' : null;
-    final String ownerSlot = ownerPrefix == null
-        ? slot(ownerName.isEmpty ? null : ownerName)
-        : withPrefix(ownerPrefix, ownerName);
+    final String holderSlot =
+        displayHolderName(p).isEmpty ? emptyPlaceholder : displayHolderName(p);
+    final String ownerSlot =
+        displayOwnerName(p).isEmpty ? emptyPlaceholder : displayOwnerName(p);
     final String nationalIdSlot =
         (p.nationalId == null || p.nationalId!.trim().isEmpty)
             ? '11111111111111'
@@ -111,7 +116,10 @@ class ClipboardFormatter {
               '${field('نوع الإصلاح', p.reformType)}'
           : '${field('نوع الزرع', slot(p.cropType))}   '
               '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
-      field('ملاحظات', slot(p.notes)),
+      field(
+        'ملاحظات',
+        p.notes.isEmpty ? emptyPlaceholder : p.notes.join('، '),
+      ),
     ];
 
     return lines.join('\n');

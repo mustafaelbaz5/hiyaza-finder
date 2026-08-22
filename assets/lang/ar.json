@@ -233,7 +233,17 @@
       "specify_title": "حدد نوع الزرع (اختياري)"
     },
     "notes_field": {
-      "specify_title": "اكتب الملاحظة (اختياري)"
+      "specify_title": "اكتب الملاحظة (اختياري)",
+      "add_title": "إضافة ملاحظة",
+      "free_text_hint": "اكتب ملاحظة...",
+      "quick_list_title": "ملاحظات شائعة"
+    },
+    "delegate": {
+      "dialog_title": "تفويض",
+      "dialog_subtitle": "أدخل اسم المالك المفوض — يجب أن يختلف عن اسم الحائز",
+      "name_required": "اسم المالك مطلوب",
+      "name_must_differ": "اسم المالك يجب أن يختلف عن اسم الحائز",
+      "auto_note": "مفوض عنه {holder}"
     },
     "status": {
       "added_from_app": "مضافة من التطبيق",

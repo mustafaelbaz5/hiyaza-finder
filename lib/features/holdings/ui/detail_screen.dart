@@ -279,11 +279,16 @@ class _DetailScreenState extends State<DetailScreen>
         final bool usageChangedAwayFromDefault =
             updated.usageType != before.usageType &&
                 updated.usageType != Parcel.defaultUsageType;
-        if (areaChanged) {
-          toSave = toSave.copyWith(notes: _needsSurveyNote);
+        if (areaChanged && !toSave.notes.contains(_needsSurveyNote)) {
+          toSave = toSave.copyWith(
+            notes: <String>[...toSave.notes, _needsSurveyNote],
+          );
         }
-        if (usageChangedAwayFromDefault) {
-          toSave = toSave.copyWith(notes: _nonAgriculturalUsageNote);
+        if (usageChangedAwayFromDefault &&
+            !toSave.notes.contains(_nonAgriculturalUsageNote)) {
+          toSave = toSave.copyWith(
+            notes: <String>[...toSave.notes, _nonAgriculturalUsageNote],
+          );
         }
       }
 
@@ -330,7 +335,7 @@ class _DetailScreenState extends State<DetailScreen>
       // Flags the new parcel as needing a field-survey follow-up, same as
       // an edit to an existing record — still user-editable in the form
       // before saving.
-      notes: _needsSurveyNote,
+      notes: <String>[_needsSurveyNote],
     );
     final bool? added = await context.pushNamed<bool>(
       Routes.addRecord,

@@ -26,7 +26,7 @@ class Parcel {
     this.ownerName,
     this.associationName,
     this.cropType,
-    this.notes,
+    this.notes = const <String>[],
     this.creditType = defaultCreditType,
     this.reformType = defaultReformType,
     this.isInheritance = false,
@@ -149,7 +149,7 @@ class Parcel {
   final String? ownerName; // اسم المالك
   final String? associationName; // اسم الجمعية — derived from the file name
   final String? cropType; // نوع الزرع
-  final String? notes; // ملاحظات
+  final List<String> notes; // ملاحظات — free-text + quick-pick entries
   final String
       creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
   final String reformType; // نوع الإصلاح: for agricultural reform cities
@@ -387,7 +387,7 @@ class Parcel {
     final Object? ownerName = _unset,
     final Object? associationName = _unset,
     final Object? cropType = _unset,
-    final Object? notes = _unset,
+    final List<String>? notes,
     final Object? creditType = _unset,
     final Object? reformType = _unset,
     final Object? isInheritance = _unset,
@@ -434,7 +434,7 @@ class Parcel {
       ownerName: resolve(ownerName, this.ownerName),
       associationName: resolve(associationName, this.associationName),
       cropType: resolve(cropType, this.cropType),
-      notes: resolve(notes, this.notes),
+      notes: notes ?? this.notes,
       creditType: resolve(creditType, this.creditType),
       reformType: resolve(reformType, this.reformType),
       isInheritance: resolve(isInheritance, this.isInheritance),
@@ -528,7 +528,7 @@ class Parcel {
       totalSqm: d('totalSqm'),
       ownerName: json['ownerName'] as String?,
       cropType: json['cropType'] as String?,
-      notes: json['notes'] as String?,
+      notes: notesFromJson(json['notes']),
       creditType: json['creditType'] as String? ?? defaultCreditType,
       reformType: json['reformType'] as String? ?? defaultReformType,
       isInheritance: json['isInheritance'] as bool? ?? false,
@@ -597,6 +597,18 @@ class Parcel {
         'growthStages': growthStages,
       };
 
+  /// Reads ملاحظات from either shape: the current `List<dynamic>` (cast to
+  /// `List<String>`), or a single legacy `String` — either from data cached
+  /// before notes became a list, or from the `holdings`/`added_holdings`
+  /// remote row's plain-text `notes` column — wrapped as a one-item list so
+  /// no existing note is ever silently dropped.
+  static List<String> notesFromJson(final dynamic value) {
+    if (value == null) return const <String>[];
+    if (value is List) return value.cast<String>();
+    final String legacy = value as String;
+    return legacy.trim().isEmpty ? const <String>[] : <String>[legacy];
+  }
+
   factory Parcel.fromJson(final Map<String, dynamic> json) {
     double? d(final String key) => (json[key] as num?)?.toDouble();
     return Parcel(
@@ -623,7 +635,7 @@ class Parcel {
       ownerName: json['ownerName'] as String?,
       associationName: json['associationName'] as String?,
       cropType: json['cropType'] as String?,
-      notes: json['notes'] as String?,
+      notes: notesFromJson(json['notes']),
       creditType: json['creditType'] as String? ?? defaultCreditType,
       reformType: json['reformType'] as String? ?? defaultReformType,
       isInheritance: json['isInheritance'] as bool? ?? false,

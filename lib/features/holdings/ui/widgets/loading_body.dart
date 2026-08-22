@@ -78,7 +78,7 @@ class LoadedBodyState extends State<LoadedBody> {
           holdingId: '',
           nationalId: '11111111111111',
           landNumber: '-1',
-          notes: 'نقص بيانات الحصر',
+          notes: <String>['نقص بيانات الحصر'],
           holdingsCount: 1, // a brand-new person starts with one قطعة
         ),
       ),
