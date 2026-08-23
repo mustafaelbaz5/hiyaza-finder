@@ -1671,3 +1671,52 @@ Every phase ends at a gate, not "it looks done": for Flutter, `flutter analyze` 
 green plus a manual walkthrough of the phase's stated flow; for the Dashboard, typecheck + lint + unit
 tests + the relevant E2E spec green; for the database, RLS and constraints verified by hand for every
 role × table × operation touched. Do not start the next phase until the current one's gate is green.
+
+---
+
+## APP_UPDATES_CLAUDE.md — post-freeze feature batch
+
+Implemented on top of the frozen v1 roadmap above; not itself part of the phase sequence, but cited
+here since later code comments reference "APP_UPDATES_CLAUDE.md § N" as rationale.
+
+- **Basins as first-class data**: `basins` Supabase table downloaded alongside a city's parcels
+  (`CityDownloadResult`), cached in `CitySnapshot.basins`, surfaced via `HoldingsRepository
+  .activeBasins`/`basinByName`. `basin_picker.dart`'s `pickBasin`/`applyBasinPick` always derives
+  `basinCode` from the picked `basinName` — never user-typed.
+- **Add flow split**: `AddModeToggle` (شخص جديد / شخص موجود) gates `AddRecordScreen` when reached
+  from a generic "+" entry point; "شخص موجود" shows `ExistingPersonSearch` (exact رقم الحيازة match)
+  and inherits اسم الحائز/الرقم القومي/اسم المالك on confirm, blanking اسم الحوض/كود الحوض/المساحة/
+  نوع المحصول/مراحل النمو/ملاحظات for fresh entry — mirrors `DetailScreen._addParcelForPerson`'s
+  existing inheritance shape.
+- **Navigation restructure**: `HomeTopBar` dropped the Wi-Fi/connectivity badge entirely; its three
+  icons now open Basins (own route, `BasinsPage`)/City Tools/city-picker. Home's body is a flat,
+  unfiltered `HoldingsRepository.allHoldings` list instead of basin-grouped cards.
+- **`UsageType`** (`data/model/usage_type.dart`) is a typed enum view (`agricultural`/`buildings`/
+  `fallow`) over `Parcel.usageType`'s existing Arabic-string storage — chosen over converting the
+  field itself to avoid rewriting 8+ call sites for a codebase convention (string-typed option
+  fields) that every sibling field already follows. `UsageTypeNotesSync` (`data/local/`) is the
+  single bidirectional نوع الاستخدام↔ملاحظات implementation, called from both `AddRecordScreen` and
+  `SeeMoreSection`/`ParcelDetailCard` so the two forms can't drift. نوع المحصول/مراحل النمو rows are
+  conditionally omitted (not disabled) outside `agricultural`, including in `ClipboardFormatter`'s
+  copy-all text.
+- **Notes list**: `NotesListService` (SharedPreferences-backed, DI-registered in
+  `holdings_module.dart`) layers user-added custom notes on top of `Parcel.notesOptions`' fixed
+  built-in list; `add_note_dialog.dart`'s quick-pick now reads through it. `notes_settings_sheet.dart`
+  (reachable from City Tools) is the add/remove UI — editing the list never touches notes already
+  saved on a parcel.
+- **مفوض dialog gap closed**: `SeeMoreSection`'s Detail-Screen توجل had been setting `isDelegate`
+  directly, bypassing `showDelegateOwnerDialog` and its "must differ from اسم الحائز" validation —
+  only `AddRecordScreen` went through the dialog. Both now share the same enable/disable shape:
+  enabling opens the dialog and appends the "مفوض عنه {holder}" note; disabling reverts اسم المالك to
+  اسم الحائز and strips any note starting with "مفوض عنه".
+- **Search**: `HoldingSearchService.searchByHolderName` replaced its three-tier (full-name-start /
+  word-start / contains-anywhere) scoring with a single startsWith-by-word-position scheme — the
+  earliest matching word wins, no contains-anywhere fallback tier.
+- **`land_number` (رقم الأرض) default changed from `"-1"` to `"0"`** in `AddRecordScreen`,
+  `BasinScreen._addParcelForBasin`, `DetailScreen._addParcelForPerson`, and `LoadingBody
+  ._openAddPerson`. Deliberately scoped to رقم الأرض only — رقم الحيازة (`holdingId`) keeps `"-1"` as
+  its pending-record sentinel (`Parcel.isHoldingIdPending`), since a blanket `"-1"`→`"0"` rewrite
+  would collide with `Parcel.isHoldingIdMissingOrZero`'s existing "0 means lost data" semantics for
+  that field.
+
+flutter analyze: clean. flutter test: 288/288 passing.

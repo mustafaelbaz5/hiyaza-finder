@@ -151,6 +151,12 @@
         "subtitle": "View and edit the city's reference code",
         "edit_title": "Enter the city code",
         "saved": "City code saved"
+      },
+      "notes_settings": {
+        "title": "Notes list",
+        "subtitle": "Add or remove notes from the quick-pick list",
+        "add": "Add",
+        "empty": "No custom notes added yet"
       }
     }
   },

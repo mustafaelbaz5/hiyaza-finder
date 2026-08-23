@@ -241,25 +241,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     );
   }
 
-  Future<void> _editUsageType(final BuildContext context) async {
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
-      context,
-      title: 'holdings.fields.usage_type'.tr(),
-      options: [
-        for (final String option in Parcel.usageTypeOptions)
-          ChoiceOption<String>(value: option, label: option),
-      ],
-      selected: _parcel.usageType,
-    );
-    if (result == null || result.isClear) return;
-    setState(
-      () => _parcel = UsageTypeNotesSync.applyUsageTypeChange(
-        _parcel,
-        result.value!,
-      ),
-    );
-  }
-
   /// مفوض asks for the new اسم المالك up front (must differ from اسم الحائز)
   /// and, on confirm, sets `owner_name` and appends "مفوض عنه {holder}" to
   /// ملاحظات automatically. Cancelling the dialog leaves the toggle off.
@@ -280,6 +261,19 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             ? _parcel.notes
             : <String>[..._parcel.notes, delegateNote],
       ),
+    );
+  }
+
+  /// إلغاء المفوض reverts اسم المالك to اسم الحائز (the same default the
+  /// field falls back to when never set) and strips the auto-added
+  /// "مفوض عنه ..." note — APP_UPDATES_CLAUDE.md § 3's Definition of Done.
+  void _disableDelegate() {
+    _parcel = _parcel.copyWith(
+      isDelegate: false,
+      ownerName: _parcel.holderName,
+      notes: _parcel.notes
+          .where((final String n) => !n.startsWith('مفوض عنه'))
+          .toList(),
     );
   }
 
@@ -473,12 +467,6 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                   _isModified((final p) => p.sahm),
                               onEdit: () => _editArea(context),
                             ),
-                            FieldRow(
-                              label: 'holdings.fields.usage_type'.tr(),
-                              value: _parcel.usageType,
-                              isModified: _isModified((final p) => p.usageType),
-                              onEdit: () => _editUsageType(context),
-                            ),
                             if (UsageType.fromLabel(_parcel.usageType) ==
                                 UsageType.agricultural)
                               FieldRow(
@@ -531,11 +519,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               value: _parcel.isDelegate,
                               isModified:
                                   _isModified((final p) => p.isDelegate),
-                              onChanged: (final bool v) =>
-                                  v ? _enableDelegate(context) : setState(
-                                    () => _parcel =
-                                        _parcel.copyWith(isDelegate: false),
-                                  ),
+                              onChanged: (final bool v) => v
+                                  ? _enableDelegate(context)
+                                  : setState(_disableDelegate),
                             ),
                             if (_parcel.isDelegate)
                               FieldRow(

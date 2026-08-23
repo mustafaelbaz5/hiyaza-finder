@@ -1,4 +1,5 @@
 import '../model/parcel.dart';
+import '../model/usage_type.dart';
 
 import '../../../cities/data/model/association_type.dart';
 
@@ -111,11 +112,19 @@ class ClipboardFormatter {
         'المساحة بالمتر',
         formatNumber(p.totalSqm) ?? emptyPlaceholder,
       ),
-      isReformCity
-          ? '${field('نوع الزرع', slot(p.cropType))}   '
-              '${field('نوع الإصلاح', p.reformType)}'
-          : '${field('نوع الزرع', slot(p.cropType))}   '
-              '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}',
+      if (UsageType.fromLabel(p.usageType) == UsageType.agricultural)
+        isReformCity
+            ? '${field('نوع الزرع', slot(p.cropType))}   '
+                '${field('نوع الإصلاح', p.reformType)}'
+            : '${field('نوع الزرع', slot(p.cropType))}   '
+                '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}'
+      else
+        isReformCity
+            ? field('نوع الإصلاح', p.reformType)
+            : field(
+                'نوع الائتمان',
+                creditSentence.isEmpty ? p.creditType : creditSentence,
+              ),
       field(
         'ملاحظات',
         p.notes.isEmpty ? emptyPlaceholder : p.notes.join('، '),

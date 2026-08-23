@@ -10,6 +10,7 @@ import '../../data/local/field_change_tracker.dart';
 import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
+import 'delegate_owner_dialog.dart';
 import 'field_row.dart';
 import 'toggle_field_row.dart';
 
@@ -78,6 +79,45 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     );
     if (value == null) return;
     widget.onFieldChanged(apply(value));
+  }
+
+  /// مفوض asks for the new اسم المالك up front (must differ from اسم
+  /// الحائز) and, on confirm, sets `owner_name` and appends
+  /// "مفوض عنه {holder}" to ملاحظات — same flow `AddRecordScreen` uses,
+  /// so Detail Screen's toggle can't silently skip the dialog+validation
+  /// (APP_UPDATES_CLAUDE.md § 3 Definition of Done).
+  Future<void> _enableDelegate(final BuildContext context) async {
+    final String? newOwnerName = await showDelegateOwnerDialog(
+      context,
+      holderName: widget.parcel.holderName ?? '',
+    );
+    if (newOwnerName == null) return;
+
+    final String delegateNote = 'holdings.delegate.auto_note'
+        .tr(namedArgs: {'holder': widget.parcel.holderName ?? ''});
+    widget.onFieldChanged(
+      widget.parcel.copyWith(
+        isDelegate: true,
+        ownerName: newOwnerName,
+        notes: widget.parcel.notes.contains(delegateNote)
+            ? widget.parcel.notes
+            : <String>[...widget.parcel.notes, delegateNote],
+      ),
+    );
+  }
+
+  /// إلغاء المفوض reverts اسم المالك to اسم الحائز and strips the
+  /// auto-added "مفوض عنه ..." note.
+  void _disableDelegate() {
+    widget.onFieldChanged(
+      widget.parcel.copyWith(
+        isDelegate: false,
+        ownerName: widget.parcel.holderName,
+        notes: widget.parcel.notes
+            .where((final String n) => !n.startsWith('مفوض عنه'))
+            .toList(),
+      ),
+    );
   }
 
   Future<void> _editDropdown(
@@ -177,9 +217,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       activeLabel: 'holdings.fields.delegate'.tr(),
       inactiveLabel: 'holdings.fields.not_delegate'.tr(),
       isModified: _isModified((final p) => p.isDelegate),
-      onChanged: (final bool v) => widget.onFieldChanged(
-        widget.parcel.copyWith(isDelegate: v),
-      ),
+      onChanged: (final bool v) =>
+          v ? _enableDelegate(context) : _disableDelegate(),
     );
     final Widget basinCode = FieldRow(
       label: 'holdings.fields.basin_code'.tr(),

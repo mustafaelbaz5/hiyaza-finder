@@ -134,7 +134,7 @@ class _NotesSettingsSheetState extends State<_NotesSettingsSheet> {
                         textAlign: TextAlign.right,
                       ),
                       trailing: IconButton(
-                        icon: Icon(Icons.delete_outline_rounded,
+                        icon: const Icon(Icons.delete_outline_rounded,
                             color: AppColors.red300),
                         onPressed: () => _remove(note),
                       ),

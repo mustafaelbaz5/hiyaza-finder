@@ -74,6 +74,13 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                     subtitle: 'cities.tools.bulk_edit.subtitle'.tr(),
                     onTap: () => context.pushNamed(Routes.fileStatus),
                   ),
+                  verticalSpacing(10),
+                  _ToolTile(
+                    icon: Icons.sticky_note_2_outlined,
+                    title: 'cities.tools.notes_settings.title'.tr(),
+                    subtitle: 'cities.tools.notes_settings.subtitle'.tr(),
+                    onTap: () => showNotesSettingsSheet(context),
+                  ),
                 ],
               ),
             ),

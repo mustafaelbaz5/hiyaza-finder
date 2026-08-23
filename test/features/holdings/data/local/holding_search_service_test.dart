@@ -117,22 +117,23 @@ void main() {
       expect(results.map((final r) => r.holdingId), contains('001117'));
     });
 
-    test('a query that only appears mid-word matches as tier 2 (contains)', () {
-      // 'مد' is inside "محمد" but not at a word-start or full-name-start —
-      // still returned (fixes ".contains()" dropping relevant results
-      // entirely), just ranked below any tier-1 (starts-with) match.
+    test(
+        'a query that only appears mid-word does not match '
+        '(no contains-anywhere fallback, section 7.2)', () {
       final results = service.search(parcels, 'مد');
-      final match = results.firstWhere((final r) => r.holdingId == '001117');
-      expect(match.score, 40);
+      expect(
+        results.where((final r) => r.holdingId == '001117'),
+        isEmpty,
+      );
     });
 
-    test('tier 1 (starts with) ranks above tier 2 (contains)', () {
+    test('an earlier-word match ranks above a later-word match', () {
       final mixed = [
-        _parcel('t1', 'مديحة علي'), // starts with 'مد' -> tier 1
-        _parcel('t2', 'أحمد سعيد'), // 'مد' only mid-word ("أحمد") -> tier 2
+        _parcel('t1', 'سعيد مدحت'), // 'مد' starts word index 1
+        _parcel('t2', 'مدحت سعيد'), // 'مد' starts word index 0
       ];
       final results = service.search(mixed, 'مد');
-      expect(results.map((final r) => r.holdingId).toList(), ['t1', 't2']);
+      expect(results.map((final r) => r.holdingId).toList(), ['t2', 't1']);
       expect(results[0].score, greaterThan(results[1].score));
     });
 

@@ -111,9 +111,10 @@ class HoldingSearchService {
   static const int _parcelIdContainsScore = 50;
 
   /// Holder-name search tiers.
-  static const int _fullNameStartScore = 100;
-  static const int _wordStartScore = 80;
-  static const int _containsScore = 40;
+  /// Highest possible word-position priority the scoring below converts
+  /// to a score — comfortably above any realistic name's word count, so
+  /// `_priorityScore` never produces a negative score.
+  static const int _maxNameWords = 20;
 
   static const int _maxResults = 10;
 
@@ -198,23 +199,23 @@ class HoldingSearchService {
     return results;
   }
 
-  /// `null` when [holderName] doesn't match [normalizedQuery] at all.
+  /// startsWith against each word of the name in turn, first match wins —
+  /// `null` when no word starts with [normalizedQuery] at all (no
+  /// contains-anywhere fallback, per APP_UPDATES_CLAUDE.md § 7.2). The
+  /// matching word's position becomes its priority (0 = first word/highest
+  /// priority); converted here to a score so lower priority sorts first
+  /// under [ScoredParcel]'s "higher score wins" convention shared with
+  /// every other search mode.
   int? _matchScore(final String normalizedQuery, final String holderName) {
     final String normalizedName = ArabicNormalizer.normalizeForSearch(
       holderName,
     );
+    final List<String> words = normalizedName.split(' ');
 
-    if (normalizedName.startsWith(normalizedQuery)) {
-      return _fullNameStartScore;
+    for (int i = 0; i < words.length; i++) {
+      final String fromHere = words.sublist(i).join(' ');
+      if (fromHere.startsWith(normalizedQuery)) return _maxNameWords - i;
     }
-
-    final bool matchesAWord = normalizedName
-        .split(' ')
-        .any((final String word) => word.startsWith(normalizedQuery));
-    if (matchesAWord) return _wordStartScore;
-
-    if (normalizedName.contains(normalizedQuery)) return _containsScore;
-
     return null;
   }
 
