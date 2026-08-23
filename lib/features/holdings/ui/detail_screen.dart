@@ -14,6 +14,7 @@ import '../data/model/parcel.dart';
 import 'add_record_screen.dart';
 import 'widgets/detail_screen_header.dart';
 import 'widgets/parcel_detail_card.dart';
+import 'widgets/parcel_index_nav_bar.dart';
 import 'widgets/parcel_status_filter.dart';
 
 /// Full record for one holding. If the holding has multiple parcels they
@@ -86,13 +87,21 @@ class _DetailScreenState extends State<DetailScreen>
   /// always the default/opening tab, per the spec.
   late final TabController _tabController;
 
+  /// Which of [visibleParcels] (this tab's filtered set) is currently shown
+  /// full-screen — paged via [ParcelIndexNavBar] instead of scrolling, so a
+  /// person with several parcels steps through them one at a time. Reset to
+  /// 0 whenever the active tab or the underlying parcel set changes, since
+  /// an index from the previous filter/holding has no meaning here.
+  int _visibleParcelIndex = 0;
+
   @override
   void initState() {
     super.initState();
     _tabController =
         TabController(length: DetailScreenTab.values.length, vsync: this)
           ..addListener(() {
-            if (!_tabController.indexIsChanging) setState(() {});
+            if (!_tabController.indexIsChanging) return;
+            setState(() => _visibleParcelIndex = 0);
           });
     _parcels = _sortedByBasin(widget.parcels);
     _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
@@ -134,6 +143,7 @@ class _DetailScreenState extends State<DetailScreen>
       _groupKey = targetGroupKey;
       _parcels = targetParcels;
       _busyParcelIds.clear();
+      _visibleParcelIndex = 0;
     });
   }
 
@@ -399,6 +409,31 @@ class _DetailScreenState extends State<DetailScreen>
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
+  Widget _buildParcelCard(final Parcel parcel) {
+    return ParcelDetailCard(
+      key: ValueKey<String>(parcel.id),
+      parcel: parcel,
+      originalParcel: _repository.originalParcel(parcel.id),
+      // "New / unsynced" no longer applies once every write is
+      // confirmed-or-failed synchronously — there is no more window where a
+      // record is visible but not yet on the server.
+      isNew: false,
+      hideCreditType: _repository.hideCreditType,
+      associationType: _repository.activeAssociationType,
+      onFieldChanged: _updateField,
+      onCompleted: _onParcelCompleted,
+      resolveBorderMatch: _repository.findByBorderText,
+      onDelete: parcel.sourceAddedHoldingId != null && parcel.completedAt == null
+          ? () => _deleteParcel(parcel)
+          : null,
+      onReopen: () => _reopenParcel(parcel),
+      isDeleting: _isParcelBusy(parcel.id),
+      isReopening: _isParcelBusy(parcel.id),
+      onReviewBusyChanged: (final bool isBusy) =>
+          _setReviewBusy(parcel.id, isBusy),
+    );
+  }
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -420,6 +455,12 @@ class _DetailScreenState extends State<DetailScreen>
     // down and re-playing its entrance animation on a state-only update.
     final List<Parcel> visibleParcels =
         _parcels.where((final Parcel p) => activeTab.matches(p)).toList();
+
+    // Clamp rather than reset-via-setState mid-build — a delete/tab switch
+    // can shrink this list in the same frame the index was last valid for.
+    final int pagedIndex = visibleParcels.isEmpty
+        ? 0
+        : _visibleParcelIndex.clamp(0, visibleParcels.length - 1);
 
     final bool showAddFab = _parcels.isNotEmpty;
 
@@ -462,6 +503,19 @@ class _DetailScreenState extends State<DetailScreen>
                           Tab(text: tab.label()),
                       ],
                     ),
+                    if (visibleParcels.length > 1) ...[
+                      ParcelIndexNavBar(
+                        index: pagedIndex,
+                        count: visibleParcels.length,
+                        onPrevious: pagedIndex > 0
+                            ? () => setState(() => _visibleParcelIndex = pagedIndex - 1)
+                            : null,
+                        onNext: pagedIndex < visibleParcels.length - 1
+                            ? () => setState(() => _visibleParcelIndex = pagedIndex + 1)
+                            : null,
+                      ),
+                      verticalSpacing(4),
+                    ],
                     verticalSpacing(8),
                     Expanded(
                       child: visibleParcels.isEmpty
@@ -473,50 +527,14 @@ class _DetailScreenState extends State<DetailScreen>
                                 ),
                               ),
                             )
-                          : ListView.builder(
+                          : SingleChildScrollView(
                               padding: EdgeInsets.symmetric(
                                 horizontal: rw(16),
                               ).copyWith(
                                   bottom: rh(16 + (showAddFab ? 64 : 0))),
-                              itemCount: visibleParcels.length,
-                              itemBuilder:
-                                  (final BuildContext context, final int i) {
-                                final Parcel parcel = visibleParcels[i];
-                                return Padding(
-                                  key: ValueKey<String>(parcel.id),
-                                  padding: EdgeInsets.only(bottom: rh(16)),
-                                  child: ParcelDetailCard(
-                                    parcel: parcel,
-                                    originalParcel:
-                                        _repository.originalParcel(parcel.id),
-                                    // "New / unsynced" no longer applies once
-                                    // every write is confirmed-or-failed
-                                    // synchronously — there is no more window
-                                    // where a record is visible but not yet on
-                                    // the server.
-                                    isNew: false,
-                                    hideCreditType: _repository.hideCreditType,
-                                    associationType:
-                                        _repository.activeAssociationType,
-                                    onFieldChanged: _updateField,
-                                    onCompleted: _onParcelCompleted,
-                                    animationDelay:
-                                        Duration(milliseconds: i * 80),
-                                    resolveBorderMatch:
-                                        _repository.findByBorderText,
-                                    onDelete:
-                                        parcel.sourceAddedHoldingId != null &&
-                                                parcel.completedAt == null
-                                            ? () => _deleteParcel(parcel)
-                                            : null,
-                                    onReopen: () => _reopenParcel(parcel),
-                                    isDeleting: _isParcelBusy(parcel.id),
-                                    isReopening: _isParcelBusy(parcel.id),
-                                    onReviewBusyChanged: (final bool isBusy) =>
-                                        _setReviewBusy(parcel.id, isBusy),
-                                  ),
-                                );
-                              },
+                              child: _buildParcelCard(
+                                visibleParcels[pagedIndex],
+                              ),
                             ),
                     ),
                   ],
