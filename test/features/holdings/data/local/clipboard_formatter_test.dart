@@ -41,22 +41,22 @@ void main() {
   group('وراثة/مفوض prefix matrix', () {
     test('neither toggle on — no prefix on either slot', () {
       final String text = formatter.format(baseParcel());
-      expect(text, contains('اسم المالك: محمد علي,'));
-      expect(text, contains('اسم الحائز: محمد علي,'));
+      expect(text, contains('اسم المالك: محمد علي'));
+      expect(text, contains('اسم الحائز: محمد علي'));
     });
 
     test('وراثة alone — both slots get (ورثة)', () {
       final String text = formatter.format(baseParcel(isInheritance: true));
-      expect(text, contains('اسم المالك: (ورثة) محمد علي,'));
-      expect(text, contains('اسم الحائز: (ورثة) محمد علي,'));
+      expect(text, contains('اسم المالك: (ورثة) محمد علي'));
+      expect(text, contains('اسم الحائز: (ورثة) محمد علي'));
     });
 
     test(
       'مفوض alone — only the holder slot gets (مفوض عنه); owner untouched',
       () {
         final String text = formatter.format(baseParcel(isDelegate: true));
-        expect(text, contains('اسم المالك: محمد علي,'));
-        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي,'));
+        expect(text, contains('اسم المالك: محمد علي'));
+        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي'));
       },
     );
 
@@ -66,8 +66,8 @@ void main() {
         final String text = formatter.format(
           baseParcel(isInheritance: true, isDelegate: true),
         );
-        expect(text, contains('اسم المالك: (ورثة) محمد علي,'));
-        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي,'));
+        expect(text, contains('اسم المالك: (ورثة) محمد علي'));
+        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي'));
       },
     );
   });
@@ -104,42 +104,112 @@ void main() {
   });
 
   group('format', () {
+    test('ID line is always first', () {
+      const Parcel p = Parcel(id: 'uuid-123', holdingId: '55');
+      final String text = formatter.format(p);
+      expect(text.split('\n').first, 'ID: uuid-123');
+    });
+
     test('blank/empty fields render the placeholder, never skipped', () {
       const Parcel p = Parcel(holdingId: '55');
       final String text = formatter.format(p);
-      expect(text, contains('اسم الحائز: -,'));
-      expect(text, contains('اسم الحوض: -,'));
-      expect(text, contains('ملاحظات: -,'));
+      expect(text, contains('اسم الحائز: -'));
+      expect(text, contains('اسم الحوض: -'));
+      expect(text, contains('كود الحوض: -'));
     });
 
-    test('missing national id is padded with 14 ones', () {
+    test('missing national id renders the placeholder, not a fake id', () {
       const Parcel p = Parcel(holdingId: '55');
       final String text = formatter.format(p);
-      expect(text, contains('الرقم القومي: 11111111111111,'));
+      expect(text, contains('الرقم القومي: -'));
+    });
+
+    test('عدد القطع defaults to 1 when holdingsCount is null or 0', () {
+      const Parcel nullCount = Parcel(holdingId: '55');
+      const Parcel zeroCount = Parcel(holdingId: '55', holdingsCount: 0);
+      expect(formatter.format(nullCount), contains('عدد القطع: 1'));
+      expect(formatter.format(zeroCount), contains('عدد القطع: 1'));
+    });
+
+    test('عدد القطع reflects a real count above 1', () {
+      const Parcel p = Parcel(holdingId: '55', holdingsCount: 3);
+      expect(formatter.format(p), contains('عدد القطع: 3'));
     });
 
     test(
-        'نوع الائتمان/نوع الإصلاح is never a Copy All field '
-        '(Credit/Reform Type Logic prompt — surfaces via ملاحظات only)', () {
+        'نوع الائتمان/نوع الإصلاح/اسم الجمعية/رقم الأرض/المساحة بالمتر are '
+        'never Copy All fields', () {
       const Parcel p = Parcel(
         holdingId: '55',
         creditType: 'أوقاف',
+        associationName: 'جمعية الدير',
+        landNumber: '13113851',
+        totalSqm: 2450.49,
         notes: <String>['الأرض تابعة لهيئة الأوقاف المصرية'],
       );
       final String text = formatter.format(p);
       expect(text, isNot(contains('نوع الائتمان')));
       expect(text, isNot(contains('نوع الإصلاح')));
+      expect(text, isNot(contains('اسم الجمعية')));
+      expect(text, isNot(contains('رقم الأرض')));
+      expect(text, isNot(contains('المساحة بالمتر')));
       expect(text, contains('الأرض تابعة لهيئة الأوقاف المصرية'));
     });
 
-    test('فدان/قيراط/سهم share one line', () {
+    test('فدان/قيراط/سهم are an indented block under المساحة:', () {
       const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
+      final List<String> lines = formatter.format(p).split('\n');
+      expect(lines, contains('المساحة:'));
+      expect(lines, contains('  فدان: 1'));
+      expect(lines, contains('  قيراط: 2'));
+      expect(lines, contains('  سهم: 3'));
+    });
+
+    test('no trailing commas anywhere in the output', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        feddan: 1,
+        qirat: 2,
+        sahm: 3,
+        notes: <String>['ملاحظة'],
+      );
+      expect(formatter.format(p), isNot(contains(',')));
+    });
+
+    test('نوع المحصول/مرحلة النمو show for زراعة usage', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        usageType: 'زراعة',
+        cropType: 'قمح',
+        growthStages: 'مرحلة النمو الخضري',
+      );
       final String text = formatter.format(p);
-      final String feddanLine =
-          text.split('\n').firstWhere((final String line) => line.contains('فدان:'));
-      expect(feddanLine, contains('فدان: 1,'));
-      expect(feddanLine, contains('قيراط: 2,'));
-      expect(feddanLine, contains('سهم: 3,'));
+      expect(text, contains('نوع المحصول: قمح'));
+      expect(text, contains('مرحلة النمو: مرحلة النمو الخضري'));
+    });
+
+    test('نوع المحصول/مرحلة النمو are omitted for مباني/بور usage', () {
+      const Parcel buildings = Parcel(holdingId: '55', usageType: 'مباني');
+      const Parcel fallow = Parcel(holdingId: '55', usageType: 'بور');
+      expect(formatter.format(buildings), isNot(contains('نوع المحصول')));
+      expect(formatter.format(buildings), isNot(contains('مرحلة النمو:')));
+      expect(formatter.format(fallow), isNot(contains('نوع المحصول')));
+      expect(formatter.format(fallow), isNot(contains('مرحلة النمو:')));
+    });
+
+    test('ملاحظات line is omitted entirely when there are no notes', () {
+      const Parcel p = Parcel(holdingId: '55');
+      final String text = formatter.format(p);
+      expect(text, isNot(contains('الملاحظات')));
+    });
+
+    test('ملاحظات line appears, joined by "، ", when notes are present', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        notes: <String>['ملاحظة أولى', 'ملاحظة ثانية'],
+      );
+      final String text = formatter.format(p);
+      expect(text, contains('الملاحظات: ملاحظة أولى، ملاحظة ثانية'));
     });
   });
 

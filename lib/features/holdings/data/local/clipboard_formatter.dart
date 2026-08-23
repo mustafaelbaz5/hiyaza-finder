@@ -58,13 +58,17 @@ class ClipboardFormatter {
     return prefix == null ? name : '$prefix $name';
   }
 
-  /// One "label: value," field per line (blank slots kept, never skipped)
-  /// so the pasted text both reads clearly on its own and lines up
-  /// row-for-row when pasted into an external spreadsheet template.
-  /// [associationType] determines whether to show نوع الائتمان (agricultural
-  /// credit) or نوع الإصلاح (agricultural reform). For compatibility,
-  /// [hideCreditType] is deprecated in favor of passing [associationType],
-  /// but still supported.
+  /// One "label: value" field per line, no trailing commas and no comma
+  /// separators between fields (Copy All Format Fix prompt) — nothing here
+  /// pastes into a spreadsheet template anymore, so the old
+  /// comma-per-field/shared-line grouping no longer serves a purpose. ID is
+  /// always first; اسم الجمعية/رقم الأرض/المساحة بالمتر are dropped
+  /// entirely; نوع المحصول/مرحلة النمو only appear for زراعة; ملاحظات is
+  /// omitted (not shown as a placeholder) when there's nothing to say.
+  /// [hideCreditType]/[associationType] are accepted for call-site
+  /// compatibility but no longer affect the output — نوع الائتمان/نوع
+  /// الإصلاح were never a Copy All field (`CreditTypeNotesSync` surfaces
+  /// them through ملاحظات instead).
   String format(
     final Parcel p, {
     final bool hideCreditType = false,
@@ -77,44 +81,31 @@ class ClipboardFormatter {
         displayHolderName(p).isEmpty ? emptyPlaceholder : displayHolderName(p);
     final String ownerSlot =
         displayOwnerName(p).isEmpty ? emptyPlaceholder : displayOwnerName(p);
-    final String nationalIdSlot =
-        (p.nationalId == null || p.nationalId!.trim().isEmpty)
-            ? '11111111111111'
-            : p.nationalId!.trim();
+    final int parcelCount = (p.holdingsCount ?? 0) < 1 ? 1 : p.holdingsCount!;
+    final bool isAgricultural =
+        UsageType.fromLabel(p.usageType) == UsageType.agricultural;
+    final String notesJoined = p.notes.join('، ').trim();
 
-    // Grouping فدان/قيراط/سهم on one shared line (instead of one field per
-    // line) trims the message's height while keeping every field's own
-    // "label: value," so it still pastes cleanly into a spreadsheet.
-    String field(final String label, final String value) => '$label: $value,';
+    String field(final String label, final String value) => '$label: $value';
 
     final List<String> lines = <String>[
-      p.holdingsCount != null
-          ? '${field('رقم الحيازة', p.holdingId)}     '
-              '${field('عدد القطع في الحيازة', p.holdingsCount.toString())}'
-          : field('رقم الحيازة', p.holdingId),
+      field('ID', p.id),
+      field('رقم الحيازة', p.holdingId),
       field('اسم المالك', ownerSlot),
       field('اسم الحائز', holderSlot),
-      field('الرقم القومي', nationalIdSlot),
-      field('اسم الجمعية', slot(p.associationName)),
+      field('الرقم القومي', slot(p.nationalId)),
+      field('عدد القطع', parcelCount.toString()),
       field('اسم الحوض', slot(p.basinName)),
-      field('رقم الأرض', slot(p.landNumber)),
-      '${field('فدان', formatNumber(p.feddan) ?? emptyPlaceholder)}     '
-          '${field('قيراط', formatNumber(p.qirat) ?? emptyPlaceholder)}   '
-          '${field('سهم', formatNumber(p.sahm) ?? emptyPlaceholder)}',
-      field(
-        'المساحة بالمتر',
-        formatNumber(p.totalSqm) ?? emptyPlaceholder,
-      ),
-      // نوع الائتمان/نوع الإصلاح is never a Copy All field — it only ever
-      // surfaces through ملاحظات (the أوقاف toggle's auto-note for credit
-      // cities, or a selected reform note for reform cities). See
-      // `CreditTypeNotesSync`.
-      if (UsageType.fromLabel(p.usageType) == UsageType.agricultural)
-        field('نوع الزرع', slot(p.cropType)),
-      field(
-        'ملاحظات',
-        p.notes.isEmpty ? emptyPlaceholder : p.notes.join('، '),
-      ),
+      field('كود الحوض', slot(p.basinCode)),
+      'المساحة:',
+      '  ${field('فدان', formatNumber(p.feddan) ?? emptyPlaceholder)}',
+      '  ${field('قيراط', formatNumber(p.qirat) ?? emptyPlaceholder)}',
+      '  ${field('سهم', formatNumber(p.sahm) ?? emptyPlaceholder)}',
+      if (isAgricultural) field('نوع المحصول', slot(p.cropType)),
+      if (isAgricultural) field('مرحلة النمو', slot(p.growthStages)),
+      field('نوع الاستخدام', slot(p.usageType)),
+      if (notesJoined.isNotEmpty && notesJoined != emptyPlaceholder)
+        field('الملاحظات', notesJoined),
     ];
 
     return lines.join('\n');
