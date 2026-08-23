@@ -8,34 +8,31 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
 
-/// [DetailScreen]'s top bar — back button, Previous/Next between holdings
-/// in the same basin (APP_CLAUDE.md § Screen 3), and the holding id/holder
-/// title, all in one AppBar-style row (UI/UX Updates prompt "Change 1" —
-/// previously Previous/Next lived in a separate row below this one; now
-/// they sit directly beside the back button and title, matching an
-/// AppBar's leading/title/actions layout even though this stays a plain
-/// widget rather than `Scaffold.appBar`, so the existing back-button/title
-/// styling doesn't need to be rebuilt around Material's AppBar). "Add
-/// parcel for this person" is on a floating action button instead, matching
-/// `HomeScreen`'s add-person FAB, so it stays reachable without occupying
-/// header space.
+/// [DetailScreen]'s top bar (UI/UX Updates prompt "Change 4") — the
+/// between-holdings/between-persons arrows this used to show are gone
+/// entirely; the only navigation left here is between the *same* person's
+/// own parcels, moved from a separate row below the AppBar into the AppBar
+/// itself. RTL layout (right = leading, per the prompt):
+/// `[ ◀ prev-parcel ] [ Title: holder name ] [ next-parcel ▶ ] [ back ← ]`.
+/// Both arrows are always rendered — greyed out (never hidden) when there's
+/// only one parcel to page through, or at the first/last one — so the
+/// control's presence never shifts the title's position.
 class DetailScreenHeader extends StatelessWidget {
   const DetailScreenHeader({
     super.key,
     required this.holdingId,
     required this.parcelCount,
-    this.onPrevious,
-    this.onNext,
+    this.onPreviousParcel,
+    this.onNextParcel,
   });
 
   final String holdingId;
   final int parcelCount;
 
-  /// `null` disables/hides that direction — first/last holding in the
-  /// basin, or no basin context at all (e.g. reached from a search result
-  /// rather than a `BasinScreen`).
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
+  /// `null` disables (greys out, never hides) that direction — first/last
+  /// parcel among the currently-visible ones, or a single-parcel holding.
+  final VoidCallback? onPreviousParcel;
+  final VoidCallback? onNextParcel;
 
   void _navigate(final VoidCallback callback) {
     HapticFeedback.selectionClick();
@@ -54,16 +51,18 @@ class DetailScreenHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const AppBackButton(),
-              if (onPrevious != null)
-                IconButton(
-                  tooltip: 'holdings.detail.previous_holding'.tr(),
-                  onPressed: () => _navigate(onPrevious!),
-                  icon: const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.primary200,
-                  ),
+              IconButton(
+                tooltip: 'holdings.detail.previous_parcel'.tr(),
+                onPressed: onPreviousParcel == null
+                    ? null
+                    : () => _navigate(onPreviousParcel!),
+                icon: Icon(
+                  Icons.chevron_right_rounded,
+                  color: onPreviousParcel == null
+                      ? colors.textHint
+                      : AppColors.primary200,
                 ),
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,15 +91,17 @@ class DetailScreenHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onNext != null)
-                IconButton(
-                  tooltip: 'holdings.detail.next_holding'.tr(),
-                  onPressed: () => _navigate(onNext!),
-                  icon: const Icon(
-                    Icons.chevron_left_rounded,
-                    color: AppColors.primary200,
-                  ),
+              IconButton(
+                tooltip: 'holdings.detail.next_parcel'.tr(),
+                onPressed:
+                    onNextParcel == null ? null : () => _navigate(onNextParcel!),
+                icon: Icon(
+                  Icons.chevron_left_rounded,
+                  color:
+                      onNextParcel == null ? colors.textHint : AppColors.primary200,
                 ),
+              ),
+              const AppBackButton(),
             ],
           ),
           verticalSpacing(16),

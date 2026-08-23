@@ -7,7 +7,6 @@ import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_form_.dart';
 import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
 import '../../data/repo/holdings_repository.dart';
@@ -28,25 +27,21 @@ class LoadingBody extends StatelessWidget {
   }
 }
 
-/// Search bar stays pinned at the top — only the body below scrolls. Home is
-/// search-first (UI/UX Updates prompt "Change 3"): the body shows
-/// [RecommendationList]'s search results while [HomeState.query] is
-/// non-empty, and [HomeEmptyState] otherwise — there is no flat,
-/// unfiltered city-wide list here at all (basin grouping/progress lives on
-/// its own [BasinsPage]).
+/// Home's results area (UI/UX Updates prompt "Change 5" moved the search
+/// bar itself out into its own elevated card in `HomeScreen`, above this
+/// widget — this only renders what's below it: [RecommendationList]'s
+/// search results while [HomeState.query] is non-empty, and
+/// [HomeEmptyState] otherwise). There is no flat, unfiltered city-wide list
+/// here at all (basin grouping/progress lives on its own [BasinsPage]).
 class LoadedBody extends StatefulWidget {
   const LoadedBody({
     super.key,
     required this.state,
-    required this.controller,
     required this.cubit,
-    required this.onQueryChanged,
   });
 
   final HomeState state;
-  final TextEditingController controller;
   final HomeCubit cubit;
-  final void Function(String query) onQueryChanged;
 
   @override
   State<LoadedBody> createState() => LoadedBodyState();
@@ -82,23 +77,6 @@ class LoadedBodyState extends State<LoadedBody> {
 
   @override
   Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    final List<Widget> suffixButtons = <Widget>[
-      if (widget.controller.text.isNotEmpty)
-        IconButton(
-          icon: Icon(Icons.close_rounded, color: colors.iconSecondary),
-          tooltip: 'holdings.search.clear'.tr(),
-          onPressed: () {
-            widget.controller.clear();
-            widget.onQueryChanged('');
-          },
-        ),
-    ];
-    final Widget? suffixIcon = suffixButtons.isEmpty
-        ? null
-        : Row(mainAxisSize: MainAxisSize.min, children: suffixButtons);
-
     final bool isSearching = widget.state.query.trim().isNotEmpty;
 
     return LayoutBuilder(
@@ -108,45 +86,17 @@ class LoadedBodyState extends State<LoadedBody> {
 
         return Stack(
           children: <Widget>[
-            Column(
-              children: <Widget>[
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      verticalSpacing(8),
-                      CustomTextForm(
-                        hintText: 'holdings.search.hint'.tr(),
-                        controller: widget.controller,
-                        isRTL: true,
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colors.iconSecondary,
-                        ),
-                        suffixIcon: suffixIcon,
-                        onChanged: widget.onQueryChanged,
-                      ),
-                      verticalSpacing(8),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: isSearching
-                        ? RecommendationList(
-                            query: widget.state.query,
-                            results: widget.state.results,
-                            onSelect: (final SearchResult result) =>
-                                _openDetail(context, result),
-                            onAddNew: () => _openAddPerson(context),
-                          )
-                        : const HomeEmptyState(),
-                  ),
-                ),
-              ],
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: isSearching
+                  ? RecommendationList(
+                      query: widget.state.query,
+                      results: widget.state.results,
+                      onSelect: (final SearchResult result) =>
+                          _openDetail(context, result),
+                      onAddNew: () => _openAddPerson(context),
+                    )
+                  : const HomeEmptyState(),
             ),
             // Always-visible add-person entry point — previously only
             // reachable after typing a search that returned no results,

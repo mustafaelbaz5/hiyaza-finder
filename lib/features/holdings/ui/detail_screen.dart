@@ -14,7 +14,6 @@ import '../data/model/parcel.dart';
 import 'add_record_screen.dart';
 import 'widgets/detail_screen_header.dart';
 import 'widgets/parcel_detail_card.dart';
-import 'widgets/parcel_index_nav_bar.dart';
 import 'widgets/parcel_status_filter.dart';
 
 /// Full record for one holding. If the holding has multiple parcels they
@@ -88,10 +87,12 @@ class _DetailScreenState extends State<DetailScreen>
   late final TabController _tabController;
 
   /// Which of [visibleParcels] (this tab's filtered set) is currently shown
-  /// full-screen — paged via [ParcelIndexNavBar] instead of scrolling, so a
-  /// person with several parcels steps through them one at a time. Reset to
-  /// 0 whenever the active tab or the underlying parcel set changes, since
-  /// an index from the previous filter/holding has no meaning here.
+  /// full-screen — paged via [DetailScreenHeader]'s prev/next arrows
+  /// (moved into the AppBar, UI/UX Updates prompt "Change 4") instead of
+  /// scrolling, so a person with several parcels steps through them one at
+  /// a time. Reset to 0 whenever the active tab or the underlying parcel
+  /// set changes, since an index from the previous filter/holding has no
+  /// meaning here.
   int _visibleParcelIndex = 0;
 
   @override
@@ -118,33 +119,6 @@ class _DetailScreenState extends State<DetailScreen>
           (a.basinName ?? '').compareTo(b.basinName ?? ''),
     );
     return sorted;
-  }
-
-  /// Previous/Next between holdings in the same basin — `null` if this
-  /// holding's parcels have no basin name, or [_repository] finds no
-  /// adjacent holding in that direction.
-  void _navigateToAdjacentHolding(final bool next) {
-    final String? basinName = _parcels.isEmpty ? null : _parcels.first.basinName;
-    final String? groupKey = _groupKey;
-    if (basinName == null || groupKey == null) return;
-
-    final String? targetGroupKey = _repository.adjacentHoldingGroupKey(
-      basinName,
-      groupKey,
-      next: next,
-    );
-    if (targetGroupKey == null) return;
-
-    final List<Parcel> targetParcels =
-        _sortedByBasin(_repository.parcelsForHolding(targetGroupKey));
-    if (targetParcels.isEmpty) return;
-
-    setState(() {
-      _groupKey = targetGroupKey;
-      _parcels = targetParcels;
-      _busyParcelIds.clear();
-      _visibleParcelIndex = 0;
-    });
   }
 
   @override
@@ -439,13 +413,6 @@ class _DetailScreenState extends State<DetailScreen>
     final colors = context.customColors;
     final String holdingId =
         _parcels.isNotEmpty ? _parcels.first.holdingId : '';
-    final String? basinName = _parcels.isEmpty ? null : _parcels.first.basinName;
-    final String? previousGroupKey = basinName == null || _groupKey == null
-        ? null
-        : _repository.adjacentHoldingGroupKey(basinName, _groupKey!, next: false);
-    final String? nextGroupKey = basinName == null || _groupKey == null
-        ? null
-        : _repository.adjacentHoldingGroupKey(basinName, _groupKey!, next: true);
     final DetailScreenTab activeTab =
         DetailScreenTab.values[_tabController.index];
     // Deliberately NOT re-sorted by completion state — a parcel keeps its
@@ -480,12 +447,17 @@ class _DetailScreenState extends State<DetailScreen>
                     DetailScreenHeader(
                       holdingId: holdingId,
                       parcelCount: _parcels.length,
-                      onPrevious: previousGroupKey == null
-                          ? null
-                          : () => _navigateToAdjacentHolding(false),
-                      onNext: nextGroupKey == null
-                          ? null
-                          : () => _navigateToAdjacentHolding(true),
+                      // Between-holdings/between-persons navigation is gone
+                      // (UI/UX Updates prompt "Change 4") — this is now only
+                      // ever navigation between the same person's own
+                      // parcels, always rendered (disabled, never hidden)
+                      // even for a single-parcel holding.
+                      onPreviousParcel: pagedIndex > 0
+                          ? () => setState(() => _visibleParcelIndex = pagedIndex - 1)
+                          : null,
+                      onNextParcel: pagedIndex < visibleParcels.length - 1
+                          ? () => setState(() => _visibleParcelIndex = pagedIndex + 1)
+                          : null,
                     ),
                     // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
                     // Phase 11 §11) — unlike the filter-chip row this replaced,
@@ -503,19 +475,6 @@ class _DetailScreenState extends State<DetailScreen>
                           Tab(text: tab.label()),
                       ],
                     ),
-                    if (visibleParcels.length > 1) ...[
-                      ParcelIndexNavBar(
-                        index: pagedIndex,
-                        count: visibleParcels.length,
-                        onPrevious: pagedIndex > 0
-                            ? () => setState(() => _visibleParcelIndex = pagedIndex - 1)
-                            : null,
-                        onNext: pagedIndex < visibleParcels.length - 1
-                            ? () => setState(() => _visibleParcelIndex = pagedIndex + 1)
-                            : null,
-                      ),
-                      verticalSpacing(4),
-                    ],
                     verticalSpacing(8),
                     Expanded(
                       child: visibleParcels.isEmpty

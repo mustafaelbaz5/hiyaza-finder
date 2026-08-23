@@ -155,9 +155,9 @@ class Parcel {
   final String
       creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
   final String reformType; // نوع الإصلاح: for agricultural reform cities
-  final bool isInheritance; // وراثة
+  final bool isInheritance; // وراثة — prefixes اسم المالك display with "وارثه "
   final bool
-      isDelegate; // مفوض — overrides the (ورثة) copy-all prefix with (مفوض عنه)
+      isDelegate; // مفوض — represented only via the auto "مفوض عنه {holder}" ملاحظات entry, never a name prefix
   final String usageType; // نوع الاستخدام
 
   /// Whether this row currently lives in `added_holdings` (`true`) or has

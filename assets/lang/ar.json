@@ -255,7 +255,10 @@
       "specify_title": "اكتب الملاحظة (اختياري)",
       "add_title": "إضافة ملاحظة",
       "free_text_hint": "اكتب ملاحظة...",
-      "quick_list_title": "ملاحظات شائعة"
+      "quick_list_title": "ملاحظات شائعة",
+      "collapsed_with_count": "{note} (+{count})",
+      "add_button": "+ إضافة",
+      "empty": "لا توجد ملاحظات"
     },
     "delegate": {
       "dialog_title": "تفويض",

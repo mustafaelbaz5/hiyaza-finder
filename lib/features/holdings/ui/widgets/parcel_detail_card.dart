@@ -97,11 +97,6 @@ class ParcelDetailCard extends StatelessWidget {
     return FieldChangeTracker.isModified(current(parcel), current(original));
   }
 
-  String? _prefixed(final String? prefix, final String? name) {
-    if (name == null || name.isEmpty) return name;
-    return prefix == null ? name : '$prefix $name';
-  }
-
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -207,13 +202,10 @@ class ParcelDetailCard extends StatelessWidget {
           verticalSpacing(8),
           FieldRow(
             label: 'holdings.fields.owner_name'.tr(),
-            // وراثة/مفوض prefix shown here matches `ClipboardFormatter`'s
-            // exact rule (`REFACTOR_ROADMAP.md` Phase 10 §6) — display
+            // وراثة prefix shown here matches `ClipboardFormatter`'s exact
+            // "وارثه " rule (UI/UX Updates prompt "Change 2") — display
             // only, the edit dialog below still opens with the raw name.
-            value: _prefixed(
-              _formatter.ownerNamePrefix(parcel),
-              _formatter.effectiveOwnerName(parcel),
-            ),
+            value: _formatter.displayOwnerName(parcel),
             isModified: _isModified((final p) => p.ownerName),
             onEdit: () => _editText(
               context,
@@ -226,10 +218,9 @@ class ParcelDetailCard extends StatelessWidget {
           verticalSpacing(8),
           FieldRow(
             label: 'holdings.fields.holder_name'.tr(),
-            value: _prefixed(
-              _formatter.holderNamePrefix(parcel),
-              parcel.holderName,
-            ),
+            // اسم الحائز is never prefixed (UI/UX Updates prompt "Change
+            // 1"/"Change 2") — مفوض only ever shows up as a ملاحظات entry.
+            value: _formatter.displayHolderName(parcel),
             isModified: _isModified((final p) => p.holderName),
             onEdit: () => _editText(
               context,
@@ -242,7 +233,10 @@ class ParcelDetailCard extends StatelessWidget {
           verticalSpacing(8),
           FieldRow(
             label: 'holdings.fields.national_id'.tr(),
-            value: parcel.nationalId,
+            // Display-only fallback (UI/UX Updates prompt "Change 7") —
+            // never written back to `Parcel.nationalId` itself; the edit
+            // dialog below still opens with the real (possibly empty) value.
+            value: _formatter.displayNationalId(parcel),
             isModified: _isModified((final p) => p.nationalId),
             onEdit: () => _editText(
               context,
@@ -268,12 +262,6 @@ class ParcelDetailCard extends StatelessWidget {
                 _isModified((final p) => p.qirat) ||
                 _isModified((final p) => p.sahm),
             onEdit: () => _editArea(context),
-          ),
-          verticalSpacing(8),
-          FieldRow(
-            label: 'holdings.fields.area_sqm'.tr(),
-            value: _formatter.formatNumber(parcel.totalSqm),
-            isModified: _isModified((final p) => p.totalSqm),
           ),
           verticalSpacing(8),
           FieldRow(

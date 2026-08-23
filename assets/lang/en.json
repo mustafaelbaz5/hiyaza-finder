@@ -255,7 +255,10 @@
       "specify_title": "Write the note (optional)",
       "add_title": "Add note",
       "free_text_hint": "Write a note...",
-      "quick_list_title": "Common notes"
+      "quick_list_title": "Common notes",
+      "collapsed_with_count": "{note} (+{count})",
+      "add_button": "+ Add",
+      "empty": "No notes"
     },
     "delegate": {
       "dialog_title": "Delegate",
