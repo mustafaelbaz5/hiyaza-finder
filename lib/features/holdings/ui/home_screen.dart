@@ -11,7 +11,6 @@ import 'widgets/home_top_bar.dart';
 import 'widgets/loading_body.dart';
 
 import '../../../core/router/routes.dart';
-import '../../../core/settings/ui/settings_sheet.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -39,11 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _openFileStatus(final HomeCubit cubit) async {
-    await context.pushNamed(Routes.fileStatus);
-    if (mounted) cubit.refreshData();
-  }
-
   Future<void> _openCityPicker(final HomeCubit cubit) async {
     final CitySnapshot? snapshot =
         await context.pushNamed<CitySnapshot>(Routes.cityPicker);
@@ -65,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return Column(
               children: <Widget>[
                 HomeTopBar(
-                  onSettings: () => showSettingsSheet(context),
+                  onChangeCity: () => _openCityPicker(cubit),
                 ),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -87,8 +81,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             cubit: cubit,
                             onQueryChanged: (final String q) =>
                                 _onQueryChanged(q, cubit),
-                            onOpenFileStatus: () => _openFileStatus(cubit),
-                            onChangeCity: () => _openCityPicker(cubit),
                           ),
                       },
                     ),

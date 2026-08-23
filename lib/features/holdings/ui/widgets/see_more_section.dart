@@ -7,7 +7,9 @@ import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
 import '../../data/local/field_change_tracker.dart';
+import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
+import '../../data/model/usage_type.dart';
 import 'field_row.dart';
 import 'toggle_field_row.dart';
 
@@ -262,23 +264,25 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           basinCode
         else
           _pairRow(basinCode, creditOrReformType),
-        verticalSpacing(8),
-        FieldRow(
-          label: 'holdings.fields.growth_stages'.tr(),
-          value: widget.parcel.growthStages,
-          isModified: _isModified((final p) => p.growthStages),
-          onEdit: () => _editDropdown(
-            context,
-            title: 'holdings.fields.growth_stages'.tr(),
-            initialValue: widget.parcel.growthStages,
-            options: Parcel.growthStageOptions,
-            allowClear: false,
-            apply: (final String? v) => widget.parcel.copyWith(
-              growthStages: v ?? Parcel.defaultGrowthStage,
+        if (UsageType.fromLabel(widget.parcel.usageType) ==
+            UsageType.agricultural) ...[
+          FieldRow(
+            label: 'holdings.fields.growth_stages'.tr(),
+            value: widget.parcel.growthStages,
+            isModified: _isModified((final p) => p.growthStages),
+            onEdit: () => _editDropdown(
+              context,
+              title: 'holdings.fields.growth_stages'.tr(),
+              initialValue: widget.parcel.growthStages,
+              options: Parcel.growthStageOptions,
+              allowClear: false,
+              apply: (final String? v) => widget.parcel.copyWith(
+                growthStages: v ?? Parcel.defaultGrowthStage,
+              ),
             ),
           ),
-        ),
-        verticalSpacing(8),
+          verticalSpacing(8),
+        ],
         _pairRow(directorate, administration),
         verticalSpacing(8),
         FieldRow(
@@ -305,8 +309,9 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
             initialValue: widget.parcel.usageType,
             options: Parcel.usageTypeOptions,
             allowClear: false,
-            apply: (final String? v) => widget.parcel.copyWith(
-              usageType: v ?? Parcel.defaultUsageType,
+            apply: (final String? v) => UsageTypeNotesSync.applyUsageTypeChange(
+              widget.parcel,
+              v ?? Parcel.defaultUsageType,
             ),
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import '../../../features/holdings/data/local/bulk_edit_service.dart';
 import '../../../features/holdings/data/local/local_added_parcels_store.dart';
 import '../../../features/holdings/data/local/local_edit_tracker.dart';
+import '../../../features/holdings/data/local/notes_list_service.dart';
 import '../../../features/holdings/data/local/parcel_edit_overlay.dart';
 import '../../../features/holdings/data/local/parcel_edits_store.dart';
 import '../../../features/holdings/data/local/parcel_query_service.dart';
@@ -28,6 +29,9 @@ void registerHoldingsModule(final GetIt getIt) {
   );
   getIt.registerLazySingleton(
     () => LocalEditTracker(store: getIt<KeyValueStore>()),
+  );
+  getIt.registerLazySingleton(
+    () => NotesListService(getIt<KeyValueStore>()),
   );
 
   getIt.registerLazySingleton<HoldingsRepository>(

@@ -15,6 +15,10 @@ abstract class HoldingsReader {
 
   List<SearchResult> search(final String query, {final String? basin});
 
+  /// Every distinct holding, city-wide, unfiltered by basin — Home's flat
+  /// list (APP_CLAUDE.md § 9.1).
+  List<SearchResult> get allHoldings;
+
   List<String> get availableBasins;
 
   Map<String, int> get basinHoldingCounts;

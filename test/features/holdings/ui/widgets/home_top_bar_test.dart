@@ -1,43 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
-import 'package:hiyaza_finder/core/networking/connection_quality_service.dart';
-import 'package:hiyaza_finder/core/networking/network_info.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/home_top_bar.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 import '../../../../support/localized_widget_test_harness.dart';
 
-class _FakeNetworkInfo implements NetworkInfo {
-  @override
-  Future<bool> get isConnected async => true;
-
-  @override
-  Stream<InternetConnectionStatus> get onStatusChange => const Stream.empty();
-}
-
-/// Regression test for consolidating city-level actions: the settings sheet
-/// no longer links to "أدوات المدينة" — instead `HomeTopBar` exposes a
-/// direct icon button that navigates to `Routes.cityTools`.
+/// `HomeTopBar` no longer shows a connectivity indicator or a basin-filter
+/// icon (APP_UPDATES_CLAUDE.md § 9.1/9.4) — just the three navigation
+/// icons: basins page, city tools, and change city (a direct callback,
+/// since Home owns the city-picker flow itself).
 void main() {
   setUpAll(initLocalizedWidgetTestHarness);
 
-  setUp(() async {
-    await getIt.reset();
-    getIt.registerLazySingleton<ConnectionQualityService>(
-      () => ConnectionQualityService(_FakeNetworkInfo()),
-    );
-  });
-
-  tearDown(() async {
-    await getIt.reset();
-  });
-
-  testWidgets('tapping the أدوات المدينة icon navigates to Routes.cityTools',
-      (final tester) async {
+  Future<List<String?>> _pumpAndCapturePushedRoutes(
+    final WidgetTester tester, {
+    required final VoidCallback onChangeCity,
+  }) async {
     final List<String?> pushedRoutes = <String?>[];
-
     await tester.pumpWidget(
       wrapLocalized(
         Builder(
@@ -46,7 +25,7 @@ void main() {
               pushedRoutes.add(settings.name);
               return MaterialPageRoute<void>(
                 settings: settings,
-                builder: (final _) => HomeTopBar(onSettings: () {}),
+                builder: (final _) => HomeTopBar(onChangeCity: onChangeCity),
               );
             },
           ),
@@ -54,6 +33,24 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    return pushedRoutes;
+  }
+
+  testWidgets('tapping the basins icon navigates to Routes.basins',
+      (final tester) async {
+    final List<String?> pushedRoutes =
+        await _pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
+
+    await tester.tap(find.byIcon(Icons.holiday_village_rounded));
+    await tester.pumpAndSettle();
+
+    expect(pushedRoutes, contains(Routes.basins));
+  });
+
+  testWidgets('tapping the city tools icon navigates to Routes.cityTools',
+      (final tester) async {
+    final List<String?> pushedRoutes =
+        await _pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
 
     await tester.tap(find.byIcon(Icons.build_outlined));
     await tester.pumpAndSettle();
@@ -61,42 +58,27 @@ void main() {
     expect(pushedRoutes, contains(Routes.cityTools));
   });
 
-  testWidgets('shows a wifi-off icon when the connectivity service reports '
-      'offline', (final tester) async {
-    await getIt.reset();
-    // Uses `checkNow()` instead of `start()` — a running `Timer.periodic`
-    // would make `pumpAndSettle` (which waits out every pending timer) hang
-    // forever, so this test avoids starting the poll loop entirely and just
-    // triggers one classification pass directly.
-    final ConnectionQualityService service = ConnectionQualityService(
-      _OfflineNetworkInfo(),
+  testWidgets('tapping the change-city icon calls onChangeCity',
+      (final tester) async {
+    bool changeCityTapped = false;
+    await tester.pumpWidget(
+      wrapLocalized(
+        HomeTopBar(onChangeCity: () => changeCityTapped = true),
+      ),
     );
-    await service.checkNow();
-    getIt.registerLazySingleton<ConnectionQualityService>(() => service);
-
-    await tester.pumpWidget(wrapLocalized(HomeTopBar(onSettings: () {})));
     await tester.pump();
 
-    expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.wifi_rounded), findsNothing);
+    await tester.tap(find.byIcon(Icons.swap_horiz_rounded));
+    await tester.pump();
 
-    service.dispose();
+    expect(changeCityTapped, isTrue);
   });
 
-  testWidgets('shows a wifi icon when the connectivity service reports '
-      'strong', (final tester) async {
-    await tester.pumpWidget(wrapLocalized(HomeTopBar(onSettings: () {})));
+  testWidgets('shows no connectivity indicator', (final tester) async {
+    await tester.pumpWidget(wrapLocalized(HomeTopBar(onChangeCity: () {})));
     await tester.pump();
 
-    expect(find.byIcon(Icons.wifi_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.wifi_rounded), findsNothing);
     expect(find.byIcon(Icons.wifi_off_rounded), findsNothing);
   });
-}
-
-class _OfflineNetworkInfo implements NetworkInfo {
-  @override
-  Future<bool> get isConnected async => false;
-
-  @override
-  Stream<InternetConnectionStatus> get onStatusChange => const Stream.empty();
 }

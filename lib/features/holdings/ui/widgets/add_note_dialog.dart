@@ -1,16 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
-import '../../data/model/parcel.dart';
+import '../../data/local/notes_list_service.dart';
 
 /// Adds one ملاحظة — either typed free-text or picked from
-/// [Parcel.notesOptions]'s common list. Returns the chosen/typed text
-/// (trimmed), or `null` if dismissed without adding anything.
+/// [NotesListService.getUserNotesList] (built-in list + the user's saved
+/// custom additions, APP_UPDATES_CLAUDE.md § 5). Returns the chosen/typed
+/// text (trimmed), or `null` if dismissed without adding anything.
 Future<String?> showAddNoteDialog(final BuildContext context) {
   return showDialog<String>(
     context: context,
@@ -27,6 +29,15 @@ class _AddNoteDialog extends StatefulWidget {
 
 class _AddNoteDialogState extends State<_AddNoteDialog> {
   final TextEditingController _controller = TextEditingController();
+  List<String> _options = const <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    getIt<NotesListService>().getUserNotesList().then((final List<String> options) {
+      if (mounted) setState(() => _options = options);
+    });
+  }
 
   @override
   void dispose() {
@@ -103,12 +114,11 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final String option in Parcel.notesOptions)
-                      if (option != Parcel.notesOtherOption)
-                        _QuickNoteTile(
-                          label: option,
-                          onTap: () => Navigator.pop(context, option),
-                        ),
+                    for (final String option in _options)
+                      _QuickNoteTile(
+                        label: option,
+                        onTap: () => Navigator.pop(context, option),
+                      ),
                   ],
                 ),
               ),

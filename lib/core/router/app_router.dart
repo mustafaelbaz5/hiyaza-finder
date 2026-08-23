@@ -17,6 +17,7 @@ import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.da
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/basin_screen.dart';
+import 'package:hiyaza_finder/features/holdings/ui/basins_page.dart';
 import 'package:hiyaza_finder/features/holdings/ui/detail_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/export_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/file_status_screen.dart';
@@ -47,6 +48,8 @@ class AppRouter {
           ),
           settings,
         );
+      case Routes.basins:
+        return _buildRoute(const BasinsPage(), settings);
       case Routes.basin:
         final String basinName = settings.arguments as String? ?? '';
         return _buildRoute(BasinScreen(basinName: basinName), settings);

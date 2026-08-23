@@ -25,6 +25,7 @@ class Parcel {
     this.totalSqm,
     this.ownerName,
     this.associationName,
+    this.associationCode,
     this.cropType,
     this.notes = const <String>[],
     this.creditType = defaultCreditType,
@@ -148,6 +149,7 @@ class Parcel {
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
   final String? associationName; // اسم الجمعية — derived from the file name
+  final String? associationCode; // كود الجمعية — read-only, from `parcels.association_code`
   final String? cropType; // نوع الزرع
   final List<String> notes; // ملاحظات — free-text + quick-pick entries
   final String
@@ -309,7 +311,7 @@ class Parcel {
   static const List<String> usageTypeOptions = <String>[
     'زراعة',
     'مباني',
-    'استخدام اخر',
+    'بور',
   ];
 
   static const List<String> cropTypeOptions = <String>[
@@ -386,6 +388,7 @@ class Parcel {
     final Object? totalSqm = _unset,
     final Object? ownerName = _unset,
     final Object? associationName = _unset,
+    final Object? associationCode = _unset,
     final Object? cropType = _unset,
     final List<String>? notes,
     final Object? creditType = _unset,
@@ -433,6 +436,7 @@ class Parcel {
       totalSqm: resolve(totalSqm, this.totalSqm),
       ownerName: resolve(ownerName, this.ownerName),
       associationName: resolve(associationName, this.associationName),
+      associationCode: resolve(associationCode, this.associationCode),
       cropType: resolve(cropType, this.cropType),
       notes: notes ?? this.notes,
       creditType: resolve(creditType, this.creditType),
@@ -515,6 +519,7 @@ class Parcel {
       borderNorth: original.borderNorth,
       associationName:
           json['associationName'] as String? ?? original.associationName,
+      associationCode: original.associationCode,
       directorate: json['directorate'] as String?,
       administration: json['administration'] as String?,
       basinName: json['basinName'] as String?,
@@ -576,6 +581,7 @@ class Parcel {
         'totalSqm': totalSqm,
         'ownerName': ownerName,
         'associationName': associationName,
+        'associationCode': associationCode,
         'cropType': cropType,
         'notes': notes,
         'creditType': creditType,
@@ -634,6 +640,7 @@ class Parcel {
       totalSqm: d('totalSqm'),
       ownerName: json['ownerName'] as String?,
       associationName: json['associationName'] as String?,
+      associationCode: json['associationCode'] as String?,
       cropType: json['cropType'] as String?,
       notes: notesFromJson(json['notes']),
       creditType: json['creditType'] as String? ?? defaultCreditType,

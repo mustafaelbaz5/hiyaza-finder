@@ -4,6 +4,8 @@ import '../data/local/holding_search_service.dart';
 import '../data/model/parcel.dart';
 import '../data/repo/holdings_repository.dart';
 import 'add_record_screen.dart';
+import 'widgets/basin_info_card.dart';
+import 'widgets/export_bottom_sheet.dart';
 import 'widgets/recommendation_tile.dart';
 
 import '../../../../core/di/dependency_injection.dart';
@@ -13,6 +15,8 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/app_back_button.dart';
+import '../../cities/data/model/basin.dart';
+import 'widgets/top_bar_icon_button.dart';
 
 /// Which completion state the basin screen's holdings are filtered to.
 enum BasinFilter { all, pending, completed }
@@ -77,10 +81,8 @@ class _BasinScreenState extends State<BasinScreen> {
       arguments: AddRecordArgs(
         initialParcel: Parcel(
           holdingId: '',
-          nationalId: '11111111111111',
-          landNumber: '-1',
+          landNumber: '0',
           basinName: widget.basinName,
-          notes: const <String>['نقص بيانات الحصر'],
           holdingsCount: 1,
         ),
       ),
@@ -148,9 +150,25 @@ class _BasinScreenState extends State<BasinScreen> {
                       color: colors.textSecondary,
                     ),
                   ),
+                  horizontalSpacing(4),
+                  TopBarIconButton(
+                    icon: Icons.ios_share_rounded,
+                    tooltip: 'holdings.export.title'.tr(),
+                    onTap: () => showExportBottomSheet(
+                      context,
+                      basinName: widget.basinName,
+                      basinParcels: basinParcels,
+                    ),
+                  ),
                 ],
               ),
             ),
+            BasinInfoCard(
+              basin: _repository.activeBasins
+                  .cast<Basin?>()
+                  .firstWhere((final Basin? b) => b?.basinName == widget.basinName, orElse: () => null),
+            ),
+            verticalSpacing(8),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: rw(16)),
               child: Row(

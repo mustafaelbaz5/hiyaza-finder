@@ -139,6 +139,13 @@
       "export": {
         "subtitle": "تصدير بيانات هذه المدينة إلى ملف Excel"
       },
+      "bulk_edit": {
+        "subtitle": "تعديل جماعي لحقل على عدة حيازات دفعة واحدة"
+      },
+      "city_info": {
+        "association_name": "اسم الجمعية",
+        "association_code": "كود الجمعية"
+      },
       "city_code": {
         "title": "كود المدينة",
         "subtitle": "عرض وتعديل كود المدينة",
@@ -373,7 +380,12 @@
       "national_id_invalid": "الرقم القومي يجب أن يتكون من 14 رقمًا",
       "no_active_city": "لا يمكن الإضافة بدون مدينة محمّلة",
       "discard_confirm": "سيتم فقدان التغييرات، هل تريد الخروج؟",
-      "save_failed": "تعذّر حفظ السجل الجديد — تحقق من اتصالك بالإنترنت وحاول مرة أخرى"
+      "save_failed": "تعذّر حفظ السجل الجديد — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "mode_new_person": "شخص جديد",
+      "mode_existing_person": "شخص موجود",
+      "search_holding_id_hint": "أدخل رقم الحيازة",
+      "search_no_match": "لا يوجد حيازة بهذا الرقم",
+      "confirm_person": "متابعة الإضافة لهذا الشخص"
     },
     "edit": {
       "title": "تعديل حيازة {id}",
@@ -392,6 +404,7 @@
       "scope_title": "البيانات المُصدَّرة",
       "scope_all": "كل البيانات ({count} قطعة)",
       "scope_added_only": "المضافة يدوياً فقط ({count} قطعة)",
+      "basin_export_title": "تصدير بيانات {basin}",
       "basin_title": "الحوض",
       "all_basins": "كل الأحواض",
       "pick_basin_title": "حوض محدد",
@@ -426,10 +439,15 @@
       "applied_failed_message": "فشل تحديث كل السجلات ({failed})"
     },
     "basin": {
-      "title": "التركيز على حوض معيّن",
+      "title": "الأحواض",
       "subtitle": "اختر حوضًا لتسريع البحث، أو اترك الكل للبحث في كل البيانات.",
       "all": "الكل",
-      "focus_label": "الحوض: {basin}"
+      "focus_label": "الحوض: {basin}",
+      "code_label": "كود: {code}",
+      "code_title": "كود الحوض",
+      "total_parcels": "إجمالي القطع",
+      "total_area": "المساحة الكلية",
+      "total_area_value": "{value} م²"
     }
   },
   "settings": {

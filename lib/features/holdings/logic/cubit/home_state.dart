@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import '../../data/local/holding_search_service.dart';
-import '../../data/model/basin_progress.dart';
 import '../../data/model/parcel.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
@@ -11,8 +10,8 @@ class HomeState extends Equatable {
     this.parcels = const <Parcel>[],
     this.query = '',
     this.results = const <SearchResult>[],
+    this.allHoldings = const <SearchResult>[],
     this.errorMessage,
-    this.basins = const <BasinProgress>[],
     this.modifiedIds = const <String>{},
   });
 
@@ -22,11 +21,13 @@ class HomeState extends Equatable {
   final List<Parcel> parcels;
   final String query;
   final List<SearchResult> results;
-  final String? errorMessage;
 
-  /// Per-basin completion progress — basin-first home's card list. Empty
-  /// query shows these; a non-empty [query] shows [results] instead.
-  final List<BasinProgress> basins;
+  /// Every distinct holding, city-wide, unfiltered — Home's flat list
+  /// (APP_CLAUDE.md § 9.1). Shown while [query] is empty; a non-empty
+  /// [query] shows [results] instead.
+  final List<SearchResult> allHoldings;
+
+  final String? errorMessage;
 
   /// `Parcel.id`s with a local edit-overlay entry
   /// (`HoldingsRepository.isParcelEdited`) — snapshotted into state
@@ -52,25 +53,13 @@ class HomeState extends Equatable {
   int get modifiedCount =>
       parcels.where((final Parcel p) => modifiedIds.contains(p.id)).length;
 
-  /// Total distinct holdings across every basin — the home screen's overall
-  /// progress bar denominator.
-  int get totalHoldingsCount =>
-      basins.fold(0, (final int sum, final BasinProgress b) => sum + b.totalCount);
-
-  /// Total completed holdings across every basin — the home screen's
-  /// overall progress bar numerator.
-  int get completedHoldingsCount => basins.fold(
-        0,
-        (final int sum, final BasinProgress b) => sum + b.completedCount,
-      );
-
   HomeState copyWith({
     final HomeStatus? status,
     final List<Parcel>? parcels,
     final String? query,
     final List<SearchResult>? results,
+    final List<SearchResult>? allHoldings,
     final String? errorMessage,
-    final List<BasinProgress>? basins,
     final Set<String>? modifiedIds,
   }) {
     return HomeState(
@@ -78,8 +67,8 @@ class HomeState extends Equatable {
       parcels: parcels ?? this.parcels,
       query: query ?? this.query,
       results: results ?? this.results,
+      allHoldings: allHoldings ?? this.allHoldings,
       errorMessage: errorMessage,
-      basins: basins ?? this.basins,
       modifiedIds: modifiedIds ?? this.modifiedIds,
     );
   }
@@ -90,8 +79,8 @@ class HomeState extends Equatable {
         parcels,
         query,
         results,
+        allHoldings,
         errorMessage,
-        basins,
         modifiedIds,
       ];
 }

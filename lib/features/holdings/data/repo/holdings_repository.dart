@@ -50,6 +50,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// Exposed for city-scoped maintenance screens (e.g. per-city نوع الزرع
   /// management) that need it but aren't part of the parcel-write flow.
   String? get activeCityId => _dataset.activeCityId;
+  String? get activeCityName => _dataset.activeCityName;
+  String? get activeDirectorate => _dataset.activeDirectorate;
+  String? get activeAdministration => _dataset.activeAdministration;
 
   /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
   /// dataset. [associationType]/[associationSubtype] come straight from the
@@ -119,6 +122,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     for (final Parcel p in _dataset.parcels) {
       if (p.associationName?.trim().isNotEmpty ?? false) {
         return p.associationName;
+      }
+    }
+    return null;
+  }
+
+  /// كود الجمعية — read-only, from the first parcel that has one. Shown on
+  /// `CityInfoCard`; never user-entered.
+  String? get defaultAssociationCode {
+    for (final Parcel p in _dataset.parcels) {
+      if (p.associationCode?.trim().isNotEmpty ?? false) {
+        return p.associationCode;
       }
     }
     return null;
@@ -298,6 +312,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   @override
   List<SearchResult> search(final String query, {final String? basin}) =>
       _queryService.search(_dataset.parcels, query, basin: basin);
+
+  @override
+  List<SearchResult> get allHoldings => _queryService.allHoldings(_dataset.parcels);
 
   /// Distinct اسم الحوض values in the active dataset, sorted.
   @override

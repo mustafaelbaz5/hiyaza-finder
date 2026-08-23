@@ -6,7 +6,9 @@ import '../../../../core/router/routes.dart';
 import '../../data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
 import '../../data/local/field_change_tracker.dart';
+import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
+import '../../data/model/usage_type.dart';
 import '../../data/repo/holdings_repository.dart';
 import 'see_more_section.dart';
 
@@ -20,6 +22,7 @@ import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
 
+import 'basin_picker.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
 import '../../../crop_type/ui/widgets/crop_type_picker.dart';
@@ -284,19 +287,23 @@ class ParcelDetailCard extends StatelessWidget {
                   parcel.copyWith(landNumber: v.isEmpty ? null : v),
             ),
           ),
-          verticalSpacing(8),
-          FieldRow(
-            label: 'holdings.fields.crop_type'.tr(),
-            value: parcel.cropType,
-            isModified: _isModified((final p) => p.cropType),
-            onEdit: () => _editCropType(context),
-          ),
+          if (UsageType.fromLabel(parcel.usageType) == UsageType.agricultural) ...[
+            verticalSpacing(8),
+            FieldRow(
+              label: 'holdings.fields.crop_type'.tr(),
+              value: parcel.cropType,
+              isModified: _isModified((final p) => p.cropType),
+              onEdit: () => _editCropType(context),
+            ),
+          ],
           verticalSpacing(8),
           NotesField(
             notes: parcel.notes,
             isModified: _isModified((final p) => p.notes),
             onChanged: (final List<String> notes) =>
                 onFieldChanged(parcel.copyWith(notes: notes)),
+            onNoteAdded: (final String note) =>
+                onFieldChanged(UsageTypeNotesSync.applyNoteAdded(parcel, note)),
           ),
           verticalSpacing(12),
           verticalSpacing(8),
@@ -415,20 +422,12 @@ class ParcelDetailCard extends StatelessWidget {
       return;
     }
 
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+    final BasinPickResult? result = await pickBasin(
       context,
-      title: 'holdings.fields.basin_name'.tr(),
-      options: [
-        for (final String basin in basins)
-          ChoiceOption<String>(value: basin, label: basin),
-      ],
       selected: parcel.basinName,
-      clearLabel: '—',
     );
     if (result == null) return;
-    onFieldChanged(
-      parcel.copyWith(basinName: result.isClear ? null : result.value),
-    );
+    onFieldChanged(applyBasinPick(parcel, result));
   }
 
   Future<void> _openBorderPerson(

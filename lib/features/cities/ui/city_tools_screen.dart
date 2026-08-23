@@ -7,6 +7,8 @@ import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/screen_header.dart';
+import '../../holdings/ui/widgets/notes_settings_sheet.dart';
+import 'widgets/city_info_card.dart';
 
 /// Entry point for city-scoped maintenance actions: which cities are
 /// downloaded, the missing-رقم-الحيازة worklist, and per-city نوع الزرع
@@ -31,6 +33,8 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ScreenHeader(title: 'cities.tools.title'.tr()),
+            const CityInfoCard(),
+            verticalSpacing(16),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.symmetric(horizontal: rw(16))
@@ -62,6 +66,13 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                     title: 'holdings.export.title'.tr(),
                     subtitle: 'cities.tools.export.subtitle'.tr(),
                     onTap: () => context.pushNamed(Routes.export),
+                  ),
+                  verticalSpacing(10),
+                  _ToolTile(
+                    icon: Icons.dashboard_customize_outlined,
+                    title: 'holdings.bulk_edit.entry_pill'.tr(),
+                    subtitle: 'cities.tools.bulk_edit.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.fileStatus),
                   ),
                 ],
               ),

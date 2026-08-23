@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../data/local/area_calculator.dart';
 import '../data/local/field_change_tracker.dart';
+import '../data/local/usage_type_notes_sync.dart';
 import '../data/model/parcel.dart';
+import '../data/model/usage_type.dart';
 import '../data/repo/holdings_repository.dart';
+import 'widgets/add_mode_toggle.dart';
 import 'widgets/add_record_header.dart';
+import 'widgets/basin_picker.dart';
 import 'widgets/delegate_owner_dialog.dart';
+import 'widgets/existing_person_search.dart';
 import 'widgets/field_edit_dialogs.dart';
 import 'widgets/field_row.dart';
 import 'widgets/notes_field.dart';
@@ -67,10 +72,55 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   late Parcel _parcel;
   bool _isSaving = false;
 
+  /// Only meaningful when [AddRecordScreen.parentHoldingId] is null — a
+  /// Detail-Screen-initiated add already implies an existing person and
+  /// skips this choice entirely (APP_UPDATES_CLAUDE.md § 2.1).
+  AddMode _mode = AddMode.newPerson;
+
+  /// Set once an existing-person search is confirmed — becomes the new
+  /// add flow's `parentHoldingId`, mirroring Detail Screen's
+  /// `_addParcelForPerson` inheritance shape.
+  String? _inheritedParentHoldingId;
+
   @override
   void initState() {
     super.initState();
     _parcel = widget.initialParcel;
+  }
+
+  bool get _showModeToggle =>
+      widget.parentHoldingId == null && _inheritedParentHoldingId == null;
+
+  bool get _awaitingExistingPersonSearch =>
+      widget.parentHoldingId == null &&
+      _mode == AddMode.existingPerson &&
+      _inheritedParentHoldingId == null;
+
+  String? get _effectiveParentHoldingId =>
+      widget.parentHoldingId ?? _inheritedParentHoldingId;
+
+  /// Inherits اسم الحائز/الرقم القومي/رقم الحيازة/اسم المالك from the
+  /// matched person while leaving اسم الحوض/كود الحوض/المساحة/نوع المحصول
+  /// blank for fresh entry — same shape as `detail_screen.dart`'s
+  /// `_addParcelForPerson` (§ 2.2).
+  void _onExistingPersonConfirmed(final List<Parcel> matchedParcels) {
+    final Parcel source = matchedParcels.first;
+    setState(() {
+      _inheritedParentHoldingId = source.id;
+      _parcel = source.copyWith(
+        landNumber: '0',
+        feddan: null,
+        qirat: null,
+        sahm: null,
+        totalSqm: null,
+        basinName: null,
+        basinCode: null,
+        cropType: null,
+        growthStages: null,
+        holdingsCount: (source.holdingsCount ?? 1) + 1,
+        notes: const <String>[],
+      );
+    });
   }
 
   /// See `Parcel.hasRequiredFieldsFilled` — the same gate used by
@@ -125,7 +175,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     try {
       final Parcel? saved = await getIt<HoldingsRepository>().addLocalParcel(
         _parcelToSave,
-        parentHoldingId: widget.parentHoldingId,
+        parentHoldingId: _effectiveParentHoldingId,
       );
       if (!mounted) return;
       if (saved == null) {
@@ -191,6 +241,25 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     );
   }
 
+  Future<void> _editUsageType(final BuildContext context) async {
+    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+      context,
+      title: 'holdings.fields.usage_type'.tr(),
+      options: [
+        for (final String option in Parcel.usageTypeOptions)
+          ChoiceOption<String>(value: option, label: option),
+      ],
+      selected: _parcel.usageType,
+    );
+    if (result == null || result.isClear) return;
+    setState(
+      () => _parcel = UsageTypeNotesSync.applyUsageTypeChange(
+        _parcel,
+        result.value!,
+      ),
+    );
+  }
+
   /// مفوض asks for the new اسم المالك up front (must differ from اسم الحائز)
   /// and, on confirm, sets `owner_name` and appends "مفوض عنه {holder}" to
   /// ملاحظات automatically. Cancelling the dialog leaves the toggle off.
@@ -250,22 +319,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
       return;
     }
 
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+    final BasinPickResult? result = await pickBasin(
       context,
-      title: 'holdings.fields.basin_name'.tr(),
-      options: [
-        for (final String basin in basins)
-          ChoiceOption<String>(value: basin, label: basin),
-      ],
       selected: _parcel.basinName,
-      clearLabel: '—',
     );
     if (result == null) return;
-    setState(
-      () => _parcel = _parcel.copyWith(
-        basinName: result.isClear ? null : result.value,
-      ),
-    );
+    setState(() => _parcel = applyBasinPick(_parcel, result));
   }
 
   String _areaFraction(final Parcel p) {
@@ -286,7 +345,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String title = widget.parentHoldingId == null
+    final String? effectiveParentId = _effectiveParentHoldingId;
+    final String title = effectiveParentId == null
         ? 'holdings.add.new_person_title'.tr()
         : 'holdings.add.new_parcel_title'.tr();
 
@@ -308,11 +368,27 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 AddRecordHeader(
                   title: title,
                   onBack: () => _confirmDiscardAndPop(context),
-                  forPersonName: widget.parentHoldingId == null
+                  forPersonName: effectiveParentId == null
                       ? null
-                      : widget.initialParcel.holderName ?? '',
+                      : _parcel.holderName ?? '',
                 ),
+                if (_showModeToggle)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: rw(16)),
+                    child: AddModeToggle(
+                      mode: _mode,
+                      onChanged: (final AddMode mode) =>
+                          setState(() => _mode = mode),
+                    ),
+                  ),
                 verticalSpacing(16),
+                if (_awaitingExistingPersonSearch)
+                  Expanded(
+                    child: ExistingPersonSearch(
+                      onConfirm: _onExistingPersonConfirmed,
+                    ),
+                  )
+                else
                 Expanded(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
@@ -377,7 +453,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                 ),
                               ),
                             ),
-                            if (widget.parentHoldingId != null &&
+                            if (effectiveParentId != null &&
                                 _parcel.landNumber == '-1')
                               Padding(
                                 padding: EdgeInsets.only(top: rh(4)),
@@ -398,11 +474,20 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               onEdit: () => _editArea(context),
                             ),
                             FieldRow(
-                              label: 'holdings.fields.crop_type'.tr(),
-                              value: _parcel.cropType,
-                              isModified: _isModified((final p) => p.cropType),
-                              onEdit: () => _editCropType(context),
+                              label: 'holdings.fields.usage_type'.tr(),
+                              value: _parcel.usageType,
+                              isModified: _isModified((final p) => p.usageType),
+                              onEdit: () => _editUsageType(context),
                             ),
+                            if (UsageType.fromLabel(_parcel.usageType) ==
+                                UsageType.agricultural)
+                              FieldRow(
+                                label: 'holdings.fields.crop_type'.tr(),
+                                value: _parcel.cropType,
+                                isModified:
+                                    _isModified((final p) => p.cropType),
+                                onEdit: () => _editCropType(context),
+                              ),
                             NotesField(
                               notes: _parcel.notes,
                               isModified: _isModified((final p) => p.notes),
@@ -410,8 +495,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                   setState(
                                 () => _parcel = _parcel.copyWith(notes: notes),
                               ),
+                              onNoteAdded: (final String note) => setState(
+                                () => _parcel = UsageTypeNotesSync
+                                    .applyNoteAdded(_parcel, note),
+                              ),
                             ),
-                            if (widget.parentHoldingId == null)
+                            if (effectiveParentId == null)
                               FieldRow(
                                 label: 'holdings.fields.national_id'.tr(),
                                 value: _parcel.nationalId,

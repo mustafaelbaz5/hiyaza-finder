@@ -139,6 +139,13 @@
       "export": {
         "subtitle": "Export this city's data to an Excel file"
       },
+      "bulk_edit": {
+        "subtitle": "Bulk-edit one field across several holdings at once"
+      },
+      "city_info": {
+        "association_name": "Association name",
+        "association_code": "Association code"
+      },
       "city_code": {
         "title": "City code",
         "subtitle": "View and edit the city's reference code",
@@ -373,7 +380,12 @@
       "national_id_invalid": "National ID must be 14 digits",
       "no_active_city": "Can't add without a loaded city",
       "discard_confirm": "Your changes will be lost. Leave anyway?",
-      "save_failed": "Couldn't save the new record — check your connection and try again"
+      "save_failed": "Couldn't save the new record — check your connection and try again",
+      "mode_new_person": "New person",
+      "mode_existing_person": "Existing person",
+      "search_holding_id_hint": "Enter the holding number",
+      "search_no_match": "No holding found with this number",
+      "confirm_person": "Continue adding for this person"
     },
     "edit": {
       "title": "Edit holding {id}",
@@ -392,6 +404,7 @@
       "scope_title": "Exported data",
       "scope_all": "All data ({count} parcels)",
       "scope_added_only": "Manually added only ({count} parcels)",
+      "basin_export_title": "Export {basin} data",
       "basin_title": "Basin",
       "all_basins": "All basins",
       "pick_basin_title": "Specific basin",
@@ -426,10 +439,15 @@
       "applied_failed_message": "All {failed} record(s) failed to update"
     },
     "basin": {
-      "title": "Focus on a basin",
+      "title": "Basins",
       "subtitle": "Choose a basin to speed up search, or leave All to search the whole file.",
       "all": "All",
-      "focus_label": "Basin: {basin}"
+      "focus_label": "Basin: {basin}",
+      "code_label": "Code: {code}",
+      "code_title": "Basin code",
+      "total_parcels": "Total parcels",
+      "total_area": "Total area",
+      "total_area_value": "{value} m²"
     }
   },
   "settings": {

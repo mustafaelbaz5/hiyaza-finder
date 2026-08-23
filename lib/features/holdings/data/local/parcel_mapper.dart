@@ -30,6 +30,7 @@ Parcel parcelRowToParcel(final Map<String, dynamic> row) {
     sahm: asDouble(row['area_sahm']),
     totalSqm: asDouble(row['area_sqm']),
     associationName: row['association_name'] as String?,
+    associationCode: row['association_code'] as String?,
     holdingsCount: (row['parcel_count_in_holding'] as num?)?.toInt(),
   );
 }

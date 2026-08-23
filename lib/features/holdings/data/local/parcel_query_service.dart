@@ -100,6 +100,46 @@ class ParcelQueryService {
     return summaries;
   }
 
+  /// Every distinct holding in [parcels] as a [SearchResult] — the flat,
+  /// unfiltered Home list (APP_CLAUDE.md § 9.1: "قائمة الحيازات (كل
+  /// الأحواض مع بعض)"), sorted by رقم الحيازة ascending (pending/
+  /// non-numeric holdings sort last). Unlike [search], this has no query
+  /// to score against, so every result gets `score: 0`.
+  List<SearchResult> allHoldings(final List<Parcel> parcels) {
+    final Map<String, List<Parcel>> byGroup = <String, List<Parcel>>{};
+    for (final Parcel p in parcels) {
+      byGroup.putIfAbsent(p.groupKey, () => <Parcel>[]).add(p);
+    }
+
+    double holdingNumberValue(final String holdingId) {
+      final double? parsed = double.tryParse(holdingId.trim());
+      return parsed ?? double.infinity;
+    }
+
+    final List<SearchResult> results = byGroup.entries.map(
+      (final MapEntry<String, List<Parcel>> entry) {
+        final List<Parcel> group = entry.value;
+        final Parcel first = group.first;
+        final int completedCount =
+            group.where((final Parcel p) => p.completedAt != null).length;
+        return SearchResult(
+          holdingId: first.holdingId,
+          groupKey: entry.key,
+          holderName: first.holderName,
+          parcelCount: group.length,
+          score: 0,
+          completedCount: completedCount,
+          isFieldAdded: first.isFieldAdded,
+        );
+      },
+    ).toList()
+      ..sort(
+        (final SearchResult a, final SearchResult b) =>
+            holdingNumberValue(a.holdingId).compareTo(holdingNumberValue(b.holdingId)),
+      );
+    return results;
+  }
+
   /// [groupKey] is `Parcel.groupKey` (from a `SearchResult`), not the raw
   /// رقم الحيازة — see that getter's doc for why: several pending records
   /// can share the same placeholder id and must not be merged together.

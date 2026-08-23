@@ -355,26 +355,27 @@ class _DetailScreenState extends State<DetailScreen>
     }
   }
 
-  /// Pre-fills a new-parcel form from [source] per APP_PLAN.md decision
-  /// #8: everything copied except المساحة (blanked — entered fresh for
-  /// the new land), رقم الأرض (defaults to `-1`, must be corrected), and
-  /// اسم الحوض (blanked — required fields must always be actively chosen
-  /// by the user, even for a parcel added under an existing person whose
-  /// other parcels already have one).
+  /// Pre-fills a new-parcel form from [source] (APP_UPDATES_CLAUDE.md § 2.2):
+  /// اسم الحائز/الرقم القومي/رقم الحيازة/اسم المالك inherit from [source];
+  /// المساحة (blanked — entered fresh for the new land), رقم الأرض (defaults
+  /// to `0`), and اسم الحوض (blanked — required fields must always be
+  /// actively chosen by the user, even for a parcel added under an existing
+  /// person whose other parcels already have one) do not.
   Future<void> _addParcelForPerson(final Parcel source) async {
     final Parcel template = source.copyWith(
-      landNumber: '-1',
+      landNumber: '0',
       feddan: null,
       qirat: null,
       sahm: null,
       totalSqm: null,
       basinName: null,
+      cropType: null,
+      growthStages: null,
       // عدد القطع في الحيازة grows by one for the new parcel being added.
       holdingsCount: (source.holdingsCount ?? 1) + 1,
-      // Flags the new parcel as needing a field-survey follow-up, same as
-      // an edit to an existing record — still user-editable in the form
-      // before saving.
-      notes: <String>[_needsSurveyNote],
+      // الملاحظات = [] by default (§2.2) — not inherited from the source
+      // parcel's own notes.
+      notes: const <String>[],
     );
     final bool? added = await context.pushNamed<bool>(
       Routes.addRecord,

@@ -19,11 +19,18 @@ class NotesField extends StatelessWidget {
     super.key,
     required this.notes,
     required this.onChanged,
+    this.onNoteAdded,
     this.isModified = false,
   });
 
   final List<String> notes;
   final ValueChanged<List<String>> onChanged;
+
+  /// Called with just the newly-added note (in addition to [onChanged]
+  /// firing with the full list) — lets a caller run APP_UPDATES_CLAUDE.md
+  /// § 4.3's bidirectional نوع الاستخدام↔notes logic without needing to
+  /// diff two lists to find what changed.
+  final ValueChanged<String>? onNoteAdded;
 
   /// Same meaning as `FieldRow.isModified` — highlights the section when
   /// the note list differs from the parcel's original value.
@@ -33,7 +40,11 @@ class NotesField extends StatelessWidget {
     final String? note = await showAddNoteDialog(context);
     if (note == null || note.trim().isEmpty) return;
     if (notes.contains(note)) return;
-    onChanged(<String>[...notes, note]);
+    if (onNoteAdded != null) {
+      onNoteAdded!(note);
+    } else {
+      onChanged(<String>[...notes, note]);
+    }
   }
 
   void _remove(final String note) {

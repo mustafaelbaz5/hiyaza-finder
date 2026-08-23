@@ -32,10 +32,6 @@ class RecommendationList extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    if (query.trim().isEmpty) {
-      return ListView(physics: _scrollPhysics);
-    }
-
     if (results.isEmpty) {
       // `ListView`'s children stack at their intrinsic height rather than
       // stretching to fill the viewport, so a bare `Center` wouldn't
