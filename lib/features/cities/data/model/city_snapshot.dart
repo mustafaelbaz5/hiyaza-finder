@@ -2,6 +2,7 @@
 import '../../../holdings/data/model/parcel.dart';
 
 import 'association_type.dart';
+import 'basin.dart';
 
 /// A downloaded-and-cached city dataset — what the app actually works
 /// from offline once a city has been picked. [dataVersion] is what the
@@ -17,6 +18,7 @@ class CitySnapshot {
     required this.dataVersion,
     required this.downloadedAt,
     required this.parcels,
+    this.basins = const <Basin>[],
     this.directorate,
     this.administration,
     this.associationType,
@@ -28,6 +30,10 @@ class CitySnapshot {
   final int dataVersion;
   final DateTime downloadedAt;
   final List<Parcel> parcels;
+
+  /// The city's أحواض, downloaded in the same request as [parcels] — see
+  /// `CityRemoteDataSource.downloadCityData`.
+  final List<Basin> basins;
 
   /// Carried forward so `HomeCubit.refreshActiveCity` can reconstruct a
   /// full `City` for re-download without a value going missing on refresh.

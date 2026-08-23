@@ -43,6 +43,7 @@ class HomeCubit extends Cubit<HomeState> {
         administration: snapshot.administration,
         associationType: snapshot.associationType,
         associationSubtype: snapshot.associationSubtype,
+        basins: snapshot.basins,
       );
       return snapshot;
     } catch (_) {

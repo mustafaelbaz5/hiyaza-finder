@@ -3,6 +3,7 @@ import 'parcel_edit_overlay.dart';
 import '../model/parcel.dart';
 
 import '../../../cities/data/model/association_type.dart';
+import '../../../cities/data/model/basin.dart';
 
 import 'parcel_edits_store.dart';
 
@@ -33,11 +34,13 @@ class ParcelDatasetState {
   String? _activeEditsKey;
 
   List<Parcel> _parcels = <Parcel>[];
+  List<Basin> _basins = <Basin>[];
   BorderNameIndex _borderIndex = BorderNameIndex.empty();
   Map<String, Parcel> _originalById = <String, Parcel>{};
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
 
   List<Parcel> get parcels => _parcels;
+  List<Basin> get basins => _basins;
   BorderNameIndex get borderIndex => _borderIndex;
 
   String? get activeCityId => _activeCityId;
@@ -58,6 +61,7 @@ class ParcelDatasetState {
     final String? administration,
     final AssociationType? associationType,
     final String? associationSubtype,
+    final List<Basin> basins = const <Basin>[],
   }) async {
     final String key = 'city::$cityId';
     _activeEditsKey = key;
@@ -67,6 +71,7 @@ class ParcelDatasetState {
     _activeAdministration = administration ?? _activeAdministration;
     _activeAssociationType = associationType;
     _activeAssociationSubtype = associationSubtype;
+    _basins = basins;
     _originalById = <String, Parcel>{
       for (final Parcel p in parcels) p.id: p,
     };

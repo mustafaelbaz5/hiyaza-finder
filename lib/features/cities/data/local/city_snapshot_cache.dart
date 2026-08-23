@@ -5,6 +5,7 @@ import '../../../holdings/data/model/parcel.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../model/association_type.dart';
+import '../model/basin.dart';
 import '../model/cached_city_meta.dart';
 import '../model/city_snapshot.dart';
 
@@ -32,6 +33,7 @@ class CitySnapshotCache {
       'dataVersion': snapshot.dataVersion,
       'downloadedAt': snapshot.downloadedAt.toIso8601String(),
       'parcels': snapshot.parcels.map((final Parcel p) => p.toJson()).toList(),
+      'basins': snapshot.basins.map((final Basin b) => b.toJson()).toList(),
       'directorate': snapshot.directorate,
       'administration': snapshot.administration,
       'associationType': snapshot.associationType == null
@@ -55,6 +57,11 @@ class CitySnapshotCache {
       downloadedAt: DateTime.parse(json['downloadedAt'] as String),
       parcels: (json['parcels'] as List<dynamic>)
           .map((final dynamic e) => Parcel.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      // Absent in snapshots cached before basins existed — an empty list
+      // just means "no basin data yet," not an error.
+      basins: (json['basins'] as List<dynamic>? ?? const <dynamic>[])
+          .map((final dynamic e) => Basin.fromJson(e as Map<String, dynamic>))
           .toList(),
       directorate: json['directorate'] as String?,
       administration: json['administration'] as String?,

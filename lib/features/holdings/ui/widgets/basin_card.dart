@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -54,14 +55,29 @@ class BasinCard extends StatelessWidget {
                 Icon(dotIcon, size: 10, color: dotColor),
                 horizontalSpacing(8),
                 Expanded(
-                  child: Text(
-                    basin.basinName,
-                    style: AppTextStyles.font16SemiBold.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        basin.basinName,
+                        style: AppTextStyles.font16SemiBold.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (basin.basinCode != null)
+                        Text(
+                          'holdings.basin.code_label'.tr(
+                            namedArgs: {'code': basin.basinCode!},
+                          ),
+                          style: AppTextStyles.font12Regular.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                    ],
                   ),
                 ),
                 horizontalSpacing(8),

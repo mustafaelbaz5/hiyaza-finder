@@ -15,6 +15,7 @@ import 'holdings_writer.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../cities/data/model/association_type.dart';
+import '../../../cities/data/model/basin.dart';
 
 class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   HoldingsRepository({
@@ -62,6 +63,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String? administration,
     final AssociationType? associationType,
     final String? associationSubtype,
+    final List<Basin> basins = const <Basin>[],
   }) async {
     final List<Parcel> result = await _dataset.adopt(
       cityId,
@@ -71,8 +73,25 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       administration: administration,
       associationType: associationType,
       associationSubtype: associationSubtype,
+      basins: basins,
     );
     return result;
+  }
+
+  /// The active city's أحواض, downloaded alongside its parcels — server
+  /// truth for basin code/totals, unlike [basinSummaries] (derived from
+  /// [parcels], completion-focused). Empty until a city with basin data is
+  /// loaded.
+  List<Basin> get activeBasins => _dataset.basins;
+
+  /// [basinName]'s [Basin] row, if the active city has one by that name —
+  /// used by the basin picker (§2.3) to fill in `basin_code` automatically
+  /// once the user chooses a اسم الحوض.
+  Basin? basinByName(final String basinName) {
+    for (final Basin b in _dataset.basins) {
+      if (b.basinName == basinName) return b;
+    }
+    return null;
   }
 
   /// The active city's جمعية system, read from `cities.association_type` —

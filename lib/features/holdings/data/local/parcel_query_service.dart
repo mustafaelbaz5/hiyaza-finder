@@ -66,12 +66,15 @@ class ParcelQueryService {
   List<BasinProgress> basinSummaries(final List<Parcel> parcels) {
     final Map<String, Map<String, List<Parcel>>> holdingsByBasin =
         <String, Map<String, List<Parcel>>>{};
+    final Map<String, String> codeByBasin = <String, String>{};
     for (final Parcel p in parcels) {
       final String? name = p.basinName?.trim();
       if (name == null || name.isEmpty) continue;
       (holdingsByBasin[name] ??= <String, List<Parcel>>{})
           .putIfAbsent(p.groupKey, () => <Parcel>[])
           .add(p);
+      final String? code = p.basinCode?.trim();
+      if (code != null && code.isNotEmpty) codeByBasin.putIfAbsent(name, () => code);
     }
 
     final List<BasinProgress> summaries = <BasinProgress>[
@@ -79,6 +82,7 @@ class ParcelQueryService {
           in holdingsByBasin.entries)
         BasinProgress(
           basinName: basinEntry.key,
+          basinCode: codeByBasin[basinEntry.key],
           totalCount: basinEntry.value.length,
           completedCount: basinEntry.value.values
               .where(

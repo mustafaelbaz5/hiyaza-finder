@@ -7,7 +7,16 @@ import '../../../../core/errors/error_handler.dart';
 import '../../../holdings/data/local/parcel_mapper.dart';
 import '../../../holdings/data/model/parcel.dart';
 import '../model/association_type.dart';
+import '../model/basin.dart';
 import '../model/city.dart';
+
+/// A city's parcels + basins, downloaded together in one round-trip.
+class CityDownloadResult {
+  const CityDownloadResult({required this.parcels, required this.basins});
+
+  final List<Parcel> parcels;
+  final List<Basin> basins;
+}
 
 /// HTTP-only data source — hits the PostgREST endpoints (`/rest/v1/<table>`)
 /// directly with the public anon key, since no writes ever happen from this
@@ -90,6 +99,21 @@ class CityRemoteDataSource {
       <String, String>{'city_id': 'eq.$cityId'},
     );
     return rows.map(parcelRowToParcel).toList();
+  }
+
+  /// Fetches [cityId]'s parcels and basins in the same download — basins
+  /// are a small, pre-aggregated table (one row per حوض), so pulling both
+  /// together costs one extra request, not a separate download flow.
+  Future<CityDownloadResult> downloadCityData(final String cityId) async {
+    final List<Parcel> parcels = await downloadHoldings(cityId);
+    final List<Map<String, dynamic>> basinRows = await _fetchAllPages(
+      'basins',
+      <String, String>{'city_id': 'eq.$cityId'},
+    );
+    return CityDownloadResult(
+      parcels: parcels,
+      basins: basinRows.map(basinRowToBasin).toList(),
+    );
   }
 
   City _cityFromRow(final Map<String, dynamic> row) => City(

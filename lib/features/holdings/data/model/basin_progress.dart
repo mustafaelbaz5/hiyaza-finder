@@ -8,9 +8,11 @@ class BasinProgress extends Equatable {
     required this.basinName,
     required this.totalCount,
     required this.completedCount,
+    this.basinCode,
   });
 
   final String basinName;
+  final String? basinCode;
 
   /// Distinct holdings in this basin (by `Parcel.groupKey`, not raw
   /// `holdingId` — see `ParcelQueryService.basinHoldingCounts`'s doc for
@@ -26,5 +28,6 @@ class BasinProgress extends Equatable {
   bool get isNotStarted => completedCount == 0;
 
   @override
-  List<Object?> get props => <Object?>[basinName, totalCount, completedCount];
+  List<Object?> get props =>
+      <Object?>[basinName, basinCode, totalCount, completedCount];
 }
