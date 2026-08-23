@@ -7,21 +7,30 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/custom_text_form_.dart';
+import '../../../cities/data/model/association_type.dart';
 import '../../data/local/notes_list_service.dart';
 
 /// Adds one ملاحظة — either typed free-text or picked from
 /// [NotesListService.getUserNotesList] (built-in list + the user's saved
-/// custom additions, APP_UPDATES_CLAUDE.md § 5). Returns the chosen/typed
-/// text (trimmed), or `null` if dismissed without adding anything.
-Future<String?> showAddNoteDialog(final BuildContext context) {
+/// custom additions, APP_UPDATES_CLAUDE.md § 5; plus the reform-only
+/// quick-select notes when [associationType] is a reform city — Credit/
+/// Reform Type Logic prompt). Returns the chosen/typed text (trimmed), or
+/// `null` if dismissed without adding anything.
+Future<String?> showAddNoteDialog(
+  final BuildContext context, {
+  final AssociationType? associationType,
+}) {
   return showDialog<String>(
     context: context,
-    builder: (final BuildContext context) => const _AddNoteDialog(),
+    builder: (final BuildContext context) =>
+        _AddNoteDialog(associationType: associationType),
   );
 }
 
 class _AddNoteDialog extends StatefulWidget {
-  const _AddNoteDialog();
+  const _AddNoteDialog({this.associationType});
+
+  final AssociationType? associationType;
 
   @override
   State<_AddNoteDialog> createState() => _AddNoteDialogState();
@@ -34,7 +43,9 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
   @override
   void initState() {
     super.initState();
-    getIt<NotesListService>().getUserNotesList().then((final List<String> options) {
+    getIt<NotesListService>()
+        .getUserNotesList(associationType: widget.associationType)
+        .then((final List<String> options) {
       if (mounted) setState(() => _options = options);
     });
   }

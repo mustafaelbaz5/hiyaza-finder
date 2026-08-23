@@ -81,17 +81,10 @@ class ClipboardFormatter {
         (p.nationalId == null || p.nationalId!.trim().isEmpty)
             ? '11111111111111'
             : p.nationalId!.trim();
-    final bool isReformCity =
-        associationType == AssociationType.agriculturalReform ||
-            (hideCreditType && associationType == null);
 
-    final String creditSentence =
-        p.creditType == 'أوقاف' ? 'هذه الأرض تابعة لهيئة الأوقاف المصرية' : '';
-
-    // Grouping فدان/قيراط/سهم and نوع الزرع/نوع الائتمان on shared lines
-    // (instead of one field per line) trims the message's height while
-    // keeping every field's own "label: value," so it still pastes cleanly
-    // into a spreadsheet.
+    // Grouping فدان/قيراط/سهم on one shared line (instead of one field per
+    // line) trims the message's height while keeping every field's own
+    // "label: value," so it still pastes cleanly into a spreadsheet.
     String field(final String label, final String value) => '$label: $value,';
 
     final List<String> lines = <String>[
@@ -112,19 +105,12 @@ class ClipboardFormatter {
         'المساحة بالمتر',
         formatNumber(p.totalSqm) ?? emptyPlaceholder,
       ),
+      // نوع الائتمان/نوع الإصلاح is never a Copy All field — it only ever
+      // surfaces through ملاحظات (the أوقاف toggle's auto-note for credit
+      // cities, or a selected reform note for reform cities). See
+      // `CreditTypeNotesSync`.
       if (UsageType.fromLabel(p.usageType) == UsageType.agricultural)
-        isReformCity
-            ? '${field('نوع الزرع', slot(p.cropType))}   '
-                '${field('نوع الإصلاح', p.reformType)}'
-            : '${field('نوع الزرع', slot(p.cropType))}   '
-                '${field('نوع الائتمان', creditSentence.isEmpty ? p.creditType : creditSentence)}'
-      else
-        isReformCity
-            ? field('نوع الإصلاح', p.reformType)
-            : field(
-                'نوع الائتمان',
-                creditSentence.isEmpty ? p.creditType : creditSentence,
-              ),
+        field('نوع الزرع', slot(p.cropType)),
       field(
         'ملاحظات',
         p.notes.isEmpty ? emptyPlaceholder : p.notes.join('، '),

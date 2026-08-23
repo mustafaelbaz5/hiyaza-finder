@@ -118,10 +118,18 @@ void main() {
       expect(text, contains('الرقم القومي: 11111111111111,'));
     });
 
-    test('أوقاف credit type is rendered as the fixed sentence', () {
-      const Parcel p = Parcel(holdingId: '55', creditType: 'أوقاف');
+    test(
+        'نوع الائتمان/نوع الإصلاح is never a Copy All field '
+        '(Credit/Reform Type Logic prompt — surfaces via ملاحظات only)', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        creditType: 'أوقاف',
+        notes: <String>['الأرض تابعة لهيئة الأوقاف المصرية'],
+      );
       final String text = formatter.format(p);
-      expect(text, contains('نوع الائتمان: هذه الأرض تابعة لهيئة الأوقاف المصرية'));
+      expect(text, isNot(contains('نوع الائتمان')));
+      expect(text, isNot(contains('نوع الإصلاح')));
+      expect(text, contains('الأرض تابعة لهيئة الأوقاف المصرية'));
     });
 
     test('فدان/قيراط/سهم share one line', () {

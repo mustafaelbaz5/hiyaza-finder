@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../data/local/area_calculator.dart';
+import '../data/local/credit_type_notes_sync.dart';
 import '../data/local/field_change_tracker.dart';
 import '../data/local/usage_type_notes_sync.dart';
 import '../data/model/parcel.dart';
@@ -479,13 +480,20 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             NotesField(
                               notes: _parcel.notes,
                               isModified: _isModified((final p) => p.notes),
+                              associationType: getIt<HoldingsRepository>()
+                                  .activeAssociationType,
                               onChanged: (final List<String> notes) =>
                                   setState(
                                 () => _parcel = _parcel.copyWith(notes: notes),
                               ),
                               onNoteAdded: (final String note) => setState(
-                                () => _parcel = UsageTypeNotesSync
-                                    .applyNoteAdded(_parcel, note),
+                                () => _parcel = Parcel.reformTypeOptions
+                                        .contains(note)
+                                    ? CreditTypeNotesSync
+                                        .applyReformNoteSelected(
+                                            _parcel, note)
+                                    : UsageTypeNotesSync.applyNoteAdded(
+                                        _parcel, note),
                               ),
                             ),
                             if (effectiveParentId == null)

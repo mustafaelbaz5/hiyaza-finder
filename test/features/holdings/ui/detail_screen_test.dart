@@ -14,6 +14,12 @@ import '../../../support/localized_widget_test_harness.dart';
 /// after being marked reviewed instead of jumping to the bottom, which was
 /// the root cause of Copy ID appearing to need two taps (the tapped card
 /// moved out from under the user's finger on the very next rebuild).
+///
+/// `DetailScreen` now pages one parcel at a time (see `ParcelIndexNavBar`)
+/// instead of stacking every parcel in one scrollable list, so this test
+/// stays on the single-parcel card (p1) throughout and asserts its position
+/// is unaffected by being marked reviewed, rather than comparing it against
+/// a second simultaneously-visible card.
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
 
@@ -77,20 +83,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Confirm both cards render in original order before any action, using
-    // the stable ValueKey(parcel.id) added to each list item.
+    // p1 is the first (and, by default, currently paged) parcel — confirm
+    // it renders using the stable ValueKey(parcel.id).
     final Finder firstCardFinder = find.byKey(const ValueKey<String>('p1'));
-    final Finder secondCardFinder = find.byKey(const ValueKey<String>('p2'));
+    expect(firstCardFinder, findsOneWidget);
     final double firstYBefore = tester.getTopLeft(firstCardFinder).dy;
-    final double secondYBefore = tester.getTopLeft(secondCardFinder).dy;
-    expect(
-      firstYBefore,
-      lessThan(secondYBefore),
-      reason: 'p1 must render above p2 initially, matching the order '
-          'parcels were passed in.',
-    );
 
-    // Tap the first card's Copy ID chip to mark it reviewed.
+    // Tap its Copy ID chip to mark it reviewed.
     final Finder firstCardIdChip = find.descendant(
       of: firstCardFinder,
       matching: find.ancestor(
@@ -102,15 +101,18 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    // p1 must still render above p2 — no jump to the bottom despite now
-    // being the reviewed one.
-    final double firstYAfter = tester.getTopLeft(firstCardFinder).dy;
-    final double secondYAfter = tester.getTopLeft(secondCardFinder).dy;
+    // p1 must still be the card shown at the same position — no jump/reflow
+    // despite now being the reviewed one, and the paged index must not have
+    // moved to p2.
+    final Finder firstCardFinderAfter = find.byKey(const ValueKey<String>('p1'));
+    expect(firstCardFinderAfter, findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('p2')), findsNothing);
+    final double firstYAfter = tester.getTopLeft(firstCardFinderAfter).dy;
     expect(
       firstYAfter,
-      lessThan(secondYAfter),
-      reason: 'a reviewed parcel must keep its original position instead of '
-          'sinking to the bottom of the list.',
+      firstYBefore,
+      reason: 'a reviewed parcel must keep its original on-screen position '
+          'instead of the paged view jumping elsewhere.',
     );
   });
 }

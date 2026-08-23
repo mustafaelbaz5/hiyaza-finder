@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/router/routes.dart';
 import '../../data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
+import '../../data/local/credit_type_notes_sync.dart';
 import '../../data/local/field_change_tracker.dart';
 import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
@@ -300,10 +301,14 @@ class ParcelDetailCard extends StatelessWidget {
           NotesField(
             notes: parcel.notes,
             isModified: _isModified((final p) => p.notes),
+            associationType: associationType,
             onChanged: (final List<String> notes) =>
                 onFieldChanged(parcel.copyWith(notes: notes)),
-            onNoteAdded: (final String note) =>
-                onFieldChanged(UsageTypeNotesSync.applyNoteAdded(parcel, note)),
+            onNoteAdded: (final String note) => onFieldChanged(
+              Parcel.reformTypeOptions.contains(note)
+                  ? CreditTypeNotesSync.applyReformNoteSelected(parcel, note)
+                  : UsageTypeNotesSync.applyNoteAdded(parcel, note),
+            ),
           ),
           verticalSpacing(12),
           verticalSpacing(8),
@@ -500,7 +505,9 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    if (!Parcel.isValueFilled(parcel.cropType)) {
+    final bool cropTypeRequired =
+        UsageType.fromLabel(parcel.usageType) == UsageType.agricultural;
+    if (cropTypeRequired && !Parcel.isValueFilled(parcel.cropType)) {
       context
           .showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
       return;

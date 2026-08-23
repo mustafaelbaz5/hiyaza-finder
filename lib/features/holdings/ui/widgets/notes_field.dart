@@ -5,6 +5,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../cities/data/model/association_type.dart';
 import '../../data/model/parcel.dart';
 import 'add_note_dialog.dart';
 
@@ -21,6 +22,7 @@ class NotesField extends StatelessWidget {
     required this.onChanged,
     this.onNoteAdded,
     this.isModified = false,
+    this.associationType,
   });
 
   final List<String> notes;
@@ -28,7 +30,8 @@ class NotesField extends StatelessWidget {
 
   /// Called with just the newly-added note (in addition to [onChanged]
   /// firing with the full list) — lets a caller run APP_UPDATES_CLAUDE.md
-  /// § 4.3's bidirectional نوع الاستخدام↔notes logic without needing to
+  /// § 4.3's bidirectional نوع الاستخدام↔notes logic, or the Credit/Reform
+  /// Type Logic prompt's reform-note↔نوع الإصلاح logic, without needing to
   /// diff two lists to find what changed.
   final ValueChanged<String>? onNoteAdded;
 
@@ -36,8 +39,16 @@ class NotesField extends StatelessWidget {
   /// the note list differs from the parcel's original value.
   final bool isModified;
 
+  /// Adds the reform city's 3 quick-select reform notes to the picker when
+  /// this is `AssociationType.agriculturalReform` — `null`/credit shows the
+  /// built-in list only (Credit/Reform Type Logic prompt).
+  final AssociationType? associationType;
+
   Future<void> _add(final BuildContext context) async {
-    final String? note = await showAddNoteDialog(context);
+    final String? note = await showAddNoteDialog(
+      context,
+      associationType: associationType,
+    );
     if (note == null || note.trim().isEmpty) return;
     if (notes.contains(note)) return;
     if (onNoteAdded != null) {

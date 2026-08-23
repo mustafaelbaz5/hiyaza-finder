@@ -1,19 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
+import '../../data/local/credit_type_notes_sync.dart';
 import '../../data/local/field_change_tracker.dart';
 import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
 import 'delegate_owner_dialog.dart';
 import 'field_row.dart';
+import 'ownership_toggle.dart';
 import 'toggle_field_row.dart';
-
 
 /// Collapsed-by-default section for the less-frequently-needed fields
 /// (المديرية/الإدارة/كود الحوض/نوع الاستخدام), toggled independently per
@@ -179,7 +181,9 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         ),
         AnimatedSize(
           duration: const Duration(milliseconds: 200),
-          child: _expanded ? _buildFields(context) : const SizedBox(width: double.infinity),
+          child: _expanded
+              ? _buildFields(context)
+              : const SizedBox(width: double.infinity),
         ),
       ],
     );
@@ -234,38 +238,24 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         ),
       ),
     );
-    final Widget creditOrReformType =
-        widget.associationType == AssociationType.agriculturalReform
-            ? FieldRow(
-                label: 'holdings.fields.reform_type'.tr(),
-                value: widget.parcel.reformType,
-                isModified: _isModified((final p) => p.reformType),
-                onEdit: () => _editDropdown(
-                  context,
-                  title: 'holdings.fields.reform_type'.tr(),
-                  initialValue: widget.parcel.reformType,
-                  options: Parcel.reformTypeOptions,
-                  allowClear: false,
-                  apply: (final String? v) => widget.parcel.copyWith(
-                    reformType: v ?? Parcel.defaultReformType,
-                  ),
-                ),
-              )
-            : FieldRow(
-                label: 'holdings.fields.credit_type'.tr(),
-                value: widget.parcel.creditType,
-                isModified: _isModified((final p) => p.creditType),
-                onEdit: () => _editDropdown(
-                  context,
-                  title: 'holdings.fields.credit_type'.tr(),
-                  initialValue: widget.parcel.creditType,
-                  options: Parcel.creditTypeOptions,
-                  allowClear: false,
-                  apply: (final String? v) => widget.parcel.copyWith(
-                    creditType: v ?? Parcel.defaultCreditType,
-                  ),
-                ),
-              );
+    // نوع الائتمان/نوع الإصلاح are no longer a visible dropdown field —
+    // credit cities get the ملك/أوقاف toggle below (drives `creditType` +
+    // the أوقاف note automatically); reform cities show nothing here at
+    // all, since نوع الإصلاح is now selected purely via the quick-select
+    // notes (Credit/Reform Type Logic prompt).
+    final bool isReformCity =
+        widget.associationType == AssociationType.agriculturalReform;
+    final Widget? ownershipToggle = isReformCity
+        ? null
+        : OwnershipToggle(
+            isAwqaf: widget.parcel.creditType != Parcel.defaultCreditType,
+            onChanged: (final bool isAwqaf) => widget.onFieldChanged(
+              CreditTypeNotesSync.applyOwnershipToggle(
+                widget.parcel,
+                isAwqaf,
+              ),
+            ),
+          );
     final Widget directorate = FieldRow(
       label: 'holdings.fields.directorate'.tr(),
       value: widget.parcel.directorate,
@@ -298,11 +288,11 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       children: [
         _pairRow(inheritance, delegate),
         verticalSpacing(8),
-        if (widget.hideCreditType &&
-            widget.associationType != AssociationType.agriculturalReform)
-          basinCode
-        else
-          _pairRow(basinCode, creditOrReformType),
+        basinCode,
+        if (ownershipToggle != null) ...[
+          verticalSpacing(8),
+          ownershipToggle,
+        ],
         if (UsageType.fromLabel(widget.parcel.usageType) ==
             UsageType.agricultural) ...[
           FieldRow(
