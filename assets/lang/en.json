@@ -313,7 +313,11 @@
       "no_results": "No results",
       "voice": "Voice search",
       "mic_permission_denied": "Microphone access is required for voice search",
-      "clear": "Clear search"
+      "clear": "Clear search",
+      "start_title": "Start searching",
+      "start_subtitle": "Type a holder name or holding number to search this city's data",
+      "no_results_for": "No results for \"{query}\"",
+      "no_results_hint": "Check the spelling of the name or number"
     },
     "detail": {
       "see_more": "See more",

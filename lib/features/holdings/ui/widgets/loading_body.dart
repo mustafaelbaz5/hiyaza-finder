@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -13,7 +14,7 @@ import '../../data/repo/holdings_repository.dart';
 import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/home_state.dart';
 import '../add_record_screen.dart';
-
+import 'home_empty_state.dart';
 import 'recommendation_list.dart';
 
 class LoadingBody extends StatelessWidget {
@@ -27,11 +28,12 @@ class LoadingBody extends StatelessWidget {
   }
 }
 
-/// Search bar stays pinned at the top — only the body below scrolls. Body
-/// shows search results while [HomeState.query] is non-empty, otherwise
-/// the flat, unfiltered list of every holding city-wide
-/// (APP_CLAUDE.md § 9.1 — basin grouping/progress moved to its own
-/// [BasinsPage]).
+/// Search bar stays pinned at the top — only the body below scrolls. Home is
+/// search-first (UI/UX Updates prompt "Change 3"): the body shows
+/// [RecommendationList]'s search results while [HomeState.query] is
+/// non-empty, and [HomeEmptyState] otherwise — there is no flat,
+/// unfiltered city-wide list here at all (basin grouping/progress lives on
+/// its own [BasinsPage]).
 class LoadedBody extends StatefulWidget {
   const LoadedBody({
     super.key,
@@ -98,8 +100,6 @@ class LoadedBodyState extends State<LoadedBody> {
         : Row(mainAxisSize: MainAxisSize.min, children: suffixButtons);
 
     final bool isSearching = widget.state.query.trim().isNotEmpty;
-    final List<SearchResult> shown =
-        isSearching ? widget.state.results : widget.state.allHoldings;
 
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
@@ -133,14 +133,17 @@ class LoadedBodyState extends State<LoadedBody> {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: RecommendationList(
-                      query: widget.state.query,
-                      results: shown,
-                      onSelect: (final SearchResult result) =>
-                          _openDetail(context, result),
-                      onAddNew: () => _openAddPerson(context),
-                    ),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: isSearching
+                        ? RecommendationList(
+                            query: widget.state.query,
+                            results: widget.state.results,
+                            onSelect: (final SearchResult result) =>
+                                _openDetail(context, result),
+                            onAddNew: () => _openAddPerson(context),
+                          )
+                        : const HomeEmptyState(),
                   ),
                 ),
               ],

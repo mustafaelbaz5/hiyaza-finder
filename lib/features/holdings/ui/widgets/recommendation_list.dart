@@ -1,12 +1,7 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/custom_text_button.dart';
 import '../../data/local/holding_search_service.dart';
+import 'home_no_results.dart';
 import 'recommendation_tile.dart';
 
 class RecommendationList extends StatelessWidget {
@@ -46,31 +41,7 @@ class RecommendationList extends StatelessWidget {
             children: [
               ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'holdings.search.no_results'.tr(),
-                        style: AppTextStyles.font14Regular.copyWith(
-                          color: context.customColors.textHint,
-                        ),
-                      ),
-                      if (onAddNew != null) ...[
-                        verticalSpacing(16),
-                        CustomTextButton(
-                          text: 'holdings.add.new_person_cta'.tr(),
-                          onPressed: onAddNew,
-                          isFullWidth: false,
-                          prefixIcon: const Icon(
-                            Icons.person_add_alt_1_rounded,
-                            color: AppColors.white,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                child: HomeNoResults(query: query, onAddNew: onAddNew),
               ),
             ],
           );

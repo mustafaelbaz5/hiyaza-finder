@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onQueryChanged(final String query, final HomeCubit cubit) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 150), () {
+    _debounce = Timer(const Duration(milliseconds: 300), () {
       cubit.search(query);
     });
   }

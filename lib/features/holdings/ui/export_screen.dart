@@ -71,8 +71,12 @@ class _ExportScreenState extends State<ExportScreen> {
       }
 
       final Directory dir = await getApplicationDocumentsDirectory();
-      final String fileName =
-          'hiyaza_export_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final String fileName = ExportService.buildExportFileName(
+        associationName:
+            _repository.defaultAssociationName ?? _repository.activeCityName ?? 'hiyaza',
+        basinName: _basinFilter,
+        scope: _scope,
+      );
       final File file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes, flush: true);
 

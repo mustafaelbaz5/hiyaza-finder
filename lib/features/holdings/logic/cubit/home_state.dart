@@ -10,7 +10,6 @@ class HomeState extends Equatable {
     this.parcels = const <Parcel>[],
     this.query = '',
     this.results = const <SearchResult>[],
-    this.allHoldings = const <SearchResult>[],
     this.errorMessage,
     this.modifiedIds = const <String>{},
   });
@@ -20,12 +19,12 @@ class HomeState extends Equatable {
   final HomeStatus status;
   final List<Parcel> parcels;
   final String query;
-  final List<SearchResult> results;
 
-  /// Every distinct holding, city-wide, unfiltered — Home's flat list
-  /// (APP_CLAUDE.md § 9.1). Shown while [query] is empty; a non-empty
-  /// [query] shows [results] instead.
-  final List<SearchResult> allHoldings;
+  /// Only populated once [query] is non-empty — Home is search-first (UI/UX
+  /// Updates prompt "Change 3"): it never shows a flat, unfiltered
+  /// city-wide list (that view moved to `BasinsPage`/per-basin browsing),
+  /// so there is nothing to compute or hold before the user types.
+  final List<SearchResult> results;
 
   final String? errorMessage;
 
@@ -58,7 +57,6 @@ class HomeState extends Equatable {
     final List<Parcel>? parcels,
     final String? query,
     final List<SearchResult>? results,
-    final List<SearchResult>? allHoldings,
     final String? errorMessage,
     final Set<String>? modifiedIds,
   }) {
@@ -67,7 +65,6 @@ class HomeState extends Equatable {
       parcels: parcels ?? this.parcels,
       query: query ?? this.query,
       results: results ?? this.results,
-      allHoldings: allHoldings ?? this.allHoldings,
       errorMessage: errorMessage,
       modifiedIds: modifiedIds ?? this.modifiedIds,
     );
@@ -79,7 +76,6 @@ class HomeState extends Equatable {
         parcels,
         query,
         results,
-        allHoldings,
         errorMessage,
         modifiedIds,
       ];

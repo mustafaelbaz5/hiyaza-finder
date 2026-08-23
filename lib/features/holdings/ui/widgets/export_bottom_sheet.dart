@@ -10,9 +10,11 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
+import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../data/local/export_service.dart';
 import '../../data/model/parcel.dart';
+import '../../data/repo/holdings_repository.dart';
 
 /// Simple export sheet reached from [BasinScreen]'s export button
 /// (APP_CLAUDE.md § 9.3) — always scoped to the one basin it's opened
@@ -63,9 +65,14 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
         return;
       }
 
+      final HoldingsRepository repository = getIt<HoldingsRepository>();
       final Directory dir = await getApplicationDocumentsDirectory();
-      final String fileName =
-          'hiyaza_export_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      final String fileName = ExportService.buildExportFileName(
+        associationName:
+            repository.defaultAssociationName ?? repository.activeCityName ?? 'hiyaza',
+        basinName: widget.basinName,
+        scope: _scope,
+      );
       final File file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes, flush: true);
 

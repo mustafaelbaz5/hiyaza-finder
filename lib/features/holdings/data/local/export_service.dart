@@ -91,6 +91,29 @@ class ExportService {
     return bytes == null ? null : Uint8List.fromList(bytes);
   }
 
+  /// Builds the shared filename for an export — association name + basin
+  /// scope + data scope, so a field worker sharing several exports from the
+  /// same phone can tell them apart without opening each one (UI/UX Updates
+  /// prompt "Change 2"). `associationName` is cleaned for filesystem safety
+  /// (`-`/spaces → `_`); `basinName` of `null`/empty means "every basin".
+  static String buildExportFileName({
+    required final String associationName,
+    required final String? basinName,
+    required final ExportScope scope,
+  }) {
+    final String cleanName =
+        associationName.replaceAll('-', '_').replaceAll(' ', '_').trim();
+
+    final String basinPart = (basinName == null || basinName.trim().isEmpty)
+        ? 'كل_الاحواض'
+        : basinName.trim().replaceAll(' ', '_');
+
+    final String scopePart =
+        scope == ExportScope.addedOnly ? '_بيانات_مضافة' : '';
+
+    return '${cleanName}_$basinPart$scopePart.xlsx';
+  }
+
   void _writeHeader(final xlsx.Sheet sheet) {
     sheet.appendRow(
       columns.map((final String c) => xlsx.TextCellValue(c)).toList(),

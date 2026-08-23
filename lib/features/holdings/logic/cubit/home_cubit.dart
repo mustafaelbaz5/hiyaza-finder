@@ -77,7 +77,6 @@ class HomeCubit extends Cubit<HomeState> {
       parcels: parcels,
       query: '',
       results: const <SearchResult>[],
-      allHoldings: _repository.allHoldings,
       modifiedIds: _modifiedIds(parcels),
     );
   }
@@ -99,7 +98,6 @@ class HomeCubit extends Cubit<HomeState> {
     emit(
       state.copyWith(
         parcels: parcels,
-        allHoldings: _repository.allHoldings,
         results:
             state.query.trim().isEmpty ? state.results : _repository.search(state.query),
         modifiedIds: _modifiedIds(parcels),
