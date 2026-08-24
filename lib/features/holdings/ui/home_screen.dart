@@ -67,9 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: colors.background,
+      // The footer badge should stay pinned in place rather than being
+      // shoved up by the on-screen keyboard when the search field is
+      // focused — the search results area is what should shrink instead.
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: BlocBuilder<HomeCubit, HomeState>(
           builder: (final BuildContext context, final HomeState state) {
+            final bool isSearching = state.query.trim().isNotEmpty;
             return Column(
               children: <Widget>[
                 const AppIdentityHeader(),
@@ -133,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const DeveloperFooterBadge(),
+                DeveloperFooterBadge(isSearching: isSearching),
               ],
             );
           },

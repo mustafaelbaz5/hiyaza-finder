@@ -99,7 +99,10 @@ class ClipboardFormatter {
         UsageType.fromLabel(p.usageType) == UsageType.agricultural;
     final String notesJoined = p.notes.join('، ').trim();
 
-    String field(final String label, final String value) => '$label: $value';
+    // Trailing ";" makes each field unambiguous to split on downstream
+    // (e.g. re-splitting the pasted text into a spreadsheet row), on top
+    // of the newline that already separates fields visually.
+    String field(final String label, final String value) => '$label: $value;';
 
     final List<String> lines = <String>[
       field('ID', p.id),

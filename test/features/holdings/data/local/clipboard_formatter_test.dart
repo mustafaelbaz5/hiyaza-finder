@@ -106,7 +106,7 @@ void main() {
     test('ID line is always first', () {
       const Parcel p = Parcel(id: 'uuid-123', holdingId: '55');
       final String text = formatter.format(p);
-      expect(text.split('\n').first, 'ID: uuid-123');
+      expect(text.split('\n').first, 'ID: uuid-123;');
     });
 
     test('رقم الأرض comes right after كود الحوض', () {
@@ -118,7 +118,7 @@ void main() {
       final List<String> lines = formatter.format(p).split('\n');
       final int basinCodeIndex =
           lines.indexWhere((final String l) => l.startsWith('كود الحوض'));
-      expect(lines[basinCodeIndex + 1], 'رقم الأرض: 13113851');
+      expect(lines[basinCodeIndex + 1], 'رقم الأرض: 13113851;');
     });
 
     test('رقم الأرض falls back to "0" when missing', () {
@@ -188,9 +188,19 @@ void main() {
       const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
       final List<String> lines = formatter.format(p).split('\n');
       expect(lines, contains('المساحة:'));
-      expect(lines, contains('  فدان: 1'));
-      expect(lines, contains('  قيراط: 2'));
-      expect(lines, contains('  سهم: 3'));
+      expect(lines, contains('  فدان: 1;'));
+      expect(lines, contains('  قيراط: 2;'));
+      expect(lines, contains('  سهم: 3;'));
+    });
+
+    test('every field line ends with ";" so fields are unambiguous to split',
+        () {
+      const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
+      final List<String> lines = formatter.format(p).split('\n');
+      for (final String line in lines) {
+        if (line == 'المساحة:') continue; // the section header, not a field
+        expect(line, endsWith(';'));
+      }
     });
 
     test('no trailing commas anywhere in the output', () {

@@ -263,23 +263,11 @@ class _DetailScreenState extends State<DetailScreen>
     if (idx >= 0) setState(() => _parcels[idx] = updated);
   }
 
-  /// الملاحظات default used when a brand-new parcel is created (Add Parcel/
-  /// Add Person) — still freely user-editable in the form before saving.
-  static const String _needsSurveyNote = 'نقص بيانات الحصر';
-
-  /// الملاحظات no longer gets force-overwritten on every field edit — that
-  /// silently discarded whatever the user had actually written whenever
-  /// they corrected any unrelated field (`REFACTOR_ROADMAP.md` Phase 12).
-  /// It's now only auto-set by one deliberate trigger: المساحة (فدان/قيراط/
-  /// سهم or المساحة بالمتر) changing → "نقص بيانات الحصر" (the field survey
-  /// for this parcel needs re-verifying). Every other field edit leaves
-  /// الملاحظات exactly as the user last set it.
-  ///
-  /// نوع الاستخدام changes no longer add a second, generic note here — that
-  /// used to duplicate `UsageTypeNotesSync.applyUsageTypeChange`'s own
-  /// specific مباني/بور auto-note (already applied before this handler ever
-  /// runs, e.g. from `SeeMoreSection`'s usage-type dropdown), so a single
-  /// usage-type change previously produced two notes instead of one.
+  /// الملاحظات is never force-overwritten or auto-appended by this
+  /// handler — every field edit leaves الملاحظات exactly as the user last
+  /// set it. مباني/بور's own specific auto-notes are still applied
+  /// upstream by `UsageTypeNotesSync` (triggered from the usage-type
+  /// dropdown itself), not by this method.
   Future<void> _updateField(final Parcel updated) async {
     if (_isParcelBusy(updated.id)) return;
     setState(() {
@@ -290,19 +278,7 @@ class _DetailScreenState extends State<DetailScreen>
       final int idx = _parcels.indexWhere(
         (final Parcel p) => p.id == updated.id,
       );
-      final Parcel? before = idx >= 0 ? _parcels[idx] : null;
-      Parcel toSave = updated;
-      if (before != null) {
-        final bool areaChanged = updated.feddan != before.feddan ||
-            updated.qirat != before.qirat ||
-            updated.sahm != before.sahm ||
-            updated.totalSqm != before.totalSqm;
-        if (areaChanged && !toSave.notes.contains(_needsSurveyNote)) {
-          toSave = toSave.copyWith(
-            notes: <String>[...toSave.notes, _needsSurveyNote],
-          );
-        }
-      }
+      final Parcel toSave = updated;
 
       await _repository.updateParcel(toSave);
       if (idx >= 0) {

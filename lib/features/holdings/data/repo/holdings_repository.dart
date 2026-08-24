@@ -227,8 +227,12 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       for (final Parcel p in _dataset.parcels)
         if (p.id != id)
           // Mirrors addLocalParcel's bump: undo it for any sibling parcel
-          // still sharing this holding.
-          (p.groupKey == removed.groupKey && p.holdingsCount != null)
+          // still sharing this holding — floored at 1 so a stale/incorrect
+          // source count (or two decrements racing) can never leave a
+          // still-existing holding showing عدد القطع: 0.
+          (p.groupKey == removed.groupKey &&
+                  p.holdingsCount != null &&
+                  p.holdingsCount! > 1)
               ? p.copyWith(holdingsCount: p.holdingsCount! - 1)
               : p,
     ]);

@@ -78,33 +78,45 @@ class AppIdentityHeader extends StatelessWidget {
   }
 }
 
-/// Low-emphasis "تطوير: {developerName}" footer badge (UI/UX redesign) —
-/// tappable, deep-links to the existing About screen so this stays a
-/// discovery hint rather than duplicating About's full content. Reuses the
+/// Low-emphasis "تطوير: {developerName}" footer badge — tappable,
+/// deep-links to the existing About screen so this stays a discovery hint
+/// rather than duplicating About's full content. Reuses the
 /// `about.footer.made_with_love` translation key already built for this
 /// exact string in `AboutScreen`, so the wording can't drift between the
 /// two places it appears.
+///
+/// Only shown on Home's empty/init state (no active search) — it hides
+/// itself once the user starts searching, so it never competes with
+/// results for space. `HomeScreen` pins this via
+/// `Scaffold.resizeToAvoidBottomInset: false` so opening the keyboard for
+/// the search field doesn't shove it up the screen the way a plain
+/// `Column` child would.
 class DeveloperFooterBadge extends StatelessWidget {
-  const DeveloperFooterBadge({super.key});
+  const DeveloperFooterBadge({super.key, required this.isSearching});
+
+  final bool isSearching;
 
   @override
   Widget build(final BuildContext context) {
+    if (isSearching) return const SizedBox.shrink();
+
     final colors = context.customColors;
 
     return InkWell(
       onTap: () => context.pushNamed(Routes.aboutScreen),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(6),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(6)),
+        padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(3)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline_rounded, size: 14, color: colors.textHint),
-            horizontalSpacing(6),
+            Icon(Icons.info_outline_rounded, size: 11, color: colors.textHint),
+            horizontalSpacing(4),
             Text(
               '${'about.footer.made_with_love'.tr()} ${AppConfig.developerName}',
               style: AppTextStyles.font12Regular.copyWith(
                 color: colors.textHint,
+                fontSize: 10,
               ),
             ),
           ],
