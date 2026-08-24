@@ -1,10 +1,9 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../data/local/export_file_saver.dart';
 import '../data/local/export_service.dart';
 import '../data/model/parcel.dart';
 import '../data/repo/holdings_repository.dart';
@@ -70,19 +69,33 @@ class _ExportScreenState extends State<ExportScreen> {
         return;
       }
 
-      final Directory dir = await getApplicationDocumentsDirectory();
       final String fileName = ExportService.buildExportFileName(
         associationName:
             _repository.defaultAssociationName ?? _repository.activeCityName ?? 'hiyaza',
         basinName: _basinFilter,
         scope: _scope,
       );
-      final File file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes, flush: true);
+      // Lets the user pick where the file lands (Downloads, SD card, a
+      // cloud-synced folder, ...) via the OS's own "Save As" dialog,
+      // falling back to the app's private documents directory if they
+      // cancel it — either way the Share sheet is still offered right
+      // after, so the export is never trapped in a spot they can't reach.
+      final ExportSaveResult saveResult = await saveExportFile(
+        bytes: bytes,
+        fileName: fileName,
+      );
 
       if (!mounted) return;
+      context.showSuccessSnackBar(
+        saveResult.userChoseLocation
+            ? 'holdings.export.saved_to_location'.tr()
+            : 'holdings.export.saved_to_app_folder'.tr(),
+      );
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)], fileNameOverrides: [fileName]),
+        ShareParams(
+          files: [XFile(saveResult.filePath)],
+          fileNameOverrides: [fileName],
+        ),
       );
     } catch (_) {
       if (mounted) context.showErrorSnackBar('errors.unknown'.tr());

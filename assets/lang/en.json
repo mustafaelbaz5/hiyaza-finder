@@ -435,6 +435,8 @@
       "contents_basin_sheets": "One sheet per basin",
       "preview_count": "{count} parcels will be exported",
       "nothing_to_export": "No data to export for this scope",
+      "saved_to_location": "File saved to the location you chose",
+      "saved_to_app_folder": "File saved inside the app's folder",
       "export_button": "Export Excel"
     },
     "bulk_edit": {

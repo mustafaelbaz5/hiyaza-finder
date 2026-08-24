@@ -435,6 +435,8 @@
       "contents_basin_sheets": "شيت لكل حوض",
       "preview_count": "سيتم تصدير {count} قطعة",
       "nothing_to_export": "لا توجد بيانات لتصديرها بهذا النطاق",
+      "saved_to_location": "تم حفظ الملف في المكان الذي اخترته",
+      "saved_to_app_folder": "تم حفظ الملف داخل مجلد التطبيق",
       "export_button": "تصدير Excel"
     },
     "bulk_edit": {

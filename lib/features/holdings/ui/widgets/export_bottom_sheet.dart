@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/themes/app_colors.dart';
@@ -12,6 +10,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../data/local/export_file_saver.dart';
 import '../../data/local/export_service.dart';
 import '../../data/model/parcel.dart';
 import '../../data/repo/holdings_repository.dart';
@@ -66,20 +65,27 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
       }
 
       final HoldingsRepository repository = getIt<HoldingsRepository>();
-      final Directory dir = await getApplicationDocumentsDirectory();
       final String fileName = ExportService.buildExportFileName(
         associationName:
             repository.defaultAssociationName ?? repository.activeCityName ?? 'hiyaza',
         basinName: widget.basinName,
         scope: _scope,
       );
-      final File file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes, flush: true);
+      // Lets the user pick where the file lands via the OS's own "Save As"
+      // dialog, falling back to the app's private documents directory if
+      // they cancel it.
+      final ExportSaveResult saveResult = await saveExportFile(
+        bytes: bytes,
+        fileName: fileName,
+      );
 
       if (!mounted) return;
       Navigator.pop(context);
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)], fileNameOverrides: [fileName]),
+        ShareParams(
+          files: [XFile(saveResult.filePath)],
+          fileNameOverrides: [fileName],
+        ),
       );
     } catch (_) {
       if (mounted) context.showErrorSnackBar('errors.unknown'.tr());
