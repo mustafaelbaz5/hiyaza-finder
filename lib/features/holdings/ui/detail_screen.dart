@@ -320,6 +320,13 @@ class _DetailScreenState extends State<DetailScreen>
       basinName: null,
       cropType: null,
       growthStages: null,
+      // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
+      // [source]'s value — a new parcel is a fresh survey, and if the
+      // source person's other parcel had been set to مباني/بور the
+      // required نوع الزرع field would otherwise silently disappear from
+      // this form with no way to bring it back (usage type isn't editable
+      // in the add flow at all).
+      usageType: Parcel.defaultUsageType,
       // عدد القطع في الحيازة grows by one for the new parcel being added.
       holdingsCount: (source.holdingsCount ?? 1) + 1,
       // الملاحظات = [] by default (§2.2) — not inherited from the source

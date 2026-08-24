@@ -118,6 +118,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         basinCode: null,
         cropType: null,
         growthStages: null,
+        // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
+        // [source]'s value — same reasoning as `DetailScreen
+        // ._addParcelForPerson`: a new parcel is a fresh survey, and usage
+        // type isn't editable in this screen, so inheriting مباني/بور here
+        // would silently hide the required نوع الزرع field with no way to
+        // bring it back.
+        usageType: Parcel.defaultUsageType,
         holdingsCount: (source.holdingsCount ?? 1) + 1,
         notes: const <String>[],
       );
@@ -471,7 +478,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                             if (UsageType.fromLabel(_parcel.usageType) ==
                                 UsageType.agricultural)
                               FieldRow(
-                                label: 'holdings.fields.crop_type'.tr(),
+                                label: '${'holdings.fields.crop_type'.tr()} *',
                                 value: _parcel.cropType,
                                 isModified:
                                     _isModified((final p) => p.cropType),
