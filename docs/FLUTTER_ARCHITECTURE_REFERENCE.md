@@ -258,20 +258,22 @@ lib/
 
 **Contents:**
 
-| Component | Purpose | Testable | Example |
-|-----------|---------|----------|---------|
-| **Entities** | Core business objects; immutable | Yes (plain Dart) | `Parcel`, `City`, `AppUser` |
-| **Repository Interfaces** | Abstract contracts for data access | Yes (fakes substitute implementations) | `HoldingsReader`, `HoldingsWriter`, `CityRepository` |
-| **Services** | Pure functions over entities; no I/O | Yes (unit test, no fixtures) | `ParcelEditOverlay.apply()`, `ParcelQueryService.search()` |
-| **Use Cases** | Orchestrate services + repositories for a single user action | Yes (against fake repos) | `SignInUseCase`, `DownloadCityUseCase` |
+| Component                 | Purpose                                                      | Testable                               | Example                                                    |
+| ------------------------- | ------------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------------- |
+| **Entities**              | Core business objects; immutable                             | Yes (plain Dart)                       | `Parcel`, `City`, `AppUser`                                |
+| **Repository Interfaces** | Abstract contracts for data access                           | Yes (fakes substitute implementations) | `HoldingsReader`, `HoldingsWriter`, `CityRepository`       |
+| **Services**              | Pure functions over entities; no I/O                         | Yes (unit test, no fixtures)           | `ParcelEditOverlay.apply()`, `ParcelQueryService.search()` |
+| **Use Cases**             | Orchestrate services + repositories for a single user action | Yes (against fake repos)               | `SignInUseCase`, `DownloadCityUseCase`                     |
 
 **Key Entities:**
+
 - **`Parcel`** (445 lines): One row of land-holding data. Combines fields from `holdings` (immutable) and `holding_edits` (corrections). Has two JSON serialization paths: `toEditableJson()` (overlay) and `toJson()` (full snapshot).
 - **`City`**: Published city metadata; only `status='published'` are offered to field app.
 - **`CitySnapshot`**: Locally cached city data (parcels + metadata + version).
 - **`AppUser`**: Authenticated user identity + role.
 
 **Design Principles:**
+
 - Entities use value semantics (`copyWith`, `==`/`hashCode` via `equatable`).
 - Repository interfaces are narrow (`HoldingsReader` vs. `HoldingsWriter`); no god-interfaces.
 - Services are pure: given input, always return same output (no caching, no I/O).
@@ -288,43 +290,49 @@ lib/
 
 **Contents:**
 
-| Component | Purpose | Example |
-|-----------|---------|---------|
-| **Data Sources** | Direct Supabase queries; one file per source | `SupabaseCityDataSource` (read), `HoldingsApi` (write) |
-| **Models/DTOs** | JSON ↔ Dart serialization | `AppUserModel.fromJson()` |
-| **Repositories (impl)** | Concrete repository combining data sources | `CityRepositoryImpl`, `HoldingsRepository` |
-| **Mappers** | Specific transformations (row → entity) | `holdingRowToParcel()`, `parcelToAddedHoldingsRecord()` |
-| **Stores** | Local persistence abstraction | `ParcelEditsStore` (JSON file I/O) |
+| Component               | Purpose                                      | Example                                                 |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------- |
+| **Data Sources**        | Direct Supabase queries; one file per source | `SupabaseCityDataSource` (read), `HoldingsApi` (write)  |
+| **Models/DTOs**         | JSON ↔ Dart serialization                    | `AppUserModel.fromJson()`                               |
+| **Repositories (impl)** | Concrete repository combining data sources   | `CityRepositoryImpl`, `HoldingsRepository`              |
+| **Mappers**             | Specific transformations (row → entity)      | `holdingRowToParcel()`, `parcelToAddedHoldingsRecord()` |
+| **Stores**              | Local persistence abstraction                | `ParcelEditsStore` (JSON file I/O)                      |
 
 **Key Classes:**
 
 **`SupabaseCityDataSource`:**
+
 - Only file that queries Supabase directly for city/holdings/edits.
 - Handles pagination (1000-row limit).
 - Fetches multiple tables and merges locally (holdings + edits + added_holdings + counts).
 
 **`HoldingsApi`:**
+
 - All write operations: edit, bulk-edit, add-record, mark-reviewed.
 - 15-second timeout per request (converts hung connections into user-visible errors).
 - No retry logic (online-first).
 
 **`HoldingsRepository`:**
+
 - Owns in-memory dataset for active city.
 - Merges corrections on load via `ParcelEditOverlay`.
 - Exposes search, detail, bulk-edit, add/delete operations.
 - Updates happen server-first (await HoldingsApi call), then local state.
 
 **`ParcelEditsStore`:**
+
 - Persists local edit overlays to JSON file.
 - Keyed per city (e.g., `city::${cityId}`).
 - Loads on city activation; reapplies on fresh download.
 
 **`RealtimeSyncService`:**
+
 - Subscribes to Supabase Realtime for holdings/holding_edits/added_holdings.
 - Patches incoming changes into `HoldingsRepository` incrementally.
 - Filters by active city.
 
 **Design Principles:**
+
 - One data source per remote service (clear I/O boundary).
 - Models have `fromJson` / `toJson` but are often discarded after mapping to domain entities.
 - Repositories are thin coordinators (not god-classes).
@@ -342,28 +350,32 @@ lib/
 
 **Contents:**
 
-| Component | Purpose | Example |
-|-----------|---------|---------|
-| **Cubits** | State machine; emits state changes | `SessionCubit`, `SearchCubit` |
-| **Screens** | Full-screen UI; container component | `HomeScreen`, `LoginScreen` |
-| **Widgets** | Reusable UI; presentational | `ParcelDetailCard`, `BorderCompass` |
+| Component   | Purpose                             | Example                             |
+| ----------- | ----------------------------------- | ----------------------------------- |
+| **Cubits**  | State machine; emits state changes  | `SessionCubit`, `SearchCubit`       |
+| **Screens** | Full-screen UI; container component | `HomeScreen`, `LoginScreen`         |
+| **Widgets** | Reusable UI; presentational         | `ParcelDetailCard`, `BorderCompass` |
 
 **Key Cubits:**
 
 **`SessionCubit`:**
+
 - Listens to Supabase Auth state.
 - Emits `authenticated`/`unauthenticated`.
 - Router redirects on state change.
 
 **`SearchCubit`:**
+
 - Queries active dataset via `HoldingsReader.search()`.
 - Emits search results, selected basin, filters.
 
 **`AppSettingsCubit`:**
+
 - Persists font/theme preference.
 - Emits theme state for app-wide MaterialApp theme.
 
 **Key Screens:**
+
 - **`LoginScreen`**: Email/password input; Supabase Auth.
 - **`CityPickerScreen`**: Lists published cities; downloads selected; shows progress.
 - **`HomeScreen`**: Search interface; basin filter; search results; detail navigation.
@@ -371,11 +383,13 @@ lib/
 - **`AddRecordScreen`**: Form to create new person or new parcel; validation; submit.
 
 **Key Widgets:**
+
 - **`ParcelDetailCard`** (~500 lines): Largest widget; renders one parcel with all fields; handles inline edits; copy-all button; is_inheritance/is_delegate prefix logic.
 - **`BorderCompass`**: Visual 4-way compass showing border names; tappable to navigate to referenced person.
 - **`SyncStatusBadge`**: Shows pending operation count, last-sync time, manual sync button.
 
 **Design Principles:**
+
 - Cubits are pure state machines (no business logic).
 - Screens are thin composition layers; don't render much directly.
 - Widgets are stateless; state flows down, events bubble up.
@@ -386,6 +400,7 @@ lib/
 ## 3. Data Flow Patterns
 
 ### 3.1 City Download & Activation
+
 ```
 CityPickerScreen (user selects city)
   │
@@ -415,6 +430,7 @@ CityPickerScreen (user selects city)
 ```
 
 ### 3.2 Search Flow
+
 ```
 HomeScreen (user types search query)
   │
@@ -439,6 +455,7 @@ HomeScreen (user types search query)
 ```
 
 ### 3.3 Inline Field Edit Flow
+
 ```
 HoldingDetailScreen (user edits one field inline)
   │
@@ -466,6 +483,7 @@ HoldingDetailScreen (user edits one field inline)
 ```
 
 ### 3.4 Realtime Update Flow
+
 ```
 Another user (on different device) edits same parcel
   │
@@ -491,6 +509,7 @@ Another user (on different device) edits same parcel
 ```
 
 ### 3.5 Add New Person Flow
+
 ```
 HomeScreen (search finds nothing)
   │
@@ -536,6 +555,7 @@ HomeScreen (search finds nothing)
 ```
 
 ### 3.6 Bulk Edit Flow
+
 ```
 HomeScreen (user selects bulk-edit mode)
   │
@@ -579,6 +599,7 @@ HomeScreen (user selects bulk-edit mode)
 ## 4. State Management
 
 ### Architecture
+
 - **Framework:** Flutter BLoC library (bloc, flutter_bloc, hydrated_bloc)
 - **State Immutability:** All states immutable; `copyWith` for updates
 - **Single Source of Truth:** One cubit per feature concern
@@ -586,6 +607,7 @@ HomeScreen (user selects bulk-edit mode)
 ### Key Cubits
 
 **`SessionCubit`** (auth/session_cubit.dart):
+
 ```dart
 abstract class SessionState {}
 class UnauthenticatedState extends SessionState {}
@@ -597,11 +619,13 @@ class SessionErrorState extends SessionState {
   final String message;
 }
 ```
+
 - Listens to `Supabase.instance.auth.onAuthStateChanged` stream.
 - Emits state on sign in/out.
 - Router uses this to gate navigation.
 
 **`SearchCubit`** (holdings/search_cubit.dart):
+
 ```dart
 class SearchState {
   final List<SearchResult> results;
@@ -611,17 +635,20 @@ class SearchState {
   final String? error;
 }
 ```
+
 - Listens to user search input (debounced).
 - Queries `ParcelQueryService`.
 - Emits results as user types.
 
 **`AppSettingsCubit`** (core/settings_cubit.dart):
+
 ```dart
 class AppSettingsState {
   final bool isDarkMode;
   final AppFontSize fontSize;
 }
 ```
+
 - Persists to SharedPreferences via `hydrated_bloc`.
 - Emits theme state for root MaterialApp.
 
@@ -630,6 +657,7 @@ class AppSettingsState {
 ## 5. Dependency Injection
 
 ### Setup: `lib/core/di/dependency_injection.dart`
+
 ```dart
 final GetIt getIt = GetIt.instance;
 
@@ -643,24 +671,29 @@ Future<void> setUpDependencies() async {
 ```
 
 ### Module Pattern
+
 Each module registers related dependencies:
 
 **`core_module`:**
+
 - `KeyValueStore` (SharedPreferences wrapper)
 - `NetworkInfo` (internet connection checker)
 - `SecureStorage` (flutter_secure_storage)
 - `VoiceSearchService` (speech_to_text)
 
 **`auth_module`:**
+
 - `SupabaseAuthRepository` (impl)
 - `SessionCubit`
 
 **`cities_module`:**
+
 - `SupabaseCityDataSource`
 - `CitySnapshotCache`
 - `CityRepositoryImpl`
 
 **`holdings_module`:**
+
 - `HoldingsApi`
 - `HoldingsRepository`
 - `ParcelQueryService`
@@ -669,10 +702,13 @@ Each module registers related dependencies:
 - `BorderNameIndex`
 
 **`sync_module`:**
+
 - `RealtimeSyncService`
 
 ### Lazy Singletons
+
 All dependencies registered as `GetIt.lazySingleton()`:
+
 - Constructed on first access.
 - Reused thereafter (no rebuilds).
 - Circular dependencies resolved via getter functions (see `RealtimeSyncService`).
@@ -682,6 +718,7 @@ All dependencies registered as `GetIt.lazySingleton()`:
 ## 6. Routing & Navigation
 
 ### Router: `lib/core/router/app_router.dart`
+
 Uses **GoRouter** (declarative, nested routing):
 
 ```dart
@@ -708,6 +745,7 @@ final router = GoRouter(
 ```
 
 ### Route Strings (lib/core/router/routes.dart)
+
 ```dart
 class Routes {
   static const String login = '/login';
@@ -722,6 +760,7 @@ class Routes {
 ```
 
 ### Navigation Patterns
+
 - **Push:** `context.push(Routes.holdingDetail, extra: parcelId)`
 - **Replace:** `context.replace(Routes.login)` (on logout)
 - **Guard:** Router's `redirect` callback checks auth state before routing
@@ -731,6 +770,7 @@ class Routes {
 ## 7. Error Handling
 
 ### Failure Value Type: `lib/core/errors/failure.dart`
+
 ```dart
 abstract class Failure {
   final String message;
@@ -743,6 +783,7 @@ class ServerFailure extends Failure {}
 ```
 
 ### Central Handler: `lib/core/errors/error_handler.dart`
+
 ```dart
 class ErrorHandler {
   static void handleException(dynamic error) {
@@ -759,6 +800,7 @@ class ErrorHandler {
 ```
 
 ### Result Type (Conceptual, not yet used consistently)
+
 ```dart
 // NOT YET IMPLEMENTED, but intended for use cases:
 // Result<T, Failure> = Success<T> | Failure
@@ -766,6 +808,7 @@ class ErrorHandler {
 ```
 
 ### Current Pattern
+
 - Network calls in data sources throw exceptions.
 - `ErrorHandler.handleException()` catches and converts to `Failure`.
 - Caller catches `Failure` and emits error state.
@@ -778,6 +821,7 @@ class ErrorHandler {
 ### Framework: `easy_localization` (Arabic default, English fallback)
 
 ### Setup: `lib/core/localization/localization_manager.dart`
+
 ```dart
 EasyLocalization(
   supportedLocales: [Locale('ar'), Locale('en')],
@@ -789,15 +833,18 @@ EasyLocalization(
 ```
 
 ### Translation Files
+
 - `assets/lang/ar.json` (Arabic, RTL)
 - `assets/lang/en.json` (English, LTR)
 
 ### Usage
+
 ```dart
 Text('field_name'.tr())  // Looks up in current locale's JSON
 ```
 
 ### Known Gap
+
 - Many older widgets hardcode Arabic strings instead of using `.tr()`.
 - This is documented as tech debt (not a pattern to copy in new code).
 
@@ -806,6 +853,7 @@ Text('field_name'.tr())  // Looks up in current locale's JSON
 ## 9. Models & Entities
 
 ### Parcel (445 lines): Core Entity
+
 ```dart
 class Parcel {
   final String id;                    // UUID (stable across app/db/edits)
@@ -815,9 +863,9 @@ class Parcel {
   final String? basinName;            // اسم الحوض
   final bool reviewed;                // Marked as complete
   final bool isFieldAdded;            // Field-created record?
-  
+
   // ... 30+ more fields (see full file for complete list)
-  
+
   Parcel copyWith({...});            // Immutable replacement
   Map<String, dynamic> toJson();     // Full snapshot
   Map<String, dynamic> toEditableJson(); // Corrections only
@@ -827,11 +875,13 @@ class Parcel {
 ```
 
 **Key Getters:**
+
 - `groupKey`: For grouping "one holding"; handles pending-record ambiguity
 - `isHoldingIdPending`: Whether رقم الحيازة is still a placeholder
 - `isValueFilled(value)`: Shared validation rule for "field has a real value"
 
 ### City (52 lines)
+
 ```dart
 class City {
   final String id;
@@ -843,6 +893,7 @@ class City {
 ```
 
 ### CitySnapshot (locally cached)
+
 ```dart
 class CitySnapshot {
   final String cityId;
@@ -855,6 +906,7 @@ class CitySnapshot {
 ```
 
 ### AppUser
+
 ```dart
 class AppUser {
   final String id;
@@ -869,6 +921,7 @@ class AppUser {
 ## 10. Search & Query Services
 
 ### ParcelQueryService: Pure Search Logic
+
 ```dart
 class ParcelQueryService {
   List<SearchResult> search(List<Parcel> parcels, String query, {String? basin}) {
@@ -876,11 +929,11 @@ class ParcelQueryService {
     final List<Parcel> scope = basin != null
         ? parcels.where((p) => p.basinName == basin).toList()
         : parcels;
-    
+
     // Delegate to HoldingSearchService (Arabic-aware ranking)
     return _searchService.search(scope, query);
   }
-  
+
   List<String> availableBasins(List<Parcel> parcels) { ... }
   Map<String, int> basinHoldingCounts(List<Parcel> parcels) { ... }
   List<Parcel> parcelsForHolding(List<Parcel> parcels, String groupKey) { ... }
@@ -888,29 +941,31 @@ class ParcelQueryService {
 ```
 
 ### HoldingSearchService: Arabic Normalization & Ranking
+
 ```dart
 class HoldingSearchService {
   List<SearchResult> search(List<Parcel> parcels, String query) {
     final normalized = ArabicNormalizer.normalize(query);
-    
+
     // Rank by:
     // 1. Exact match holderName
     // 2. Substring match holderName
     // 3. Exact/substring match nationalId or holdingId
-    
+
     // Return sorted by score, then by name
   }
 }
 ```
 
 ### BorderNameIndex: O(1) حدود Lookup
+
 ```dart
 class BorderNameIndex {
   // Precomputed index:
   // "محمد علي" → Parcel.id (the holding that person refers to)
   // "ورثة محمد" → Parcel.id
   // (Handles ambiguity; builds once per dataset load)
-  
+
   Parcel? findByBorderText(String borderText) {
     final normalized = ArabicNormalizer.normalize(borderText);
     return _index[normalized];
@@ -923,6 +978,7 @@ class BorderNameIndex {
 ## 11. Clipboard Formatting
 
 ### ClipboardFormatter: Copy-All Logic
+
 ```dart
 class ClipboardFormatter {
   String formatForClipboard(Parcel parcel) {
@@ -930,8 +986,8 @@ class ClipboardFormatter {
     // اسم الحائز: محمد علي
     // الرقم القومي: 123...
     // ... (all fields)
-    
-    // Prefix logic: وراثة / مفوض
+
+    // Prefix logic: ورثة / مفوض
     // If isInheritance: "ورثة محمد" instead of just "محمد"
     // If isDelegate: "مفوض عنه محمد" instead of just "محمد"
   }
@@ -939,6 +995,7 @@ class ClipboardFormatter {
 ```
 
 **Business Logic Matrix:**
+
 ```
 | isInheritance | isDelegate | Prefix |
 |---------------|------------|--------|
@@ -954,53 +1011,56 @@ class ClipboardFormatter {
 
 ### Currently Supported Features
 
-| Feature | Status | Entry Point | Key Classes |
-|---------|--------|-------------|-------------|
-| **Authentication** | ✅ Implemented | LoginScreen | SessionCubit, SupabaseAuthRepository |
-| **City Download** | ✅ Implemented | CityPickerScreen | CityRepositoryImpl, SupabaseCityDataSource |
-| **Search** | ✅ Implemented | HomeScreen | SearchCubit, ParcelQueryService, HoldingSearchService |
-| **Basin Filter** | ✅ Implemented | HomeScreen | ParcelQueryService.availableBasins() |
-| **Detail View** | ✅ Implemented | HoldingDetailScreen | ParcelDetailCard widget |
-| **Inline Edit** | ✅ Implemented | ParcelDetailCard | HoldingsApi.editHolding(), HoldingsRepository.updateParcel() |
-| **Copy-All** | ✅ Implemented | ParcelDetailCard | ClipboardFormatter.formatForClipboard() |
-| **Bulk Edit** | ✅ Implemented | HomeScreen (mode) | BulkEditService, HoldingsApi.bulkEditHoldings() |
-| **Add New Person** | ✅ Implemented | AddRecordScreen | HoldingsRepository.addLocalParcel(), HoldingsApi.addRecord() |
-| **Add Parcel (existing person)** | ✅ Implemented | HoldingDetailScreen | HoldingsRepository.addLocalParcel(parentHoldingId=...) |
-| **Borders Navigator** | ✅ Implemented | ParcelDetailCard (BorderCompass) | BorderNameIndex.findByBorderText() |
-| **Realtime Updates** | ✅ Implemented | (background) | RealtimeSyncService |
-| **Staleness Check** | ✅ Implemented | App open | CityRepository.remoteDataVersion() |
-| **Mark Reviewed** | ✅ Implemented | Detail screen | HoldingsApi.markReviewed() |
-| **Settings (font/theme)** | ✅ Implemented | SettingsSheet | AppSettingsCubit |
-| **Offline Support** | ⚠️ Partial | (cache/edits) | ParcelEditsStore, CitySnapshotCache |
-| **Voice Search** | ✅ Implemented | HomeScreen | VoiceSearchService |
+| Feature                          | Status         | Entry Point                      | Key Classes                                                  |
+| -------------------------------- | -------------- | -------------------------------- | ------------------------------------------------------------ |
+| **Authentication**               | ✅ Implemented | LoginScreen                      | SessionCubit, SupabaseAuthRepository                         |
+| **City Download**                | ✅ Implemented | CityPickerScreen                 | CityRepositoryImpl, SupabaseCityDataSource                   |
+| **Search**                       | ✅ Implemented | HomeScreen                       | SearchCubit, ParcelQueryService, HoldingSearchService        |
+| **Basin Filter**                 | ✅ Implemented | HomeScreen                       | ParcelQueryService.availableBasins()                         |
+| **Detail View**                  | ✅ Implemented | HoldingDetailScreen              | ParcelDetailCard widget                                      |
+| **Inline Edit**                  | ✅ Implemented | ParcelDetailCard                 | HoldingsApi.editHolding(), HoldingsRepository.updateParcel() |
+| **Copy-All**                     | ✅ Implemented | ParcelDetailCard                 | ClipboardFormatter.formatForClipboard()                      |
+| **Bulk Edit**                    | ✅ Implemented | HomeScreen (mode)                | BulkEditService, HoldingsApi.bulkEditHoldings()              |
+| **Add New Person**               | ✅ Implemented | AddRecordScreen                  | HoldingsRepository.addLocalParcel(), HoldingsApi.addRecord() |
+| **Add Parcel (existing person)** | ✅ Implemented | HoldingDetailScreen              | HoldingsRepository.addLocalParcel(parentHoldingId=...)       |
+| **Borders Navigator**            | ✅ Implemented | ParcelDetailCard (BorderCompass) | BorderNameIndex.findByBorderText()                           |
+| **Realtime Updates**             | ✅ Implemented | (background)                     | RealtimeSyncService                                          |
+| **Staleness Check**              | ✅ Implemented | App open                         | CityRepository.remoteDataVersion()                           |
+| **Mark Reviewed**                | ✅ Implemented | Detail screen                    | HoldingsApi.markReviewed()                                   |
+| **Settings (font/theme)**        | ✅ Implemented | SettingsSheet                    | AppSettingsCubit                                             |
+| **Offline Support**              | ⚠️ Partial     | (cache/edits)                    | ParcelEditsStore, CitySnapshotCache                          |
+| **Voice Search**                 | ✅ Implemented | HomeScreen                       | VoiceSearchService                                           |
 
 ### Not Yet Implemented
 
-| Feature | Why | Planned Phase |
-|---------|-----|---------------|
-| **Sync Outbox** | Online-first design; no queue | Phase 3 (if going local-first) |
-| **Conflict Resolution UI** | Rare (single team per city) | Phase 6 |
-| **Export to Excel** | Dashboard feature | (dashboard repo) |
-| **Person Grouping UI** | person_id added recently; UI pending | TBD |
-| **Unreviewed Filter** | Data model ready; UI not wired | TBD |
+| Feature                    | Why                                  | Planned Phase                  |
+| -------------------------- | ------------------------------------ | ------------------------------ |
+| **Sync Outbox**            | Online-first design; no queue        | Phase 3 (if going local-first) |
+| **Conflict Resolution UI** | Rare (single team per city)          | Phase 6                        |
+| **Export to Excel**        | Dashboard feature                    | (dashboard repo)               |
+| **Person Grouping UI**     | person_id added recently; UI pending | TBD                            |
+| **Unreviewed Filter**      | Data model ready; UI not wired       | TBD                            |
 
 ---
 
 ## 13. Current Business Rules (Implicit in Code)
 
 ### City & Downloads
+
 1. Only `status='published'` cities are offered to field app (enforced by RLS + query filter).
 2. City download is one operation: holdings + edits + approved added_holdings + counts in one round-trip.
 3. Staleness check happens on app open (fetch city.data_version, compare with cached snapshot).
 4. Re-download on stale prompted by banner (not automatic; respects metered connections).
 
 ### Parcels & Holding Identity
+
 5. One `Parcel` row = one row of land data; multiple rows can share same رقم الحيازة (holding ID).
 6. Search/grouping by `groupKey` (not raw holding_id_number): pending records group by unique id to prevent merge.
 7. Brand-new person has `holding_id_number = "-1"` (placeholder) until dashboard assigns official number.
 8. "Add parcel to person" copies all fields from parent except area (feddan/qirat/sahm) and land_number (defaults to "-1").
 
 ### Edits & Corrections
+
 9. Corrections stored append-only in `holding_edits` table (never update/delete).
 10. Merge on download: fetch original holding row, overlay latest edit from `holding_edits_latest`.
 11. Merge on edit: if edit already exists for same holding, new edit replaces it (last-write-wins by client_edited_at).
@@ -1008,18 +1068,21 @@ class ClipboardFormatter {
 13. Locally, edits are overlaid via `ParcelEditOverlay.apply(original, snapshot)` from `ParcelEditsStore` (JSON file per city).
 
 ### Field-Added Records
+
 14. New persons/parcels created by field worker go to `added_holdings` table, not `holdings`.
 15. `added_holdings` row has `client_id` unique constraint for idempotent sync (retry-safe).
 16. Dashboard-approved records auto-promoted to `holdings` (trigger inferred; Realtime event fires).
 17. Once promoted, original `added_holdings` row is superseded; app ignores it (realtime handler filters by `promoted_holding_id is null`).
 
 ### Credit/Reform Types
+
 18. City's `association_type` (from `cities` table) gates which credit/reform options shown in app.
 19. `credit_type` (ملك/أوقاف) only shown for `agricultural_credit` cities.
 20. `reform_type` (إصلاح variants) only shown for `agricultural_reform` cities.
 21. `usage_type` (زراعة/مباني/etc.) and `is_inheritance`/`is_delegate` always shown (not gated).
 
 ### Copy-All & Prefixes
+
 22. Copy-all groups by basin (or all if no basin filter active).
 23. Prefix rules:
     - If `is_inheritance=true`: prepend "ورثة" to holder name.
@@ -1027,17 +1090,20 @@ class ClipboardFormatter {
     - If both: behavior unclear (see test for exact rule).
 
 ### Reviewed Status
+
 24. Field worker can mark a parcel `reviewed=true` (separate from edits; direct UPDATE).
 25. Reviewed status is per-parcel, not per-holding.
 26. Dashboard can see reviewed status; may use for "export only reviewed" reports.
 
 ### Search
+
 27. Search query normalized (Arabic diacritics removed).
 28. Ranked by: exact holder name match > substring match > national ID > holding ID.
 29. Can narrow to basin (filter, then search within).
 30. No full-text index (yet); ranking is in-memory per city.
 
 ### Borders
+
 31. Border text (الحدود) is unstructured; matched against holder/owner names by exact (normalized) string match.
 32. Match is O(1) via `BorderNameIndex` built once per dataset load.
 33. No fuzzy matching; ambiguous names resolve by first match.
@@ -1262,17 +1328,20 @@ class ClipboardFormatter {
     - Refactor: add Supabase-based analytics if needed.
 
 20. **Color Palette Not Themeable**
-   - Colors hardcoded per light/dark theme; no color variables or tokens.
-   - Refactor: extract to theme.colorScheme or Material Design 3 tokens.
+
+- Colors hardcoded per light/dark theme; no color variables or tokens.
+- Refactor: extract to theme.colorScheme or Material Design 3 tokens.
 
 21. **`holdings`'s `logic/`+`ui/` split vs. every other feature's `presentation/`**
-   - Real, confirmed naming drift (2026-08-06 audit), not just a stylistic nit — anyone reading this
-     doc's §1 tree literally alongside the real `holdings` folder will find it doesn't match.
-   - Refactor: pick one convention project-wide; tracked in `REFACTOR_ROADMAP.md` Phase 8.
+
+- Real, confirmed naming drift (2026-08-06 audit), not just a stylistic nit — anyone reading this
+  doc's §1 tree literally alongside the real `holdings` folder will find it doesn't match.
+- Refactor: pick one convention project-wide; tracked in `REFACTOR_ROADMAP.md` Phase 8.
 
 22. **Empty `lib/features/sync/presentation/` directory**
-   - Zero files; should be deleted outright, not merely renamed.
-   - Tracked in `REFACTOR_ROADMAP.md` Phase 8.
+
+- Zero files; should be deleted outright, not merely renamed.
+- Tracked in `REFACTOR_ROADMAP.md` Phase 8.
 
 ---
 
@@ -1332,7 +1401,7 @@ class ClipboardFormatter {
     - Confirm if this is future scope.
 
 11. **What is the corpus of test data?**
-    - Real sample file exists (الدير_ائتمان_مجمع.xlsx with ~1,200 rows, real PII).
+    - Real sample file exists (الدير*ائتمان*مجمع.xlsx with ~1,200 rows, real PII).
     - Trimmed test fixture used in tests?
     - Confirm fixture location and how to regenerate.
 
@@ -1349,26 +1418,26 @@ class ClipboardFormatter {
 
 ## 17. Version & Dependencies
 
-| Name | Version | Purpose |
-|------|---------|---------|
-| `flutter` | >=3.0.0 | Framework |
-| `flutter_bloc` | ^9.1.1 | State management |
-| `hydrated_bloc` | ^11.0.0 | Persistence (hydrated state) |
-| `supabase_flutter` | ^2.16.0 | Backend (auth + database + realtime) |
-| `easy_localization` | ^3.0.8 | i18n (Arabic/English) |
-| `uuid` | ^4.5.1 | UUID generation |
-| `url_launcher` | ^6.3.2 | Open URLs |
-| `flutter_secure_storage` | ^10.3.1 | Encrypted storage |
-| `shared_preferences` | ^2.5.5 | Key-value store |
-| `path_provider` | ^2.1.6 | File system paths |
-| `internet_connection_checker` | ^3.0.1 | Connectivity check |
-| `speech_to_text` | ^7.4.0 | Voice search (Android) |
-| `permission_handler` | ^12.0.3 | Runtime permissions |
-| `flutter_dotenv` | ^6.0.1 | Environment variables |
-| `equatable` | ^2.1.0 | Value equality |
-| `get_it` | ^9.2.1 | Dependency injection |
-| `google_fonts` | ^8.1.0 | Font loading |
-| `flutter_screenutil` | ^5.9.3 | Responsive sizing |
+| Name                          | Version | Purpose                              |
+| ----------------------------- | ------- | ------------------------------------ |
+| `flutter`                     | >=3.0.0 | Framework                            |
+| `flutter_bloc`                | ^9.1.1  | State management                     |
+| `hydrated_bloc`               | ^11.0.0 | Persistence (hydrated state)         |
+| `supabase_flutter`            | ^2.16.0 | Backend (auth + database + realtime) |
+| `easy_localization`           | ^3.0.8  | i18n (Arabic/English)                |
+| `uuid`                        | ^4.5.1  | UUID generation                      |
+| `url_launcher`                | ^6.3.2  | Open URLs                            |
+| `flutter_secure_storage`      | ^10.3.1 | Encrypted storage                    |
+| `shared_preferences`          | ^2.5.5  | Key-value store                      |
+| `path_provider`               | ^2.1.6  | File system paths                    |
+| `internet_connection_checker` | ^3.0.1  | Connectivity check                   |
+| `speech_to_text`              | ^7.4.0  | Voice search (Android)               |
+| `permission_handler`          | ^12.0.3 | Runtime permissions                  |
+| `flutter_dotenv`              | ^6.0.1  | Environment variables                |
+| `equatable`                   | ^2.1.0  | Value equality                       |
+| `get_it`                      | ^9.2.1  | Dependency injection                 |
+| `google_fonts`                | ^8.1.0  | Font loading                         |
+| `flutter_screenutil`          | ^5.9.3  | Responsive sizing                    |
 
 **Unused/stale claim:** none — `pubspec.yaml` confirmed to have zero Firebase packages as of the Phase
 6 cleanup (2026-08-06); no Firebase dependency was ever added to this project. See this doc's
@@ -1379,6 +1448,7 @@ top-of-file accuracy note.
 ## 18. Test Coverage
 
 ### Tested Components
+
 - `ParcelQueryService` (search, basin filtering, lookups)
 - `ParcelEditOverlay` (merge logic)
 - `BulkEditService` (bulk apply)
@@ -1391,6 +1461,7 @@ top-of-file accuracy note.
 - Added holdings mapper
 
 ### Untested Components
+
 - `ParcelDetailCard` (large widget; no widget tests)
 - `HomeScreen` (integration; no E2E tests)
 - `RealtimeSyncService` (realtime; mock Supabase needed)
@@ -1398,6 +1469,7 @@ top-of-file accuracy note.
 - `VoiceSearchService` (platform-specific)
 
 ### Strategy
+
 - Fakes over mocks for domain interfaces.
 - Test fixtures using real Arabic data (e.g., from trimmed `الدير_ائتمان_مجمع.xlsx`).
 - Target >= 90% coverage for domain services.
@@ -1407,10 +1479,12 @@ top-of-file accuracy note.
 ## 19. Build & Release
 
 ### Flavors
+
 - `development`: Points to dev Supabase project; `.env` from .env file.
 - `production`: Points to prod Supabase project; `.env` from environment.
 
 ### Build Commands
+
 ```bash
 make dev       # flutter run --flavor development --target lib/main_dev.dart
 make prod      # flutter run --flavor production --target lib/main_prod.dart
@@ -1421,6 +1495,7 @@ make generate  # dart run build_runner build
 ```
 
 ### Version
+
 - Current: 1.1.2+2
 - Naming: Semantic versioning (major.minor.patch + build).
 - Update in `pubspec.yaml` before each release.
@@ -1463,15 +1538,14 @@ make generate  # dart run build_runner build
 
 ## 21. Future Roadmap (From APP_PLAN.md)
 
-| Phase | Focus | Gate |
-|-------|-------|------|
-| 0 | Refactor (no behavior change) | flutter analyze + flutter test ✓ |
-| 1 | Supabase schema + RLS | RLS verified by hand ✓ |
-| 2 | Auth + city download | Download works offline ✓ |
-| 3 | Sync outbox (priority feature) | Edit → sync → appears on device B ✓ |
-| 4 | Add new person / add parcel | Both workflows work with correct server rows ✓ |
-| 5 | Retire Excel path | No file_picker / spreadsheet_decoder references |
-| 6 | Hardening | Offline 24h with 20 queued ops → clean sync |
+| Phase | Focus                          | Gate                                            |
+| ----- | ------------------------------ | ----------------------------------------------- |
+| 0     | Refactor (no behavior change)  | flutter analyze + flutter test ✓                |
+| 1     | Supabase schema + RLS          | RLS verified by hand ✓                          |
+| 2     | Auth + city download           | Download works offline ✓                        |
+| 3     | Sync outbox (priority feature) | Edit → sync → appears on device B ✓             |
+| 4     | Add new person / add parcel    | Both workflows work with correct server rows ✓  |
+| 5     | Retire Excel path              | No file_picker / spreadsheet_decoder references |
+| 6     | Hardening                      | Offline 24h with 20 queued ops → clean sync     |
 
 ---
-

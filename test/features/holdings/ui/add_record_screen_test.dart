@@ -11,7 +11,7 @@ import '../../../support/localized_widget_test_harness.dart';
 
 /// `add_record_screen.dart` was trimmed down to a fixed field list per the
 /// user's request (رقم الحيازة, اسم الحائز, اسم الحوض, رقم الأرض, المساحة,
-/// نوع الزرع, الملاحظات, الرقم القومي [new-person only], وراثة/مفوض toggles)
+/// نوع الزرع, الملاحظات, الرقم القومي [new-person only], ورثة/مفوض toggles)
 /// — عدد القطع/نوع الائتمان/نوع الاستخدام/مراحل النمو are no longer shown.
 /// اسم المالك now only appears once مفوض is toggled on, rather than always.
 class _InMemoryKeyValueStore implements KeyValueStore {
@@ -82,7 +82,8 @@ void main() {
     expect(find.text('اسم المالك'), findsNothing);
   });
 
-  testWidgets('عدد القطع/نوع الائتمان/نوع الاستخدام/مراحل النمو are no '
+  testWidgets(
+      'عدد القطع/نوع الائتمان/نوع الاستخدام/مراحل النمو are no '
       'longer shown on the trimmed form', (final tester) async {
     await _registerRepository();
 
@@ -98,7 +99,8 @@ void main() {
     expect(find.text('مراحل النمو'), findsNothing);
   });
 
-  testWidgets('الرقم القومي only shows for the new-person flow '
+  testWidgets(
+      'الرقم القومي only shows for the new-person flow '
       '(parentHoldingId == null)', (final tester) async {
     await _registerRepository();
 

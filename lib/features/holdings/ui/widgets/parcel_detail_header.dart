@@ -33,7 +33,7 @@ class ParcelDetailTopRow extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback onDeleteConfirmed;
 
-  /// وراثة / مفوض — real, DB-persisted `Parcel` fields (`REFACTOR_ROADMAP.md`
+  /// ورثة / مفوض — real, DB-persisted `Parcel` fields (`REFACTOR_ROADMAP.md`
   /// Phase 7); previously only shown via the Copy-All clipboard text prefix,
   /// never as a visible in-app badge.
   final bool isInheritance;

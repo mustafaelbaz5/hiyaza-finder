@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/clipboard_formatter.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 void main() {
   const ClipboardFormatter formatter = ClipboardFormatter();
@@ -35,18 +35,18 @@ void main() {
     });
   });
 
-  // The وراثة/مفوض prefix matrix (UI/UX Updates prompt "Change 1"/"Change
+  // The ورثة/مفوض prefix matrix (UI/UX Updates prompt "Change 1"/"Change
   // 2"): اسم الحائز is NEVER prefixed regardless of either toggle — مفوض is
   // represented only via the auto ملاحظات entry. اسم المالك gets "وارثه "
-  // (no brackets, trailing space) when وراثة is set, unaffected by مفوض.
-  group('وراثة/مفوض prefix matrix', () {
+  // (no brackets, trailing space) when ورثة is set, unaffected by مفوض.
+  group('ورثة/مفوض prefix matrix', () {
     test('neither toggle on — no prefix on either slot', () {
       final String text = formatter.format(baseParcel());
       expect(text, contains('اسم المالك: محمد علي'));
       expect(text, contains('اسم الحائز: محمد علي'));
     });
 
-    test('وراثة alone — owner gets "وارثه ", holder stays unprefixed', () {
+    test('ورثة alone — owner gets "وارثه ", holder stays unprefixed', () {
       final String text = formatter.format(baseParcel(isInheritance: true));
       expect(text, contains('اسم المالك: وارثه محمد علي'));
       expect(text, contains('اسم الحائز: محمد علي'));
@@ -62,7 +62,7 @@ void main() {
     );
 
     test(
-      'وراثة + مفوض together — owner still gets "وارثه ", holder unprefixed',
+      'ورثة + مفوض together — owner still gets "وارثه ", holder unprefixed',
       () {
         final String text = formatter.format(
           baseParcel(isInheritance: true, isDelegate: true),
@@ -83,7 +83,7 @@ void main() {
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('وراثة alone — owner gets "وارثه ", holder stays null', () {
+    test('ورثة alone — owner gets "وارثه ", holder stays null', () {
       final Parcel p = baseParcel(isInheritance: true);
       expect(formatter.holderNamePrefix(p), isNull);
       expect(formatter.ownerNamePrefix(p), 'وارثه ');
@@ -95,8 +95,7 @@ void main() {
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('وراثة + مفوض together — holder still null, owner keeps "وارثه "',
-        () {
+    test('ورثة + مفوض together — holder still null, owner keeps "وارثه "', () {
       final Parcel p = baseParcel(isInheritance: true, isDelegate: true);
       expect(formatter.holderNamePrefix(p), isNull);
       expect(formatter.ownerNamePrefix(p), 'وارثه ');
@@ -110,10 +109,16 @@ void main() {
       expect(text.split('\n').first, 'ID: uuid-123');
     });
 
-    test('رقم الأرض is the second line, right after ID', () {
-      const Parcel p = Parcel(holdingId: '55', landNumber: '13113851');
+    test('رقم الأرض comes right after كود الحوض', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        basinCode: 'B1',
+        landNumber: '13113851',
+      );
       final List<String> lines = formatter.format(p).split('\n');
-      expect(lines[1], 'رقم الأرض: 13113851');
+      final int basinCodeIndex =
+          lines.indexWhere((final String l) => l.startsWith('كود الحوض'));
+      expect(lines[basinCodeIndex + 1], 'رقم الأرض: 13113851');
     });
 
     test('رقم الأرض falls back to "0" when missing', () {

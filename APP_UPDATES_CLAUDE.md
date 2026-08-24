@@ -1,4 +1,5 @@
 # CLAUDE.md — HiyazaFinder App Updates
+
 ## Remaining Implementation Requirements
 
 > **اقرأ الملف ده بالكامل قبل أي سطر كود.**
@@ -16,7 +17,7 @@
 ✅ SOLID + Clean Code
 ✅ Local-First
 ✅ One class per file
-✅ One widget per file  
+✅ One widget per file
 ✅ ملف أقل من 150 سطر
 ✅ Use available skills
 ```
@@ -84,6 +85,7 @@ class CitySnapshot {
 ```
 
 ### Definition of Done
+
 ```
 □ Basin model موجود
 □ Download بيجيب parcels + basins في request واحد
@@ -99,6 +101,7 @@ class CitySnapshot {
 ### 2.1 شخص جديد بحيازة جديدة
 
 **الـ Required Fields:**
+
 ```
 رقم الحيازة         ← يدخله اليوزر
 اسم الحائز         ← يدخله اليوزر
@@ -111,6 +114,7 @@ class CitySnapshot {
 ```
 
 **الـ Default Values:**
+
 ```
 رقم الأرض     = "0"   (مش -1)
 اسم المالك    = اسم الحائز (تلقائي)
@@ -119,6 +123,7 @@ class CitySnapshot {
 ```
 
 **الـ Hidden Fields (مش بتظهر في Add Screen):**
+
 ```
 رقم الصفحة بالسجل   ← مش required في الإضافة
 الرقم الموحد للحيازة ← مش required في الإضافة
@@ -129,11 +134,13 @@ class CitySnapshot {
 ### 2.2 حيازة جديدة لشخص موجود
 
 **البحث:**
+
 - اليوزر بيبحث بـ رقم الحيازة
 - Exact match (زي الـ search algorithm)
 - لو لقى → بيعرض بيانات الشخص للتأكيد
 
 **البيانات اللي بتتورث تلقائياً:**
+
 ```
 اسم الحائز         ← من الشخص الموجود
 الرقم القومي       ← من الشخص الموجود
@@ -142,6 +149,7 @@ class CitySnapshot {
 ```
 
 **البيانات اللي اليوزر بيدخلها:**
+
 ```
 اسم الحوض    ← يختار من قائمة
 كود الحوض   ← تلقائي
@@ -151,6 +159,7 @@ class CitySnapshot {
 ```
 
 **الملاحظات:**
+
 ```
 = [] فاضية by default — مش required
 ```
@@ -172,6 +181,7 @@ void onBasinSelected(Basin basin) {
 ```
 
 ### Definition of Done
+
 ```
 □ Add Screen بيفرّق بين شخص جديد وشخص موجود
 □ البحث بـ رقم الحيازة exact match
@@ -229,7 +239,7 @@ void onDelegateToggled(bool enabled, Parcel parcel) {
 }
 ```
 
-### 3.3 وراثة + مفوض مع بعض
+### 3.3 ورثة + مفوض مع بعض
 
 ```dart
 // is_inheritance = true AND is_delegate = true:
@@ -250,6 +260,7 @@ String displayHolderName(LocalParcelData data, String holderName) {
 ```
 
 ### Definition of Done
+
 ```
 □ اسم المالك دايماً ظاهر (default = اسم الحائز)
 □ اسم المالك read-only لو المفوض مش مفعّل
@@ -340,6 +351,7 @@ void _addNoteIfAbsent(String note) {
 ```
 
 ### Definition of Done
+
 ```
 □ 3 options فقط: زراعة / مباني / بور
 □ نوع المحصول + مراحل النمو بيختفوا لو مش زراعة
@@ -415,12 +427,14 @@ class NotesListService {
 ### 5.4 Notes Settings
 
 متاحة من City Tools Screen:
+
 - عرض القائمة الحالية
 - إضافة note جديدة للقائمة
 - حذف note من القائمة
 - مش بتأثر على notes المضافة فعلاً للقطع
 
 ### Definition of Done
+
 ```
 □ Default list = 3 notes ثابتة
 □ اليوزر يقدر يضيف للقائمة من Settings
@@ -492,6 +506,7 @@ String buildCopyAllText({
 ```
 
 ### Definition of Done
+
 ```
 □ Format منسّق وواضح
 □ نوع المحصول + مراحل النمو بيظهروا بس لو زراعة
@@ -589,6 +604,7 @@ SearchType detectSearchType(String query) {
 - لما يدخل → Detail Screen بكل القطع
 
 ### Definition of Done
+
 ```
 □ رقم الحيازة: exact match فقط
 □ اسم الحائز: startsWith على كل جزء من الاسم
@@ -617,6 +633,7 @@ const defaultHoldingNumber = '0'; // بدل -1
 ```
 
 ### Definition of Done
+
 ```
 □ مفيش -1 في أي قيمة default
 □ رقم الأرض default = "0"
@@ -637,6 +654,7 @@ const defaultHoldingNumber = '0'; // بدل -1
 ```
 
 **الأيقونات:**
+
 ```
 🏘  → Basins Page
 ⚙️  → City Tools Screen
@@ -644,12 +662,14 @@ const defaultHoldingNumber = '0'; // بدل -1
 ```
 
 **بيتشال من الـ Header:**
+
 ```
 ❌ Wi-Fi / Internet status indicator
 ❌ Basin filter icon
 ```
 
 **بيفضل في الـ Home:**
+
 ```
 ✅ قائمة الحيازات (كل الأحواض مع بعض)
 ✅ FAB لإضافة شخص
@@ -676,6 +696,7 @@ const defaultHoldingNumber = '0'; // بدل -1
 ```
 
 **كل Basin Card يحتوي:**
+
 ```
 اسم الحوض
 كود الحوض
@@ -711,6 +732,7 @@ Progress bar
 ```
 
 **[📤] Export Button:**
+
 ```
 يفتح Bottom Sheet:
 ┌─────────────────────────────────┐
@@ -726,18 +748,21 @@ Progress bar
 ### 9.4 شيل Wi-Fi Indicator
 
 **احذف من:**
+
 ```
 ❌ home_top_bar.dart → _ConnectionQualityBadge widget
 ❌ أي مكان تاني بيعرض internet status
 ```
 
 **فضّل:**
+
 ```
 ✅ Internet check بس وقت الـ download
 ✅ Error message واضحة لو الـ download فشل بسبب الـ network
 ```
 
 ### Definition of Done
+
 ```
 □ Wi-Fi indicator اتشال من كل الـ UI
 □ Home header فيه: search + 3 أيقونات بس
@@ -752,6 +777,7 @@ Progress bar
 ## 10. City Tools Screen — التعديل
 
 ### 10.1 بيتشال
+
 ```
 ❌ إحصائيات الأحواض section كاملاً
 ```
@@ -759,6 +785,7 @@ Progress bar
 ### 10.2 بيتضاف في الأول
 
 **City Info Card:**
+
 ```
 ┌─────────────────────────────────┐
 │  شنشا                           │
@@ -776,12 +803,15 @@ Progress bar
 ```
 
 **[نسخ] بجانب اسم الجمعية:**
+
 - ينسخ اسم الجمعية للـ clipboard
 
 **[نسخ] بجانب كود الجمعية:**
+
 - ينسخ كود الجمعية للـ clipboard
 
 ### Definition of Done
+
 ```
 □ City Info Card في أول الصفحة
 □ نسخ اسم الجمعية شغال
@@ -809,6 +839,7 @@ List<Parcel> sortParcelsByBasin(List<Parcel> parcels) {
 ## 12. Implementation Phases
 
 ### Phase 1 — Basin Model + Download
+
 ```
 1.1 أنشئ features/cities/data/model/basin.dart
 1.2 عدّل city_remote_ds.dart → downloadCityData() يرجع parcels + basins
@@ -823,6 +854,7 @@ Definition of Done:
 ```
 
 ### Phase 2 — Navigation Restructure
+
 ```
 2.1 عدّل home_top_bar.dart:
     ❌ شيل Wi-Fi indicator
@@ -846,6 +878,7 @@ Definition of Done:
 ```
 
 ### Phase 3 — City Tools Update
+
 ```
 3.1 عدّل city_tools_screen.dart:
     ❌ شيل إحصائيات الأحواض
@@ -861,6 +894,7 @@ Definition of Done:
 ```
 
 ### Phase 4 — Add Record Screen Restructure
+
 ```
 4.1 عدّل add_record_screen.dart:
     - Tab/Toggle: شخص جديد / شخص موجود
@@ -886,6 +920,7 @@ Definition of Done:
 ```
 
 ### Phase 5 — نوع الاستخدام + Notes System
+
 ```
 5.1 أنشئ UsageType enum في data/model/
 5.2 عدّل LocalParcelData → usageType + notes: List<String>
@@ -906,8 +941,9 @@ Definition of Done:
 ```
 
 ### Phase 6 — Owner Name + Toggles
+
 ```
-6.1 عدّل toggle_field_row.dart (وراثة + مفوض)
+6.1 عدّل toggle_field_row.dart (ورثة + مفوض)
 6.2 أنشئ features/holdings/ui/widgets/owner_name_field.dart
     - ظاهر دايماً
     - read-only لو المفوض مش مفعّل
@@ -924,6 +960,7 @@ Definition of Done:
 ```
 
 ### Phase 7 — Copy All + Search
+
 ```
 7.1 عدّل clipboard_formatter.dart → buildCopyAllText()
     - نوع الائتمان من AssociationType
@@ -943,6 +980,7 @@ Definition of Done:
 ```
 
 ### Phase 8 — Detail Screen + Sort
+
 ```
 8.1 عدّل detail_screen.dart:
     - القطع مرتبة بـ basin name
@@ -959,6 +997,7 @@ Definition of Done:
 ```
 
 ### Phase 9 — Final Verification
+
 ```
 □ flutter analyze → zero issues
 □ Basin details بتتحمّل مع البلد
@@ -992,5 +1031,5 @@ Definition of Done:
 
 ---
 
-*آخر تحديث: أغسطس 2026*
-*الإصدار: 4.0 — Remaining Requirements*
+_آخر تحديث: أغسطس 2026_
+_الإصدار: 4.0 — Remaining Requirements_

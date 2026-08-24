@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/bulk_edit_service.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/bulk_edit_service.dart';
 
 void main() {
   const BulkEditService service = BulkEditService();
@@ -42,12 +42,14 @@ void main() {
       isTrue,
     );
     expect(
-      result.parcels.firstWhere((final Parcel p) => p.basinName == 'السواخ').notes,
+      result.parcels
+          .firstWhere((final Parcel p) => p.basinName == 'السواخ')
+          .notes,
       isEmpty,
     );
   });
 
-  test('applies the boolean وراثة field', () {
+  test('applies the boolean ورثة field', () {
     final BulkEditResult result = service.apply(
       parcels,
       field: BulkEditableField.isInheritance,

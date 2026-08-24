@@ -172,7 +172,7 @@
       "password_required": "كلمة المرور مطلوبة"
     }
   },
-    "about": {
+  "about": {
     "sections": {
       "app_info": "معلومات التطبيق",
       "developer": "المطور",
@@ -223,8 +223,8 @@
       "usage_type": "نوع الاستخدام",
       "directorate": "المديرية",
       "administration": "الإدارة",
-      "inheritance": "وراثة",
-      "not_inheritance": "ليست وراثة",
+      "inheritance": "ورثة",
+      "not_inheritance": "ليست ورثة",
       "delegate": "مفوض",
       "not_delegate": "غير مفوض",
       "holder_name_farmer_card": "اسم الحائز (بطاقة الفلاح)",
@@ -271,7 +271,7 @@
       "added_from_app": "مضافة من التطبيق",
       "pending_review": "قيد المراجعة",
       "reviewed": "تم المراجعة",
-      "inheritance": "وراثة",
+      "inheritance": "ورثة",
       "delegate": "مفوض"
     },
     "association_type": {
@@ -334,6 +334,7 @@
       "copied": "تم النسخ",
       "copied_and_reviewed": "تم نسخ المعرّف وتحديد الحيازة كمُراجعة",
       "crop_type_required_to_copy": "اختر نوع الزرع قبل نسخ البيانات",
+      "area_required_to_copy": "أدخل المساحة (فدان/قيراط/سهم) قبل نسخ البيانات",
       "holding_id": "رقم الحيازة",
       "holding_id_pending": "بدون رقم — جديد",
       "holdings_count": "عدد القطع في الحيازة",
@@ -451,8 +452,8 @@
       "pick_basin_title": "اختر الحوض",
       "pick_field_title": "اختر الحقل",
       "value_placeholder": "—",
-      "inheritance_true": "وراثة",
-      "inheritance_false": "ليست وراثة",
+      "inheritance_true": "ورثة",
+      "inheritance_false": "ليست ورثة",
       "apply": "تطبيق",
       "confirm_message": "سيتم تطبيق \"{field}\" = \"{value}\" على {scope}. متابعة؟",
       "applied_message": "تم تحديث {count} سجل",

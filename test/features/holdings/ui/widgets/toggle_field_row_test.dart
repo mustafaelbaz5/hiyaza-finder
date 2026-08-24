@@ -12,49 +12,52 @@ void main() {
   testWidgets('renders the label', (final tester) async {
     await pumpLocalized(
       tester,
-      ToggleFieldRow(label: 'وراثة', value: false, onChanged: (final _) {}),
+      ToggleFieldRow(label: 'ورثة', value: false, onChanged: (final _) {}),
     );
 
-    expect(find.text('وراثة'), findsOneWidget);
+    expect(find.text('ورثة'), findsOneWidget);
   });
 
   testWidgets('shows the default "yes" text when true and no activeLabel given',
       (final tester) async {
     await pumpLocalized(
       tester,
-      ToggleFieldRow(label: 'وراثة', value: true, onChanged: (final _) {}),
+      ToggleFieldRow(label: 'ورثة', value: true, onChanged: (final _) {}),
     );
 
     expect(find.text('نعم'), findsOneWidget);
   });
 
-  testWidgets('shows the default "no" text when false and no inactiveLabel given',
+  testWidgets(
+      'shows the default "no" text when false and no inactiveLabel given',
       (final tester) async {
     await pumpLocalized(
       tester,
-      ToggleFieldRow(label: 'وراثة', value: false, onChanged: (final _) {}),
+      ToggleFieldRow(label: 'ورثة', value: false, onChanged: (final _) {}),
     );
 
     expect(find.text('لا'), findsOneWidget);
   });
 
-  testWidgets('shows the custom activeLabel when true and given', (final tester) async {
+  testWidgets('shows the custom activeLabel when true and given',
+      (final tester) async {
     await pumpLocalized(
       tester,
       ToggleFieldRow(
-        label: 'وراثة',
+        label: 'ورثة',
         value: true,
-        activeLabel: 'وراثة',
-        inactiveLabel: 'ليست وراثة',
+        activeLabel: 'ورثة',
+        inactiveLabel: 'ليست ورثة',
         onChanged: (final _) {},
       ),
     );
 
-    // Both the field label and the active state text render "وراثة" here.
-    expect(find.text('وراثة'), findsNWidgets(2));
+    // Both the field label and the active state text render "ورثة" here.
+    expect(find.text('ورثة'), findsNWidgets(2));
   });
 
-  testWidgets('shows the custom inactiveLabel when false and given', (final tester) async {
+  testWidgets('shows the custom inactiveLabel when false and given',
+      (final tester) async {
     await pumpLocalized(
       tester,
       ToggleFieldRow(
@@ -72,7 +75,7 @@ void main() {
   testWidgets('the switch reflects value', (final tester) async {
     await pumpLocalized(
       tester,
-      ToggleFieldRow(label: 'وراثة', value: true, onChanged: (final _) {}),
+      ToggleFieldRow(label: 'ورثة', value: true, onChanged: (final _) {}),
     );
 
     final Switch switchWidget = tester.widget(find.byType(Switch));
@@ -85,7 +88,7 @@ void main() {
     await pumpLocalized(
       tester,
       ToggleFieldRow(
-        label: 'وراثة',
+        label: 'ورثة',
         value: false,
         onChanged: (final bool v) => received = v,
       ),
@@ -97,11 +100,12 @@ void main() {
     expect(received, isTrue);
   });
 
-  testWidgets('shows the modified badge only when isModified is true', (final tester) async {
+  testWidgets('shows the modified badge only when isModified is true',
+      (final tester) async {
     await pumpLocalized(
       tester,
       ToggleFieldRow(
-        label: 'وراثة',
+        label: 'ورثة',
         value: false,
         isModified: true,
         onChanged: (final _) {},
@@ -111,10 +115,11 @@ void main() {
     expect(find.text('تم التعديل'), findsOneWidget);
   });
 
-  testWidgets('does not show the modified badge by default', (final tester) async {
+  testWidgets('does not show the modified badge by default',
+      (final tester) async {
     await pumpLocalized(
       tester,
-      ToggleFieldRow(label: 'وراثة', value: false, onChanged: (final _) {}),
+      ToggleFieldRow(label: 'ورثة', value: false, onChanged: (final _) {}),
     );
 
     expect(find.text('تم التعديل'), findsNothing);

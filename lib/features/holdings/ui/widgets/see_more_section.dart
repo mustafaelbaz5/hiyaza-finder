@@ -202,7 +202,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       );
 
   /// Exact row layout per `REFACTOR_ROADMAP.md` Phase 11 §5:
-  /// Row 1 وراثة/مفوض, Row 2 كود الحوض/نوع الائتمان أو الإصلاح, Row 3
+  /// Row 1 ورثة/مفوض, Row 2 كود الحوض/نوع الائتمان أو الإصلاح, Row 3
   /// مراحل النمو (full-width), Row 4 المديرية/الإدارة. اسم الجمعية (moved
   /// here from the primary area, §4) and نوع الاستخدام (kept, not in the
   /// spec's 4 named rows) come after as their own full-width rows rather

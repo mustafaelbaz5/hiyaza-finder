@@ -334,6 +334,7 @@
       "copied": "Copied",
       "copied_and_reviewed": "ID copied and holding marked as reviewed",
       "crop_type_required_to_copy": "Please select the crop type before copying data",
+      "area_required_to_copy": "Enter the area (feddan/qirat/sahm) before copying data",
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
       "holdings_count": "Number of parcels in holding",

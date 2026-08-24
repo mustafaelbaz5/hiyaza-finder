@@ -149,13 +149,14 @@ class Parcel {
   // --- Fields added in-app (never parsed from the Excel file) ---
   final String? ownerName; // اسم المالك
   final String? associationName; // اسم الجمعية — derived from the file name
-  final String? associationCode; // كود الجمعية — read-only, from `parcels.association_code`
+  final String?
+      associationCode; // كود الجمعية — read-only, from `parcels.association_code`
   final String? cropType; // نوع الزرع
   final List<String> notes; // ملاحظات — free-text + quick-pick entries
   final String
       creditType; // نوع الائتمان: ملك / أوقاف (only for agricultural credit)
   final String reformType; // نوع الإصلاح: for agricultural reform cities
-  final bool isInheritance; // وراثة — prefixes اسم المالك display with "وارثه "
+  final bool isInheritance; // ورثة — prefixes اسم المالك display with "وارثه "
   final bool
       isDelegate; // مفوض — represented only via the auto "مفوض عنه {holder}" ملاحظات entry, never a name prefix
   final String usageType; // نوع الاستخدام
@@ -178,7 +179,8 @@ class Parcel {
   /// (`HoldingsRepository.setParcelCompleted`'s `mark_parcel_completed` RPC
   /// in particular).
   bool get isCurrentlyInAddedHoldings =>
-      isFieldAdded && (sourceAddedHoldingId == null || sourceAddedHoldingId == id);
+      isFieldAdded &&
+      (sourceAddedHoldingId == null || sourceAddedHoldingId == id);
 
   /// Whether رقم الحيازة hasn't been officially assigned yet — true for a
   /// brand-new person added in the field whose display value is still one
@@ -213,10 +215,9 @@ class Parcel {
   /// until given a real number — grouping by it directly would silently
   /// merge unrelated new people into one search result/detail screen, so
   /// pending records group by their own unique [id] instead.
-  String get groupKey =>
-      isHoldingIdPending
-          ? 'pending:${personId ?? pendingGroupId ?? id}'
-          : holdingId;
+  String get groupKey => isHoldingIdPending
+      ? 'pending:${personId ?? pendingGroupId ?? id}'
+      : holdingId;
 
   /// Whether a required text/choice field actually has a value — blank,
   /// whitespace-only, and the literal `"-"` placeholder (used elsewhere for
@@ -417,8 +418,7 @@ class Parcel {
 
     return Parcel(
       id: id ?? this.id,
-      sourceAddedHoldingId:
-          sourceAddedHoldingId ?? this.sourceAddedHoldingId,
+      sourceAddedHoldingId: sourceAddedHoldingId ?? this.sourceAddedHoldingId,
       personId: personId ?? this.personId,
       holdingId: holdingId ?? this.holdingId,
       pageNumber: resolve(pageNumber, this.pageNumber),

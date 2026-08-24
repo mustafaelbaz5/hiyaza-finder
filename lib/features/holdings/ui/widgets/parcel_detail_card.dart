@@ -2,7 +2,18 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
 import '../../data/local/credit_type_notes_sync.dart';
@@ -11,27 +22,15 @@ import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
 import '../../data/repo/holdings_repository.dart';
-import 'see_more_section.dart';
-
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/errors/error_message_resolver.dart';
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../../cities/data/model/association_type.dart';
-
 import 'basin_picker.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
-import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'notes_field.dart';
 import 'parcel_detail_header.dart';
 import 'required_field_gaps.dart';
+import 'see_more_section.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -202,7 +201,7 @@ class ParcelDetailCard extends StatelessWidget {
           verticalSpacing(8),
           FieldRow(
             label: 'holdings.fields.owner_name'.tr(),
-            // وراثة prefix shown here matches `ClipboardFormatter`'s exact
+            // ورثة prefix shown here matches `ClipboardFormatter`'s exact
             // "وارثه " rule (UI/UX Updates prompt "Change 2") — display
             // only, the edit dialog below still opens with the raw name.
             value: _formatter.displayOwnerName(parcel),
@@ -263,7 +262,8 @@ class ParcelDetailCard extends StatelessWidget {
                 _isModified((final p) => p.sahm),
             onEdit: () => _editArea(context),
           ),
-          if (UsageType.fromLabel(parcel.usageType) == UsageType.agricultural) ...[
+          if (UsageType.fromLabel(parcel.usageType) ==
+              UsageType.agricultural) ...[
             verticalSpacing(8),
             FieldRow(
               label: 'holdings.fields.crop_type'.tr(),
@@ -485,6 +485,18 @@ class ParcelDetailCard extends StatelessWidget {
     if (cropTypeRequired && !Parcel.isValueFilled(parcel.cropType)) {
       context
           .showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
+      return;
+    }
+    // المساحة must be a real, non-zero value — a saved 0 (or nothing
+    // entered at all) is indistinguishable otherwise, and copying it out
+    // would silently hand a field worker a record that reads as "no land"
+    // instead of "not yet surveyed" (`Parcel.isAreaFilled`'s own doc).
+    if (!Parcel.isAreaFilled(
+      feddan: parcel.feddan,
+      qirat: parcel.qirat,
+      sahm: parcel.sahm,
+    )) {
+      context.showErrorSnackBar('holdings.detail.area_required_to_copy'.tr());
       return;
     }
 

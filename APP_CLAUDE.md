@@ -1,4 +1,5 @@
 # CLAUDE.md — HiyazaFinder App
+
 ## Complete Refactor + New Features Plan
 
 > **اقرأ الملف ده بالكامل قبل أي سطر كود.**
@@ -45,6 +46,7 @@ lib/features/<feature>/
 ```
 
 ### قواعد الـ Pattern
+
 ```
 ❌ مفيش domain/ folder
 ❌ مفيش presentation/ folder
@@ -61,6 +63,7 @@ lib/features/<feature>/
 ## 3. الـ Features Structure
 
 ### 3.1 Feature: `cities`
+
 ```
 lib/features/cities/
 ├── data/
@@ -91,6 +94,7 @@ lib/features/cities/
 ```
 
 ### 3.2 Feature: `holdings`
+
 ```
 lib/features/holdings/
 ├── data/
@@ -158,6 +162,7 @@ lib/features/holdings/
 ```
 
 ### 3.3 Feature: `crop_type`
+
 ```
 lib/features/crop_type/
 ├── data/
@@ -173,6 +178,7 @@ lib/features/crop_type/
 ```
 
 ### 3.4 Feature: `about`
+
 ```
 lib/features/about/
 ├── data/
@@ -218,6 +224,7 @@ lib/features/about/
 ```
 
 **Logic:**
+
 - 🟢 = كل الحيازات completed
 - 🟡 = جزء completed
 - ⚪ = لا شيء completed
@@ -225,6 +232,7 @@ lib/features/about/
 - Search bar → يفتح Search Screen
 
 **State:**
+
 ```dart
 // home_state.dart
 enum HomeStatus { loading, noCity, loaded, error }
@@ -273,6 +281,7 @@ class BasinSummary {
 ```
 
 **Logic:**
+
 - مرتب بـ رقم الحيازة تصاعدياً
 - كل card = holding واحد (مش قطعة)
 - ✅ = كل قطع الحيازة completed
@@ -311,6 +320,7 @@ class BasinSummary {
 **القطع مرتبة بـ اسم الحوض أبجدياً**
 
 **Previous/Next:**
+
 ```dart
 // الترتيب = نفس ترتيب Basin Screen
 // السابق/التالي = الحيازة اللي قبل وبعد في نفس الحوض
@@ -428,6 +438,7 @@ List<SearchResult> searchByHolderName(List<Parcel> parcels, String query) {
 ### الـ Parcel Fields
 
 **من الـ DB (read-only من Supabase):**
+
 ```
 id, city_id, basin_id
 directorate, administration
@@ -441,6 +452,7 @@ border_north, border_south, border_east, border_west
 ```
 
 **locally فقط (بتتحفظ في ParcelEditsStore):**
+
 ```
 owner_name          ← اسم المالك (default = holder_name)
 usage_type          ← نوع الاستخدام (default = 'زراعة')
@@ -477,7 +489,7 @@ completed_at        ← DateTime?
 
 ## 7. الـ Toggle Logic الجديد
 
-### وراثة Toggle
+### ورثة Toggle
 
 ```dart
 // is_inheritance = true
@@ -635,6 +647,7 @@ const exportColumns = [
 ## 11. Implementation Phases
 
 ### Phase 1 — Supabase Removal + Package Update
+
 ```
 1.1 pubspec.yaml:
     ❌ supabase_flutter
@@ -657,6 +670,7 @@ Definition of Done:
 ```
 
 ### Phase 2 — Restructure: `cities`
+
 ```
 2.1 أنشئ folders الجديدة
 2.2 انقل models من domain/entities → data/model/
@@ -671,6 +685,7 @@ Definition of Done:
 ```
 
 ### Phase 3 — Restructure: `holdings` (Part 1 — Data Layer)
+
 ```
 3.1 أنشئ folders الجديدة
 3.2 انقل models
@@ -687,6 +702,7 @@ Definition of Done:
 ```
 
 ### Phase 4 — Restructure: `holdings` (Part 2 — Logic + UI)
+
 ```
 4.1 انقل + عدّل home_cubit.dart (Basin-First)
 4.2 أنشئ basin_screen.dart
@@ -703,6 +719,7 @@ Definition of Done:
 ```
 
 ### Phase 5 — Search Algorithm الجديد
+
 ```
 5.1 عدّل holding_search_service.dart:
     - detectSearchType()
@@ -721,6 +738,7 @@ Definition of Done:
 ```
 
 ### Phase 6 — Notes + Toggles الجديدة
+
 ```
 6.1 عدّل Parcel model:
     - notes: List<String> (مش String)
@@ -731,7 +749,7 @@ Definition of Done:
     - حذف note
 
 6.3 عدّل toggle logic:
-    - وراثة → display prefix بس
+    - ورثة → display prefix بس
     - مفوض → Dialog + owner_name + auto-note
     - الاتنين مع بعض → combined logic
 
@@ -741,11 +759,12 @@ Definition of Done:
 
 Definition of Done:
 □ Notes بتتضاف وتتحذف صح
-□ وراثة بتظهر في العرض والـ copy
+□ ورثة بتظهر في العرض والـ copy
 □ مفوض بيفتح Dialog ويضيف ملاحظة تلقائي
 ```
 
 ### Phase 7 — Export Feature
+
 ```
 7.1 أنشئ export_service.dart في data/local/
 7.2 أنشئ export_screen.dart
@@ -761,6 +780,7 @@ Definition of Done:
 ```
 
 ### Phase 8 — crop_type Feature
+
 ```
 8.1 أنشئ lib/features/crop_type/
 8.2 LocalCropTypeService (SharedPreferences)
@@ -773,6 +793,7 @@ Definition of Done:
 ```
 
 ### Phase 9 — About + Core Cleanup
+
 ```
 9.1 Restructure about feature
 9.2 احذف DI modules (auth + sync)
@@ -788,6 +809,7 @@ Definition of Done:
 ```
 
 ### Phase 10 — Final Verification
+
 ```
 □ flutter pub get → no errors
 □ flutter analyze → zero issues
@@ -808,26 +830,26 @@ Definition of Done:
 
 ## 12. قواعد لا تُكسر
 
-| القاعدة | التفصيل |
-|---|---|
-| ❌ لا Supabase SDK | http فقط |
-| ❌ لا Auth | HomeScreen مباشرة |
-| ❌ لا writes على network | local only |
-| ❌ لا domain/ folder | models في data/model/ |
-| ❌ لا presentation/ folder | ui/ بدلها |
-| ❌ لا any في Dart | strong typing دايماً |
-| ❌ لا business logic في UI | services + repo بس |
-| ❌ لا hardcoded strings | constants أو localization |
-| ✅ Phase by phase | لا قفز بين phases |
-| ✅ ui/ → logic/ فقط | مش data/ مباشرة |
-| ✅ logic/ → repo interface | مش impl |
-| ✅ one class per file | |
-| ✅ one widget per file | |
-| ✅ ملف أقل من 150 سطر | لو أكبر → اقسمه |
-| ✅ Use available skills | استخدم أي skill مفيدة |
-| ✅ Export-ready | LocalAddedParcelsStore + LocalEditTracker |
-| ✅ Preview قبل Export | اليوزر يشوف قبل التنزيل |
-| ✅ Batch operations | +100 عنصر → batches |
+| القاعدة                    | التفصيل                                   |
+| -------------------------- | ----------------------------------------- |
+| ❌ لا Supabase SDK         | http فقط                                  |
+| ❌ لا Auth                 | HomeScreen مباشرة                         |
+| ❌ لا writes على network   | local only                                |
+| ❌ لا domain/ folder       | models في data/model/                     |
+| ❌ لا presentation/ folder | ui/ بدلها                                 |
+| ❌ لا any في Dart          | strong typing دايماً                      |
+| ❌ لا business logic في UI | services + repo بس                        |
+| ❌ لا hardcoded strings    | constants أو localization                 |
+| ✅ Phase by phase          | لا قفز بين phases                         |
+| ✅ ui/ → logic/ فقط        | مش data/ مباشرة                           |
+| ✅ logic/ → repo interface | مش impl                                   |
+| ✅ one class per file      |                                           |
+| ✅ one widget per file     |                                           |
+| ✅ ملف أقل من 150 سطر      | لو أكبر → اقسمه                           |
+| ✅ Use available skills    | استخدم أي skill مفيدة                     |
+| ✅ Export-ready            | LocalAddedParcelsStore + LocalEditTracker |
+| ✅ Preview قبل Export      | اليوزر يشوف قبل التنزيل                   |
+| ✅ Batch operations        | +100 عنصر → batches                       |
 
 ---
 
@@ -851,5 +873,5 @@ Definition of Done:
 
 ---
 
-*آخر تحديث: أغسطس 2026*
-*الإصدار: 3.0 — Basin-First + New Features*
+_آخر تحديث: أغسطس 2026_
+_الإصدار: 3.0 — Basin-First + New Features_

@@ -18,6 +18,7 @@ for full per-item justification; this section carries only the final scope + cla
 **Objective:** close every confirmed structural gap without breaking anything currently live.
 
 **Classification legend** (per the deployment-safety rule governing this whole effort):
+
 - **Safe before release** — fully additive, zero Flutter dependency, deployable now with no
   coordination.
 - **Safe after Flutter update** — additive at the schema level, but only becomes meaningful once a
@@ -27,22 +28,22 @@ for full per-item justification; this section carries only the final scope + cla
   before/after verification pass, not a blind same-day rollout.
 - **Optional cleanup** — safe to defer indefinitely; do only once justified by actual need.
 
-| # | Item | Scope | Classification | Notes |
-|---|---|---|---|---|
-| 1 | `association_types` reference table (`DATABASE_REFERENCE.md` §4.1) | `create table association_types (...)`; seed 2 current values; `cities.association_type_code` new nullable column | **Safe before release** | Existing `association_type` enum untouched; Dashboard mgmt UI is separate follow-up work |
-| 2 | `holding_edits.holding_type` discriminator (§4.2, §7.1) | `alter table holding_edits add column holding_type text not null default 'holding' check (...)` | **Safe before release** | Zero Flutter dependency (confirmed: zero `.rpc()` calls, column never read by any live query); old rows get an approximate default, see §7.1 caveat |
-| 3 | `editable_fields` table + validation trigger (§4.3, §7.2) | `create table editable_fields (...)` + trigger, deployed **warn-only** first | **Safe before release** for the table + warn-only trigger; promotion to reject-mode is its own later step, treated as **Requires maintenance window** in spirit (needs an observation window against real traffic, not a timed rollout) | Do not enable rejection until a confirmed zero-unknown-key observation period |
-| 4 | `added_holdings.reform_type` (§4.4) | — | **Already live** — no migration needed | Confirmed via column comment on the live schema |
-| 5 | `city_top_holders` refresh automation (§4.5) | — | **Retired — moot** | Live-verified plain view, not materialized; no refresh step exists to automate |
-| 6 | `persons` table (§4.6) | — | **Not building** | Superseded; `person_id` (already live) is the real, correct mechanism |
-| 6b | `person_client_id` (§7.5, new finding) | — | **Not building; doc cleanup only** | Confirmed absent from live schema; delete/mark-abandoned the stale Flutter-repo migration file that introduced it |
-| 7 | Completion state `completed_at`/`completed_by` (§4.7) | `alter table holdings/added_holdings add column completed_at timestamptz, add column completed_by uuid references profiles(id)` | **Safe before release**, but functionally inert until Flutter Phase 2 reads/writes it — tracked as **Safe after Flutter update** for when it becomes *meaningful*, even though the migration itself can ship immediately | Explicitly named as a current Flutter Phase 2 blocker in this doc's own prior status update |
-| 8 | Soft delete `deleted_at`/`deleted_by` on `added_holdings` (§4.8) | `alter table added_holdings add column deleted_at timestamptz, add column deleted_by uuid references profiles(id)` | **Safe before release**; filter-usage is **Safe after Flutter update** | Existing queries keep returning these rows until Flutter Phase 2 adds `deleted_at is null` filters |
-| 9 | Sync idempotency `operation_id`/`target_was_stale` (§4.9, §7 decision) | `alter table holding_edits add column operation_id uuid unique; add column target_was_stale boolean not null default false` | **Safe before release** | Repurposed as general retry-safety/staleness-detection infrastructure, independent of the abandoned offline outbox — see §7's alternatives-considered writeup for why this wasn't dropped |
-| 10 | National ID format CHECK (§4.10, §7.6) | `check (national_id ~ '^\d{14}$' or national_id = '1111111111')` on `holdings`/`added_holdings`, added **`VALID`, not `NOT VALID`** | **Safe before release** | Live audit: only 1 non-conforming row per table, both the known placeholder — constraint is 100% compliant with current data once the placeholder is exempted, no need for the cautious `NOT VALID` path |
-| 11 | `commit_import_batch` dedup guard (§7.4, new finding) | Add `on conflict (city_id, dedup_key) do nothing` to the existing insert, wire the already-present-but-hardcoded `rowsDuplicate` response field to the real count | **Requires maintenance window** | Confirmed live: the function currently has **zero** dedup guard — a behavior change to an existing, load-bearing function, not a new additive object; needs a deliberate test-import verification pass (duplicate/fresh/partial-overlap files) before shipping, and a small Dashboard follow-up to surface the now-real `rowsDuplicate` count |
-| 12 | Legacy `id`/`client_id` backfill on `added_holdings` (§6) | `update added_holdings set id = client_id where id <> client_id` + repoint `holding_edits.holding_id` for affected rows | **Requires maintenance window**, explicit sign-off gated | Live-reconfirmed: exactly 353 rows. Deferred to Phase 4, not this phase — rewrites synced production rows and an append-only audit table's keys |
-| 13 | `is_stale` column/index/filter cleanup | Drop the vestigial column, its index, and all `is_stale=false` filter clauses | **Optional cleanup** | Currently a functional no-op (nothing sets it `true` anymore); needs a full grep of every reader before removal, not urgent |
+| #   | Item                                                                   | Scope                                                                                                                                                             | Classification                                                                                                                                                                                                                          | Notes                                                                                                                                                                                                                                                                                                                                         |
+| --- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `association_types` reference table (`DATABASE_REFERENCE.md` §4.1)     | `create table association_types (...)`; seed 2 current values; `cities.association_type_code` new nullable column                                                 | **Safe before release**                                                                                                                                                                                                                 | Existing `association_type` enum untouched; Dashboard mgmt UI is separate follow-up work                                                                                                                                                                                                                                                      |
+| 2   | `holding_edits.holding_type` discriminator (§4.2, §7.1)                | `alter table holding_edits add column holding_type text not null default 'holding' check (...)`                                                                   | **Safe before release**                                                                                                                                                                                                                 | Zero Flutter dependency (confirmed: zero `.rpc()` calls, column never read by any live query); old rows get an approximate default, see §7.1 caveat                                                                                                                                                                                           |
+| 3   | `editable_fields` table + validation trigger (§4.3, §7.2)              | `create table editable_fields (...)` + trigger, deployed **warn-only** first                                                                                      | **Safe before release** for the table + warn-only trigger; promotion to reject-mode is its own later step, treated as **Requires maintenance window** in spirit (needs an observation window against real traffic, not a timed rollout) | Do not enable rejection until a confirmed zero-unknown-key observation period                                                                                                                                                                                                                                                                 |
+| 4   | `added_holdings.reform_type` (§4.4)                                    | —                                                                                                                                                                 | **Already live** — no migration needed                                                                                                                                                                                                  | Confirmed via column comment on the live schema                                                                                                                                                                                                                                                                                               |
+| 5   | `city_top_holders` refresh automation (§4.5)                           | —                                                                                                                                                                 | **Retired — moot**                                                                                                                                                                                                                      | Live-verified plain view, not materialized; no refresh step exists to automate                                                                                                                                                                                                                                                                |
+| 6   | `persons` table (§4.6)                                                 | —                                                                                                                                                                 | **Not building**                                                                                                                                                                                                                        | Superseded; `person_id` (already live) is the real, correct mechanism                                                                                                                                                                                                                                                                         |
+| 6b  | `person_client_id` (§7.5, new finding)                                 | —                                                                                                                                                                 | **Not building; doc cleanup only**                                                                                                                                                                                                      | Confirmed absent from live schema; delete/mark-abandoned the stale Flutter-repo migration file that introduced it                                                                                                                                                                                                                             |
+| 7   | Completion state `completed_at`/`completed_by` (§4.7)                  | `alter table holdings/added_holdings add column completed_at timestamptz, add column completed_by uuid references profiles(id)`                                   | **Safe before release**, but functionally inert until Flutter Phase 2 reads/writes it — tracked as **Safe after Flutter update** for when it becomes _meaningful_, even though the migration itself can ship immediately                | Explicitly named as a current Flutter Phase 2 blocker in this doc's own prior status update                                                                                                                                                                                                                                                   |
+| 8   | Soft delete `deleted_at`/`deleted_by` on `added_holdings` (§4.8)       | `alter table added_holdings add column deleted_at timestamptz, add column deleted_by uuid references profiles(id)`                                                | **Safe before release**; filter-usage is **Safe after Flutter update**                                                                                                                                                                  | Existing queries keep returning these rows until Flutter Phase 2 adds `deleted_at is null` filters                                                                                                                                                                                                                                            |
+| 9   | Sync idempotency `operation_id`/`target_was_stale` (§4.9, §7 decision) | `alter table holding_edits add column operation_id uuid unique; add column target_was_stale boolean not null default false`                                       | **Safe before release**                                                                                                                                                                                                                 | Repurposed as general retry-safety/staleness-detection infrastructure, independent of the abandoned offline outbox — see §7's alternatives-considered writeup for why this wasn't dropped                                                                                                                                                     |
+| 10  | National ID format CHECK (§4.10, §7.6)                                 | `check (national_id ~ '^\d{14}$' or national_id = '1111111111')` on `holdings`/`added_holdings`, added **`VALID`, not `NOT VALID`**                               | **Safe before release**                                                                                                                                                                                                                 | Live audit: only 1 non-conforming row per table, both the known placeholder — constraint is 100% compliant with current data once the placeholder is exempted, no need for the cautious `NOT VALID` path                                                                                                                                      |
+| 11  | `commit_import_batch` dedup guard (§7.4, new finding)                  | Add `on conflict (city_id, dedup_key) do nothing` to the existing insert, wire the already-present-but-hardcoded `rowsDuplicate` response field to the real count | **Requires maintenance window**                                                                                                                                                                                                         | Confirmed live: the function currently has **zero** dedup guard — a behavior change to an existing, load-bearing function, not a new additive object; needs a deliberate test-import verification pass (duplicate/fresh/partial-overlap files) before shipping, and a small Dashboard follow-up to surface the now-real `rowsDuplicate` count |
+| 12  | Legacy `id`/`client_id` backfill on `added_holdings` (§6)              | `update added_holdings set id = client_id where id <> client_id` + repoint `holding_edits.holding_id` for affected rows                                           | **Requires maintenance window**, explicit sign-off gated                                                                                                                                                                                | Live-reconfirmed: exactly 353 rows. Deferred to Phase 4, not this phase — rewrites synced production rows and an append-only audit table's keys                                                                                                                                                                                               |
+| 13  | `is_stale` column/index/filter cleanup                                 | Drop the vestigial column, its index, and all `is_stale=false` filter clauses                                                                                     | **Optional cleanup**                                                                                                                                                                                                                    | Currently a functional no-op (nothing sets it `true` anymore); needs a full grep of every reader before removal, not urgent                                                                                                                                                                                                                   |
 
 **Dependencies:** items 1, 2, 3 (table+warn-trigger), 7, 8, 9, 10 have none — can start immediately.
 Item 11 (import dedup) has no schema dependency but needs its own verification pass. Item 12 needs
@@ -59,7 +60,7 @@ not assumed. Item 11's risk is behavioral (a currently-permissive import path be
 rejecting) rather than structural. Item 12 remains the one deliberately deferred, sign-off-gated risk.
 
 **Notes:** Excel import/export schema and behavior are out of scope for this phase, and for every phase.
-Item 11 touches the import *commit* function's dedup behavior, not the Excel column mapping/schema
+Item 11 touches the import _commit_ function's dedup behavior, not the Excel column mapping/schema
 itself — the export format and import field mapping remain untouched.
 
 ---
@@ -79,6 +80,7 @@ and — the highest-priority item — build a working, durable offline sync outb
 designed, never implemented), plus the new review/completion and add-person/add-parcel workflows.
 
 **Original scope (superseded):**
+
 - Split `HoldingsRepository` (646 lines today) into focused services along the lines already specified
   in the app's own prior planning doc (`ParcelQueryService`, `ParcelEditOverlay`, `BulkEditService`,
   `ClipboardFormatter`, plus new sync/completion services).
@@ -170,6 +172,7 @@ three landed commits) rather than a big-bang change.
 codebase and never touches import/export.
 
 **Scope:**
+
 - New Holding Details page. Plain composition, except association-type-conditional sections, which use
   a small registry (`SYSTEM_DESIGN.md` §3) since that variation already exists today (Credit vs. Reform
   fields).
@@ -197,6 +200,7 @@ codebase and never touches import/export.
 before they run.
 
 **Scope:**
+
 - Flutter captures the three export-gap fields (owner national ID, farmer-card names, growth stage)
   once their domain is fully defined; Dashboard removes its export fallback logic once real data flows.
 - **Legacy `id`/`client_id` backfill** (`DATABASE_REFERENCE.md` §6) — executed only after explicit
@@ -257,7 +261,7 @@ already-documented architectural decision.
   isn't a full recency sort), but `SearchResult.isFieldAdded` now breaks a same-score tie in favor of
   field-added parcels in `HoldingSearchService._groupAndRank`. Tests: `holding_search_service_test.dart`
   "isFieldAdded tiebreak" group.
-- ✅ **Holder-status UI badge.** `ParcelDetailTopRow` now shows وراثة/مفوض badges from
+- ✅ **Holder-status UI badge.** `ParcelDetailTopRow` now shows ورثة/مفوض badges from
   `parcel.isInheritance`/`isDelegate`, alongside the existing added/reviewed badges.
 - ✅ **Home screen summary cards.** New `StatusSummaryCards` widget (added/pending-review/reviewed
   parcel-row counts, derived from `HomeState.parcels` — no new state) shown below `FileInfoCard`.
@@ -328,8 +332,8 @@ off on implementing all four; each is built and gated independently before the n
      round-trip anymore when a `SyncRunner` is configured. A `_syncRunner == null` fallback path
      (test-mode, mirrors the old `holdingsApi == null` convention) preserves the exact original
      await-then-mutate ordering so existing repository tests asserting "a failed write leaves the
-     dataset untouched" keep passing unchanged — that invariant is real and correct for the *synchronous
-     test double*, it's just no longer true for the production optimistic path, which is now covered by
+     dataset untouched" keep passing unchanged — that invariant is real and correct for the _synchronous
+     test double_, it's just no longer true for the production optimistic path, which is now covered by
      its own dedicated test file (`holdings_repository_outbox_test.dart`, 7 tests) proving the local
      mutation happens before any network call and survives a network failure without being undone.
      `AddParcelSyncHandler`/`DeleteParcelSyncHandler`/`EditParcelSyncHandler`/
@@ -362,6 +366,7 @@ off on implementing all four; each is built and gated independently before the n
 
   **Phase 9 #9 complete** — flutter analyze clean, flutter test 263/263 passing (up from 250 before
   this item).
+
 - ✅ **In-app activity center per city (2026-08-06) — resolved as a scope clarification, not a
   reversal.** The full "activity center" reading (filterable history, drill-down lists, a dedicated
   screen) was and remains out of scope per §4's "lightweight... not a Dashboard replacement" boundary —
@@ -406,6 +411,7 @@ consistency) to `holdings` specifically. No phase has yet applied that same bar 
 features that went untouched this session: `auth`, `cities`, `about`, `sync`.
 
 **Done:**
+
 - ✅ **`holdings` `logic/`+`ui/` → `domain/`+`presentation/` rename.** Pure-Dart services
   (`arabic_normalizer`, `area_calculator`, `holding_search_service`) moved to `domain/services/`; the
   cubit moved to `presentation/cubit/`; `ui/screens`+`ui/widgets` merged into `presentation/`. `about`'s
@@ -454,18 +460,19 @@ widget test directly exercised the removed `onFinish` callback).
 
 **Coverage matrix:**
 
-| # | Requirement | Status | Evidence |
-|---|---|---|---|
-| 1 | Hide derived fields from manual entry | ⚠️ PARTIAL | `area_sqm` is already auto-calculated (`AreaCalculator.totalSqm`) whenever فدان/قيراط/سهم change, but is still rendered as its own tappable/editable `FieldRow` (`parcel_detail_card.dart`), duplicating the fraction field just above it and implying it's independently editable when it isn't. |
-| 2/8 | Reorganize details screen, most-used info first | ⚠️ PARTIAL | A primary (`ResponsiveFieldsWrap`) vs. secondary (`SeeMoreSection`, collapsed) split already exists and is reasonable, but not formally reviewed for ordering, and not named `section_holder`/`section_extra` as the localization keys of the same name imply. |
-| 3 | Copy ID = the only completion trigger, remove standalone Finish | ❌ MISSING | Copy ID already auto-completes (`_copyId` calls `setParcelCompleted(completed: true)`), but a fully independent Finish/Reopen button pair still exists (`ParcelDetailTopRow` → `DetailScreen._finishParcel`/`_reopenParcel`). Two independent paths write the same `completedAt` field today. |
-| 4 | Emphasize primary action, de-emphasize secondary | ❌ MISSING | Delete/Reopen/Finish/Copy ID/Copy All/Add Parcel all use comparable tonal/outlined weight — no visual hierarchy. |
-| 5 | Spacing/grouping/readability polish | ⚠️ PARTIAL | Rolled into #2/#8's reorganization pass rather than tracked separately. |
-| 6 | Faster data entry, fewer taps | ⚠️ PARTIAL | Rolled into #1 (removing the redundant area_sqm tap target) and #3 (removing the now-redundant Finish tap once Copy ID covers it). |
-| 7 | Floating Add Parcel action | ❌ MISSING | `DetailScreen` uses an inline `CustomTextButton.outlined` in the header (`detail_screen_header.dart`), not a FAB. `HomeScreen` already has a `FloatingActionButton.extended` precedent to follow (`home_screen.dart:392`). |
-| 9 | Growth Stage field | ✅ DONE | Real end-to-end field already existed (`Parcel.growthStages`, both DB tables, `SeeMoreSection`/`AddRecordScreen` UI) but as unconstrained free text. User supplied the real business value list — converted to a real option enum (`Parcel.growthStageOptions`) matching the `usageTypeOptions`/`cropTypeOptions` pattern.
+| #   | Requirement                                                     | Status     | Evidence                                                                                                                                                                                                                                                                                                                   |
+| --- | --------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Hide derived fields from manual entry                           | ⚠️ PARTIAL | `area_sqm` is already auto-calculated (`AreaCalculator.totalSqm`) whenever فدان/قيراط/سهم change, but is still rendered as its own tappable/editable `FieldRow` (`parcel_detail_card.dart`), duplicating the fraction field just above it and implying it's independently editable when it isn't.                          |
+| 2/8 | Reorganize details screen, most-used info first                 | ⚠️ PARTIAL | A primary (`ResponsiveFieldsWrap`) vs. secondary (`SeeMoreSection`, collapsed) split already exists and is reasonable, but not formally reviewed for ordering, and not named `section_holder`/`section_extra` as the localization keys of the same name imply.                                                             |
+| 3   | Copy ID = the only completion trigger, remove standalone Finish | ❌ MISSING | Copy ID already auto-completes (`_copyId` calls `setParcelCompleted(completed: true)`), but a fully independent Finish/Reopen button pair still exists (`ParcelDetailTopRow` → `DetailScreen._finishParcel`/`_reopenParcel`). Two independent paths write the same `completedAt` field today.                              |
+| 4   | Emphasize primary action, de-emphasize secondary                | ❌ MISSING | Delete/Reopen/Finish/Copy ID/Copy All/Add Parcel all use comparable tonal/outlined weight — no visual hierarchy.                                                                                                                                                                                                           |
+| 5   | Spacing/grouping/readability polish                             | ⚠️ PARTIAL | Rolled into #2/#8's reorganization pass rather than tracked separately.                                                                                                                                                                                                                                                    |
+| 6   | Faster data entry, fewer taps                                   | ⚠️ PARTIAL | Rolled into #1 (removing the redundant area_sqm tap target) and #3 (removing the now-redundant Finish tap once Copy ID covers it).                                                                                                                                                                                         |
+| 7   | Floating Add Parcel action                                      | ❌ MISSING | `DetailScreen` uses an inline `CustomTextButton.outlined` in the header (`detail_screen_header.dart`), not a FAB. `HomeScreen` already has a `FloatingActionButton.extended` precedent to follow (`home_screen.dart:392`).                                                                                                 |
+| 9   | Growth Stage field                                              | ✅ DONE    | Real end-to-end field already existed (`Parcel.growthStages`, both DB tables, `SeeMoreSection`/`AddRecordScreen` UI) but as unconstrained free text. User supplied the real business value list — converted to a real option enum (`Parcel.growthStageOptions`) matching the `usageTypeOptions`/`cropTypeOptions` pattern. |
 
 **Scope for this phase (all done, 2026-08-07):**
+
 - **#1** ✅ Removed `area_sqm`'s tap-to-edit affordance in `parcel_detail_card.dart` — display-only, driven purely by `AreaCalculator.totalSqm`.
 - **#3** ✅ Removed the standalone Finish button from `ParcelDetailTopRow`/`DetailScreen`; Copy ID remains the sole completion trigger. Reopen stays (still needed to undo a completion — no other UI path does that).
 - **#4** ✅ Restyled Copy ID (`ParcelIdChip`) as the visually primary action (filled, high-contrast green); `CopyAllButton` stepped down to an outlined secondary style so it no longer competes with it.
@@ -503,7 +510,7 @@ type appears empty right after saving a new person/parcel") does not originate i
 add/save/reload path — traced UI → `Parcel.copyWith` → `HoldingsRepository.addLocalParcel` →
 `ParcelDatasetState.append`/`setOriginal` → `ParcelQueryService.parcelsForHolding` →
 `DetailScreen._refreshFromRepository`, and `cropType` survives every hop intact (no JSON
-round-trip or overlay merge exists in this path at all — those only apply to the *edit* flow).
+round-trip or overlay merge exists in this path at all — those only apply to the _edit_ flow).
 Root cause: `auto_approve_added_holding()` and `approve_added_holding()` (Postgres functions,
 confirmed live via direct schema query) INSERT into `holdings` with an explicit column list that
 predates most of `added_holdings`' app-only columns — `crop_type`, `notes`, `credit_type`,
@@ -538,10 +545,10 @@ to scan/tap accurately on phones. `ملاحظات` stays a single-line `FieldRow
 it's a fixed-option dropdown via `Parcel.notesOptions`, never free text, so it never needed a
 taller block) rather than a separate redesign.
 
-**§6 — وراثة/مفوض name-prefix display added to the primary card.** New
+**§6 — ورثة/مفوض name-prefix display added to the primary card.** New
 `ClipboardFormatter.holderNamePrefix`/`ownerNamePrefix` (extracted from the existing `format()`
-prefix logic so the display and the copy-all text can never drift apart): مفوض overrides وراثة for
-اسم الحائز only, وراثة alone still prefixes both slots, matching the already-tested clipboard
+prefix logic so the display and the copy-all text can never drift apart): مفوض overrides ورثة for
+اسم الحائز only, ورثة alone still prefixes both slots, matching the already-tested clipboard
 matrix exactly. `ParcelDetailCard`'s owner/holder `FieldRow`s now show the prefixed name; the edit
 dialog still opens with the raw, unprefixed name. Inheritance/Delegate toggles themselves were
 already a compact adjacent pair in `SeeMoreSection` (two-per-row via `ResponsiveFieldsWrap` on
@@ -619,13 +626,13 @@ explicit order.
 
 **§4/§5 — اسم الجمعية moved into More Details; exact row layout rebuilt.** `see_more_section.dart`
 rewritten from one `ResponsiveFieldsWrap` (auto-wrapping, no manual pairing) to explicit rows via a
-new `_pairRow` helper: Row 1 وراثة/مفوض, Row 2 كود الحوض/نوع الائتمان-أو-الإصلاح, Row 3 مراحل النمو
+new `_pairRow` helper: Row 1 ورثة/مفوض, Row 2 كود الحوض/نوع الائتمان-أو-الإصلاح, Row 3 مراحل النمو
 (full-width), Row 4 المديرية/الإدارة — then اسم الجمعية (moved here from the primary card) and نوع
 الاستخدام as additional full-width rows, since the spec's 4 named rows didn't cover every existing
 field and "keep the rest of the existing functionality" ruled out dropping them.
 
 **§6/§7/§8/§9/§10 — reverified, no regressions.** Growth-stage spelling، farmer-card derivation، the
-`auto_approve_added_holding`/`approve_added_holding` DB fix، وراثة/مفوض name-prefix display، and the
+`auto_approve_added_holding`/`approve_added_holding` DB fix، ورثة/مفوض name-prefix display، and the
 `_copyId`→`setParcelCompleted` auto-review path were all already correct from Phase 10 — grepped
 each after this phase's edits to confirm nothing touched them incidentally.
 
@@ -683,6 +690,7 @@ retargeted from the removed `StatusBadge` to the surviving banner's text).
 ---
 
 ## Phase 12 — Copy-all visibility, notes auto-set correction, sync-completeness audit,
+
 snackbar clarity (2026-08-07)
 
 **Status: done.** A small, focused follow-up: `Parcel.defaultUsageType`/`defaultCreditType` were
@@ -697,7 +705,7 @@ rather than filled so `ParcelIdChip`'s solid-green fill still reads as the prima
 and hierarchy are not the same axis; the previous version conflated them.
 
 **الملاحظات no longer force-overwritten on every field edit.** Previously, `DetailScreen._updateField`
-unconditionally reset الملاحظات to "نقص بيانات الحصر" on *any* field save unless the save was itself
+unconditionally reset الملاحظات to "نقص بيانات الحصر" on _any_ field save unless the save was itself
 an explicit edit to الملاحظات — silently discarding whatever the user had actually written the moment
 they corrected an unrelated field (national ID, basin, crop type, anything). Replaced with exactly
 two deliberate triggers, per explicit user confirmation: المساحة (فدان/قيراط/سهم/المساحة بالمتر)
@@ -795,6 +803,7 @@ false` and never read `created_by` — so the moment promotion completed (near-i
 المضافة tab membership, and creator email were gone for good, not just delayed.
 
 Fixed at both layers:
+
 - **DB** (`supabase/migrations/20260808000001_preserve_added_provenance_on_promotion.sql`, applied
   live): added the three columns to `holdings`, and updated both `approve_added_holding` and
   `auto_approve_added_holding` to carry `created_by`/`is_field_added: true`/
@@ -805,7 +814,7 @@ Fixed at both layers:
   of hardcoding `isFieldAdded: false`.
 - **Flutter** (`parcel_status_filter.dart`): `DetailScreenTab.added.matches` was checking only
   `isFieldAdded`, while `ParcelDetailCard`'s own badge check used `isFieldAdded ||
-  sourceAddedHoldingId != null || isNew` — a parcel identified only via `sourceAddedHoldingId` (the
+sourceAddedHoldingId != null || isNew` — a parcel identified only via `sourceAddedHoldingId` (the
   common case right after promotion) showed the badge on the card but never appeared under the
   المضافة tab. Aligned the tab filter to the same definition.
 
@@ -861,7 +870,7 @@ points back to, via Phase 14's migration), or both sharing a non-null `sourceAdd
 bookkeeping is cleaned up so nothing lingers under an id no longer in the dataset.
 
 **Bug 2 — production flavor crashed on startup with no internet: "No MaterialLocalizations
-found."** `_ConnectivityGate` (`hiyaza_finder_app.dart`) wrapped `MaterialApp` from the *outside*
+found."** `_ConnectivityGate` (`hiyaza_finder_app.dart`) wrapped `MaterialApp` from the _outside_
 and called `AppDialogs.showError` (a `showDialog`-based Material dialog) using its own
 `BuildContext` — but that context sits above `MaterialApp`'s internally-created
 `Navigator`/`Localizations`, which `showDialog` requires. `NetworkInfoImpl.isConnected` bypasses to
@@ -948,6 +957,7 @@ columns are `NOT NULL`) so a fractional فدان value isn't silently truncated 
 ever reaching validation.
 
 Fixed:
+
 - `field_edit_dialogs.dart`'s `_AreaEditDialog` now validates on save: any of the three values at or
   above `999999.9999` shows an inline Arabic error ("القيمة كبيرة جدًا — يرجى مراجعة الرقم
   المدخل") and blocks the dialog from closing, instead of letting an invalid value ever reach the
@@ -959,7 +969,7 @@ Fixed:
 
 **What this does NOT fix:** the one sync operation already stuck in this device's outbox queue with
 an invalid value — that entry will keep retrying and failing forever regardless of this fix, since
-the fix only prevents a *new* bad value from being created. It needs to be discarded from the sync
+the fix only prevents a _new_ bad value from being created. It needs to be discarded from the sync
 sheet (تجاهل) and the parcel's area re-entered correctly by hand.
 
 **Dependencies:** none.
@@ -1032,6 +1042,7 @@ never blocked on network — this only changes what "success" means while online
 
 **`mark_parcel_completed` RPC** (new, `security definer`): the one sanctioned way to write
 `completed_at`/`completed_by`. Two real bugs found and fixed along the way:
+
 - `holdings_write` RLS only allowed admin/editor — a `field`-role user (the app's actual field
   workers) had no RLS path to write these columns on a promoted `holdings` row at all;
   `added_holdings_update_own` only covers rows still `status = 'pending'`, a narrow window since
@@ -1095,6 +1106,7 @@ parcels already have a real, enforced identity (`id`/`source_added_holding_id`, 
 and were never at risk of the kind of silent duplication a re-imported row was.
 
 **Verification against the live database (not just code review):**
+
 - Two `holdings` inserts with `is_field_added = true` and an identical fingerprint (same holder,
   national ID, `land_number = '-1'`, basin) — both succeed. (Ran inside a transaction, rolled back —
   no data left behind.)
@@ -1102,7 +1114,7 @@ and were never at risk of the kind of silent duplication a re-imported row was.
   rejected with `holdings_active_dedup_key_unique` violation, confirming import-duplicate protection
   is untouched.
 - Confirmed zero existing imported rows (`is_field_added = false`) currently share a `(city_id,
-  dedup_key)` pair — the narrower index applies with zero pre-existing violations.
+dedup_key)` pair — the narrower index applies with zero pre-existing violations.
 
 **Dependencies:** the dedup fix depends on Phase 14's `holdings.is_field_added` column already being
 live and reliably populated for promoted parcels.
@@ -1112,7 +1124,7 @@ and reading the full migration history (`composite_dedup_key` → `dedup_holding
 `dedup_key_unique_constraint`) to understand issue 2's original intent before narrowing it.
 
 **Risks:** low for both. Issue 1's fix is additive (new optional callback, old behavior preserved when
-unset). Issue 2's fix only *removes* rows from an index's scope — it cannot cause a previously-caught
+unset). Issue 2's fix only _removes_ rows from an index's scope — it cannot cause a previously-caught
 import duplicate to slip through, since imports are still fully covered.
 
 flutter analyze: clean. flutter test: 297/297 passing (2 new in `parcel_detail_card_test.dart`,
@@ -1152,6 +1164,7 @@ for a genuinely unclassified error. Wired into `add_record_screen.dart`, `detail
 `file_status_screen.dart` (replacing its stray `errors.unknown`-only catch).
 
 **Loading indicators** for the four actions that had none:
+
 - `ParcelIdChip` (copy-ID/review) gained `isLoading` — spinner replaces the fingerprint icon, tap
   disabled. `ParcelDetailCard` itself stays a `StatelessWidget` (converting the whole ~600-line card
   would be a much larger, unrelated diff); a new small `_ReviewIdChip` wrapper owns the in-flight
@@ -1225,6 +1238,7 @@ guarded (`_busyParcelIds`, `_isSaving`).
 **Fix:** added `BlockingLoadingOverlay` (`core/widgets/ui/loaders/blocking_loading_overlay.dart`) — a
 reusable full-screen modal veil (opaque barrier + centered spinner + message) that also disables the
 system back gesture via an internal `PopScope`. Wired into:
+
 - `AddRecordScreen.build` — visible for the duration of `_save`'s awaited `addLocalParcel` call, with
   an outer `PopScope.canPop` now also gated on `!_isSaving` (previously only unsaved-changes-gated).
 - `DetailScreen.build` — a new `_busyMessage` string (action-specific: saving/deleting/reopening) set
@@ -1266,10 +1280,10 @@ up to three independent Realtime events for the exact same underlying write (`ad
 order relative to each other. Four distinct bugs fell out of this:
 
 1. `ParcelDatasetState.removeWhereIdOrSource`/`findByIdOrSource` matched by `sourceAddedHoldingId` as
-   well as exact `id` — the "this added_holdings row is now superseded, remove it" handling
+   well as exact `id` — the "this added*holdings row is now superseded, remove it" handling
    (`handleAddedHoldingsPayload` in `realtime_payload_dispatcher.dart`) fires an `applyRemoteDelete`
-   keyed on the *pre-promotion* `added_holdings.id`. If that echo arrived after the local device had
-   already applied the promoted parcel (now living under a *different* `id`, with the old id only
+   keyed on the \_pre-promotion* `added_holdings.id`. If that echo arrived after the local device had
+   already applied the promoted parcel (now living under a _different_ `id`, with the old id only
    surviving as `sourceAddedHoldingId`), the wildcard match deleted it anyway — the empty-details bug.
 2. `HoldingsRepository.addLocalParcel`'s local `applyLocally` used to blindly `_dataset.append(...)`
    instead of reconciling with an entry a racing Realtime echo might already have added for the exact
@@ -1286,6 +1300,7 @@ order relative to each other. Four distinct bugs fell out of this:
    shown anywhere.
 
 **Fix:**
+
 1. `removeWhereIdOrSource`/`findByIdOrSource` now match only by exact `id` — a
    `sourceAddedHoldingId`-based supersede-delete can never remove an entry that's already moved on to
    a different id.
@@ -1324,7 +1339,7 @@ in `setParcelCompleted`/`updateParcel`.**
    "couldn't update the review status" error, or — worse, before this fix — silently reporting success
    with nothing actually written server-side.
 6. `HoldingsRepository.setParcelCompleted`/`updateParcel` each captured `_dataset.indexOf(...)` once
-   *before* their awaited network call, then reused that numeric index afterward to apply the local
+   _before_ their awaited network call, then reused that numeric index afterward to apply the local
    write (`_applyCompletedLocally`/`applyLocally`'s `_dataset.replaceAt(idx, ...)`). If a Realtime
    event appended or removed an entry in `_dataset.parcels` while the await was in flight — shifting
    every later array position — the stale index could apply the confirmed write onto a completely
@@ -1363,6 +1378,7 @@ already committed server-side**: the client throws, shows an error, but the writ
 exactly "sometimes it works anyway even though it shows an error."
 
 **Fix:**
+
 1. New `HoldingsApi.fetchParcelById(id, {isFieldAdded})` — reads a single row's current server state
    from `holdings`/`added_holdings` (tries the table matching the last-known `isFieldAdded` first, both
    if unknown), returning `null` (never throwing) if not found in either — a failed reconciliation read
@@ -1416,14 +1432,14 @@ true cause immediately:
 
 **Root cause:** `HoldingsApi.markCompleted` declared `final List<Map<String, dynamic>> rows =
 await _client.rpc('mark_parcel_completed', ...)`. Supabase's `.rpc()` call returns `dynamic` — the
-underlying JSON array deserializes as a plain `List<dynamic>` whose *elements* happen to be
+underlying JSON array deserializes as a plain `List<dynamic>` whose _elements_ happen to be
 `Map<String, dynamic>`, but the outer `List` itself is never statically typed as
 `List<Map<String, dynamic>>`. Assigning it directly to that typed variable throws a runtime
 `_TypeError` on **every single call**, unconditionally — not a race, not a timeout, not something that
 only happens on slow connections. This explains why the error was so persistent and (from the user's
 perspective) inconsistent: the RPC itself always succeeded server-side (confirmed earlier via Supabase
-logs, Phase 25's first pass), so the *review status* was frequently already correct by the time the
-user re-checked, while the *client* threw on every call — exactly "sometimes it works anyway even
+logs, Phase 25's first pass), so the _review status_ was frequently already correct by the time the
+user re-checked, while the _client_ threw on every call — exactly "sometimes it works anyway even
 though it shows an error."
 
 **Fix:** cast the RPC result explicitly — `(rawResult as List).map((row) =>
@@ -1459,6 +1475,7 @@ correctly threw `NotFoundException` for this (Phase 24's fix), but two things th
    reconciliation exists to correct.
 
 **Fix:**
+
 1. `refreshParcel` no longer passes the local `isFieldAdded` hint at all — `fetchParcelById(parcelId)`
    with no hint checks both `holdings` and `added_holdings`, so a stale local flag can no longer point
    the reconciliation read at the wrong table.
@@ -1490,7 +1507,7 @@ flutter analyze: clean. flutter test: 322/322 passing.
 doesn't mean what its own doc comment claimed.**
 
 The very next real device log (after the type-cast and NotFoundException-retry fixes above both
-landed) showed the retry loop still failing on the *second* attempt too, with the exact same
+landed) showed the retry loop still failing on the _second_ attempt too, with the exact same
 `isFieldAdded=true` sent both times — even though `refreshParcel`'s reconciliation read had correctly
 found the row in `holdings`. Tapping Copy ID again made the parcel disappear from the list entirely
 (a downstream symptom of the repeated `NotFoundException` never resolving).
@@ -1552,7 +1569,7 @@ parcel's `groupKey` legitimately changed mid-session (`'pending:<id>'` → `'pen
 
 **Fix:** `_refreshFromRepository()` now falls back to re-deriving `_groupKey` when a query against the
 currently-held one returns zero results but the screen previously had parcels: it re-reads each
-currently-shown parcel's *current* `groupKey` from the repository and retries the query with that,
+currently-shown parcel's _current_ `groupKey` from the repository and retries the query with that,
 adopting it as the new `_groupKey` the moment one produces results. Added `debugPrint` tracing at each
 step so the exact trigger is fully visible if this recurs. Deliberately reactive (only kicks in on an
 otherwise-would-be-empty result) rather than proactively re-syncing `_groupKey` on every refresh, so an
@@ -1584,6 +1601,7 @@ enabled, closing off this whole class of ambiguity at the source rather than con
 downstream.
 
 **Fix:**
+
 1. `Parcel.hasRequiredFieldsFilled` now also checks `!isHoldingIdPending` (the existing getter that
    already treats `""`/`"-"`/`"-1"` as not-yet-assigned) — `AddRecordScreen._canSave` already gates
    directly on this getter, so Save is now disabled until a real number is entered, with no separate
@@ -1600,7 +1618,7 @@ both `AddRecordScreen`'s save button and `ParcelDetailCard`'s Copy ID review gat
 longer create a new person/parcel without immediately knowing/entering its official number, which may
 not always be available at time of entry in the field. Accepted as the explicit tradeoff requested,
 given the alternative was leaving the entire pending-parcel reconciliation surface open indefinitely.
-Existing already-pending parcels created before this change are unaffected — this only gates *new*
+Existing already-pending parcels created before this change are unaffected — this only gates _new_
 saves going forward, not a migration of past records.
 
 Regression tests added: `parcel_national_id_test.dart` (4 new cases: `"-1"`, blank, `"-"`, and a real
@@ -1620,6 +1638,7 @@ doesn't yet have the official number must still be able to type `"-1"` themselve
 sortable placeholder, not be permanently blocked from saving.
 
 **Fix:**
+
 1. New `Parcel.isHoldingIdExplicitlyEntered(value)` — rejects only blank/whitespace-only input,
    deliberately allowing `"-1"` (unlike [isHoldingIdPending], which still treats `"-1"` as pending —
    that getter is untouched, since `groupKey`/search grouping must keep working exactly as before for
@@ -1631,9 +1650,9 @@ sortable placeholder, not be permanently blocked from saving.
    now-more-permissive required check without the user ever touching the field, silently defeating the
    point of making it required in the first place (confirmed via explicit user sign-off before
    implementing, given the ambiguity).
-3. `DetailScreen._addParcelForPerson` (add a parcel for an *existing* person) intentionally left
+3. `DetailScreen._addParcelForPerson` (add a parcel for an _existing_ person) intentionally left
    unchanged — it inherits the parent's real, already-assigned رقم الحيازة via `source.copyWith(...)`,
-   which is correct as-is; only the *new person* flow needed the blank-by-default change.
+   which is correct as-is; only the _new person_ flow needed the blank-by-default change.
 
 **Dependencies:** the prior required-field-gate follow-up in this same phase. **Complexity:** low.
 
@@ -1681,7 +1700,7 @@ here since later code comments reference "APP_UPDATES_CLAUDE.md § N" as rationa
 
 - **Basins as first-class data**: `basins` Supabase table downloaded alongside a city's parcels
   (`CityDownloadResult`), cached in `CitySnapshot.basins`, surfaced via `HoldingsRepository
-  .activeBasins`/`basinByName`. `basin_picker.dart`'s `pickBasin`/`applyBasinPick` always derives
+.activeBasins`/`basinByName`. `basin_picker.dart`'s `pickBasin`/`applyBasinPick` always derives
   `basinCode` from the picked `basinName` — never user-typed.
 - **Add flow split**: `AddModeToggle` (شخص جديد / شخص موجود) gates `AddRecordScreen` when reached
   from a generic "+" entry point; "شخص موجود" shows `ExistingPersonSearch` (exact رقم الحيازة match)
@@ -1714,7 +1733,7 @@ here since later code comments reference "APP_UPDATES_CLAUDE.md § N" as rationa
   earliest matching word wins, no contains-anywhere fallback tier.
 - **`land_number` (رقم الأرض) default changed from `"-1"` to `"0"`** in `AddRecordScreen`,
   `BasinScreen._addParcelForBasin`, `DetailScreen._addParcelForPerson`, and `LoadingBody
-  ._openAddPerson`. Deliberately scoped to رقم الأرض only — رقم الحيازة (`holdingId`) keeps `"-1"` as
+._openAddPerson`. Deliberately scoped to رقم الأرض only — رقم الحيازة (`holdingId`) keeps `"-1"` as
   its pending-record sentinel (`Parcel.isHoldingIdPending`), since a blanket `"-1"`→`"0"` rewrite
   would collide with `Parcel.isHoldingIdMissingOrZero`'s existing "0 means lost data" semantics for
   that field.

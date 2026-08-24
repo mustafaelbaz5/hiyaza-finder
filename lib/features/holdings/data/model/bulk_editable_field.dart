@@ -14,7 +14,7 @@ enum BulkEditableField {
 }
 
 extension BulkEditableFieldX on BulkEditableField {
-  /// `true` for the one boolean field (وراثة) — picked via two named
+  /// `true` for the one boolean field (ورثة) — picked via two named
   /// options instead of the free dropdown list [textOptions] provides.
   bool get isBoolean => this == BulkEditableField.isInheritance;
 
