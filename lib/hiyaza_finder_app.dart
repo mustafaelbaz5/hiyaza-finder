@@ -18,14 +18,14 @@ import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
 import 'core/widgets/ui/dialogs/app_dialogs.dart';
 
-
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
 
   /// Not private: `_ConnectivityGate` (below) needs a `BuildContext` that's
   /// inside the `Navigator` `MaterialApp` creates internally, since it
   /// itself sits in `MaterialApp.builder`, above it.
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   /// Root-level `ScaffoldMessenger` key — lets a snackbar be shown/kept
   /// alive independent of whichever `Scaffold`/route is currently on
@@ -43,13 +43,15 @@ class HiyazaFinderApp extends StatelessWidget {
   /// phone layout (also covers narrow/resized desktop windows).
   static const double _frameBreakpoint = 640;
 
-  bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  bool get _isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   @override
   Widget build(final BuildContext context) {
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
-        final bool useFrame = _isDesktop && constraints.maxWidth > _frameBreakpoint;
+        final bool useFrame =
+            _isDesktop && constraints.maxWidth > _frameBreakpoint;
 
         if (!useFrame) return _buildApp();
 
@@ -148,7 +150,8 @@ class _ConnectivityGateState extends State<_ConnectivityGate> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((final _) => _checkConnectivity());
+    WidgetsBinding.instance
+        .addPostFrameCallback((final _) => _checkConnectivity());
   }
 
   Future<void> _checkConnectivity() async {
