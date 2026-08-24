@@ -335,19 +335,22 @@ class Parcel {
     'مرحلة الإزهار والإثمار',
   ];
 
+  /// Quick-pick ملاحظات list (UI/UX redesign — trimmed from a 12-item list
+  /// down to the 4 notes field workers actually use). The first three are
+  /// exact string matches for `CreditTypeNotesSync.awqafNote`/
+  /// `UsageTypeNotesSync.fallowNote`/`UsageTypeNotesSync.buildingsNote` —
+  /// kept as literals here (not references) since `parcel.dart` can't
+  /// import those files without a cycle, they in turn import `Parcel`.
+  /// Picking one of these three from the notes UI also flips نوع
+  /// الاستخدام/نوع الائتمان to match, via `NotesField.onNoteAdded`'s
+  /// routing — if any of these three strings ever changes, update the
+  /// matching constant in `credit_type_notes_sync.dart`/
+  /// `usage_type_notes_sync.dart` in the same change.
   static const List<String> notesOptions = <String>[
-    'لا يوجد حصر ميداني',
-    'وضع يد',
-    'نقص بيانات الحصر',
-    'تابعة الي جهة\\هيئة',
+    'الأرض تابعة لهيئة الأوقاف المصرية', // must match CreditTypeNotesSync.awqafNote
+    'الأرض بور أو غير مزروعة', // must match UsageTypeNotesSync.fallowNote
+    'الأرض بها مباني', // must match UsageTypeNotesSync.buildingsNote
     'غير محيز',
-    'اكثر من نقطة في نفس الحيازة',
-    'استخدام غير زراعي',
-    'حيازة توجد داخل اكثر من جمعية',
-    'خطوط الحصر غير مطابقة للصورة',
-    'لا يوجد خطوط حصر لتوضيح التقسيمات',
-    'تعارض التقسيمات بين اكثر من موظف حصر ميداني',
-    notesOtherOption,
   ];
 
   /// The ملاحظات option that unlocks the free-text follow-up

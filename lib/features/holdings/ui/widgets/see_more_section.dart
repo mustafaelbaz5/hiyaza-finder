@@ -323,6 +323,23 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           isModified: _isModified((final p) => p.totalSqm),
         ),
         verticalSpacing(8),
+        // Moved here from the primary card area (UI/UX redesign) — grouped
+        // with the other parcel-identity/measurement fields above rather
+        // than the administrative المديرية/الإدارة pair below.
+        FieldRow(
+          label: 'holdings.fields.land_number'.tr(),
+          value: widget.parcel.landNumber,
+          isModified: _isModified((final p) => p.landNumber),
+          onEdit: () => _editText(
+            context,
+            title: 'holdings.fields.land_number'.tr(),
+            initialValue: widget.parcel.landNumber ?? '',
+            apply: (final String v) => widget.parcel.copyWith(
+              landNumber: v.isEmpty ? null : v,
+            ),
+          ),
+        ),
+        verticalSpacing(8),
         _pairRow(directorate, administration),
         verticalSpacing(8),
         FieldRow(

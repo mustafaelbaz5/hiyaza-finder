@@ -297,6 +297,8 @@
       "brand": "حيازة",
       "holdings_loaded": "{count} حيازة محمّلة",
       "change_file": "تغيير المدينة",
+      "refresh": "تحديث",
+      "settings": "الإعدادات",
       "summary_added": "مضافة",
       "summary_modified": "معدّلة",
       "summary_pending_review": "قيد المراجعة",

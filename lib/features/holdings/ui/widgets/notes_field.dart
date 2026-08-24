@@ -52,6 +52,18 @@ class NotesField extends StatelessWidget {
     if (updated != null) onChanged(updated);
   }
 
+  /// The "+" icon skips the management sheet entirely and jumps straight
+  /// to [showAddNoteDialog] (UI/UX redesign) — the fastest path to adding a
+  /// note; tapping anywhere else on the row still opens the full sheet via
+  /// [_open].
+  Future<void> _addDirect(final BuildContext context) => addNoteFlow(
+        context,
+        notes: notes,
+        onChanged: onChanged,
+        onNoteAdded: onNoteAdded,
+        associationType: associationType,
+      );
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -75,6 +87,23 @@ class NotesField extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Nested inside the outer row's InkWell — tapping this icon
+            // wins the tap (Flutter's gesture arena resolves to the
+            // innermost InkWell), so it opens the direct add-dialog flow
+            // instead of the outer row's full management sheet.
+            InkWell(
+              onTap: () => _addDirect(context),
+              borderRadius: BorderRadius.circular(16),
+              child: const Padding(
+                padding: EdgeInsets.all(2),
+                child: Icon(
+                  Icons.add_circle_outline_rounded,
+                  size: 20,
+                  color: AppColors.primary200,
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
             Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 20,

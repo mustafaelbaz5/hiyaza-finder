@@ -297,6 +297,8 @@
       "brand": "Hiyaza",
       "holdings_loaded": "{count} holdings loaded",
       "change_file": "Change city",
+      "refresh": "Refresh",
+      "settings": "Settings",
       "summary_added": "Added",
       "summary_modified": "Modified",
       "summary_pending_review": "Pending review",

@@ -42,6 +42,28 @@ Future<List<String>?> showNotesManagementSheet(
   );
 }
 
+/// Opens [showAddNoteDialog] and, on a non-empty non-duplicate result,
+/// appends it to [notes] via [onChanged] — the same append+dedupe+
+/// [onNoteAdded] contract `_NotesManagementSheet._add()` uses, extracted so
+/// [NotesField]'s own "+" icon (which skips the management sheet entirely,
+/// UI/UX redesign) can trigger the identical flow without duplicating it.
+Future<void> addNoteFlow(
+  final BuildContext context, {
+  required final List<String> notes,
+  required final ValueChanged<List<String>> onChanged,
+  final ValueChanged<String>? onNoteAdded,
+  final AssociationType? associationType,
+}) async {
+  final String? note = await showAddNoteDialog(
+    context,
+    associationType: associationType,
+  );
+  if (note == null || note.trim().isEmpty) return;
+  if (notes.contains(note)) return;
+  onChanged(<String>[...notes, note]);
+  onNoteAdded?.call(note);
+}
+
 class _NotesManagementSheet extends StatefulWidget {
   const _NotesManagementSheet({
     required this.initialNotes,
@@ -66,20 +88,18 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
     _notes = List<String>.of(widget.initialNotes);
   }
 
-  Future<void> _add() async {
-    final String? note = await showAddNoteDialog(
-      context,
-      associationType: widget.associationType,
-    );
-    if (note == null || note.trim().isEmpty) return;
-    if (_notes.contains(note)) return;
-    setState(() => _notes = <String>[..._notes, note]);
-    // The caller's bidirectional sync (نوع الاستخدام/نوع الإصلاح ↔ notes)
-    // still needs to run against the *pre-add* parcel — reported alongside
-    // the local list update rather than folded into it, same contract the
-    // old inline `NotesField._add` used.
-    widget.onNoteAdded?.call(note);
-  }
+  Future<void> _add() => addNoteFlow(
+        context,
+        notes: _notes,
+        // The caller's bidirectional sync (نوع الاستخدام/نوع الإصلاح ↔
+        // notes) still needs to run against the *pre-add* parcel — reported
+        // alongside the local list update rather than folded into it, same
+        // contract the old inline `NotesField._add` used.
+        onChanged: (final List<String> updated) =>
+            setState(() => _notes = updated),
+        onNoteAdded: widget.onNoteAdded,
+        associationType: widget.associationType,
+      );
 
   void _remove(final String note) {
     setState(() => _notes = _notes.where((final String n) => n != note).toList());
@@ -152,6 +172,17 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
                     textAlign: TextAlign.right,
                   ),
                 ),
+                // The bottom button now opens the add-note flow (below)
+                // instead of closing the sheet, so this small × is the
+                // sheet's only remaining explicit dismiss affordance —
+                // deletions/edits made this session still persist either
+                // way, since [_close] always pops the current [_notes].
+                IconButton(
+                  icon: Icon(Icons.close_rounded,
+                      size: 20, color: colors.iconSecondary),
+                  tooltip: 'app_dialogs.close'.tr(),
+                  onPressed: _close,
+                ),
               ],
             ),
             verticalSpacing(12),
@@ -209,6 +240,9 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
                     ),
             ),
             verticalSpacing(12),
+            // The prime bottom-button slot is now the fastest way to add a
+            // note (UI/UX redesign) rather than a redundant "Close" — the
+            // header's small × (above) handles dismissal instead.
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -216,9 +250,9 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
                   backgroundColor: AppColors.primary200,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                onPressed: _close,
+                onPressed: _add,
                 child: Text(
-                  'app_dialogs.close'.tr(),
+                  'holdings.notes_field.add_title'.tr(),
                   style: AppTextStyles.font14Bold.copyWith(
                     color: AppColors.white,
                   ),

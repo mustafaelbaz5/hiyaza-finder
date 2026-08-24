@@ -267,21 +267,19 @@ class _DetailScreenState extends State<DetailScreen>
   /// Add Person) — still freely user-editable in the form before saving.
   static const String _needsSurveyNote = 'نقص بيانات الحصر';
 
-  /// الملاحظات value automatically set when نوع الاستخدام is changed away
-  /// from the default زراعة (`REFACTOR_ROADMAP.md` Phase 12).
-  static const String _nonAgriculturalUsageNote = 'استخدام غير زراعي';
-
   /// الملاحظات no longer gets force-overwritten on every field edit — that
   /// silently discarded whatever the user had actually written whenever
   /// they corrected any unrelated field (`REFACTOR_ROADMAP.md` Phase 12).
-  /// It's now only auto-set by two specific, deliberate triggers:
-  /// - المساحة (فدان/قيراط/سهم or المساحة بالمتر) changing → "نقص بيانات
-  ///   الحصر" (the field survey for this parcel needs re-verifying).
-  /// - نوع الاستخدام changing away from the زراعة default → "استخدام غير
-  ///   زراعي".
-  /// Every other field edit leaves الملاحظات exactly as the user last set
-  /// it. If both triggers fire in the same edit, نوع الاستخدام's message
-  /// wins (it's the more specific, actionable one).
+  /// It's now only auto-set by one deliberate trigger: المساحة (فدان/قيراط/
+  /// سهم or المساحة بالمتر) changing → "نقص بيانات الحصر" (the field survey
+  /// for this parcel needs re-verifying). Every other field edit leaves
+  /// الملاحظات exactly as the user last set it.
+  ///
+  /// نوع الاستخدام changes no longer add a second, generic note here — that
+  /// used to duplicate `UsageTypeNotesSync.applyUsageTypeChange`'s own
+  /// specific مباني/بور auto-note (already applied before this handler ever
+  /// runs, e.g. from `SeeMoreSection`'s usage-type dropdown), so a single
+  /// usage-type change previously produced two notes instead of one.
   Future<void> _updateField(final Parcel updated) async {
     if (_isParcelBusy(updated.id)) return;
     setState(() {
@@ -299,18 +297,9 @@ class _DetailScreenState extends State<DetailScreen>
             updated.qirat != before.qirat ||
             updated.sahm != before.sahm ||
             updated.totalSqm != before.totalSqm;
-        final bool usageChangedAwayFromDefault =
-            updated.usageType != before.usageType &&
-                updated.usageType != Parcel.defaultUsageType;
         if (areaChanged && !toSave.notes.contains(_needsSurveyNote)) {
           toSave = toSave.copyWith(
             notes: <String>[...toSave.notes, _needsSurveyNote],
-          );
-        }
-        if (usageChangedAwayFromDefault &&
-            !toSave.notes.contains(_nonAgriculturalUsageNote)) {
-          toSave = toSave.copyWith(
-            notes: <String>[...toSave.notes, _nonAgriculturalUsageNote],
           );
         }
       }

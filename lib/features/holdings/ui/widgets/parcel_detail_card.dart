@@ -263,19 +263,6 @@ class ParcelDetailCard extends StatelessWidget {
                 _isModified((final p) => p.sahm),
             onEdit: () => _editArea(context),
           ),
-          verticalSpacing(8),
-          FieldRow(
-            label: 'holdings.fields.land_number'.tr(),
-            value: parcel.landNumber,
-            isModified: _isModified((final p) => p.landNumber),
-            onEdit: () => _editText(
-              context,
-              title: 'holdings.fields.land_number'.tr(),
-              initialValue: parcel.landNumber ?? '',
-              apply: (final String v) =>
-                  parcel.copyWith(landNumber: v.isEmpty ? null : v),
-            ),
-          ),
           if (UsageType.fromLabel(parcel.usageType) == UsageType.agricultural) ...[
             verticalSpacing(8),
             FieldRow(
