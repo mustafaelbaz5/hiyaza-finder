@@ -1,12 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hiyaza_finder/core/widgets/app_back_button.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
 
 /// [DetailScreen]'s top bar (UI/UX Updates prompt "Change 4") — the
 /// between-holdings/between-persons arrows this used to show are gone
@@ -51,13 +51,15 @@ class DetailScreenHeader extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
+              const AppBackButton(),
+              horizontalSpacing(24),
               IconButton(
                 tooltip: 'holdings.detail.previous_parcel'.tr(),
                 onPressed: onPreviousParcel == null
                     ? null
                     : () => _navigate(onPreviousParcel!),
                 icon: Icon(
-                  Icons.chevron_right_rounded,
+                  Icons.chevron_left_rounded,
                   color: onPreviousParcel == null
                       ? colors.textHint
                       : AppColors.primary200,
@@ -93,18 +95,20 @@ class DetailScreenHeader extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'holdings.detail.next_parcel'.tr(),
-                onPressed:
-                    onNextParcel == null ? null : () => _navigate(onNextParcel!),
+                onPressed: onNextParcel == null
+                    ? null
+                    : () => _navigate(onNextParcel!),
                 icon: Icon(
-                  Icons.chevron_left_rounded,
-                  color:
-                      onNextParcel == null ? colors.textHint : AppColors.primary200,
+                  
+                  Icons.chevron_right_outlined,
+                  color: onNextParcel == null
+                      ? colors.textHint
+                      : AppColors.primary200,
                 ),
               ),
-              const AppBackButton(),
+              horizontalSpacing(24),
             ],
           ),
-          verticalSpacing(16),
         ],
       ),
     );

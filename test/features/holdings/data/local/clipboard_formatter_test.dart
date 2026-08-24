@@ -35,9 +35,10 @@ void main() {
     });
   });
 
-  // The وراثة/مفوض prefix matrix: four distinct combinations, each with a
-  // specific, previously user-specified expected outcome for the holder
-  // slot (اسم الحائز) and the owner slot (اسم المالك).
+  // The وراثة/مفوض prefix matrix (UI/UX Updates prompt "Change 1"/"Change
+  // 2"): اسم الحائز is NEVER prefixed regardless of either toggle — مفوض is
+  // represented only via the auto ملاحظات entry. اسم المالك gets "وارثه "
+  // (no brackets, trailing space) when وراثة is set, unaffected by مفوض.
   group('وراثة/مفوض prefix matrix', () {
     test('neither toggle on — no prefix on either slot', () {
       final String text = formatter.format(baseParcel());
@@ -45,37 +46,36 @@ void main() {
       expect(text, contains('اسم الحائز: محمد علي'));
     });
 
-    test('وراثة alone — both slots get (ورثة)', () {
+    test('وراثة alone — owner gets "وارثه ", holder stays unprefixed', () {
       final String text = formatter.format(baseParcel(isInheritance: true));
-      expect(text, contains('اسم المالك: (ورثة) محمد علي'));
-      expect(text, contains('اسم الحائز: (ورثة) محمد علي'));
+      expect(text, contains('اسم المالك: وارثه محمد علي'));
+      expect(text, contains('اسم الحائز: محمد علي'));
     });
 
     test(
-      'مفوض alone — only the holder slot gets (مفوض عنه); owner untouched',
+      'مفوض alone — neither slot is prefixed; مفوض only shows via ملاحظات',
       () {
         final String text = formatter.format(baseParcel(isDelegate: true));
         expect(text, contains('اسم المالك: محمد علي'));
-        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي'));
+        expect(text, contains('اسم الحائز: محمد علي'));
       },
     );
 
     test(
-      'وراثة + مفوض together — holder gets (مفوض عنه), owner keeps (ورثة)',
+      'وراثة + مفوض together — owner still gets "وارثه ", holder unprefixed',
       () {
         final String text = formatter.format(
           baseParcel(isInheritance: true, isDelegate: true),
         );
-        expect(text, contains('اسم المالك: (ورثة) محمد علي'));
-        expect(text, contains('اسم الحائز: (مفوض عنه) محمد علي'));
+        expect(text, contains('اسم المالك: وارثه محمد علي'));
+        expect(text, contains('اسم الحائز: محمد علي'));
       },
     );
   });
 
   // holderNamePrefix/ownerNamePrefix back the on-screen اسم الحائز/اسم المالك
-  // display (REFACTOR_ROADMAP.md Phase 10 §6) — same rule as the matrix
-  // above, asserted directly against the prefix strings themselves rather
-  // than through the full clipboard text.
+  // display — same rule as the matrix above, asserted directly against the
+  // prefix strings themselves rather than through the full clipboard text.
   group('holderNamePrefix/ownerNamePrefix', () {
     test('neither toggle on — both null', () {
       final Parcel p = baseParcel();
@@ -83,23 +83,23 @@ void main() {
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('وراثة alone — both get (ورثة)', () {
+    test('وراثة alone — owner gets "وارثه ", holder stays null', () {
       final Parcel p = baseParcel(isInheritance: true);
-      expect(formatter.holderNamePrefix(p), '(ورثة)');
-      expect(formatter.ownerNamePrefix(p), '(ورثة)');
+      expect(formatter.holderNamePrefix(p), isNull);
+      expect(formatter.ownerNamePrefix(p), 'وارثه ');
     });
 
-    test('مفوض alone — only holder gets (مفوض عنه), owner stays null', () {
+    test('مفوض alone — both stay null (مفوض never prefixes a name)', () {
       final Parcel p = baseParcel(isDelegate: true);
-      expect(formatter.holderNamePrefix(p), '(مفوض عنه)');
+      expect(formatter.holderNamePrefix(p), isNull);
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('وراثة + مفوض together — holder (مفوض عنه) wins, owner keeps (ورثة)',
+    test('وراثة + مفوض together — holder still null, owner keeps "وارثه "',
         () {
       final Parcel p = baseParcel(isInheritance: true, isDelegate: true);
-      expect(formatter.holderNamePrefix(p), '(مفوض عنه)');
-      expect(formatter.ownerNamePrefix(p), '(ورثة)');
+      expect(formatter.holderNamePrefix(p), isNull);
+      expect(formatter.ownerNamePrefix(p), 'وارثه ');
     });
   });
 
@@ -110,6 +110,26 @@ void main() {
       expect(text.split('\n').first, 'ID: uuid-123');
     });
 
+    test('رقم الأرض is the second line, right after ID', () {
+      const Parcel p = Parcel(holdingId: '55', landNumber: '13113851');
+      final List<String> lines = formatter.format(p).split('\n');
+      expect(lines[1], 'رقم الأرض: 13113851');
+    });
+
+    test('رقم الأرض falls back to "0" when missing', () {
+      const Parcel p = Parcel(holdingId: '55');
+      expect(formatter.format(p), contains('رقم الأرض: 0'));
+    });
+
+    test('رقم الأرض falls back to "0" for a field-added parcel', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        landNumber: '13113851',
+        isFieldAdded: true,
+      );
+      expect(formatter.format(p), contains('رقم الأرض: 0'));
+    });
+
     test('blank/empty fields render the placeholder, never skipped', () {
       const Parcel p = Parcel(holdingId: '55');
       final String text = formatter.format(p);
@@ -118,10 +138,13 @@ void main() {
       expect(text, contains('كود الحوض: -'));
     });
 
-    test('missing national id renders the placeholder, not a fake id', () {
+    test(
+        'missing national id shows the 14-ones display default, never '
+        'stored', () {
       const Parcel p = Parcel(holdingId: '55');
       final String text = formatter.format(p);
-      expect(text, contains('الرقم القومي: -'));
+      expect(text, contains('الرقم القومي: 11111111111111'));
+      expect(p.nationalId, isNull);
     });
 
     test('عدد القطع defaults to 1 when holdingsCount is null or 0', () {
@@ -137,8 +160,8 @@ void main() {
     });
 
     test(
-        'نوع الائتمان/نوع الإصلاح/اسم الجمعية/رقم الأرض/المساحة بالمتر are '
-        'never Copy All fields', () {
+        'نوع الائتمان/نوع الإصلاح/اسم الجمعية/المساحة بالمتر are never '
+        'Copy All fields (رقم الأرض IS included, per Change 8/10)', () {
       const Parcel p = Parcel(
         holdingId: '55',
         creditType: 'أوقاف',
@@ -151,8 +174,8 @@ void main() {
       expect(text, isNot(contains('نوع الائتمان')));
       expect(text, isNot(contains('نوع الإصلاح')));
       expect(text, isNot(contains('اسم الجمعية')));
-      expect(text, isNot(contains('رقم الأرض')));
       expect(text, isNot(contains('المساحة بالمتر')));
+      expect(text, contains('رقم الأرض: 13113851'));
       expect(text, contains('الأرض تابعة لهيئة الأوقاف المصرية'));
     });
 

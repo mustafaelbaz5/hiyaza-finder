@@ -99,6 +99,13 @@ class _NotesSettingsSheetState extends State<_NotesSettingsSheet> {
                 CustomTextButton(
                   text: 'cities.tools.notes_settings.add'.tr(),
                   size: CustomButtonSize.small,
+                  // `CustomTextButton` defaults to `isFullWidth: true`,
+                  // which sizes to `double.infinity` — fine inside an
+                  // `Expanded`/full-width slot, but this button sits in a
+                  // plain `Row` beside the text field, which gives it no
+                  // width bound at all and throws
+                  // "BoxConstraints forces an infinite width".
+                  isFullWidth: false,
                   onPressed: _add,
                 ),
               ],
