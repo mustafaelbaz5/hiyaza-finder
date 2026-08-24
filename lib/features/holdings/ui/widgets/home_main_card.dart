@@ -27,6 +27,7 @@ class HomeMainCard extends StatelessWidget {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
     final String? cityName = repository.activeCityName;
     final AssociationType? type = repository.activeAssociationType;
+    final int parcelCount = repository.parcels.length;
 
     return Container(
       padding: EdgeInsets.fromLTRB(rw(18), rh(18), rw(18), rh(18)),
@@ -63,6 +64,17 @@ class HomeMainCard extends StatelessWidget {
                                   .tr(),
                           style: AppTextStyles.font12Regular.copyWith(
                             color: colors.textSecondary,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ],
+                      if (parcelCount > 0) ...[
+                        verticalSpacing(2),
+                        Text(
+                          'holdings.home.holdings_loaded'
+                              .tr(namedArgs: {'count': parcelCount.toString()}),
+                          style: AppTextStyles.font12Regular.copyWith(
+                            color: AppColors.primary200,
                           ),
                           textAlign: TextAlign.right,
                         ),

@@ -241,15 +241,32 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         ),
       ),
     );
-    // نوع الائتمان/نوع الإصلاح are no longer a visible dropdown field —
-    // credit cities get the ملك/أوقاف toggle below (drives `creditType` +
-    // the أوقاف note automatically); reform cities show nothing here at
-    // all, since نوع الإصلاح is now selected purely via the quick-select
-    // notes (Credit/Reform Type Logic prompt).
+    // نوع الائتمان (credit cities): the ملك/أوقاف toggle below drives
+    // `creditType` + the أوقاف note automatically.
+    // نوع الإصلاح (reform cities): a visible dropdown — the default إصلاح
+    // مُملك adds nothing to ملاحظات; any other choice both sets
+    // `reformType` and appends itself as a plain note (not a separate
+    // Copy All field), via `CreditTypeNotesSync.applyReformNoteSelected`.
     final bool isReformCity =
         widget.associationType == AssociationType.agriculturalReform;
     final Widget? ownershipToggle = isReformCity
-        ? null
+        ? FieldRow(
+            label: 'holdings.fields.reform_type'.tr(),
+            value: widget.parcel.reformType,
+            isModified: _isModified((final p) => p.reformType),
+            onEdit: () => _editDropdown(
+              context,
+              title: 'holdings.fields.reform_type'.tr(),
+              initialValue: widget.parcel.reformType,
+              options: Parcel.reformTypeOptions,
+              allowClear: false,
+              apply: (final String? v) =>
+                  CreditTypeNotesSync.applyReformNoteSelected(
+                widget.parcel,
+                v ?? Parcel.defaultReformType,
+              ),
+            ),
+          )
         : OwnershipToggle(
             isAwqaf: widget.parcel.creditType != Parcel.defaultCreditType,
             onChanged: (final bool isAwqaf) => widget.onFieldChanged(

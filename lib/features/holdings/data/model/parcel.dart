@@ -307,6 +307,8 @@ class Parcel {
     'إصلاح مُملك',
     'إصلاح اشتراكي',
     'إصلاح قانون ثلاثة',
+    'إصلاح قانون خمسون',
+    'أملاك دولة',
   ];
 
   static const List<String> usageTypeOptions = <String>[

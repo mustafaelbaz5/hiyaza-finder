@@ -22,12 +22,13 @@ class CreditTypeNotesSync {
     return parcel.copyWith(creditType: newCreditType, notes: notes);
   }
 
-  /// A reform city's three quick-select notes
-  /// (إصلاح مُملك/إصلاح اشتراكي/إصلاح قانون ثلاثة) each set [Parcel
-  /// .reformType] to match and add themselves as a plain note — reform
-  /// type has no separate toggle, the note *is* the selection. Only
-  /// إصلاح مُملك (the default) removes the other two reform notes and adds
-  /// nothing itself, since it never needs to appear in ملاحظات.
+  /// A reform city's نوع الإصلاح dropdown ([Parcel.reformTypeOptions]) —
+  /// each option sets [Parcel.reformType] to match and, other than the
+  /// default إصلاح مُملك, also adds itself as a plain ملاحظات entry (not a
+  /// separate Copy All field) — reform type has no separate toggle, the
+  /// note *is* the selection. Picking إصلاح مُملك removes every other
+  /// reform-type note and adds nothing itself, since it never needs to
+  /// appear in ملاحظات.
   static Parcel applyReformNoteSelected(final Parcel parcel, final String note) {
     if (!Parcel.reformTypeOptions.contains(note)) {
       return parcel.notes.contains(note)
