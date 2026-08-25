@@ -262,6 +262,14 @@ class ParcelDetailCard extends StatelessWidget {
                 _isModified((final p) => p.sahm),
             onEdit: () => _editArea(context),
           ),
+          verticalSpacing(8),
+          // Moved here from See More — المساحة بالمتر sits with the rest
+          // of the area info instead of being buried behind a second tap.
+          FieldRow(
+            label: 'holdings.fields.area_sqm'.tr(),
+            value: _formatter.formatNumber(parcel.totalSqm),
+            isModified: _isModified((final p) => p.totalSqm),
+          ),
           if (UsageType.fromLabel(parcel.usageType) ==
               UsageType.agricultural) ...[
             verticalSpacing(8),

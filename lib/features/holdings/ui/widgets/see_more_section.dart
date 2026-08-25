@@ -7,7 +7,6 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
-import '../../data/local/clipboard_formatter.dart';
 import '../../data/local/credit_type_notes_sync.dart';
 import '../../data/local/field_change_tracker.dart';
 import '../../data/local/usage_type_notes_sync.dart';
@@ -57,8 +56,6 @@ class SeeMoreSection extends StatefulWidget {
 
 class SeeMoreSectionState extends State<SeeMoreSection> {
   bool _expanded = false;
-
-  static const ClipboardFormatter _formatter = ClipboardFormatter();
 
   /// See `ParcelDetailCard._isModified` — same comparison, against
   /// [SeeMoreSection.originalParcel] instead.
@@ -332,14 +329,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           ),
           verticalSpacing(8),
         ],
-        // Moved here from the primary card area (UI/UX Updates prompt
-        // "Change 3") — placed right after نوع المحصول/مراحل النمو.
-        FieldRow(
-          label: 'holdings.fields.area_sqm'.tr(),
-          value: _formatter.formatNumber(widget.parcel.totalSqm),
-          isModified: _isModified((final p) => p.totalSqm),
-        ),
-        verticalSpacing(8),
         // Moved here from the primary card area (UI/UX redesign) — grouped
         // with the other parcel-identity/measurement fields above rather
         // than the administrative المديرية/الإدارة pair below.

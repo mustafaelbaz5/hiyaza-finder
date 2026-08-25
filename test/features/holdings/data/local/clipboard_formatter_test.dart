@@ -184,13 +184,24 @@ void main() {
       expect(text, contains('الأرض تابعة لهيئة الأوقاف المصرية'));
     });
 
-    test('فدان/قيراط/سهم are an indented block under المساحة:', () {
+    test(
+        'فدان/قيراط/سهم share one indented line under المساحة: (Copy All '
+        'height-reduction prompt)', () {
       const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
       final List<String> lines = formatter.format(p).split('\n');
       expect(lines, contains('المساحة:'));
-      expect(lines, contains('  فدان: 1;'));
-      expect(lines, contains('  قيراط: 2;'));
-      expect(lines, contains('  سهم: 3;'));
+      expect(
+        lines,
+        contains('  فدان: 1; قيراط: 2; سهم: 3;'),
+      );
+    });
+
+    test(
+        'رقم الحيازة/عدد القطع share one line (Copy All height-reduction '
+        'prompt)', () {
+      const Parcel p = Parcel(holdingId: '55', holdingsCount: 3);
+      final List<String> lines = formatter.format(p).split('\n');
+      expect(lines, contains('رقم الحيازة: 55; عدد القطع: 3;'));
     });
 
     test('every field line ends with ";" so fields are unambiguous to split',

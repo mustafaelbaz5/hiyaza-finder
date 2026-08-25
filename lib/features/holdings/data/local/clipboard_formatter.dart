@@ -71,10 +71,13 @@ class ClipboardFormatter {
 
   /// One "label: value" field per line, no trailing commas and no comma
   /// separators between fields (Copy All Format Fix prompt) — nothing here
-  /// pastes into a spreadsheet template anymore, so the old
-  /// comma-per-field/shared-line grouping no longer serves a purpose.
-  /// Field order: ID, رقم الحيازة, اسم المالك, اسم الحائز, الرقم القومي,
-  /// عدد القطع, اسم الحوض, كود الحوض, رقم الأرض, المساحة, نوع المحصول/
+  /// pastes into a spreadsheet template anymore, so per-field lines are the
+  /// norm. Two exceptions share one line each to keep the message short:
+  /// رقم الحيازة + عدد القطع (closely related — "which holding, how many
+  /// parcels"), and فدان/قيراط/سهم under المساحة: (already a single 3-part
+  /// unit, same as [areaFraction] shows on screen).
+  /// Field order: ID, رقم الحيازة + عدد القطع, اسم المالك, اسم الحائز,
+  /// الرقم القومي, اسم الحوض, كود الحوض, رقم الأرض, المساحة, نوع المحصول/
   /// مرحلة النمو (زراعة only), نوع الاستخدام, الملاحظات — اسم الجمعية/
   /// المساحة بالمتر are dropped entirely; الملاحظات is omitted (not shown
   /// as a placeholder) when there's nothing to say.
@@ -106,18 +109,17 @@ class ClipboardFormatter {
 
     final List<String> lines = <String>[
       field('ID', p.id),
-      field('رقم الحيازة', p.holdingId),
+      '${field('رقم الحيازة', p.holdingId)} ${field('عدد القطع', parcelCount.toString())}',
       field('اسم المالك', ownerSlot),
       field('اسم الحائز', holderSlot),
       field('الرقم القومي', displayNationalId(p)),
-      field('عدد القطع', parcelCount.toString()),
       field('اسم الحوض', slot(p.basinName)),
       field('كود الحوض', slot(p.basinCode)),
       field('رقم الأرض', displayLandNumber(p)),
       'المساحة:',
-      '  ${field('فدان', formatNumber(p.feddan) ?? emptyPlaceholder)}',
-      '  ${field('قيراط', formatNumber(p.qirat) ?? emptyPlaceholder)}',
-      '  ${field('سهم', formatNumber(p.sahm) ?? emptyPlaceholder)}',
+      '  ${field('فدان', formatNumber(p.feddan) ?? emptyPlaceholder)} '
+          '${field('قيراط', formatNumber(p.qirat) ?? emptyPlaceholder)} '
+          '${field('سهم', formatNumber(p.sahm) ?? emptyPlaceholder)}',
       if (isAgricultural) field('نوع المحصول', slot(p.cropType)),
       if (isAgricultural) field('مرحلة النمو', slot(p.growthStages)),
       field('نوع الاستخدام', slot(p.usageType)),
