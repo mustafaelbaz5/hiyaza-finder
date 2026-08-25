@@ -58,6 +58,23 @@ class UsageTypeNotesSync {
     }
   }
 
+  /// Applies a just-removed ملاحظة: if it was one of the two usage-linked
+  /// notes, نوع الاستخدام reverts to the default زراعة (the field "returns
+  /// to its value" the way removing the note undoes what adding it did) —
+  /// otherwise the removal is a no-op here, [notes] itself already dropped
+  /// the entry via the caller's own list update.
+  static Parcel applyNoteRemoved(final Parcel parcel, final String note) {
+    switch (note) {
+      case buildingsNote:
+      case fallowNote:
+        return parcel.usageType == UsageType.agricultural.label
+            ? parcel
+            : parcel.copyWith(usageType: UsageType.agricultural.label);
+      default:
+        return parcel;
+    }
+  }
+
   static List<String> _addIfAbsent(final List<String> notes, final String note) =>
       notes.contains(note) ? notes : <String>[...notes, note];
 

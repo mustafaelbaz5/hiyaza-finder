@@ -24,6 +24,13 @@ class NotesField extends StatelessWidget {
   });
 
   final List<String> notes;
+
+  /// Fired with the full new list whenever notes are added or removed via
+  /// the management sheet — the caller is expected to diff this against
+  /// its own current list to detect removals and revert any field that a
+  /// quick-select note (نوع الاستخدام/نوع الائتمان/نوع الإصلاح) had driven,
+  /// mirroring what [onNoteAdded] does for additions (see
+  /// `ParcelDetailCard`'s wiring for the diff pattern).
   final ValueChanged<List<String>> onChanged;
 
   /// Called with just the newly-added note (in addition to [onChanged]

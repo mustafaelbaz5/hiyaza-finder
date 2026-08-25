@@ -489,10 +489,28 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               isModified: _isModified((final p) => p.notes),
                               associationType: getIt<HoldingsRepository>()
                                   .activeAssociationType,
+                              // Diffs against the current list so removed
+                              // quick-select notes revert their field to
+                              // its default in the same update — mirrors
+                              // `ParcelDetailCard`'s identical pattern.
                               onChanged: (final List<String> notes) =>
-                                  setState(
-                                () => _parcel = _parcel.copyWith(notes: notes),
-                              ),
+                                  setState(() {
+                                Parcel updated =
+                                    _parcel.copyWith(notes: notes);
+                                for (final String removedNote in _parcel.notes
+                                    .where((final String n) =>
+                                        !notes.contains(n))) {
+                                  updated = Parcel.reformTypeOptions
+                                              .contains(removedNote) ||
+                                          removedNote ==
+                                              CreditTypeNotesSync.awqafNote
+                                      ? CreditTypeNotesSync.applyNoteRemoved(
+                                          updated, removedNote)
+                                      : UsageTypeNotesSync.applyNoteRemoved(
+                                          updated, removedNote);
+                                }
+                                _parcel = updated;
+                              }),
                               onNoteAdded: (final String note) => setState(
                                 () => _parcel = Parcel.reformTypeOptions
                                         .contains(note)

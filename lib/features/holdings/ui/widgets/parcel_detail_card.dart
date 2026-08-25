@@ -285,8 +285,23 @@ class ParcelDetailCard extends StatelessWidget {
             notes: parcel.notes,
             isModified: _isModified((final p) => p.notes),
             associationType: associationType,
-            onChanged: (final List<String> notes) =>
-                onFieldChanged(parcel.copyWith(notes: notes)),
+            // Diffs the incoming list against the current one so removed
+            // quick-select notes (نوع الاستخدام/نوع الائتمان/نوع الإصلاح)
+            // revert their field to its default in the SAME update —
+            // `onNoteRemoved` fires separately/earlier against a
+            // now-stale `parcel`, so it can't safely be applied here too
+            // without one of the two writes clobbering the other.
+            onChanged: (final List<String> notes) {
+              Parcel updated = parcel.copyWith(notes: notes);
+              for (final String removedNote
+                  in parcel.notes.where((final String n) => !notes.contains(n))) {
+                updated = Parcel.reformTypeOptions.contains(removedNote) ||
+                        removedNote == CreditTypeNotesSync.awqafNote
+                    ? CreditTypeNotesSync.applyNoteRemoved(updated, removedNote)
+                    : UsageTypeNotesSync.applyNoteRemoved(updated, removedNote);
+              }
+              onFieldChanged(updated);
+            },
             onNoteAdded: (final String note) => onFieldChanged(
               Parcel.reformTypeOptions.contains(note)
                   ? CreditTypeNotesSync.applyReformNoteSelected(parcel, note)

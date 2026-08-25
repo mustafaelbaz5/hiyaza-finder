@@ -46,6 +46,24 @@ class CreditTypeNotesSync {
     return parcel.copyWith(reformType: note, notes: notes);
   }
 
+  /// Applies a just-removed ملاحظة: reverts نوع الائتمان to ملك if it was
+  /// the أوقاف note, or نوع الإصلاح to إصلاح مُملك if it was one of the
+  /// reform-type notes — the field "returns to its value" the way removing
+  /// the note undoes what adding it did. A no-op for any other note.
+  static Parcel applyNoteRemoved(final Parcel parcel, final String note) {
+    if (note == awqafNote) {
+      return parcel.creditType == Parcel.defaultCreditType
+          ? parcel
+          : parcel.copyWith(creditType: Parcel.defaultCreditType);
+    }
+    if (Parcel.reformTypeOptions.contains(note)) {
+      return parcel.reformType == Parcel.defaultReformType
+          ? parcel
+          : parcel.copyWith(reformType: Parcel.defaultReformType);
+    }
+    return parcel;
+  }
+
   static List<String> _addIfAbsent(final List<String> notes, final String note) =>
       notes.contains(note) ? notes : <String>[...notes, note];
 
