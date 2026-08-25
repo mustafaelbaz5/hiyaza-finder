@@ -48,12 +48,20 @@ class LoadedBody extends StatefulWidget {
 }
 
 class LoadedBodyState extends State<LoadedBody> {
-  void _openDetail(final BuildContext context, final SearchResult result) {
+  Future<void> _openDetail(
+    final BuildContext context,
+    final SearchResult result,
+  ) async {
     final HoldingsRepository repository = getIt<HoldingsRepository>();
-    context.pushNamed(
+    await context.pushNamed(
       Routes.holdingDetail,
       arguments: repository.parcelsForHolding(result.groupKey),
     );
+    // Detail Screen mutates parcels directly on the repository (Copy ID's
+    // completedAt write included) without going through this cubit, so the
+    // search results held in state — and the "تم المراجعة" badge derived
+    // from them — go stale unless re-derived on return.
+    if (context.mounted) widget.cubit.refreshData();
   }
 
   Future<void> _openAddPerson(final BuildContext context) async {
@@ -92,7 +100,7 @@ class LoadedBodyState extends State<LoadedBody> {
                   ? RecommendationList(
                       query: widget.state.query,
                       results: widget.state.results,
-                      onSelect: (final SearchResult result) =>
+                      onSelect: (final SearchResult result) async =>
                           _openDetail(context, result),
                       onAddNew: () => _openAddPerson(context),
                     )
