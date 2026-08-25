@@ -54,13 +54,23 @@ class CityRemoteDataSource {
     final List<Map<String, dynamic>> all = <Map<String, dynamic>>[];
     int from = 0;
     while (true) {
-      final http.Response response = await _client.get(
-        _restUri(table, query),
-        headers: <String, String>{
-          ..._headers,
-          'Range': '$from-${from + _pageSize - 1}',
-        },
-      );
+      final http.Response response;
+      try {
+        response = await _client.get(
+          _restUri(table, query),
+          headers: <String, String>{
+            ..._headers,
+            'Range': '$from-${from + _pageSize - 1}',
+          },
+        );
+      } catch (error) {
+        // A raw SocketException/ClientException from `http` (no route/DNS
+        // failure, connection refused) never reaches ErrorHandler on its
+        // own — this call site is the only place it's thrown, so it must
+        // be caught and reclassified here rather than left to escape as a
+        // raw exception all the way to the UI.
+        ErrorHandler.handleException(error);
+      }
       if (response.statusCode >= 400) {
         ErrorHandler.handleException(
           'GET $table failed: ${response.statusCode} ${response.body}',

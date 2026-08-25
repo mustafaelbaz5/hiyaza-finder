@@ -8,22 +8,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'core/config/app_config.dart';
-import 'core/di/dependency_injection.dart';
-import 'core/networking/network_info.dart';
 import 'core/router/app_router.dart';
 import 'core/router/routes.dart';
 import 'core/settings/cubit/app_settings_cubit.dart';
 import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
-import 'core/widgets/ui/dialogs/app_dialogs.dart';
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
 
-  /// Not private: `_ConnectivityGate` (below) needs a `BuildContext` that's
-  /// inside the `Navigator` `MaterialApp` creates internally, since it
-  /// itself sits in `MaterialApp.builder`, above it.
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
@@ -110,17 +104,6 @@ class HiyazaFinderApp extends StatelessWidget {
                       ),
                 ),
                 themeMode: settings.themeMode,
-                // _ConnectivityGate shows a Material AlertDialog, which
-                // needs Localizations/Navigator/Material ancestors —
-                // MaterialApp.builder is the first point in the tree
-                // where those exist. Wrapping MaterialApp from the
-                // OUTSIDE (as this used to) crashes with "No
-                // MaterialLocalizations found" the moment the gate's
-                // very first connectivity check fails, since at that
-                // point in the tree none of that context exists yet.
-                builder: (final BuildContext context, final Widget? child) {
-                  return _ConnectivityGate(child: child!);
-                },
               );
             },
           ),
@@ -128,59 +111,6 @@ class HiyazaFinderApp extends StatelessWidget {
       },
     );
   }
-}
-
-/// Gates the app's first frame behind a one-shot connectivity check — a
-/// field worker opening the app with no signal today just hits whatever
-/// downstream network call fails first (a confusing raw exception),
-/// instead of a clear "no internet" message. Loops the check-and-show cycle
-/// until connected, then never intervenes again — every other trigger
-/// (connectivity-regained, app-resume, sync retries) already handles
-/// connectivity changes after this point.
-class _ConnectivityGate extends StatefulWidget {
-  const _ConnectivityGate({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_ConnectivityGate> createState() => _ConnectivityGateState();
-}
-
-class _ConnectivityGateState extends State<_ConnectivityGate> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((final _) => _checkConnectivity());
-  }
-
-  Future<void> _checkConnectivity() async {
-    final bool connected = await getIt<NetworkInfo>().isConnected;
-    if (connected || !mounted) return;
-
-    // This widget sits in MaterialApp.builder, ABOVE the Navigator
-    // MaterialApp creates internally — showDialog needs a context BELOW
-    // one, so `context` here would crash with "No MaterialLocalizations
-    // found" the moment this ever actually fires (i.e. exactly when the
-    // app has no internet, which is the one time this dialog needs to
-    // show). HiyazaFinderApp's own navigatorKey's context is inside that
-    // Navigator and already mounted by the time this post-frame callback
-    // runs. Checked fresh (not cached) since it can turn null between the
-    // await above and here.
-    final BuildContext? dialogContext =
-        HiyazaFinderApp.navigatorKey.currentContext;
-    if (dialogContext == null || !dialogContext.mounted) return;
-
-    await AppDialogs.showError(
-      dialogContext,
-      message: 'errors.no_internet'.tr(),
-      buttonText: 'errors.retry'.tr(),
-      onPressed: _checkConnectivity,
-    );
-  }
-
-  @override
-  Widget build(final BuildContext context) => widget.child;
 }
 
 /// Overrides the ambient [MediaQuery] width so descendants (ScreenUtil,
