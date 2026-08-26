@@ -116,6 +116,14 @@ class HomeMainCard extends StatelessWidget {
                   onTap: () => context.pushNamed(Routes.basins),
                 ),
               ),
+              horizontalSpacing(10),
+              Expanded(
+                child: _PillButton(
+                  icon: Icons.layers_outlined,
+                  label: 'jazla.title'.tr(),
+                  onTap: () => context.pushNamed(Routes.jazlaList),
+                ),
+              ),
             ],
           ),
           verticalSpacing(10),

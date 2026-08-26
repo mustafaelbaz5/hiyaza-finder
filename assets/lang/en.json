@@ -157,6 +157,12 @@
         "subtitle": "Add or remove notes from the quick-pick list",
         "add": "Add",
         "empty": "No custom notes added yet"
+      },
+      "basins": {
+        "subtitle": "View basins and their progress"
+      },
+      "jazla": {
+        "subtitle": "Group parcels into Jazlas to work on"
       }
     }
   },
@@ -485,5 +491,41 @@
     "lang_en": "English",
     "more": "More",
     "about": "About the app"
+  },
+  "jazla": {
+    "title": "Jazlas",
+    "new_jazla": "New Jazla",
+    "name_hint": "Jazla name",
+    "rename": "Rename",
+    "delete": "Delete",
+    "delete_confirm_title": "Delete Jazla",
+    "delete_confirm_message": "The Jazla will be deleted; its parcels stay as-is and can be added to another Jazla.",
+    "empty_list": "No Jazlas yet",
+    "parcel_count": "{count} parcels",
+    "detail": {
+      "add_parcel": "Add parcel",
+      "export": "Export",
+      "remove_confirm": "Remove parcel from Jazla",
+      "empty": "No parcels in this Jazla yet"
+    },
+    "add_sheet": {
+      "title": "Add parcel",
+      "search_hint": "Search by name or number...",
+      "no_results": "No results",
+      "add_new_person": "New person",
+      "add_parcel_for_person": "Parcel for person",
+      "locked_badge": "In {jazlaName}"
+    },
+    "quick_view": {
+      "title": "Quick view",
+      "inheritance": "Inheritance",
+      "delegate": "Delegate",
+      "cancel": "Cancel",
+      "confirm": "Add to Jazla"
+    },
+    "export": {
+      "success": "File exported successfully",
+      "empty": "No parcels to export"
+    }
   }
 }

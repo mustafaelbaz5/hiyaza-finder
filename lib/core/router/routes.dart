@@ -12,4 +12,6 @@ class Routes {
   static const String missingHoldingId = '/missingHoldingId';
   static const String cropTypeSettings = '/cropTypeSettings';
   static const String export = '/export';
+  static const String jazlaList = '/jazlaList';
+  static const String jazlaDetail = '/jazlaDetail';
 }

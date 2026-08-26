@@ -157,6 +157,12 @@
         "subtitle": "إضافة أو حذف ملاحظات من القائمة السريعة",
         "add": "إضافة",
         "empty": "لا توجد ملاحظات مخصّصة مضافة بعد"
+      },
+      "basins": {
+        "subtitle": "عرض الأحواض وتقدّم كل حوض"
+      },
+      "jazla": {
+        "subtitle": "تجميع القطع في جزل للعمل عليها"
       }
     }
   },
@@ -485,5 +491,41 @@
     "lang_en": "English",
     "more": "المزيد",
     "about": "عن التطبيق"
+  },
+  "jazla": {
+    "title": "الجزل",
+    "new_jazla": "جزلة جديدة",
+    "name_hint": "اسم الجزلة",
+    "rename": "تعديل الاسم",
+    "delete": "حذف",
+    "delete_confirm_title": "حذف الجزلة",
+    "delete_confirm_message": "سيتم حذف الجزلة، وستبقى القطع كما هي ويمكن إضافتها لجزلة أخرى.",
+    "empty_list": "لا توجد جزل بعد",
+    "parcel_count": "{count} قطعة",
+    "detail": {
+      "add_parcel": "إضافة قطعة",
+      "export": "تصدير",
+      "remove_confirm": "إزالة القطعة من الجزلة",
+      "empty": "لا توجد قطع في هذه الجزلة بعد"
+    },
+    "add_sheet": {
+      "title": "إضافة قطعة",
+      "search_hint": "ابحث بالاسم أو الرقم...",
+      "no_results": "لا توجد نتائج",
+      "add_new_person": "شخص جديد",
+      "add_parcel_for_person": "قطعة لشخص",
+      "locked_badge": "في {jazlaName}"
+    },
+    "quick_view": {
+      "title": "عرض سريع",
+      "inheritance": "وارثه",
+      "delegate": "مفوض",
+      "cancel": "إلغاء",
+      "confirm": "إضافة للجزلة"
+    },
+    "export": {
+      "success": "تم تصدير الملف بنجاح",
+      "empty": "لا توجد قطع لتصديرها"
+    }
   }
 }
