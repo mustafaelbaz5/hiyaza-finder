@@ -76,7 +76,7 @@ class _BasinScreenState extends State<BasinScreen> {
   }
 
   Future<void> _addParcelForBasin() async {
-    final bool? added = await context.pushNamed<bool>(
+    final Parcel? added = await context.pushNamed<Parcel?>(
       Routes.addRecord,
       arguments: AddRecordArgs(
         initialParcel: Parcel(
@@ -87,7 +87,7 @@ class _BasinScreenState extends State<BasinScreen> {
         ),
       ),
     );
-    if (added == true && mounted) setState(() {});
+    if (added != null && mounted) setState(() {});
   }
 
   @override

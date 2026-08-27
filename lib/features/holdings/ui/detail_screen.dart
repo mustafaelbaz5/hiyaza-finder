@@ -333,14 +333,14 @@ class _DetailScreenState extends State<DetailScreen>
       // parcel's own notes.
       notes: const <String>[],
     );
-    final bool? added = await context.pushNamed<bool>(
+    final Parcel? added = await context.pushNamed<Parcel?>(
       Routes.addRecord,
       arguments: AddRecordArgs(
         initialParcel: template,
         parentHoldingId: source.id,
       ),
     );
-    if (added != true || !mounted) return;
+    if (added == null || !mounted) return;
     // The new parcel already exists in the repository (addLocalParcel only
     // returns after the server confirms the write) — re-reading by
     // groupKey here is what makes it appear on this screen immediately,

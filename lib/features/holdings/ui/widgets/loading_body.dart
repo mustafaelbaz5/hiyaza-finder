@@ -65,7 +65,7 @@ class LoadedBodyState extends State<LoadedBody> {
   }
 
   Future<void> _openAddPerson(final BuildContext context) async {
-    final bool? added = await context.pushNamed<bool>(
+    final Parcel? added = await context.pushNamed<Parcel?>(
       Routes.addRecord,
       arguments: const AddRecordArgs(
         initialParcel: Parcel(
@@ -78,7 +78,7 @@ class LoadedBodyState extends State<LoadedBody> {
         ),
       ),
     );
-    if (added == true && context.mounted) {
+    if (added != null && context.mounted) {
       widget.cubit.refreshData();
     }
   }

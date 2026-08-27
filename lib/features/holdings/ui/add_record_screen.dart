@@ -192,7 +192,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         return;
       }
       context.showSuccessSnackBar('holdings.add.saved'.tr());
-      Navigator.pop(context, true);
+      Navigator.pop(context, saved);
     } catch (error) {
       if (!mounted) return;
       context.showErrorSnackBar(

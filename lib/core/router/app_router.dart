@@ -23,6 +23,8 @@ import 'package:hiyaza_finder/features/holdings/ui/export_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/file_status_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/home_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
+import 'package:hiyaza_finder/features/jazla/ui/jazla_detail_screen.dart';
+import 'package:hiyaza_finder/features/jazla/ui/jazla_list_screen.dart';
 
 class AppRouter {
   AppRouter._();
@@ -59,7 +61,7 @@ class AppRouter {
       case Routes.addRecord:
         final AddRecordArgs args = (settings.arguments as AddRecordArgs?) ??
             const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
-        return _buildRoute<bool>(
+        return _buildRoute<Parcel?>(
           AddRecordScreen(
             initialParcel: args.initialParcel,
             parentHoldingId: args.parentHoldingId,
@@ -78,6 +80,11 @@ class AppRouter {
         return _buildRoute(const CropTypeSettingsScreen(), settings);
       case Routes.export:
         return _buildRoute(const ExportScreen(), settings);
+      case Routes.jazlaList:
+        return _buildRoute(const JazlaListScreen(), settings);
+      case Routes.jazlaDetail:
+        final String jazlaId = settings.arguments as String? ?? '';
+        return _buildRoute(JazlaDetailScreen(jazlaId: jazlaId), settings);
       default:
         return null;
     }
