@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../holdings/data/local/clipboard_formatter.dart';
 import '../../data/local/jazla_search_service.dart';
 import 'jazla_locked_badge.dart';
 
@@ -19,6 +20,8 @@ class JazlaParcelResultTile extends StatelessWidget {
   final ParcelSearchResult result;
   final VoidCallback onAddTap;
 
+  static const ClipboardFormatter _formatter = ClipboardFormatter();
+
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
@@ -28,6 +31,9 @@ class JazlaParcelResultTile extends StatelessWidget {
     final String basin = result.parcel.basinName?.trim().isNotEmpty == true
         ? result.parcel.basinName!.trim()
         : '—';
+    final String feddan = _formatter.formatNumber(result.parcel.feddan) ?? '0';
+    final String qirat = _formatter.formatNumber(result.parcel.qirat) ?? '0';
+    final String sahm = _formatter.formatNumber(result.parcel.sahm) ?? '0';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -67,7 +73,7 @@ class JazlaParcelResultTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${result.parcel.feddan ?? 0}ف | ${result.parcel.qirat ?? 0}ق | ${result.parcel.sahm ?? 0}س',
+                  '$feddanف | $qiratق | $sahmس',
                   style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
                   textAlign: TextAlign.right,
                 ),

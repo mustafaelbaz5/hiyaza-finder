@@ -446,11 +446,8 @@
       "export_button": "Export Excel"
     },
     "bulk_edit": {
-      "entry_pill": "City tools",
-      "title": "City tools",
-      "basins_title": "Basins",
-      "basins_subtitle": "Holding count per basin",
-      "basins_empty": "No basins in this city",
+      "entry_pill": "Helper tools",
+      "title": "Helper tools",
       "section_title": "Bulk edit a field",
       "section_subtitle": "Applies to every holding in the chosen basin (or the whole city)",
       "scope_label": "Scope",

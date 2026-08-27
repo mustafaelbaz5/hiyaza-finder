@@ -136,10 +136,18 @@ class _JazlaListView extends StatelessWidget {
                           final Jazla jazla = state.jazlas[i];
                           return JazlaCard(
                             jazla: jazla,
-                            onTap: () => context.pushNamed(
-                              Routes.jazlaDetail,
-                              arguments: jazla.id,
-                            ),
+                            onTap: () async {
+                              await context.pushNamed(
+                                Routes.jazlaDetail,
+                                arguments: jazla.id,
+                              );
+                              // The detail screen mutates parcels/parcelIds
+                              // through its own, separate cubit instance —
+                              // reload so this card's count reflects
+                              // whatever changed there (add/remove/reorder)
+                              // without leaving and re-entering this screen.
+                              cubit.load();
+                            },
                             onLongPress: () => _showOptions(context, cubit, jazla),
                           );
                         },

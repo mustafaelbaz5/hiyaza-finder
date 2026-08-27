@@ -6,6 +6,7 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../holdings/data/local/clipboard_formatter.dart';
 import '../../../holdings/data/model/parcel.dart';
 import '../../../holdings/data/repo/holdings_repository.dart';
 import '../../../holdings/data/repo/holdings_writer.dart';
@@ -52,6 +53,8 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
   late Parcel _draft = widget.original;
   bool _isSaving = false;
 
+  static const ClipboardFormatter _formatter = ClipboardFormatter();
+
   Future<void> _confirm() async {
     setState(() => _isSaving = true);
     try {
@@ -76,7 +79,12 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
     return SafeArea(
       child: Container(
         constraints: BoxConstraints(maxHeight: rh(600)),
-        padding: EdgeInsets.fromLTRB(rw(20), rh(16), rw(20), rh(20)),
+        padding: EdgeInsets.fromLTRB(
+          rw(20),
+          rh(16),
+          rw(20),
+          rh(20) + MediaQuery.of(context).viewInsets.bottom,
+        ),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(rr(20))),
@@ -127,9 +135,11 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                     verticalSpacing(8),
                     FieldRow(
                       label: 'المساحة',
-                      value: '${widget.original.feddan ?? 0}ف '
-                          '${widget.original.qirat ?? 0}ق '
-                          '${widget.original.sahm ?? 0}س',
+                      // Same formatter the main Detail Screen uses — plain
+                      // `.toString()` rendering, always Western digits.
+                      value: '${_formatter.formatNumber(widget.original.feddan) ?? '0'}ف '
+                          '${_formatter.formatNumber(widget.original.qirat) ?? '0'}ق '
+                          '${_formatter.formatNumber(widget.original.sahm) ?? '0'}س',
                     ),
                     verticalSpacing(16),
                     ToggleFieldRow(

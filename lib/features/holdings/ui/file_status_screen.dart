@@ -5,7 +5,6 @@ import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/errors/error_message_resolver.dart';
 import '../../../core/themes/app_colors.dart';
-import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/custom_text_button.dart';
@@ -228,8 +227,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final Map<String, int> counts = _repository.basinHoldingCounts;
-    final List<String> basins = _repository.availableBasins;
     final List<Parcel> parcels = _repository.parcels;
     // Same four counts `HomeState` computes for the (now-removed) home-screen
     // summary cards (`REFACTOR_ROADMAP.md` Phase 11 §1) — recomputed directly
@@ -308,63 +305,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                       modifiedCount: modifiedCount,
                       pendingCompletionCount: parcels.length - completedCount,
                       completedCount: completedCount,
-                    ),
-                    verticalSpacing(16),
-                    SectionCard(
-                      title: 'holdings.bulk_edit.basins_title'.tr(),
-                      subtitle: 'holdings.bulk_edit.basins_subtitle'.tr(),
-                      child: basins.isEmpty
-                          ? Text(
-                              'holdings.bulk_edit.basins_empty'.tr(),
-                              style: AppTextStyles.font14Regular.copyWith(
-                                color: colors.textHint,
-                              ),
-                              textAlign: TextAlign.right,
-                            )
-                          : Column(
-                              children: [
-                                for (final String basin in basins)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary50
-                                                .withValues(alpha: 0.3),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            '${counts[basin] ?? 0}',
-                                            style: AppTextStyles.font12Bold
-                                                .copyWith(
-                                              color: AppColors.primary200,
-                                            ),
-                                          ),
-                                        ),
-                                        horizontalSpacing(8),
-                                        Expanded(
-                                          child: Text(
-                                            basin,
-                                            style: AppTextStyles.font14SemiBold
-                                                .copyWith(
-                                              color: colors.textPrimary,
-                                            ),
-                                            textAlign: TextAlign.right,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
                     ),
                   ],
                 ),

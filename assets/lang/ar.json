@@ -446,11 +446,8 @@
       "export_button": "تصدير Excel"
     },
     "bulk_edit": {
-      "entry_pill": "أدوات المدينة",
-      "title": "أدوات المدينة",
-      "basins_title": "الأحواض",
-      "basins_subtitle": "عدد الحيازات في كل حوض",
-      "basins_empty": "لا توجد أحواض في هذه المدينة",
+      "entry_pill": "أدوات مساعدة",
+      "title": "أدوات مساعدة",
       "section_title": "تعديل جماعي لحقل",
       "section_subtitle": "يطبَّق على كل حيازات الحوض المختار (أو المدينة بأكملها)",
       "scope_label": "النطاق",

@@ -144,7 +144,14 @@ class _JazlaDetailView extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showJazlaAddParcelSheet(context, jazlaId: cubit.jazlaId),
+        onPressed: () async {
+          await showJazlaAddParcelSheet(context, jazlaId: cubit.jazlaId);
+          // The add-parcel sheet uses its own, separate cubit instance —
+          // reload this screen's cubit so a parcel added there (or via the
+          // reused add-person/add-parcel-for-existing-person flow it can
+          // launch) shows up immediately without leaving and re-entering.
+          cubit.load();
+        },
         icon: const Icon(Icons.add),
         label: Text('jazla.detail.add_parcel'.tr()),
       ),
