@@ -243,19 +243,19 @@ void onDelegateToggled(bool enabled, Parcel parcel) {
 
 ```dart
 // is_inheritance = true AND is_delegate = true:
-// اسم المالك في العرض: "وارثه [اسم المالك]"
-// اسم الحائز في العرض: "[اسم الحائز]" (من غير وارثه)
+// اسم المالك في العرض: "ورثة [اسم المالك]"
+// اسم الحائز في العرض: "[اسم الحائز]" (من غير ورثة)
 // note المفوض بتتضاف كمان
 
 String displayOwnerName(LocalParcelData data, String holderName) {
   final owner = data.ownerName ?? holderName;
-  return data.isInheritance ? 'وارثه $owner' : owner;
+  return data.isInheritance ? 'ورثة $owner' : owner;
 }
 
 String displayHolderName(LocalParcelData data, String holderName) {
-  // وارثه بتتضاف للحائز بس لو مفيش مفوض
+  // ورثة بتتضاف للحائز بس لو مفيش مفوض
   if (data.isDelegate) return holderName;
-  return data.isInheritance ? 'وارثه $holderName' : holderName;
+  return data.isInheritance ? 'ورثة $holderName' : holderName;
 }
 ```
 

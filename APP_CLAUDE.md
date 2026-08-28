@@ -493,19 +493,19 @@ completed_at        ← DateTime?
 
 ```dart
 // is_inheritance = true
-// → "وارثه " يُضاف في العرض قبل اسم المالك وقبل اسم الحائز
+// → "ورثة " يُضاف في العرض قبل اسم المالك وقبل اسم الحائز
 // → في Copy All والـ Export نفس الشيء
 // → القيمة المخزنة (holder_name) مش بتتغير
 // → بس الـ display والـ formatted output بيتغيروا
 
 String displayHolderName(Parcel p) {
   final name = p.holderName ?? '';
-  return p.isInheritance ? 'وارثه $name' : name;
+  return p.isInheritance ? 'ورثة $name' : name;
 }
 
 String displayOwnerName(Parcel p) {
   final name = effectiveOwnerName(p); // owner_name أو holder_name
-  return p.isInheritance ? 'وارثه $name' : name;
+  return p.isInheritance ? 'ورثة $name' : name;
 }
 ```
 
@@ -530,11 +530,11 @@ void onDelegateEnabled(String holderName, String newOwnerName) {
 
 ```dart
 // is_inheritance = true AND is_delegate = true
-// → "وارثه " قبل اسم المالك بس (مش الحائز)
+// → "ورثة " قبل اسم المالك بس (مش الحائز)
 // → ملاحظة المفوض بتتضاف كمان
 // → في العرض:
-//   اسم المالك: "وارثه [اسم المالك]"
-//   اسم الحائز: "[اسم الحائز]" (من غير وارثه)
+//   اسم المالك: "ورثة [اسم المالك]"
+//   اسم الحائز: "[اسم الحائز]" (من غير ورثة)
 ```
 
 ---

@@ -1,4 +1,5 @@
 # CLAUDE.md — Jazla Feature
+
 ## Complete Implementation Plan
 
 > **اقرأ الملف ده بالكامل قبل أي سطر كود.**
@@ -77,7 +78,7 @@ lib/features/jazla/
 ```dart
 class JazlaStore {
   static const String _keyPrefix = 'jazlas::';
-  
+
   String _key(String cityId) => '$_keyPrefix$cityId';
 
   // CRUD
@@ -139,6 +140,7 @@ abstract class JazlaRepo {
 ```
 
 **Actions:**
+
 - Tap على جزلة → Jazla Detail Screen
 - Long press → خيارات (تعديل الاسم / حذف)
 - [+ جزلة جديدة] → Dialog لإدخال الاسم
@@ -166,6 +168,7 @@ abstract class JazlaRepo {
 ```
 
 **Actions:**
+
 - Tap على قطعة → Detail Screen الكامل (مش Quick View)
 - Drag & Drop لإعادة الترتيب
 - Swipe left → حذف من الجزلة
@@ -197,6 +200,7 @@ abstract class JazlaRepo {
 ```
 
 **Rules:**
+
 - نفس Search Algorithm الحالي بالظبط
 - النتيجة على مستوى القطع مش الأشخاص
 - كل قطعة في جزلة تانية → badge بيعرض اسم الجزلة + مش قابلة للإضافة
@@ -218,7 +222,7 @@ abstract class JazlaRepo {
 │  المساحة: 0ف | 14ق | 0س        │
 │                                 │
 │  ─── تعديل قبل الإضافة ───      │
-│  [وارثه  ●────── ○]             │
+│  [ورثة  ●────── ○]             │
 │  [مفوض   ○────── ●]             │
 │                                 │
 │  [إلغاء]    [إضافة للجزلة ✓]   │
@@ -226,6 +230,7 @@ abstract class JazlaRepo {
 ```
 
 **Rules:**
+
 - Toggles (وراثة/مفوض) بيظهروا هنا
 - التعديل مؤقت — بيتحفظ بس لو اليوزر ضغط "إضافة للجزلة"
 - لو ألغى → القطعة ترجع زي ما كانت بدون أي تغيير
@@ -324,10 +329,10 @@ String buildJazlaExportFileName(String cityName, String jazlaName) {
   final day   = now.day.toString().padLeft(2, '0');
   final month = now.month.toString().padLeft(2, '0');
   final year  = now.year.toString();
-  
+
   final cleanCity  = cityName.replaceAll(' ', '_').replaceAll('-', '_');
   final cleanJazla = jazlaName.replaceAll(' ', '_');
-  
+
   return '${cleanCity}_${cleanJazla}_${day}_${month}_${year}.xlsx';
   // مثال: شنشا_جزلة_الري_26_08_2026.xlsx
 }
@@ -338,9 +343,10 @@ String buildJazlaExportFileName(String cityName, String jazlaName) {
 **الأعمدة بالترتيب:**
 
 | التسلسل | اسم الحائز | اسم المالك | رقم الحيازة | سهم | قيراط | فدان | الملاحظات |
-|---|---|---|---|---|---|---|---|
+| ------- | ---------- | ---------- | ----------- | --- | ----- | ---- | --------- |
 
 **Rules:**
+
 - التسلسل = ترتيب القطعة في الجزلة (1، 2، 3...)
 - اسم المالك = effectiveOwnerName (يراعي المفوض والوراثة)
 - اسم الحائز = effectiveHolderName (يراعي الوراثة)
@@ -393,6 +399,7 @@ case Routes.jazlaDetail:
 ## 13. Implementation Phases
 
 ### Phase 1 — Data Layer
+
 ```
 1.1 أنشئ jazla.dart model
 1.2 أنشئ jazla_store.dart
@@ -407,6 +414,7 @@ Definition of Done:
 ```
 
 ### Phase 2 — Navigation Changes
+
 ```
 2.1 شيل أيقونة الأحواض من Home AppBar
 2.2 أضف أيقونة الجزل في Home AppBar
@@ -421,6 +429,7 @@ Definition of Done:
 ```
 
 ### Phase 3 — Jazla List Screen
+
 ```
 3.1 أنشئ jazla_list_cubit + state
 3.2 أنشئ jazla_card.dart widget
@@ -436,6 +445,7 @@ Definition of Done:
 ```
 
 ### Phase 4 — Jazla Detail Screen
+
 ```
 4.1 أنشئ jazla_detail_cubit + state
 4.2 أنشئ jazla_parcel_tile.dart
@@ -451,6 +461,7 @@ Definition of Done:
 ```
 
 ### Phase 5 — Add Parcel Flow
+
 ```
 5.1 أنشئ jazla_search_bar.dart
 5.2 أنشئ jazla_parcel_result_tile.dart
@@ -479,6 +490,7 @@ Definition of Done:
 ```
 
 ### Phase 6 — Quick View Sheet
+
 ```
 6.1 أنشئ jazla_quick_view_sheet.dart
 6.2 عرض البيانات الأساسية للقطعة
@@ -499,6 +511,7 @@ Definition of Done:
 ```
 
 ### Phase 7 — Export
+
 ```
 7.1 أضف buildJazlaExportFileName() في export_service.dart
 7.2 أضف exportJazla() method:
@@ -515,6 +528,7 @@ Definition of Done:
 ```
 
 ### Phase 8 — Final Verification
+
 ```
 □ flutter analyze → zero issues
 □ إنشاء جزلة جديدة
@@ -533,16 +547,16 @@ Definition of Done:
 
 ## 14. قواعد لا تُكسر
 
-| القاعدة | التفصيل |
-|---|---|
-| ❌ لا نسخ للقطع | الجزلة تحتوي IDs فقط |
-| ❌ لا قطعة في جزلتين | isParcelUsed() دايماً قبل الإضافة |
-| ❌ لا تعديل دائم في Quick View | بس لو اليوزر ضغط "إضافة" |
-| ✅ نفس الـ Logic الحالي | Search + Add + Detail كلهم نفسهم |
-| ✅ Drag & Drop يحفظ | reorder() بعد كل تغيير |
-| ✅ Export RTL | sheet_view.rightToLeft = true |
-| ✅ Phase by phase | كل phase تكتمل قبل التالية |
-| ✅ Use available skills | استخدم أي skill مفيدة |
+| القاعدة                        | التفصيل                           |
+| ------------------------------ | --------------------------------- |
+| ❌ لا نسخ للقطع                | الجزلة تحتوي IDs فقط              |
+| ❌ لا قطعة في جزلتين           | isParcelUsed() دايماً قبل الإضافة |
+| ❌ لا تعديل دائم في Quick View | بس لو اليوزر ضغط "إضافة"          |
+| ✅ نفس الـ Logic الحالي        | Search + Add + Detail كلهم نفسهم  |
+| ✅ Drag & Drop يحفظ            | reorder() بعد كل تغيير            |
+| ✅ Export RTL                  | sheet_view.rightToLeft = true     |
+| ✅ Phase by phase              | كل phase تكتمل قبل التالية        |
+| ✅ Use available skills        | استخدم أي skill مفيدة             |
 
 ---
 
@@ -557,5 +571,5 @@ Definition of Done:
 
 ---
 
-*آخر تحديث: أغسطس 2026*
-*الإصدار: 1.0 — Local Jazla Feature*
+_آخر تحديث: أغسطس 2026_
+_الإصدار: 1.0 — Local Jazla Feature_

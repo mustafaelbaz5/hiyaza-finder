@@ -515,7 +515,7 @@
     },
     "quick_view": {
       "title": "عرض سريع",
-      "inheritance": "وارثه",
+      "inheritance": "ورثة",
       "delegate": "مفوض",
       "cancel": "إلغاء",
       "confirm": "إضافة للجزلة"

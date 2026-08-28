@@ -37,7 +37,7 @@ void main() {
 
   // The ورثة/مفوض prefix matrix (UI/UX Updates prompt "Change 1"/"Change
   // 2"): اسم الحائز is NEVER prefixed regardless of either toggle — مفوض is
-  // represented only via the auto ملاحظات entry. اسم المالك gets "وارثه "
+  // represented only via the auto ملاحظات entry. اسم المالك gets "ورثة "
   // (no brackets, trailing space) when ورثة is set, unaffected by مفوض.
   group('ورثة/مفوض prefix matrix', () {
     test('neither toggle on — no prefix on either slot', () {
@@ -46,9 +46,9 @@ void main() {
       expect(text, contains('اسم الحائز: محمد علي'));
     });
 
-    test('ورثة alone — owner gets "وارثه ", holder stays unprefixed', () {
+    test('ورثة alone — owner gets "ورثة ", holder stays unprefixed', () {
       final String text = formatter.format(baseParcel(isInheritance: true));
-      expect(text, contains('اسم المالك: وارثه محمد علي'));
+      expect(text, contains('اسم المالك: ورثة محمد علي'));
       expect(text, contains('اسم الحائز: محمد علي'));
     });
 
@@ -62,12 +62,12 @@ void main() {
     );
 
     test(
-      'ورثة + مفوض together — owner still gets "وارثه ", holder unprefixed',
+      'ورثة + مفوض together — owner still gets "ورثة ", holder unprefixed',
       () {
         final String text = formatter.format(
           baseParcel(isInheritance: true, isDelegate: true),
         );
-        expect(text, contains('اسم المالك: وارثه محمد علي'));
+        expect(text, contains('اسم المالك: ورثة محمد علي'));
         expect(text, contains('اسم الحائز: محمد علي'));
       },
     );
@@ -83,10 +83,10 @@ void main() {
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('ورثة alone — owner gets "وارثه ", holder stays null', () {
+    test('ورثة alone — owner gets "ورثة ", holder stays null', () {
       final Parcel p = baseParcel(isInheritance: true);
       expect(formatter.holderNamePrefix(p), isNull);
-      expect(formatter.ownerNamePrefix(p), 'وارثه ');
+      expect(formatter.ownerNamePrefix(p), 'ورثة ');
     });
 
     test('مفوض alone — both stay null (مفوض never prefixes a name)', () {
@@ -95,10 +95,10 @@ void main() {
       expect(formatter.ownerNamePrefix(p), isNull);
     });
 
-    test('ورثة + مفوض together — holder still null, owner keeps "وارثه "', () {
+    test('ورثة + مفوض together — holder still null, owner keeps "ورثة "', () {
       final Parcel p = baseParcel(isInheritance: true, isDelegate: true);
       expect(formatter.holderNamePrefix(p), isNull);
-      expect(formatter.ownerNamePrefix(p), 'وارثه ');
+      expect(formatter.ownerNamePrefix(p), 'ورثة ');
     });
   });
 

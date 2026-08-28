@@ -33,9 +33,9 @@ class ClipboardFormatter {
   /// so a future rule change has one place to land.
   String? holderNamePrefix(final Parcel p) => null;
 
-  /// ورثة prefix for اسم المالك display — "وارثه " (no brackets, trailing
+  /// ورثة prefix for اسم المالك display — "ورثة " (no brackets, trailing
   /// space; UI/UX Updates prompt "Change 2"). مفوض never affects اسم المالك.
-  String? ownerNamePrefix(final Parcel p) => p.isInheritance ? 'وارثه ' : null;
+  String? ownerNamePrefix(final Parcel p) => p.isInheritance ? 'ورثة ' : null;
 
   /// اسم الحائز as shown anywhere in the UI/copy-all/export — never
   /// prefixed (see [holderNamePrefix]). The stored [Parcel.holderName]
@@ -43,7 +43,7 @@ class ClipboardFormatter {
   String displayHolderName(final Parcel p) => p.holderName?.trim() ?? '';
 
   /// اسم المالك as shown anywhere in the UI/copy-all/export — prefixed with
-  /// [ownerNamePrefix] ("وارثه ") when ورثة is set, applied to
+  /// [ownerNamePrefix] ("ورثة ") when ورثة is set, applied to
   /// [effectiveOwnerName] (which already falls back to اسم الحائز when اسم
   /// المالك isn't set).
   String displayOwnerName(final Parcel p) {

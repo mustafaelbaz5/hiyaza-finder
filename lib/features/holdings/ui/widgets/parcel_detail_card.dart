@@ -202,7 +202,7 @@ class ParcelDetailCard extends StatelessWidget {
           FieldRow(
             label: 'holdings.fields.owner_name'.tr(),
             // ورثة prefix shown here matches `ClipboardFormatter`'s exact
-            // "وارثه " rule (UI/UX Updates prompt "Change 2") — display
+            // "ورثة " rule (UI/UX Updates prompt "Change 2") — display
             // only, the edit dialog below still opens with the raw name.
             value: _formatter.displayOwnerName(parcel),
             isModified: _isModified((final p) => p.ownerName),
@@ -293,8 +293,8 @@ class ParcelDetailCard extends StatelessWidget {
             // without one of the two writes clobbering the other.
             onChanged: (final List<String> notes) {
               Parcel updated = parcel.copyWith(notes: notes);
-              for (final String removedNote
-                  in parcel.notes.where((final String n) => !notes.contains(n))) {
+              for (final String removedNote in parcel.notes
+                  .where((final String n) => !notes.contains(n))) {
                 updated = Parcel.reformTypeOptions.contains(removedNote) ||
                         removedNote == CreditTypeNotesSync.awqafNote
                     ? CreditTypeNotesSync.applyNoteRemoved(updated, removedNote)
