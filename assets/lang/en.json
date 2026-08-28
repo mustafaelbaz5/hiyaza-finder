@@ -1,9 +1,15 @@
 {
   "app_title": "My App",
   "welcome": "Welcome",
+  "connectivity": {
+    "strong": "Connected to the internet",
+    "weak": "Connected — connection is slow",
+    "offline": "No internet connection"
+  },
   "errors": {
     "no_internet": "No internet connection. Please check your network.",
     "timeout": "Request timeout. Please try again.",
+    "timeout_uncertain": "Connection timed out, but the action may have already gone through — checking now...",
     "connection_error": "Connection error. Please check your internet connection.",
     "bad_request": "Invalid request. Please check your input.",
     "unauthorized": "Unauthorized access. Please login again.",
@@ -38,7 +44,9 @@
     "ok": "OK",
     "close": "Close",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "sync": {
     "status": {
@@ -57,15 +65,22 @@
       "result_all_synced": "Everything synced successfully",
       "result_partial": "{synced} synced, {remaining} still pending",
       "result_none": "Sync failed — check your internet connection and try again",
+      "retry_succeeded": "Synced successfully",
+      "retry_failed": "Retry failed — check your internet connection",
       "discard": "Discard",
       "discard_confirm": "This removes the item from the queue without uploading it. This can't be undone. Continue?",
-      "discarded": "Item discarded"
+      "discarded": "Item discarded",
+      "queued_at": "Queued {time}",
+      "attempts": "{count} attempts",
+      "already_synced": "This change was already uploaded — removed from the queue",
+      "checking": "Checking..."
     },
     "operation": {
       "edit_holding": "Holding edit",
       "bulk_edit": "Bulk edit ({count} records)",
       "add_person": "New person: {name}",
       "add_parcel": "New parcel",
+      "delete_parcel": "Delete record",
       "unnamed": "Unnamed",
       "mark_reviewed": "Reviewed status update"
     }
@@ -93,6 +108,62 @@
       "delete_confirm": "This deletes \"{name}\"'s data from this device only. You can download it again later. Continue?",
       "delete_confirm_active": "\"{name}\" is the current city. Its data will be deleted from this device only (it stays on the server), but it will disappear from the home screen until downloaded again. Continue?",
       "deleted": "City data deleted from this device"
+    },
+    "tools": {
+      "entry": "City tools",
+      "title": "City tools",
+      "missing_holding_id": {
+        "title": "Records missing a holding number",
+        "subtitle": "View and fill in holdings with no رقم الحيازة entered",
+        "search_hint": "Search by name or ID …",
+        "empty": "No records missing a holding number",
+        "empty_hint": "Every holding in this city already has a number",
+        "no_results": "No results",
+        "results_count": "{count} holdings",
+        "filter_all_basins": "All basins",
+        "filter_basin": "Filter by basin",
+        "pending_badge": "No number"
+      },
+      "crop_types": {
+        "title": "Crop types",
+        "subtitle": "Manage this city's نوع الزرع option list",
+        "add": "Add type",
+        "add_title": "Enter a crop type",
+        "empty": "No crop types added for this city yet",
+        "no_active_city": "Can't manage without a loaded city",
+        "remove_confirm": "This removes \"{name}\" from this city's crop-type list. It won't affect parcels already saved with this type. Continue?"
+      },
+      "manage_cities": {
+        "subtitle": "View and delete cities downloaded on this device"
+      },
+      "export": {
+        "subtitle": "Export this city's data to an Excel file"
+      },
+      "bulk_edit": {
+        "subtitle": "Bulk-edit one field across several holdings at once"
+      },
+      "city_info": {
+        "association_name": "Association name",
+        "association_code": "Association code"
+      },
+      "city_code": {
+        "title": "City code",
+        "subtitle": "View and edit the city's reference code",
+        "edit_title": "Enter the city code",
+        "saved": "City code saved"
+      },
+      "notes_settings": {
+        "title": "Notes list",
+        "subtitle": "Add or remove notes from the quick-pick list",
+        "add": "Add",
+        "empty": "No custom notes added yet"
+      },
+      "basins": {
+        "subtitle": "View basins and their progress"
+      },
+      "jazla": {
+        "subtitle": "Group parcels into Jazlas to work on"
+      }
     }
   },
   "auth": {
@@ -137,6 +208,82 @@
     }
   },
   "holdings": {
+    "fields": {
+      "holding_id": "Holding number",
+      "holder_name": "Holder name",
+      "owner_name": "Owner name",
+      "national_id": "National ID",
+      "association_name": "Association name",
+      "basin_name": "Basin name",
+      "basin_code": "Basin code",
+      "land_number": "Land number",
+      "area": "Area",
+      "area_sqm": "Area (m²)",
+      "crop_type": "Crop type",
+      "notes": "Notes",
+      "credit_type": "Credit type",
+      "reform_type": "Reform type",
+      "ownership_type": "Ownership type",
+      "ownership_milk": "Milk",
+      "ownership_awqaf": "Awqaf",
+      "usage_type": "Usage type",
+      "directorate": "Directorate",
+      "administration": "Administration",
+      "inheritance": "Inheritance",
+      "not_inheritance": "Not inheritance",
+      "delegate": "Delegate",
+      "not_delegate": "Not delegate",
+      "holder_name_farmer_card": "Holder name (farmer card)",
+      "owner_name_farmer_card": "Owner name (farmer card)",
+      "growth_stages": "Growth stages"
+    },
+    "area_units": {
+      "feddan": "feddan",
+      "qirat": "qirat",
+      "sahm": "sahm",
+      "fraction": "{feddan} feddan, {qirat} qirat, {sahm} sahm"
+    },
+    "borders": {
+      "north": "North",
+      "south": "South",
+      "east": "East",
+      "west": "West"
+    },
+    "field": {
+      "modified_badge": "Modified",
+      "edit_tooltip": "Edit",
+      "copy_tooltip": "Copy"
+    },
+    "crop_type": {
+      "specify_title": "Specify crop type (optional)"
+    },
+    "notes_field": {
+      "specify_title": "Write the note (optional)",
+      "add_title": "Add note",
+      "free_text_hint": "Write a note...",
+      "quick_list_title": "Common notes",
+      "collapsed_with_count": "{note} (+{count})",
+      "add_button": "+ Add",
+      "empty": "No notes"
+    },
+    "delegate": {
+      "dialog_title": "Delegate",
+      "dialog_subtitle": "Enter the delegated owner's name — it must differ from the holder's name",
+      "name_required": "Owner name is required",
+      "name_must_differ": "Owner name must differ from the holder's name",
+      "auto_note": "Delegated on behalf of {holder}"
+    },
+    "status": {
+      "added_from_app": "Added from app",
+      "pending_review": "Pending review",
+      "reviewed": "Reviewed",
+      "inheritance": "Inheritance",
+      "delegate": "Delegate"
+    },
+    "association_type": {
+      "agricultural_credit": "Agricultural credit",
+      "agricultural_reform": "Agricultural reform"
+    },
     "reform_types": {
       "owned": "Owned Reform",
       "cooperative": "Cooperative Reform",
@@ -155,13 +302,33 @@
     "home": {
       "brand": "Hiyaza",
       "holdings_loaded": "{count} holdings loaded",
-      "change_file": "Change city"
+      "change_file": "Change city",
+      "refresh": "Refresh",
+      "settings": "Settings",
+      "summary_added": "Added",
+      "summary_modified": "Modified",
+      "summary_pending_review": "Pending review",
+      "summary_reviewed": "Reviewed",
+      "basins_title": "Basins",
+      "no_basins": "No basins in this city",
+      "overall_total": "Total: {completed} / {total}"
+    },
+    "basin_screen": {
+      "filter_all": "All",
+      "filter_pending": "Pending",
+      "filter_completed": "Completed",
+      "empty": "No holdings match this filter"
     },
     "search": {
       "hint": "Search by holder name or holding number …",
       "no_results": "No results",
       "voice": "Voice search",
-      "mic_permission_denied": "Microphone access is required for voice search"
+      "mic_permission_denied": "Microphone access is required for voice search",
+      "clear": "Clear search",
+      "start_title": "Start searching",
+      "start_subtitle": "Type a holder name or holding number to search this city's data",
+      "no_results_for": "No results for \"{query}\"",
+      "no_results_hint": "Check the spelling of the name or number"
     },
     "detail": {
       "see_more": "See more",
@@ -171,13 +338,24 @@
       "empty": "No data for this holding",
       "copy_all": "Copy all data",
       "copied": "Copied",
-      "crop_type_required_to_copy": "Please select نوع الزرع before copying data",
+      "copied_and_reviewed": "ID copied and holding marked as reviewed",
+      "crop_type_required_to_copy": "Please select the crop type before copying data",
+      "area_required_to_copy": "Enter the area (feddan/qirat/sahm) before copying data",
       "holding_id": "Holding number",
       "holding_id_pending": "No number yet — new",
       "holdings_count": "Number of parcels in holding",
       "border_no_data": "No data exists for this person",
+      "area_value_too_large": "Value is too large — please check the number entered",
+      "qirat_max_exceeded": "قيراط cannot exceed 24",
+      "sahm_max_exceeded": "سهم cannot exceed 24",
       "new_badge": "New — pending sync",
       "parcel_count": "{count} parcels",
+      "parcel_count_suffix": " ({count} parcels)",
+      "previous_holding": "Previous holding",
+      "next_holding": "Next holding",
+      "previous_parcel": "Previous parcel",
+      "next_parcel": "Next parcel",
+      "parcel_index": "Parcel {index} of {count}",
       "feddan": "Feddan",
       "qirat": "Qirat",
       "sahm": "Sahm",
@@ -192,25 +370,50 @@
       "reviewed_hint": "This parcel has already been collected in the field.",
       "added_badge": "Added from app",
       "added_badge_hint": "This record was created in the app, not imported from the original dataset.",
+      "added_by": "Added by: {email}",
       "section_holder": "Core details",
       "section_holder_subtitle": "The fields most useful while working in the field.",
       "section_extra": "Additional details",
       "section_extra_subtitle": "Less frequently used fields that are still available when needed.",
-      "reopen": "Reopen"
+      "reopen": "Reopen",
+      "filter_all": "All",
+      "filter_added": "Added",
+      "tab_reviewed": "Reviewed",
+      "save_failed": "Couldn't save the change — check your connection and try again",
+      "delete_error": "Couldn't delete the record — check your connection and try again",
+      "reopen_failed": "Couldn't reopen the record — check your connection and try again",
+      "copy_and_review_failed": "ID copied, but couldn't update the review status — try again",
+      "already_reviewed_elsewhere": "ID copied, but this parcel was already reviewed from another device",
+      "review_confirmed_after_timeout": "ID copied. The connection timed out, but the check confirmed the review went through successfully",
+      "review_still_uncertain": "ID copied, but the review status couldn't be confirmed due to a connection issue — check the status later",
+      "saving_field": "Saving change…",
+      "deleting_in_progress": "Deleting record…",
+      "reopening_in_progress": "Reopening record…",
+      "reviewing_in_progress": "Confirming review…"
     },
     "add": {
       "new_person_cta": "Add",
       "new_person_title": "Add new person",
-      "new_parcel_title": "Add a new parcel",
+      "new_parcel_title": "Add",
       "for_person": "Add a new parcel for {name}",
       "land_number_hint": "Enter the correct land number",
+      "holding_id_required": "Enter a valid holding number",
       "save": "Save",
-      "saved": "Saved — will upload once you're online",
+      "saved": "Saved successfully",
+      "saving_in_progress": "Saving new record…",
       "holder_required": "Holder name is required",
-      "basin_required": "Please select اسم الحوض",
-      "crop_type_required": "Please select نوع الزرع",
+      "basin_required": "Please select a basin",
+      "crop_type_required": "Please select a crop type",
+      "area_required": "Enter the area (feddan/qirat/sahm)",
+      "national_id_invalid": "National ID must be 14 digits",
       "no_active_city": "Can't add without a loaded city",
-      "discard_confirm": "Your changes will be lost. Leave anyway?"
+      "discard_confirm": "Your changes will be lost. Leave anyway?",
+      "save_failed": "Couldn't save the new record — check your connection and try again",
+      "mode_new_person": "New person",
+      "mode_existing_person": "Existing person",
+      "search_holding_id_hint": "Enter the holding number",
+      "search_no_match": "No holding found with this number",
+      "confirm_person": "Continue adding for this person"
     },
     "edit": {
       "title": "Edit holding {id}",
@@ -224,12 +427,27 @@
       "save": "Save changes",
       "saved": "Changes saved"
     },
+    "export": {
+      "title": "Export data",
+      "scope_title": "Exported data",
+      "scope_all": "All data ({count} parcels)",
+      "scope_added_only": "Manually added only ({count} parcels)",
+      "basin_export_title": "Export {basin} data",
+      "basin_title": "Basin",
+      "all_basins": "All basins",
+      "pick_basin_title": "Specific basin",
+      "contents_title": "The exported file will contain:",
+      "contents_all_sheet": "An \"All data\" sheet",
+      "contents_basin_sheets": "One sheet per basin",
+      "preview_count": "{count} parcels will be exported",
+      "nothing_to_export": "No data to export for this scope",
+      "saved_to_location": "File saved to the location you chose",
+      "saved_to_app_folder": "File saved inside the app's folder",
+      "export_button": "Export Excel"
+    },
     "bulk_edit": {
-      "entry_pill": "City tools",
-      "title": "City tools",
-      "basins_title": "Basins",
-      "basins_subtitle": "Holding count per basin",
-      "basins_empty": "No basins in this city",
+      "entry_pill": "Helper tools",
+      "title": "Helper tools",
       "section_title": "Bulk edit a field",
       "section_subtitle": "Applies to every holding in the chosen basin (or the whole city)",
       "scope_label": "Scope",
@@ -248,10 +466,15 @@
       "applied_failed_message": "All {failed} record(s) failed to update"
     },
     "basin": {
-      "title": "Focus on a basin",
+      "title": "Basins",
       "subtitle": "Choose a basin to speed up search, or leave All to search the whole file.",
       "all": "All",
-      "focus_label": "Basin: {basin}"
+      "focus_label": "Basin: {basin}",
+      "code_label": "Code: {code}",
+      "code_title": "Basin code",
+      "total_parcels": "Total parcels",
+      "total_area": "Total area",
+      "total_area_value": "{value} m²"
     }
   },
   "settings": {
@@ -265,5 +488,41 @@
     "lang_en": "English",
     "more": "More",
     "about": "About the app"
+  },
+  "jazla": {
+    "title": "Jazlas",
+    "new_jazla": "New Jazla",
+    "name_hint": "Jazla name",
+    "rename": "Rename",
+    "delete": "Delete",
+    "delete_confirm_title": "Delete Jazla",
+    "delete_confirm_message": "The Jazla will be deleted; its parcels stay as-is and can be added to another Jazla.",
+    "empty_list": "No Jazlas yet",
+    "parcel_count": "{count} parcels",
+    "detail": {
+      "add_parcel": "Add parcel",
+      "export": "Export",
+      "remove_confirm": "Remove parcel from Jazla",
+      "empty": "No parcels in this Jazla yet"
+    },
+    "add_sheet": {
+      "title": "Add parcel",
+      "search_hint": "Search by name or number...",
+      "no_results": "No results",
+      "add_new_person": "New person",
+      "add_parcel_for_person": "Parcel for person",
+      "locked_badge": "In {jazlaName}"
+    },
+    "quick_view": {
+      "title": "Quick view",
+      "inheritance": "Inheritance",
+      "delegate": "Delegate",
+      "cancel": "Cancel",
+      "confirm": "Add to Jazla"
+    },
+    "export": {
+      "success": "File exported successfully",
+      "empty": "No parcels to export"
+    }
   }
 }

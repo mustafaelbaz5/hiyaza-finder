@@ -1,30 +1,18 @@
-import 'dart:async';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/local/holding_search_service.dart';
+import '../../data/model/parcel.dart';
+import '../../data/repo/holdings_repository.dart';
 
-import '../../../cities/domain/entities/city.dart';
-import '../../../cities/domain/entities/city_snapshot.dart';
-import '../../../cities/domain/repositories/city_repository.dart';
-import '../../data/repository/holdings_repository.dart';
-import '../../domain/entities/parcel.dart';
-import '../services/holding_search_service.dart';
+import '../../../cities/data/model/city_snapshot.dart';
+import '../../../cities/data/repo/city_repo.dart';
+
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository, this._cityRepository)
-      : super(HomeState.initial()) {
-    // `_repository` is a singleton and outlives any single `HomeCubit`
-    // instance (this cubit is recreated per navigation, see
-    // `app_router.dart`) — a Realtime event applied via
-    // `HoldingsRepository.applyRemoteChange` while this screen is on
-    // screen wouldn't otherwise be noticed, since it mutates the
-    // repository's list in place without going through this cubit.
-    _remoteChangesSub = _repository.onRemoteChange.listen((final _) => refreshData());
-  }
+  HomeCubit(this._repository, this._cityRepository) : super(HomeState.initial());
 
   final HoldingsRepository _repository;
-  final CityRepository _cityRepository;
-  late final StreamSubscription<void> _remoteChangesSub;
+  final CityRepo _cityRepository;
 
   /// Metadata for the active city — `null` until one has been loaded.
   CitySnapshot? _activeCitySnapshot;
@@ -36,7 +24,6 @@ class HomeCubit extends Cubit<HomeState> {
     if (cached != null) {
       _activeCitySnapshot = cached;
       emit(_loadedState(_repository.parcels));
-      unawaited(_checkStaleness());
       return;
     }
 
@@ -56,6 +43,7 @@ class HomeCubit extends Cubit<HomeState> {
         administration: snapshot.administration,
         associationType: snapshot.associationType,
         associationSubtype: snapshot.associationSubtype,
+        basins: snapshot.basins,
       );
       return snapshot;
     } catch (_) {
@@ -74,63 +62,12 @@ class HomeCubit extends Cubit<HomeState> {
     emit(_loadedState(_repository.parcels));
   }
 
-  Future<void> _checkStaleness() async {
-    final CitySnapshot? snapshot = _activeCitySnapshot;
-    if (snapshot == null) return;
-    try {
-      final int remoteVersion =
-          await _cityRepository.remoteDataVersion(snapshot.cityId);
-      if (remoteVersion > snapshot.dataVersion) {
-        emit(state.copyWith(isCityDataStale: true));
-      }
-    } catch (_) {
-      // Offline, or the request failed — staleness is a courtesy notice,
-      // not worth surfacing an error for.
-    }
-  }
-
-  /// Re-downloads the active city and adopts the fresh data — the
-  /// staleness banner's "تحديث البيانات" action and pull-to-refresh.
-  /// Deliberately keeps `status: loaded` throughout and rethrows on
-  /// failure instead of switching to `HomeStatus.loading`/`error`: those
-  /// would swap out the entire loaded screen (fighting a pull gesture's
-  /// own spinner, or discarding a perfectly working offline session over
-  /// a transient refresh failure). Callers decide how to surface the
-  /// error (e.g. a snackbar) while the current data stays on screen.
-  Future<void> refreshActiveCity() async {
-    final CitySnapshot? current = _activeCitySnapshot;
-    if (current == null) return;
-
-    final int remoteVersion =
-        await _cityRepository.remoteDataVersion(current.cityId);
-    final CitySnapshot fresh = await _cityRepository.downloadCity(
-      City(
-        id: current.cityId,
-        name: current.cityName,
-        status: CityStatus.published,
-        dataVersion: remoteVersion,
-        // `CityRepositoryImpl.downloadCity` copies these straight from the
-        // `City` passed in — it does NOT re-fetch the `cities` row itself
-        // (only `downloadHoldings` for parcels) — so without carrying them
-        // forward from the cached snapshot here, a refresh would silently
-        // wipe them from the new snapshot.
-        directorate: current.directorate,
-        administration: current.administration,
-        associationType: current.associationType,
-        associationSubtype: current.associationSubtype,
-      ),
-    );
-    await _repository.loadParcelsForCity(
-      fresh.cityId,
-      fresh.parcels,
-      cityName: fresh.cityName,
-      directorate: fresh.directorate,
-      administration: fresh.administration,
-      associationType: fresh.associationType,
-      associationSubtype: fresh.associationSubtype,
-    );
-    _activeCitySnapshot = fresh;
-    emit(state.copyWith(isCityDataStale: false));
+  /// Re-reads the active city's dataset from the repository — a local-only
+  /// reload, e.g. after returning from a screen that mutated parcels
+  /// directly on the repository. Re-downloading is only ever done
+  /// explicitly from the city picker, never automatically from here.
+  void refreshActiveCity() {
+    if (_activeCitySnapshot == null) return;
     refreshData();
   }
 
@@ -140,48 +77,40 @@ class HomeCubit extends Cubit<HomeState> {
       parcels: parcels,
       query: '',
       results: const <SearchResult>[],
-      availableBasins: _repository.availableBasins,
-      selectedBasin: null,
-      isCityDataStale: false,
+      modifiedIds: _modifiedIds(parcels),
     );
   }
 
+  /// Which of [parcels] have a local edit-overlay entry — backs
+  /// `HomeState.modifiedCount`.
+  Set<String> _modifiedIds(final List<Parcel> parcels) => <String>{
+        for (final Parcel p in parcels)
+          if (_repository.isParcelEdited(p.id)) p.id,
+      };
+
   /// Re-derives state from the repository's current data — used after
   /// returning from a screen that mutated parcels directly on the
-  /// repository (e.g. the bulk-edit/file-status screen), since that
-  /// mutates the same underlying list in place without going through the
-  /// cubit, so Bloc's equality check wouldn't otherwise notice the change.
+  /// repository (e.g. the bulk-edit/file-status screen, or the Basin/
+  /// Detail screens' writes), since that mutates the same underlying list
+  /// in place without going through this cubit.
   void refreshData() {
+    final List<Parcel> parcels = _repository.parcels;
     emit(
       state.copyWith(
-        parcels: _repository.parcels,
-        availableBasins: _repository.availableBasins,
-        results: state.query.trim().isEmpty
-            ? state.results
-            : _repository.search(state.query, basin: state.selectedBasin),
+        parcels: parcels,
+        results:
+            state.query.trim().isEmpty ? state.results : _repository.search(state.query),
+        modifiedIds: _modifiedIds(parcels),
       ),
     );
   }
 
+  /// Searches the whole active dataset (every basin) — the home screen's
+  /// search bar always searches globally regardless of which basin cards
+  /// are showing below it.
   void search(final String query) {
-    final List<SearchResult> results = query.trim().isEmpty
-        ? const <SearchResult>[]
-        : _repository.search(query, basin: state.selectedBasin);
+    final List<SearchResult> results =
+        query.trim().isEmpty ? const <SearchResult>[] : _repository.search(query);
     emit(state.copyWith(query: query, results: results));
-  }
-
-  /// Narrows subsequent searches to [basin] (اسم الحوض), or `null` to
-  /// search the whole loaded dataset again.
-  void selectBasin(final String? basin) {
-    final List<SearchResult> results = state.query.trim().isEmpty
-        ? const <SearchResult>[]
-        : _repository.search(state.query, basin: basin);
-    emit(state.copyWith(selectedBasin: basin, results: results));
-  }
-
-  @override
-  Future<void> close() {
-    _remoteChangesSub.cancel();
-    return super.close();
   }
 }

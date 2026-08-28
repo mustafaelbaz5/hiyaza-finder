@@ -1,0 +1,490 @@
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/material.dart';
+import '../data/repo/holdings_repository.dart';
+
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
+import '../data/model/parcel.dart';
+import 'add_record_screen.dart';
+import 'widgets/detail_screen_header.dart';
+import 'widgets/parcel_detail_card.dart';
+import 'widgets/parcel_status_filter.dart';
+
+/// Full record for one holding. If the holding has multiple parcels they
+/// are all stacked in one scrollable view, each with its own compass and
+/// fields (per the chosen UX — no per-parcel sub-routing).
+class DetailScreen extends StatefulWidget {
+  const DetailScreen({super.key, required this.parcels});
+
+  final List<Parcel> parcels;
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen>
+    with SingleTickerProviderStateMixin {
+  final HoldingsRepository _repository = getIt<HoldingsRepository>();
+  late List<Parcel> _parcels;
+
+  /// The identifying [Parcel.groupKey] shared by every parcel on this
+  /// screen — captured once at [initState] so [_refreshFromRepository] and
+  /// [_remoteChangesSub] can always re-derive the current, complete set of
+  /// this person's parcels from the repository (the source of truth),
+  /// rather than growing/patching [_parcels] by hand at each call site.
+  /// Every parcel passed into this screen shares one groupKey by
+  /// construction (`HomeScreen._openDetail` builds the list via
+  /// `parcelsForHolding(result.groupKey)`), so reading the first entry's is
+  /// safe even for the (rare) empty-list case elsewhere in this file.
+  String? _groupKey;
+
+  /// Guards each write action against a concurrent second tap on the *same*
+  /// parcel while its own request is in flight, and drives the delete/
+  /// reopen spinners on that parcel's card (`REFACTOR_ROADMAP.md` Phase 21
+  /// — previously a single screen-wide `bool` with no visible feedback at
+  /// all). Keyed by parcel id rather than a single flag since several cards
+  /// are on screen at once and each needs its own independent busy state —
+  /// deleting one parcel must not block reopening a different one.
+  final Set<String> _busyParcelIds = <String>{};
+
+  bool _isParcelBusy(final String parcelId) =>
+      _busyParcelIds.contains(parcelId);
+
+  /// Folds `ParcelDetailCard`'s Copy ID busy window into [_busyParcelIds] —
+  /// see `ParcelDetailCard.onReviewBusyChanged`'s doc. Deliberately does NOT
+  /// set [_busyMessage]/the screen-wide overlay the way delete/reopen/edit
+  /// do: Copy ID already has its own local spinner via `_ReviewIdChip`, and
+  /// this screen only needs to know the window exists so it can disable
+  /// this same parcel's Reopen/Delete for its duration — not to duplicate
+  /// the loading UI itself.
+  void _setReviewBusy(final String parcelId, final bool isBusy) {
+    if (!mounted) return;
+    setState(() {
+      if (isBusy) {
+        _busyParcelIds.add(parcelId);
+      } else {
+        _busyParcelIds.remove(parcelId);
+      }
+    });
+  }
+
+  /// Drives the screen-wide [BlockingLoadingOverlay] while any write is in
+  /// flight — set to the action-specific message right before the awaited
+  /// repository call and cleared in every `finally`, so the message on
+  /// screen always matches the action actually running.
+  String? _busyMessage;
+
+  /// Exactly three tabs — الكل/المضافة/تمت المراجعة (`REFACTOR_ROADMAP.md`
+  /// Phase 11 §11), always shown (unlike the filter-chip row this replaced,
+  /// which only appeared for holdings with more than one parcel). الكل is
+  /// always the default/opening tab, per the spec.
+  late final TabController _tabController;
+
+  /// Which of [visibleParcels] (this tab's filtered set) is currently shown
+  /// full-screen — paged via [DetailScreenHeader]'s prev/next arrows
+  /// (moved into the AppBar, UI/UX Updates prompt "Change 4") instead of
+  /// scrolling, so a person with several parcels steps through them one at
+  /// a time. Reset to 0 whenever the active tab or the underlying parcel
+  /// set changes, since an index from the previous filter/holding has no
+  /// meaning here.
+  int _visibleParcelIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController =
+        TabController(length: DetailScreenTab.values.length, vsync: this)
+          ..addListener(() {
+            if (!_tabController.indexIsChanging) return;
+            setState(() => _visibleParcelIndex = 0);
+          });
+    _parcels = _sortedByBasin(widget.parcels);
+    _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
+  }
+
+  /// القطع مرتبة بـ اسم الحوض أبجدياً (APP_CLAUDE.md § Screen 3) — a holding
+  /// spanning several basins shows its parcels grouped alphabetically by
+  /// basin, not in whatever order the backend/local dataset happened to
+  /// return them.
+  List<Parcel> _sortedByBasin(final List<Parcel> parcels) {
+    final List<Parcel> sorted = List<Parcel>.of(parcels);
+    sorted.sort(
+      (final Parcel a, final Parcel b) =>
+          (a.basinName ?? '').compareTo(b.basinName ?? ''),
+    );
+    return sorted;
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  /// Re-reads every parcel sharing [_groupKey] from the repository — the
+  /// single source of truth — and reflects it on screen. Called after every
+  /// successful write this screen makes (so the new/changed state is
+  /// visible immediately, without requiring the user to leave and return)
+  /// and on every incoming Realtime event.
+  ///
+  /// A remote change this screen didn't cause (e.g. another parcel entirely
+  /// being reconciled/promoted elsewhere, which still fires the same shared
+  /// `onRemoteChange` stream) can occasionally follow a captured [_groupKey]
+  /// that's gone stale in ways this screen has no direct way to detect —
+  /// falls back to re-deriving it from any currently-shown parcel's own
+  /// (possibly now-different) `groupKey` before giving up and showing an
+  /// empty list, so a spurious unrelated notification never blanks a
+  /// holding that's still genuinely there.
+  void _refreshFromRepository() {
+    final String? groupKey = _groupKey;
+    if (groupKey == null || !mounted) return;
+    List<Parcel> result = _repository.parcelsForHolding(groupKey);
+    if (result.isEmpty && _parcels.isNotEmpty) {
+      debugPrint(
+        '[DetailScreen] _refreshFromRepository: groupKey=$groupKey '
+        'returned 0 parcels but screen previously showed '
+        '${_parcels.length} — attempting to re-derive groupKey from a '
+        'currently-known parcel id instead of showing empty.',
+      );
+      for (final Parcel p in _parcels) {
+        final Parcel? fresh = _repository.parcels
+            .cast<Parcel?>()
+            .firstWhere((final Parcel? c) => c?.id == p.id, orElse: () => null);
+        if (fresh == null) continue;
+        final List<Parcel> retry =
+            _repository.parcelsForHolding(fresh.groupKey);
+        debugPrint(
+          '[DetailScreen] tried parcel id=${p.id}, current groupKey='
+          '${fresh.groupKey} (was ${p.groupKey}) → ${retry.length} results',
+        );
+        if (retry.isNotEmpty) {
+          _groupKey = fresh.groupKey;
+          result = retry;
+          break;
+        }
+      }
+    }
+    setState(() {
+      _parcels = _sortedByBasin(result);
+    });
+  }
+
+  Future<void> _deleteParcel(final Parcel parcel) async {
+    if (_isParcelBusy(parcel.id)) return;
+    setState(() {
+      _busyParcelIds.add(parcel.id);
+      _busyMessage = 'holdings.detail.deleting_in_progress'.tr();
+    });
+    try {
+      final bool deleted = await _repository.deleteLocalParcel(parcel.id);
+      if (!mounted) return;
+      if (!deleted) {
+        context.showErrorSnackBar('holdings.detail.delete_failed'.tr());
+        return;
+      }
+      setState(() {
+        _parcels =
+            _parcels.where((final Parcel p) => p.id != parcel.id).toList();
+      });
+      context.showSuccessSnackBar('holdings.detail.deleted'.tr());
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.delete_error'.tr(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(parcel.id);
+          _busyMessage = null;
+        });
+      }
+    }
+  }
+
+  /// Un-marks [parcel] completed — user-initiated, no confirmation dialog,
+  /// no snackbar (decision #2: deliberate user-initiated undo).
+  Future<void> _reopenParcel(final Parcel parcel) async {
+    if (_isParcelBusy(parcel.id)) return;
+    setState(() {
+      _busyParcelIds.add(parcel.id);
+      _busyMessage = 'holdings.detail.reopening_in_progress'.tr();
+    });
+    try {
+      final Parcel? updated =
+          await _repository.setParcelCompleted(parcel.id, completed: false);
+      if (!mounted) return;
+      final int idx =
+          _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+      if (idx >= 0) {
+        setState(() {
+          _parcels[idx] = updated ?? _parcels[idx].copyWith(completedAt: null);
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.reopen_failed'.tr(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(parcel.id);
+          _busyMessage = null;
+        });
+      }
+    }
+  }
+
+  /// Reflects a `ParcelDetailCard._copyId`-confirmed review into local state
+  /// (`REFACTOR_ROADMAP.md` Phase 20) — deliberately just `setState`, no
+  /// repository call. By the time this fires, `setParcelCompleted` has
+  /// already been awaited and server-confirmed inside the card; issuing a
+  /// second write here (the old `onFieldChanged`/`_updateField` path) would
+  /// be redundant at best and, if it failed for an unrelated reason, could
+  /// mask an already-successful review behind a "save failed" message.
+  void _onParcelCompleted(final Parcel updated) {
+    if (!mounted) return;
+    final int idx = _parcels.indexWhere((final Parcel p) => p.id == updated.id);
+    if (idx >= 0) setState(() => _parcels[idx] = updated);
+  }
+
+  /// الملاحظات is never force-overwritten or auto-appended by this
+  /// handler — every field edit leaves الملاحظات exactly as the user last
+  /// set it. مباني/بور's own specific auto-notes are still applied
+  /// upstream by `UsageTypeNotesSync` (triggered from the usage-type
+  /// dropdown itself), not by this method.
+  Future<void> _updateField(final Parcel updated) async {
+    if (_isParcelBusy(updated.id)) return;
+    setState(() {
+      _busyParcelIds.add(updated.id);
+      _busyMessage = 'holdings.detail.saving_field'.tr();
+    });
+    try {
+      final int idx = _parcels.indexWhere(
+        (final Parcel p) => p.id == updated.id,
+      );
+      final Parcel toSave = updated;
+
+      await _repository.updateParcel(toSave);
+      if (idx >= 0) {
+        setState(() => _parcels[idx] = toSave);
+      }
+      if (mounted) context.showSuccessSnackBar('holdings.edit.saved'.tr());
+    } catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.save_failed'.tr(),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busyParcelIds.remove(updated.id);
+          _busyMessage = null;
+        });
+      }
+    }
+  }
+
+  /// Pre-fills a new-parcel form from [source] (APP_UPDATES_CLAUDE.md § 2.2):
+  /// اسم الحائز/الرقم القومي/رقم الحيازة/اسم المالك inherit from [source];
+  /// المساحة (blanked — entered fresh for the new land), رقم الأرض (defaults
+  /// to `0`), and اسم الحوض (blanked — required fields must always be
+  /// actively chosen by the user, even for a parcel added under an existing
+  /// person whose other parcels already have one) do not.
+  Future<void> _addParcelForPerson(final Parcel source) async {
+    final Parcel template = source.copyWith(
+      landNumber: '0',
+      feddan: null,
+      qirat: null,
+      sahm: null,
+      totalSqm: null,
+      basinName: null,
+      cropType: null,
+      growthStages: null,
+      // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
+      // [source]'s value — a new parcel is a fresh survey, and if the
+      // source person's other parcel had been set to مباني/بور the
+      // required نوع الزرع field would otherwise silently disappear from
+      // this form with no way to bring it back (usage type isn't editable
+      // in the add flow at all).
+      usageType: Parcel.defaultUsageType,
+      // عدد القطع في الحيازة grows by one for the new parcel being added.
+      holdingsCount: (source.holdingsCount ?? 1) + 1,
+      // الملاحظات = [] by default (§2.2) — not inherited from the source
+      // parcel's own notes.
+      notes: const <String>[],
+    );
+    final Parcel? added = await context.pushNamed<Parcel?>(
+      Routes.addRecord,
+      arguments: AddRecordArgs(
+        initialParcel: template,
+        parentHoldingId: source.id,
+      ),
+    );
+    if (added == null || !mounted) return;
+    // The new parcel already exists in the repository (addLocalParcel only
+    // returns after the server confirms the write) — re-reading by
+    // groupKey here is what makes it appear on this screen immediately,
+    // without requiring the user to leave and come back. Previously this
+    // only showed a success snackbar and never touched `_parcels`, so the
+    // screen looked unchanged; a user who (reasonably) assumed the add had
+    // failed and left without noticing would find the correctly-grouped
+    // person already showing 2 parcels in search — easy to misread as "the
+    // new parcel became a separate person" when it was actually this
+    // screen simply never having displayed it in the first place.
+    _refreshFromRepository();
+    context.showSuccessSnackBar('holdings.add.saved'.tr());
+  }
+
+  Widget _buildParcelCard(final Parcel parcel) {
+    return ParcelDetailCard(
+      key: ValueKey<String>(parcel.id),
+      parcel: parcel,
+      originalParcel: _repository.originalParcel(parcel.id),
+      // "New / unsynced" no longer applies once every write is
+      // confirmed-or-failed synchronously — there is no more window where a
+      // record is visible but not yet on the server.
+      isNew: false,
+      hideCreditType: _repository.hideCreditType,
+      associationType: _repository.activeAssociationType,
+      onFieldChanged: _updateField,
+      onCompleted: _onParcelCompleted,
+      resolveBorderMatch: _repository.findByBorderText,
+      onDelete: parcel.sourceAddedHoldingId != null && parcel.completedAt == null
+          ? () => _deleteParcel(parcel)
+          : null,
+      onReopen: () => _reopenParcel(parcel),
+      isDeleting: _isParcelBusy(parcel.id),
+      isReopening: _isParcelBusy(parcel.id),
+      onReviewBusyChanged: (final bool isBusy) =>
+          _setReviewBusy(parcel.id, isBusy),
+    );
+  }
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    final String holdingId =
+        _parcels.isNotEmpty ? _parcels.first.holdingId : '';
+    final DetailScreenTab activeTab =
+        DetailScreenTab.values[_tabController.index];
+    // Deliberately NOT re-sorted by completion state — a parcel keeps its
+    // original position after being reviewed/reopened instead of jumping
+    // elsewhere in the list, so it stays easy to visually track. Combined
+    // with the ValueKey below, this is what stops the card from tearing
+    // down and re-playing its entrance animation on a state-only update.
+    final List<Parcel> visibleParcels =
+        _parcels.where((final Parcel p) => activeTab.matches(p)).toList();
+
+    // Clamp rather than reset-via-setState mid-build — a delete/tab switch
+    // can shrink this list in the same frame the index was last valid for.
+    final int pagedIndex = visibleParcels.isEmpty
+        ? 0
+        : _visibleParcelIndex.clamp(0, visibleParcels.length - 1);
+
+    final bool showAddFab = _parcels.isNotEmpty;
+
+    return PopScope(
+      canPop: _busyMessage == null,
+      child: BlockingLoadingOverlay(
+        visible: _busyMessage != null,
+        message: _busyMessage,
+        child: Scaffold(
+          backgroundColor: colors.background,
+          body: SafeArea(
+            child: Stack(
+              children: <Widget>[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    DetailScreenHeader(
+                      holdingId: holdingId,
+                      parcelCount: _parcels.length,
+                      // Between-holdings/between-persons navigation is gone
+                      // (UI/UX Updates prompt "Change 4") — this is now only
+                      // ever navigation between the same person's own
+                      // parcels, always rendered (disabled, never hidden)
+                      // even for a single-parcel holding.
+                      onPreviousParcel: pagedIndex > 0
+                          ? () => setState(() => _visibleParcelIndex = pagedIndex - 1)
+                          : null,
+                      onNextParcel: pagedIndex < visibleParcels.length - 1
+                          ? () => setState(() => _visibleParcelIndex = pagedIndex + 1)
+                          : null,
+                    ),
+                    // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
+                    // Phase 11 §11) — unlike the filter-chip row this replaced,
+                    // which only appeared once a holding had more than one
+                    // parcel; a fixed tab bar is part of the screen's layout
+                    // regardless of how many parcels are on it.
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.primary200,
+                      unselectedLabelColor: colors.textSecondary,
+                      indicatorColor: AppColors.primary200,
+                      tabs: [
+                        for (final DetailScreenTab tab
+                            in DetailScreenTab.values)
+                          Tab(text: tab.label()),
+                      ],
+                    ),
+                    verticalSpacing(8),
+                    Expanded(
+                      child: visibleParcels.isEmpty
+                          ? Center(
+                              child: Text(
+                                'holdings.detail.empty'.tr(),
+                                style: AppTextStyles.font16Regular.copyWith(
+                                  color: colors.textHint,
+                                ),
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: rw(16),
+                              ).copyWith(
+                                  bottom: rh(16 + (showAddFab ? 64 : 0))),
+                              child: _buildParcelCard(
+                                visibleParcels[pagedIndex],
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+                if (showAddFab)
+                  PositionedDirectional(
+                    bottom: rh(20),
+                    end: rw(20),
+                    child: FloatingActionButton.extended(
+                      onPressed: () => _addParcelForPerson(_parcels.first),
+                      icon: const Icon(Icons.add_location_alt_rounded),
+                      label: Text('holdings.add.new_parcel_title'.tr()),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

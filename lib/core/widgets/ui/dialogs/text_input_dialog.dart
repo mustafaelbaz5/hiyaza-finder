@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -98,7 +99,7 @@ class _TextInputDialogState extends State<_TextInputDialog> {
               children: [
                 Expanded(
                   child: CustomTextButton.outlined(
-                    text: 'إلغاء',
+                    text: 'app_dialogs.cancel'.tr(),
                     size: CustomButtonSize.small,
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -106,7 +107,7 @@ class _TextInputDialogState extends State<_TextInputDialog> {
                 horizontalSpacing(8),
                 Expanded(
                   child: CustomTextButton(
-                    text: 'حفظ',
+                    text: 'app_dialogs.save'.tr(),
                     size: CustomButtonSize.small,
                     onPressed: () => Navigator.pop(context, _controller.text.trim()),
                   ),

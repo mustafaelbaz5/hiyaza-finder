@@ -1,4 +1,4 @@
 class AppAssets {
-  static const String appLogoImage = 'assets/images/app_Logo.png';
-  static const String appLogoSvg = 'assets/svgs/app_Logo.svg';
+  static const String appLogoImage = 'assets/images/Logo.png';
+  static const String appLogoSvg = 'assets/svgs/logo.svg';
 }

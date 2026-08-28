@@ -1,33 +1,25 @@
-enum Environment { development, production }
+import 'package:flutter/foundation.dart';
 
 class AppConfig {
   AppConfig._();
 
-  // Environment — driven by --dart-define at compile time
-  static const String _env = String.fromEnvironment(
-    'ENV',
-    defaultValue: 'development',
-  );
+  /// Read-only REST endpoint the app downloads city/holdings data from —
+  /// no writes ever go here. Public anon key only; never the service role.
+  static const String supabaseUrl = 'https://lrxpokqhudpjyjoujnva.supabase.co';
+  static const String supabaseAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxyeHBva3FodWRwanlqb3VqbnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMzA3MzEsImV4cCI6MjEwMjcwNjczMX0.ypJA1q_RuZp9hnPSIySEMspSB_2xrO-EvyLeOTicpYY';
 
-  static Environment get environment =>
-      _env == 'production' ? Environment.production : Environment.development;
-
-  static bool get isProduction => environment == Environment.production;
-  static bool get isDevelopment => environment == Environment.development;
-  static bool get enableLogging => !isProduction;
+  static const bool isDevelopment = kDebugMode;
 
   // App Info
   static const String appName = String.fromEnvironment(
     'APP_NAME',
     defaultValue: 'HiyazaFinder Dev',
   );
-  static const String appVersion = '1.1.2';
-  static const String buildNumber = '11';
+  static const String appVersion = '1.1.7';
+  static const String buildNumber = '16';
 
   // Developer Info
   static const String developerName = 'Mustafa Elbaz';
-  static const String developerGithub = 'https://github.com/mustafaelbaz5';
-  static const String developerProfile = 'https://mustafa-portfolio-eight.vercel.app/';
-  static const String developerLinkedIn = 'https://www.linkedin.com/in/mustafa-elbaz-725a6631a';
   static const String developerEmail = 'm9stafa05@gmail.com';
 }

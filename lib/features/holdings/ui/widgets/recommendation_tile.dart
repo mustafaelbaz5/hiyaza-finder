@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../data/local/holding_search_service.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import '../../logic/services/holding_search_service.dart';
 import 'status_badge.dart';
 
 class RecommendationTile extends StatelessWidget {
@@ -24,8 +24,11 @@ class RecommendationTile extends StatelessWidget {
   Widget build(final BuildContext context) {
     final colors = context.customColors;
     final String holderName = result.holderName ?? '—';
-    final String suffix =
-        result.parcelCount > 1 ? ' (${result.parcelCount} قطع)' : '';
+    final String suffix = result.parcelCount > 1
+        ? 'holdings.detail.parcel_count_suffix'.tr(
+            namedArgs: {'count': result.parcelCount.toString()},
+          )
+        : '';
 
     return InkWell(
       onTap: onTap,
@@ -57,9 +60,9 @@ class RecommendationTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (result.reviewedCount > 0) ...<Widget>[
+                      if (result.completedCount > 0) ...<Widget>[
                         const SizedBox(width: 6),
-                        if (result.reviewedCount >= result.parcelCount)
+                        if (result.completedCount >= result.parcelCount)
                           StatusBadge(
                             icon: Icons.check_circle_rounded,
                             label: 'holdings.detail.reviewed_badge'.tr(),
@@ -68,7 +71,7 @@ class RecommendationTile extends StatelessWidget {
                         else
                           StatusBadge(
                             icon: Icons.hourglass_bottom_rounded,
-                            label: '${result.reviewedCount}/${result.parcelCount}',
+                            label: '${result.completedCount}/${result.parcelCount}',
                             color: AppColors.amber200,
                           ),
                       ],

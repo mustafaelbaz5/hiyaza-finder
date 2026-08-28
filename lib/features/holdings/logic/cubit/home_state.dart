@@ -1,14 +1,8 @@
 import 'package:equatable/equatable.dart';
-
-import '../../domain/entities/parcel.dart';
-import '../services/holding_search_service.dart';
+import '../../data/local/holding_search_service.dart';
+import '../../data/model/parcel.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
-
-/// Sentinel used by [HomeState.copyWith] so `selectedBasin` can be
-/// explicitly set to `null` (meaning "focus on all basins") instead of
-/// `null` always meaning "leave the current value unchanged".
-const Object _unset = Object();
 
 class HomeState extends Equatable {
   const HomeState({
@@ -17,9 +11,7 @@ class HomeState extends Equatable {
     this.query = '',
     this.results = const <SearchResult>[],
     this.errorMessage,
-    this.availableBasins = const <String>[],
-    this.selectedBasin,
-    this.isCityDataStale = false,
+    this.modifiedIds = const <String>{},
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -27,23 +19,38 @@ class HomeState extends Equatable {
   final HomeStatus status;
   final List<Parcel> parcels;
   final String query;
+
+  /// Only populated once [query] is non-empty — Home is search-first (UI/UX
+  /// Updates prompt "Change 3"): it never shows a flat, unfiltered
+  /// city-wide list (that view moved to `BasinsPage`/per-basin browsing),
+  /// so there is nothing to compute or hold before the user types.
   final List<SearchResult> results;
+
   final String? errorMessage;
 
-  /// Distinct اسم الحوض values found in the loaded dataset, sorted.
-  final List<String> availableBasins;
-
-  /// The basin currently focused for search, or `null` for "all basins".
-  final String? selectedBasin;
-
-  /// Whether the server has newer data for the active city than what's
-  /// cached locally — drives a non-blocking "تحديث البيانات" banner.
-  final bool isCityDataStale;
+  /// `Parcel.id`s with a local edit-overlay entry
+  /// (`HoldingsRepository.isParcelEdited`) — snapshotted into state
+  /// (rather than queried per-build from the repository) so
+  /// [modifiedCount] is a plain `Equatable`-comparable field like every
+  /// other count here. Populated by `HomeCubit` alongside [parcels]
+  /// whenever the dataset is (re)loaded.
+  final Set<String> modifiedIds;
 
   /// Raw parcel row count for the loaded dataset — a single حيازة can span
   /// several قطع, so this counts every parcel row, not distinct holdings
   /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
   int get holdingCount => parcels.length;
+
+  int get addedCount =>
+      parcels.where((final Parcel p) => p.isFieldAdded).length;
+
+  int get completedCount =>
+      parcels.where((final Parcel p) => p.completedAt != null).length;
+
+  int get pendingCompletionCount => parcels.length - completedCount;
+
+  int get modifiedCount =>
+      parcels.where((final Parcel p) => modifiedIds.contains(p.id)).length;
 
   HomeState copyWith({
     final HomeStatus? status,
@@ -51,9 +58,7 @@ class HomeState extends Equatable {
     final String? query,
     final List<SearchResult>? results,
     final String? errorMessage,
-    final List<String>? availableBasins,
-    final Object? selectedBasin = _unset,
-    final bool? isCityDataStale,
+    final Set<String>? modifiedIds,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -61,11 +66,7 @@ class HomeState extends Equatable {
       query: query ?? this.query,
       results: results ?? this.results,
       errorMessage: errorMessage,
-      availableBasins: availableBasins ?? this.availableBasins,
-      selectedBasin: identical(selectedBasin, _unset)
-          ? this.selectedBasin
-          : selectedBasin as String?,
-      isCityDataStale: isCityDataStale ?? this.isCityDataStale,
+      modifiedIds: modifiedIds ?? this.modifiedIds,
     );
   }
 
@@ -76,8 +77,6 @@ class HomeState extends Equatable {
         query,
         results,
         errorMessage,
-        availableBasins,
-        selectedBasin,
-        isCityDataStale,
+        modifiedIds,
       ];
 }

@@ -1,9 +1,15 @@
 {
   "app_title": "تطبيقي",
   "welcome": "مرحباً",
+  "connectivity": {
+    "strong": "متصل بالإنترنت",
+    "weak": "متصل بالإنترنت — الاتصال ضعيف",
+    "offline": "لا يوجد اتصال بالإنترنت"
+  },
   "errors": {
     "no_internet": "لا يوجد اتصال بالإنترنت. يرجى التحقق من الشبكة.",
     "timeout": "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.",
+    "timeout_uncertain": "انتهت مهلة الاتصال، لكن العملية قد تكون قد تمت بالفعل — يتم التحقق الآن...",
     "connection_error": "خطأ في الاتصال. يرجى التحقق من اتصال الإنترنت.",
     "bad_request": "طلب غير صالح. يرجى التحقق من المدخلات.",
     "unauthorized": "وصول غير مصرح به. يرجى تسجيل الدخول مرة أخرى.",
@@ -38,7 +44,9 @@
     "ok": "حسنًا",
     "close": "إغلاق",
     "yes": "نعم",
-    "no": "لا"
+    "no": "لا",
+    "cancel": "إلغاء",
+    "save": "حفظ"
   },
   "sync": {
     "status": {
@@ -57,15 +65,22 @@
       "result_all_synced": "تمت مزامنة كل البيانات بنجاح",
       "result_partial": "تمت مزامنة {synced}، لا يزال {remaining} بانتظار المزامنة",
       "result_none": "تعذّرت المزامنة — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "retry_succeeded": "تمت المزامنة بنجاح",
+      "retry_failed": "تعذّرت إعادة المحاولة — تحقق من اتصالك بالإنترنت",
       "discard": "تجاهل",
       "discard_confirm": "سيتم حذف هذا العنصر من قائمة الانتظار دون رفعه للخادم. هذا الإجراء لا يمكن التراجع عنه. متابعة؟",
-      "discarded": "تم تجاهل العنصر"
+      "discarded": "تم تجاهل العنصر",
+      "queued_at": "أُضيف في {time}",
+      "attempts": "{count} محاولة",
+      "already_synced": "تم رفع هذا التغيير بالفعل — تمت إزالته من قائمة الانتظار",
+      "checking": "جارِ التحقق..."
     },
     "operation": {
       "edit_holding": "تعديل بيانات حيازة",
       "bulk_edit": "تعديل جماعي ({count} سجل)",
       "add_person": "شخص جديد: {name}",
       "add_parcel": "قطعة أرض جديدة",
+      "delete_parcel": "حذف سجل",
       "unnamed": "بدون اسم",
       "mark_reviewed": "تحديث حالة المراجعة"
     }
@@ -93,6 +108,62 @@
       "delete_confirm": "سيتم حذف بيانات \"{name}\" من هذا الجهاز فقط. يمكنك تحميلها مرة أخرى لاحقًا. متابعة؟",
       "delete_confirm_active": "\"{name}\" هي المدينة الحالية. سيتم حذف بياناتها من هذا الجهاز فقط (تبقى على الخادم)، لكنها ستختفي من الشاشة الرئيسية حتى يتم تحميلها مرة أخرى. متابعة؟",
       "deleted": "تم حذف بيانات المدينة من الجهاز"
+    },
+    "tools": {
+      "entry": "أدوات المدينة",
+      "title": "أدوات المدينة",
+      "missing_holding_id": {
+        "title": "السجلات الناقصة لرقم الحيازة",
+        "subtitle": "عرض وتعديل الحيازات بدون رقم حيازة مُدخل",
+        "search_hint": "ابحث بالاسم أو المعرّف …",
+        "empty": "لا توجد سجلات ناقصة رقم الحيازة",
+        "empty_hint": "كل الحيازات في هذه المدينة لديها رقم حيازة",
+        "no_results": "لا توجد نتائج",
+        "results_count": "{count} حيازة",
+        "filter_all_basins": "كل الأحواض",
+        "filter_basin": "تصفية حسب اسم الحوض",
+        "pending_badge": "بدون رقم"
+      },
+      "crop_types": {
+        "title": "أنواع الزرع",
+        "subtitle": "إدارة قائمة أنواع الزرع لهذه المدينة",
+        "add": "إضافة نوع",
+        "add_title": "أدخل نوع الزرع",
+        "empty": "لا توجد أنواع زرع مضافة لهذه المدينة بعد",
+        "no_active_city": "لا يمكن الإدارة بدون مدينة محمّلة",
+        "remove_confirm": "سيتم حذف \"{name}\" من قائمة أنواع الزرع لهذه المدينة. لن يؤثر هذا على القطع المحفوظة بالفعل بهذا النوع. متابعة؟"
+      },
+      "manage_cities": {
+        "subtitle": "عرض وحذف المدن المحمّلة على هذا الجهاز"
+      },
+      "export": {
+        "subtitle": "تصدير بيانات هذه المدينة إلى ملف Excel"
+      },
+      "bulk_edit": {
+        "subtitle": "تعديل جماعي لحقل على عدة حيازات دفعة واحدة"
+      },
+      "city_info": {
+        "association_name": "اسم الجمعية",
+        "association_code": "كود الجمعية"
+      },
+      "city_code": {
+        "title": "كود المدينة",
+        "subtitle": "عرض وتعديل كود المدينة",
+        "edit_title": "أدخل كود المدينة",
+        "saved": "تم حفظ كود المدينة"
+      },
+      "notes_settings": {
+        "title": "قائمة الملاحظات",
+        "subtitle": "إضافة أو حذف ملاحظات من القائمة السريعة",
+        "add": "إضافة",
+        "empty": "لا توجد ملاحظات مخصّصة مضافة بعد"
+      },
+      "basins": {
+        "subtitle": "عرض الأحواض وتقدّم كل حوض"
+      },
+      "jazla": {
+        "subtitle": "تجميع القطع في جزل للعمل عليها"
+      }
     }
   },
   "auth": {
@@ -107,7 +178,7 @@
       "password_required": "كلمة المرور مطلوبة"
     }
   },
-    "about": {
+  "about": {
     "sections": {
       "app_info": "معلومات التطبيق",
       "developer": "المطور",
@@ -137,6 +208,82 @@
     }
   },
   "holdings": {
+    "fields": {
+      "holding_id": "رقم الحيازة",
+      "holder_name": "اسم الحائز",
+      "owner_name": "اسم المالك",
+      "national_id": "الرقم القومي",
+      "association_name": "اسم الجمعية",
+      "basin_name": "اسم الحوض",
+      "basin_code": "كود الحوض",
+      "land_number": "رقم الأرض",
+      "area": "المساحة",
+      "area_sqm": "المساحة بالمتر",
+      "crop_type": "نوع الزرع",
+      "notes": "ملاحظات",
+      "credit_type": "نوع الائتمان",
+      "reform_type": "نوع الإصلاح",
+      "ownership_type": "نوع الملكية",
+      "ownership_milk": "ملك",
+      "ownership_awqaf": "أوقاف",
+      "usage_type": "نوع الاستخدام",
+      "directorate": "المديرية",
+      "administration": "الإدارة",
+      "inheritance": "ورثة",
+      "not_inheritance": "ليست ورثة",
+      "delegate": "مفوض",
+      "not_delegate": "غير مفوض",
+      "holder_name_farmer_card": "اسم الحائز (بطاقة الفلاح)",
+      "owner_name_farmer_card": "اسم المالك (بطاقة الفلاح)",
+      "growth_stages": "مراحل النمو"
+    },
+    "area_units": {
+      "feddan": "فدان",
+      "qirat": "قيراط",
+      "sahm": "سهم",
+      "fraction": "{feddan} فدان، {qirat} قيراط، {sahm} سهم"
+    },
+    "borders": {
+      "north": "شمال (البحري)",
+      "south": "جنوب (القبلي)",
+      "east": "شرق (الشرقي)",
+      "west": "غرب (الغربي)"
+    },
+    "field": {
+      "modified_badge": "تم التعديل",
+      "edit_tooltip": "تعديل",
+      "copy_tooltip": "نسخ"
+    },
+    "crop_type": {
+      "specify_title": "حدد نوع الزرع (اختياري)"
+    },
+    "notes_field": {
+      "specify_title": "اكتب الملاحظة (اختياري)",
+      "add_title": "إضافة ملاحظة",
+      "free_text_hint": "اكتب ملاحظة...",
+      "quick_list_title": "ملاحظات شائعة",
+      "collapsed_with_count": "{note} (+{count})",
+      "add_button": "+ إضافة",
+      "empty": "لا توجد ملاحظات"
+    },
+    "delegate": {
+      "dialog_title": "تفويض",
+      "dialog_subtitle": "أدخل اسم المالك المفوض — يجب أن يختلف عن اسم الحائز",
+      "name_required": "اسم المالك مطلوب",
+      "name_must_differ": "اسم المالك يجب أن يختلف عن اسم الحائز",
+      "auto_note": "مفوض عنه {holder}"
+    },
+    "status": {
+      "added_from_app": "مضافة من التطبيق",
+      "pending_review": "قيد المراجعة",
+      "reviewed": "تم المراجعة",
+      "inheritance": "ورثة",
+      "delegate": "مفوض"
+    },
+    "association_type": {
+      "agricultural_credit": "الائتمان الزراعي",
+      "agricultural_reform": "الإصلاح الزراعي"
+    },
     "reform_types": {
       "owned": "إصلاح مُملك",
       "cooperative": "إصلاح اشتراكي",
@@ -155,13 +302,33 @@
     "home": {
       "brand": "حيازة",
       "holdings_loaded": "{count} حيازة محمّلة",
-      "change_file": "تغيير المدينة"
+      "change_file": "تغيير المدينة",
+      "refresh": "تحديث",
+      "settings": "الإعدادات",
+      "summary_added": "مضافة",
+      "summary_modified": "معدّلة",
+      "summary_pending_review": "قيد المراجعة",
+      "summary_reviewed": "تمت المراجعة",
+      "basins_title": "الأحواض",
+      "no_basins": "لا توجد أحواض في هذه المدينة",
+      "overall_total": "الإجمالي: {completed} / {total}"
+    },
+    "basin_screen": {
+      "filter_all": "الكل",
+      "filter_pending": "ناقصة",
+      "filter_completed": "مكتملة",
+      "empty": "لا توجد حيازات في هذا الفلتر"
     },
     "search": {
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
       "no_results": "لا نتائج",
       "voice": "بحث صوتي",
-      "mic_permission_denied": "يجب السماح بالوصول إلى الميكروفون لاستخدام البحث الصوتي"
+      "mic_permission_denied": "يجب السماح بالوصول إلى الميكروفون لاستخدام البحث الصوتي",
+      "clear": "مسح البحث",
+      "start_title": "ابدأ بالبحث",
+      "start_subtitle": "اكتب اسم الحائز أو رقم الحيازة للبحث في بيانات المدينة",
+      "no_results_for": "لا توجد نتائج لـ \"{query}\"",
+      "no_results_hint": "تأكد من كتابة الاسم أو الرقم بشكل صحيح"
     },
     "detail": {
       "see_more": "شاهد المزيد",
@@ -171,13 +338,24 @@
       "empty": "لا توجد بيانات لهذه الحيازة",
       "copy_all": "نسخ كل البيانات",
       "copied": "تم النسخ",
+      "copied_and_reviewed": "تم نسخ المعرّف وتحديد الحيازة كمُراجعة",
       "crop_type_required_to_copy": "اختر نوع الزرع قبل نسخ البيانات",
+      "area_required_to_copy": "أدخل المساحة (فدان/قيراط/سهم) قبل نسخ البيانات",
       "holding_id": "رقم الحيازة",
       "holding_id_pending": "بدون رقم — جديد",
       "holdings_count": "عدد القطع في الحيازة",
       "border_no_data": "لا توجد بيانات لهذا الشخص",
+      "area_value_too_large": "القيمة كبيرة جدًا — يرجى مراجعة الرقم المدخل",
+      "qirat_max_exceeded": "القيراط لا يمكن أن يتجاوز 24",
+      "sahm_max_exceeded": "السهم لا يمكن أن يتجاوز 24",
       "new_badge": "جديد — بانتظار المزامنة",
       "parcel_count": "{count} قطعة",
+      "parcel_count_suffix": " ({count} قطع)",
+      "previous_holding": "الحيازة السابقة",
+      "next_holding": "الحيازة التالية",
+      "previous_parcel": "القطعة السابقة",
+      "next_parcel": "القطعة التالية",
+      "parcel_index": "قطعة {index} من {count}",
       "feddan": "فدان",
       "qirat": "قيراط",
       "sahm": "سهم",
@@ -192,25 +370,50 @@
       "reviewed_hint": "تم جمع هذه البيانات من الحقل ويمكن التعامل معها كحيازة مكتملة.",
       "added_badge": "مضافة من التطبيق",
       "added_badge_hint": "هذا السجل لم يكن ضمن البيانات المستوردة الأصلية.",
+      "added_by": "تمت الإضافة بواسطة: {email}",
       "section_holder": "البيانات الأساسية",
       "section_holder_subtitle": "أهم المعلومات التي يحتاجها الفريق أثناء العمل الميداني.",
       "section_extra": "تفاصيل إضافية",
       "section_extra_subtitle": "بيانات أقل استخدامًا لكنها تبقى متاحة عند الحاجة.",
-      "reopen": "إعادة فتح"
+      "reopen": "إعادة فتح",
+      "filter_all": "الكل",
+      "filter_added": "المضافة",
+      "tab_reviewed": "تمت المراجعة",
+      "save_failed": "تعذّر حفظ التعديل — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "delete_error": "تعذّر حذف السجل — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "reopen_failed": "تعذّرت إعادة فتح السجل — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "copy_and_review_failed": "تم نسخ المعرّف، لكن تعذّر تحديث حالة المراجعة — حاول مرة أخرى",
+      "already_reviewed_elsewhere": "تم نسخ المعرّف، لكن هذه القطعة تمت مراجعتها بالفعل من جهاز آخر",
+      "review_confirmed_after_timeout": "تم نسخ المعرّف. انتهت مهلة الاتصال، لكن التحقق أكّد أن المراجعة تمت بنجاح",
+      "review_still_uncertain": "تم نسخ المعرّف، لكن تعذّر التأكد من حالة المراجعة بسبب مشكلة في الاتصال — تحقق من الحالة لاحقًا",
+      "saving_field": "جارِ حفظ التعديل…",
+      "deleting_in_progress": "جارِ حذف السجل…",
+      "reopening_in_progress": "جارِ إعادة فتح السجل…",
+      "reviewing_in_progress": "جارِ تأكيد المراجعة…"
     },
     "add": {
       "new_person_cta": "إضافة",
       "new_person_title": "إضافة شخص جديد",
-      "new_parcel_title": "إضافة قطعة أرض جديدة",
+      "new_parcel_title": "إضافة ",
       "for_person": "إضافة قطعة أرض جديدة لـ {name}",
       "land_number_hint": "يجب إدخال رقم الأرض الصحيح",
+      "holding_id_required": "أدخل رقم الحيازة الصحيح",
       "save": "حفظ",
-      "saved": "تم الحفظ، سيتم رفعها عند توفر الاتصال",
+      "saved": "تم الحفظ بنجاح",
+      "saving_in_progress": "جارِ حفظ السجل الجديد…",
       "holder_required": "اسم الحائز مطلوب",
       "basin_required": "اختر اسم الحوض",
       "crop_type_required": "اختر نوع الزرع",
+      "area_required": "أدخل المساحة (فدان/قيراط/سهم)",
+      "national_id_invalid": "الرقم القومي يجب أن يتكون من 14 رقمًا",
       "no_active_city": "لا يمكن الإضافة بدون مدينة محمّلة",
-      "discard_confirm": "سيتم فقدان التغييرات، هل تريد الخروج؟"
+      "discard_confirm": "سيتم فقدان التغييرات، هل تريد الخروج؟",
+      "save_failed": "تعذّر حفظ السجل الجديد — تحقق من اتصالك بالإنترنت وحاول مرة أخرى",
+      "mode_new_person": "شخص جديد",
+      "mode_existing_person": "شخص موجود",
+      "search_holding_id_hint": "أدخل رقم الحيازة",
+      "search_no_match": "لا يوجد حيازة بهذا الرقم",
+      "confirm_person": "متابعة الإضافة لهذا الشخص"
     },
     "edit": {
       "title": "تعديل حيازة {id}",
@@ -224,12 +427,27 @@
       "save": "حفظ التعديلات",
       "saved": "تم حفظ التعديلات"
     },
+    "export": {
+      "title": "تصدير البيانات",
+      "scope_title": "البيانات المُصدَّرة",
+      "scope_all": "كل البيانات ({count} قطعة)",
+      "scope_added_only": "المضافة يدوياً فقط ({count} قطعة)",
+      "basin_export_title": "تصدير بيانات {basin}",
+      "basin_title": "الحوض",
+      "all_basins": "كل الأحواض",
+      "pick_basin_title": "حوض محدد",
+      "contents_title": "الملف المُصدَّر سيحتوي على:",
+      "contents_all_sheet": "شيت \"كل البيانات\"",
+      "contents_basin_sheets": "شيت لكل حوض",
+      "preview_count": "سيتم تصدير {count} قطعة",
+      "nothing_to_export": "لا توجد بيانات لتصديرها بهذا النطاق",
+      "saved_to_location": "تم حفظ الملف في المكان الذي اخترته",
+      "saved_to_app_folder": "تم حفظ الملف داخل مجلد التطبيق",
+      "export_button": "تصدير Excel"
+    },
     "bulk_edit": {
-      "entry_pill": "أدوات المدينة",
-      "title": "أدوات المدينة",
-      "basins_title": "الأحواض",
-      "basins_subtitle": "عدد الحيازات في كل حوض",
-      "basins_empty": "لا توجد أحواض في هذه المدينة",
+      "entry_pill": "أدوات مساعدة",
+      "title": "أدوات مساعدة",
       "section_title": "تعديل جماعي لحقل",
       "section_subtitle": "يطبَّق على كل حيازات الحوض المختار (أو المدينة بأكملها)",
       "scope_label": "النطاق",
@@ -239,8 +457,8 @@
       "pick_basin_title": "اختر الحوض",
       "pick_field_title": "اختر الحقل",
       "value_placeholder": "—",
-      "inheritance_true": "وراثة",
-      "inheritance_false": "ليست وراثة",
+      "inheritance_true": "ورثة",
+      "inheritance_false": "ليست ورثة",
       "apply": "تطبيق",
       "confirm_message": "سيتم تطبيق \"{field}\" = \"{value}\" على {scope}. متابعة؟",
       "applied_message": "تم تحديث {count} سجل",
@@ -248,10 +466,15 @@
       "applied_failed_message": "فشل تحديث كل السجلات ({failed})"
     },
     "basin": {
-      "title": "التركيز على حوض معيّن",
+      "title": "الأحواض",
       "subtitle": "اختر حوضًا لتسريع البحث، أو اترك الكل للبحث في كل البيانات.",
       "all": "الكل",
-      "focus_label": "الحوض: {basin}"
+      "focus_label": "الحوض: {basin}",
+      "code_label": "كود: {code}",
+      "code_title": "كود الحوض",
+      "total_parcels": "إجمالي القطع",
+      "total_area": "المساحة الكلية",
+      "total_area_value": "{value} م²"
     }
   },
   "settings": {
@@ -265,5 +488,41 @@
     "lang_en": "English",
     "more": "المزيد",
     "about": "عن التطبيق"
+  },
+  "jazla": {
+    "title": "الجزل",
+    "new_jazla": "جزلة جديدة",
+    "name_hint": "اسم الجزلة",
+    "rename": "تعديل الاسم",
+    "delete": "حذف",
+    "delete_confirm_title": "حذف الجزلة",
+    "delete_confirm_message": "سيتم حذف الجزلة، وستبقى القطع كما هي ويمكن إضافتها لجزلة أخرى.",
+    "empty_list": "لا توجد جزل بعد",
+    "parcel_count": "{count} قطعة",
+    "detail": {
+      "add_parcel": "إضافة قطعة",
+      "export": "تصدير",
+      "remove_confirm": "إزالة القطعة من الجزلة",
+      "empty": "لا توجد قطع في هذه الجزلة بعد"
+    },
+    "add_sheet": {
+      "title": "إضافة قطعة",
+      "search_hint": "ابحث بالاسم أو الرقم...",
+      "no_results": "لا توجد نتائج",
+      "add_new_person": "شخص جديد",
+      "add_parcel_for_person": "قطعة لشخص",
+      "locked_badge": "في {jazlaName}"
+    },
+    "quick_view": {
+      "title": "عرض سريع",
+      "inheritance": "ورثة",
+      "delegate": "مفوض",
+      "cancel": "إلغاء",
+      "confirm": "إضافة للجزلة"
+    },
+    "export": {
+      "success": "تم تصدير الملف بنجاح",
+      "empty": "لا توجد قطع لتصديرها"
+    }
   }
 }

@@ -1,0 +1,81 @@
+import '../../../../core/storage/key_value_store.dart';
+import '../local/city_snapshot_cache.dart';
+import '../model/cached_city_meta.dart';
+import '../model/city.dart';
+import '../model/city_snapshot.dart';
+import '../remote/city_remote_ds.dart' show CityDownloadResult, CityRemoteDataSource;
+import 'city_repo.dart';
+
+class CityRepoImpl implements CityRepo {
+  CityRepoImpl({
+    required final CityRemoteDataSource dataSource,
+    required final CitySnapshotCache cache,
+    required final KeyValueStore keyValueStore,
+  })  : _dataSource = dataSource,
+        _cache = cache,
+        _keyValueStore = keyValueStore;
+
+  static const String _activeCityIdKey = 'active_city_id';
+
+  final CityRemoteDataSource _dataSource;
+  final CitySnapshotCache _cache;
+  final KeyValueStore _keyValueStore;
+
+  @override
+  Future<List<City>> listPublishedCities() => _dataSource.listPublishedCities();
+
+  @override
+  Future<CitySnapshot> downloadCity(final City city) async {
+    final CityDownloadResult result = await _dataSource.downloadCityData(city.id);
+    final CitySnapshot snapshot = CitySnapshot(
+      cityId: city.id,
+      cityName: city.name,
+      dataVersion: city.dataVersion,
+      downloadedAt: DateTime.now(),
+      parcels: result.parcels,
+      basins: result.basins,
+      directorate: city.directorate,
+      administration: city.administration,
+      // Copied straight from `City` (itself read from `cities.association_type`
+      // / `association_subtype`) — the DB is the single source of truth, no
+      // per-parcel detection.
+      associationType: city.associationType,
+      associationSubtype: city.associationSubtype,
+    );
+    await _cache.save(snapshot);
+    await _keyValueStore.setString(_activeCityIdKey, city.id);
+    return snapshot;
+  }
+
+  @override
+  Future<CitySnapshot?> loadActiveCachedSnapshot() async {
+    final String? cityId = await _keyValueStore.getString(_activeCityIdKey);
+    if (cityId == null) return null;
+    return _cache.load(cityId);
+  }
+
+  @override
+  Future<int> remoteDataVersion(final String cityId) =>
+      _dataSource.remoteDataVersion(cityId);
+
+  @override
+  Future<List<CachedCityMeta>> listCachedCities() async {
+    final List<String> ids = await _cache.listCachedCityIds();
+    final List<CachedCityMeta> metas = <CachedCityMeta>[];
+    for (final String id in ids) {
+      final CachedCityMeta? meta = await _cache.loadMetadata(id);
+      if (meta != null) metas.add(meta);
+    }
+    return metas;
+  }
+
+  @override
+  Future<void> deleteCachedCity(final String cityId) async {
+    await _cache.delete(cityId);
+    final String? activeCityId =
+        await _keyValueStore.getString(_activeCityIdKey);
+    if (activeCityId == cityId) {
+      await _keyValueStore.remove(_activeCityIdKey);
+    }
+  }
+}

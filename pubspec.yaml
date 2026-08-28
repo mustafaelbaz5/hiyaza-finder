@@ -1,7 +1,7 @@
 name: hiyaza_finder
-description: "A new Flutter project."
+description: "Hiyaza app"
 publish_to: "none"
-version: 1.1.2+2
+version: 1.1.7+7
 
 # ----------------------------------------------------------------
 # ENVIRONMENT
@@ -16,16 +16,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # --- Supabase ---
-  supabase_flutter: ^2.16.0
+  # --- HTTP ---
+  http: ^1.2.0
 
   # --- State Management ---
   bloc: ^9.2.1
   flutter_bloc: ^9.1.1
   hydrated_bloc: ^11.0.0
-
-  # --- Networking ---
-  dio: ^5.10.0
 
   # --- Storage & Preferences ---
   flutter_secure_storage: ^10.3.1
@@ -52,11 +49,9 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_svg: ^2.2.4
   uuid: ^4.5.1
-
-  # --- Voice Search (Android only) ---
-  speech_to_text: ^7.4.0
-  permission_handler: ^12.0.3
-  flutter_dotenv: ^6.0.1
+  excel: ^4.0.6
+  share_plus: ^11.0.0
+  file_picker: ^11.0.3
 
 # ----------------------------------------------------------------
 # DEV DEPENDENCIES
@@ -83,7 +78,6 @@ flutter:
     - assets/images/
     - assets/svgs/
     - assets/lang/
-    - .env
   # --- Fonts ---
   fonts:
     - family: Manrope
@@ -126,6 +120,6 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/app_Logo.png"
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/images/app_Logo.png"
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#ff20643f"
+  adaptive_icon_foreground: "assets/images/logo.png"
