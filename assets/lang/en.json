@@ -161,8 +161,8 @@
       "basins": {
         "subtitle": "View basins and their progress"
       },
-      "jazla": {
-        "subtitle": "Group parcels into Jazlas to work on"
+      "helper_tools": {
+        "title": "Helper tools"
       }
     }
   },
@@ -502,8 +502,15 @@
     "detail": {
       "add_parcel": "Add parcel",
       "export": "Export",
-      "remove_confirm": "Remove parcel from Jazla",
-      "empty": "No parcels in this Jazla yet"
+      "remove_confirm_title": "Remove from Jazla",
+      "remove_confirm_message": "The parcel will be removed from this Jazla only — its data is not deleted.",
+      "remove": "Remove",
+      "empty": "No parcels in this Jazla yet",
+      "tab_parcels": "Parcels",
+      "tab_add": "Add parcel",
+      "area_label": "Area",
+      "area_value": "{feddan} feddan | {qirat} qirat | {sahm} sahm",
+      "bulk_apply": "Bulk apply"
     },
     "add_sheet": {
       "title": "Add parcel",
@@ -523,6 +530,18 @@
     "export": {
       "success": "File exported successfully",
       "empty": "No parcels to export"
+    },
+    "bulk_apply": {
+      "title": "Bulk apply on {jazlaName}",
+      "parcel_count": "{count} parcels",
+      "field_label": "Choose field",
+      "value_label": "Choose value",
+      "apply": "Apply to all",
+      "cancel": "Cancel",
+      "empty": "No parcels in this Jazla",
+      "applied_message": "Applied to {count} parcels",
+      "applied_failed_message": "Failed to apply to {failed} parcels",
+      "applied_partial_message": "Applied to {succeeded}, failed for {failed}"
     }
   }
 }

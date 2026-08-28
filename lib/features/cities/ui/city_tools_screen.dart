@@ -40,6 +40,10 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                 padding: EdgeInsets.symmetric(horizontal: rw(16))
                     .copyWith(bottom: rh(24)),
                 children: [
+                  // معلومات الجمعية — the identity block above the list
+                  // (`CityInfoCard`) already covers this; the management
+                  // entry (rename/delete downloaded cities) stays here as
+                  // its own tile, alongside export.
                   _ToolTile(
                     icon: Icons.folder_delete_outlined,
                     title: 'cities.manage.entry'.tr(),
@@ -48,10 +52,30 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                   ),
                   verticalSpacing(10),
                   _ToolTile(
-                    icon: Icons.assignment_late_outlined,
-                    title: 'cities.tools.missing_holding_id.title'.tr(),
-                    subtitle: 'cities.tools.missing_holding_id.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.missingHoldingId),
+                    icon: Icons.file_download_outlined,
+                    title: 'holdings.export.title'.tr(),
+                    subtitle: 'cities.tools.export.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.export),
+                  ),
+                  verticalSpacing(20),
+                  // الأحواض
+                  _SectionHeader(
+                    icon: Icons.holiday_village_rounded,
+                    title: 'holdings.basin.title'.tr(),
+                  ),
+                  verticalSpacing(10),
+                  _ToolTile(
+                    icon: Icons.holiday_village_rounded,
+                    title: 'holdings.basin.title'.tr(),
+                    subtitle: 'cities.tools.basins.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.basins),
+                  ),
+                  verticalSpacing(20),
+                  // أدوات مساعدة — أنواع الزرع + قائمة الملاحظات + السجلات
+                  // الناقصة, grouped as the "helper tools" section.
+                  _SectionHeader(
+                    icon: Icons.build_outlined,
+                    title: 'cities.tools.helper_tools.title'.tr(),
                   ),
                   verticalSpacing(10),
                   _ToolTile(
@@ -62,10 +86,25 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                   ),
                   verticalSpacing(10),
                   _ToolTile(
-                    icon: Icons.file_download_outlined,
-                    title: 'holdings.export.title'.tr(),
-                    subtitle: 'cities.tools.export.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.export),
+                    icon: Icons.sticky_note_2_outlined,
+                    title: 'cities.tools.notes_settings.title'.tr(),
+                    subtitle: 'cities.tools.notes_settings.subtitle'.tr(),
+                    onTap: () => showNotesSettingsSheet(context),
+                  ),
+                  verticalSpacing(10),
+                  _ToolTile(
+                    icon: Icons.assignment_late_outlined,
+                    title: 'cities.tools.missing_holding_id.title'.tr(),
+                    subtitle: 'cities.tools.missing_holding_id.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.missingHoldingId),
+                  ),
+                  verticalSpacing(20),
+                  // تعديل جماعي — its own section, kept separate from
+                  // "helper tools" since it's a bulk write operation, not a
+                  // list-management tool.
+                  _SectionHeader(
+                    icon: Icons.dashboard_customize_outlined,
+                    title: 'holdings.bulk_edit.entry_pill'.tr(),
                   ),
                   verticalSpacing(10),
                   _ToolTile(
@@ -74,32 +113,39 @@ class _CityToolsScreenState extends State<CityToolsScreen> {
                     subtitle: 'cities.tools.bulk_edit.subtitle'.tr(),
                     onTap: () => context.pushNamed(Routes.fileStatus),
                   ),
-                  verticalSpacing(10),
-                  _ToolTile(
-                    icon: Icons.sticky_note_2_outlined,
-                    title: 'cities.tools.notes_settings.title'.tr(),
-                    subtitle: 'cities.tools.notes_settings.subtitle'.tr(),
-                    onTap: () => showNotesSettingsSheet(context),
-                  ),
-                  verticalSpacing(10),
-                  _ToolTile(
-                    icon: Icons.holiday_village_rounded,
-                    title: 'holdings.basin.title'.tr(),
-                    subtitle: 'cities.tools.basins.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.basins),
-                  ),
-                  verticalSpacing(10),
-                  _ToolTile(
-                    icon: Icons.layers_outlined,
-                    title: 'jazla.title'.tr(),
-                    subtitle: 'cities.tools.jazla.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.jazlaList),
-                  ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A small section label above a group of related [_ToolTile]s — purely
+/// visual grouping, no navigation of its own.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 16, color: colors.textSecondary),
+          horizontalSpacing(6),
+          Text(
+            title,
+            style: AppTextStyles.font12Bold.copyWith(color: colors.textSecondary),
+            textAlign: TextAlign.right,
+          ),
+        ],
       ),
     );
   }

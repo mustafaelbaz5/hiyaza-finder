@@ -357,19 +357,33 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       _queryService.findByBorderText(_dataset.borderIndex, borderText);
 
   /// Applies [value] to every parcel's [field], optionally scoped to
-  /// [basin] (only parcels whose اسم الحوض matches). Every in-scope row is
-  /// applied to the local dataset and edit overlay immediately.
+  /// [basin] (اسم الحوض match) and/or [parcelIds] (e.g. one Jazla's own
+  /// parcels — both scopes combine with AND when given together). Every
+  /// in-scope row is applied to the local dataset and edit overlay.
+  ///
+  /// The edit-overlay bookkeeping (`_dataset.setEdit`/[LocalEditTracker
+  /// .markEditedBatch]) is batched rather than done per-parcel-per-await —
+  /// a per-parcel `SharedPreferences` round trip was the actual cause of
+  /// bulk edit freezing the UI on a city with hundreds/thousands of
+  /// parcels. Processed in chunks with a `Future<void>.delayed(Duration.zero)`
+  /// yield between them so the event loop (and any progress UI via
+  /// [onProgress]) stays responsive throughout, even though every chunk's
+  /// work is still synchronous, in-memory `copyWith` calls — cheap enough
+  /// that an isolate/`compute()` would only add IPC overhead here.
   @override
   Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
+    final Set<String>? parcelIds,
+    final void Function(double progress)? onProgress,
   }) async {
     final BulkEditResult result = _bulkEditService.apply(
       _dataset.parcels,
       field: field,
       value: value,
       basin: basin,
+      parcelIds: parcelIds,
     );
 
     if (result.changedCount == 0) {
@@ -377,17 +391,35 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     }
 
     final String? cityId = _dataset.activeCityId;
+    bool inScopeOf(final Parcel p) =>
+        (basin == null || p.basinName == basin) &&
+        (parcelIds == null || parcelIds.contains(p.id));
 
     final List<Parcel> inScope = <Parcel>[];
     final List<Parcel> outOfScope = <Parcel>[];
     for (final Parcel p in result.parcels) {
-      (basin == null || p.basinName == basin ? inScope : outOfScope).add(p);
+      (inScopeOf(p) ? inScope : outOfScope).add(p);
     }
 
-    for (final Parcel p in inScope) {
-      _dataset.setEdit(p.id, _dataset.editSnapshot(p));
-      if (cityId != null) await _editTracker.markEdited(p.id, cityId);
+    const int batchSize = 200;
+    for (int i = 0; i < inScope.length; i += batchSize) {
+      final List<Parcel> batch =
+          inScope.skip(i).take(batchSize).toList(growable: false);
+      for (final Parcel p in batch) {
+        _dataset.setEdit(p.id, _dataset.editSnapshot(p));
+      }
+      if (cityId != null) {
+        await _editTracker.markEditedBatch(
+          batch.map((final Parcel p) => p.id),
+          cityId,
+        );
+      }
+      onProgress?.call((i + batch.length) / inScope.length);
+      // Yields to the event loop between batches so a long-running bulk
+      // edit never blocks a frame for its entire duration.
+      await Future<void>.delayed(Duration.zero);
     }
+
     _dataset.replaceAll(<Parcel>[...inScope, ...outOfScope]);
     // Defensive: no `BulkEditableField` touches حائز/مالك today, but
     // rebuilding here is O(n) same as the reassignment above and keeps

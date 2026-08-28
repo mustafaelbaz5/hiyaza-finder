@@ -21,6 +21,22 @@ class LocalEditTracker {
     await _store.setString(_key(cityId), jsonEncode(current.toList()));
   }
 
+  /// Marks every id in [parcelIds] edited in one read-modify-write instead
+  /// of one round trip per id — [markEdited] called in a loop across
+  /// hundreds/thousands of parcels (a bulk edit's scope) does a full
+  /// decode-encode-write cycle *per parcel*, which is the actual cause of
+  /// bulk edit freezing the UI on a large city; this collapses that to a
+  /// single write no matter how many ids are in scope.
+  Future<void> markEditedBatch(
+    final Iterable<String> parcelIds,
+    final String cityId,
+  ) async {
+    if (parcelIds.isEmpty) return;
+    final Set<String> current = await getEditedIds(cityId);
+    current.addAll(parcelIds);
+    await _store.setString(_key(cityId), jsonEncode(current.toList()));
+  }
+
   Future<Set<String>> getEditedIds(final String cityId) async {
     final String? raw = await _store.getString(_key(cityId));
     if (raw == null) return <String>{};

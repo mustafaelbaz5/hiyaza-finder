@@ -15,5 +15,7 @@ abstract class HoldingsWriter {
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
+    final Set<String>? parcelIds,
+    final void Function(double progress)? onProgress,
   });
 }

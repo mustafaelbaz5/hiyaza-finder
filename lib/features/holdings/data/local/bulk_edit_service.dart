@@ -18,16 +18,24 @@ class BulkEditResult {
 class BulkEditService {
   const BulkEditService();
 
+  /// [basin] and [parcelIds] are independent scope filters — when both are
+  /// given, a parcel must satisfy both (basin match AND id in the set).
+  /// [parcelIds] is what lets a Jazla's "تطبيق جماعي" apply only to its own
+  /// parcels through this exact same logic, rather than a second bulk-edit
+  /// implementation.
   BulkEditResult apply(
     final List<Parcel> parcels, {
     required final BulkEditableField field,
     required final Object? value,
     final String? basin,
+    final Set<String>? parcelIds,
   }) {
     int changed = 0;
     final List<Parcel> updated = <Parcel>[];
     for (final Parcel p in parcels) {
-      if (basin != null && p.basinName != basin) {
+      final bool inScope = (basin == null || p.basinName == basin) &&
+          (parcelIds == null || parcelIds.contains(p.id));
+      if (!inScope) {
         updated.add(p);
         continue;
       }

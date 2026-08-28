@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../crop_type/ui/widgets/crop_type_picker.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/errors/error_message_resolver.dart';
@@ -11,6 +10,7 @@ import '../../../core/widgets/custom_text_button.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../data/model/bulk_edit_outcome.dart';
 import '../data/model/bulk_editable_field.dart';
 import '../data/model/parcel.dart';
@@ -51,6 +51,7 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   BulkEditableField _bulkField = BulkEditableField.cropType;
   Object? _bulkValue;
   bool _isApplying = false;
+  double _applyProgress = 0;
 
   Future<void> _pickBulkBasin() async {
     final List<String> basins = _repository.availableBasins;
@@ -174,12 +175,18 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   }
 
   Future<void> _applyBulkEdit() async {
-    setState(() => _isApplying = true);
+    setState(() {
+      _isApplying = true;
+      _applyProgress = 0;
+    });
     try {
       final BulkEditOutcome outcome = await _repository.bulkApplyField(
         field: _bulkField,
         value: _bulkValue,
         basin: _bulkBasin,
+        onProgress: (final double progress) {
+          if (mounted) setState(() => _applyProgress = progress);
+        },
       );
       if (!mounted) return;
       setState(() => _isApplying = false);
@@ -282,10 +289,20 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                             value: _valueLabel(_bulkValue),
                             onTap: _pickBulkValue,
                           ),
+                          if (_isApplying) ...[
+                            verticalSpacing(12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: _applyProgress == 0 ? null : _applyProgress,
+                                minHeight: 6,
+                              ),
+                            ),
+                          ],
                           verticalSpacing(16),
                           CustomTextButton(
                             text: 'holdings.bulk_edit.apply'.tr(),
-                            onPressed: _confirmAndApplyBulkEdit,
+                            onPressed: _isApplying ? null : _confirmAndApplyBulkEdit,
                             isLoading: _isApplying,
                             prefixIcon: const Icon(
                               Icons.done_all_rounded,
