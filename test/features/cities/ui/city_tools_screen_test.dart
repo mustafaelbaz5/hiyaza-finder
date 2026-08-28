@@ -101,7 +101,21 @@ void main() {
     await pumpLocalizedScreen(tester, const CityToolsScreen());
     await tester.pumpAndSettle();
 
-    expect(find.text('السجلات الناقصة لرقم الحيازة'), findsOneWidget);
+    // Both tiles now live further down the reorganized list (inside the
+    // "أدوات مساعدة" section) — scroll to bring them into the fixed test
+    // viewport before asserting on them.
+    await tester.dragUntilVisible(
+      find.text('أنواع الزرع'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
     expect(find.text('أنواع الزرع'), findsOneWidget);
+
+    await tester.dragUntilVisible(
+      find.text('السجلات الناقصة لرقم الحيازة'),
+      find.byType(ListView),
+      const Offset(0, -100),
+    );
+    expect(find.text('السجلات الناقصة لرقم الحيازة'), findsOneWidget);
   });
 }

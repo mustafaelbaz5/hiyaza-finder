@@ -62,6 +62,34 @@ void main() {
     );
   });
 
+  test('scopes the change to the given parcelIds only', () {
+    final BulkEditResult result = service.apply(
+      parcels,
+      field: BulkEditableField.cropType,
+      value: 'ذرة',
+      parcelIds: <String>{'1', '3'},
+    );
+
+    expect(result.changedCount, 2);
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType, 'ذرة');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType, 'ذرة');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '2').cropType, isNull);
+  });
+
+  test('basin and parcelIds combine with AND when both are given', () {
+    final BulkEditResult result = service.apply(
+      parcels,
+      field: BulkEditableField.cropType,
+      value: 'أرز',
+      basin: 'البشيط',
+      parcelIds: <String>{'1', '3'}, // '3' is basin السواخ — excluded
+    );
+
+    expect(result.changedCount, 1);
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType, 'أرز');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType, isNull);
+  });
+
   test('a value can clear a nullable field', () {
     final List<Parcel> withCrop =
         parcels.map((final Parcel p) => p.copyWith(cropType: 'قمح')).toList();
