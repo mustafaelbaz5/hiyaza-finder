@@ -1,15 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/choice_dialog.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/association_type.dart';
-import 'package:hiyaza_finder/features/holdings/domain/entities/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/domain/services/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/field_row.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/toggle_field_row.dart';
+
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../data/local/credit_type_notes_sync.dart';
+import '../../data/local/field_change_tracker.dart';
+import '../../data/local/usage_type_notes_sync.dart';
+import '../../data/model/parcel.dart';
+import '../../data/model/usage_type.dart';
+import 'delegate_owner_dialog.dart';
+import 'field_row.dart';
+import 'ownership_toggle.dart';
+import 'toggle_field_row.dart';
 
 /// Collapsed-by-default section for the less-frequently-needed fields
 /// (المديرية/الإدارة/كود الحوض/نوع الاستخدام), toggled independently per
@@ -77,6 +83,45 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     widget.onFieldChanged(apply(value));
   }
 
+  /// مفوض asks for the new اسم المالك up front (must differ from اسم
+  /// الحائز) and, on confirm, sets `owner_name` and appends
+  /// "مفوض عنه {holder}" to ملاحظات — same flow `AddRecordScreen` uses,
+  /// so Detail Screen's toggle can't silently skip the dialog+validation
+  /// (APP_UPDATES_CLAUDE.md § 3 Definition of Done).
+  Future<void> _enableDelegate(final BuildContext context) async {
+    final String? newOwnerName = await showDelegateOwnerDialog(
+      context,
+      holderName: widget.parcel.holderName ?? '',
+    );
+    if (newOwnerName == null) return;
+
+    final String delegateNote = 'holdings.delegate.auto_note'
+        .tr(namedArgs: {'holder': widget.parcel.holderName ?? ''});
+    widget.onFieldChanged(
+      widget.parcel.copyWith(
+        isDelegate: true,
+        ownerName: newOwnerName,
+        notes: widget.parcel.notes.contains(delegateNote)
+            ? widget.parcel.notes
+            : <String>[...widget.parcel.notes, delegateNote],
+      ),
+    );
+  }
+
+  /// إلغاء المفوض reverts اسم المالك to اسم الحائز and strips the
+  /// auto-added "مفوض عنه ..." note.
+  void _disableDelegate() {
+    widget.onFieldChanged(
+      widget.parcel.copyWith(
+        isDelegate: false,
+        ownerName: widget.parcel.holderName,
+        notes: widget.parcel.notes
+            .where((final String n) => !n.startsWith('مفوض عنه'))
+            .toList(),
+      ),
+    );
+  }
+
   Future<void> _editDropdown(
     final BuildContext context, {
     required final String title,
@@ -137,99 +182,201 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         AnimatedSize(
           duration: const Duration(milliseconds: 200),
           child: _expanded
-              ? ResponsiveFieldsWrap(
-                  children: [
-                    ToggleFieldRow(
-                      label: 'وراثة',
-                      value: widget.parcel.isInheritance,
-                      activeLabel: 'وراثة',
-                      inactiveLabel: 'ليست وراثة',
-                      isModified: _isModified((final p) => p.isInheritance),
-                      onChanged: (final bool v) => widget.onFieldChanged(
-                        widget.parcel.copyWith(isInheritance: v),
-                      ),
-                    ),
-                    ToggleFieldRow(
-                      label: 'مفوض',
-                      value: widget.parcel.isDelegate,
-                      activeLabel: 'مفوض',
-                      inactiveLabel: 'غير مفوض',
-                      isModified: _isModified((final p) => p.isDelegate),
-                      onChanged: (final bool v) => widget.onFieldChanged(
-                        widget.parcel.copyWith(isDelegate: v),
-                      ),
-                    ),
-                    if (widget.associationType ==
-                        AssociationType.agriculturalReform)
-                      FieldRow(
-                        label: 'نوع الإصلاح',
-                        value: widget.parcel.reformType,
-                        isModified: _isModified((final p) => p.reformType),
-                        onEdit: () => _editDropdown(
-                          context,
-                          title: 'نوع الإصلاح',
-                          initialValue: widget.parcel.reformType,
-                          options: Parcel.reformTypeOptions,
-                          allowClear: false,
-                          apply: (final String? v) => widget.parcel.copyWith(
-                            reformType: v ?? Parcel.defaultReformType,
-                          ),
-                        ),
-                      )
-                    else if (!widget.hideCreditType)
-                      FieldRow(
-                        label: 'نوع الائتمان',
-                        value: widget.parcel.creditType,
-                        isModified: _isModified((final p) => p.creditType),
-                        onEdit: () => _editDropdown(
-                          context,
-                          title: 'نوع الائتمان',
-                          initialValue: widget.parcel.creditType,
-                          options: Parcel.creditTypeOptions,
-                          allowClear: false,
-                          apply: (final String? v) => widget.parcel.copyWith(
-                            creditType: v ?? Parcel.defaultCreditType,
-                          ),
-                        ),
-                      ),
-                    FieldRow(
-                      label: 'نوع الاستخدام',
-                      value: widget.parcel.usageType,
-                      isModified: _isModified((final p) => p.usageType),
-                      onEdit: () => _editDropdown(
-                        context,
-                        title: 'نوع الاستخدام',
-                        initialValue: widget.parcel.usageType,
-                        options: Parcel.usageTypeOptions,
-                        allowClear: false,
-                        apply: (final String? v) => widget.parcel.copyWith(
-                          usageType: v ?? Parcel.defaultUsageType,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
-                      label: 'كود الحوض',
-                      value: widget.parcel.basinCode,
-                      placeholder: '-1',
-                      isModified: _isModified((final p) => p.basinCode),
-                      onEdit: () => _editText(
-                        context,
-                        title: 'كود الحوض',
-                        initialValue: widget.parcel.basinCode ?? '',
-                        apply: (final String v) => widget.parcel.copyWith(
-                          basinCode: v.isEmpty ? null : v,
-                        ),
-                      ),
-                    ),
-                    FieldRow(
-                        label: 'المديرية', value: widget.parcel.directorate),
-                    FieldRow(
-                      label: 'الإدارة',
-                      value: widget.parcel.administration,
-                    ),
-                  ],
-                )
+              ? _buildFields(context)
               : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
+  }
+
+  Widget _pairRow(final Widget left, final Widget right) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: left),
+          horizontalSpacing(8),
+          Expanded(child: right),
+        ],
+      );
+
+  /// Exact row layout per `REFACTOR_ROADMAP.md` Phase 11 §5:
+  /// Row 1 ورثة/مفوض, Row 2 كود الحوض/نوع الائتمان أو الإصلاح, Row 3
+  /// مراحل النمو (full-width), Row 4 المديرية/الإدارة. اسم الجمعية (moved
+  /// here from the primary area, §4) and نوع الاستخدام (kept, not in the
+  /// spec's 4 named rows) come after as their own full-width rows rather
+  /// than inventing a 5th/6th named pairing the spec didn't specify.
+  Widget _buildFields(final BuildContext context) {
+    final Widget inheritance = ToggleFieldRow(
+      label: 'holdings.fields.inheritance'.tr(),
+      value: widget.parcel.isInheritance,
+      activeLabel: 'holdings.fields.inheritance'.tr(),
+      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
+      isModified: _isModified((final p) => p.isInheritance),
+      onChanged: (final bool v) => widget.onFieldChanged(
+        widget.parcel.copyWith(isInheritance: v),
+      ),
+    );
+    final Widget delegate = ToggleFieldRow(
+      label: 'holdings.fields.delegate'.tr(),
+      value: widget.parcel.isDelegate,
+      activeLabel: 'holdings.fields.delegate'.tr(),
+      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
+      isModified: _isModified((final p) => p.isDelegate),
+      onChanged: (final bool v) =>
+          v ? _enableDelegate(context) : _disableDelegate(),
+    );
+    final Widget basinCode = FieldRow(
+      label: 'holdings.fields.basin_code'.tr(),
+      value: widget.parcel.basinCode,
+      placeholder: '-1',
+      isModified: _isModified((final p) => p.basinCode),
+      onEdit: () => _editText(
+        context,
+        title: 'holdings.fields.basin_code'.tr(),
+        initialValue: widget.parcel.basinCode ?? '',
+        apply: (final String v) => widget.parcel.copyWith(
+          basinCode: v.isEmpty ? null : v,
+        ),
+      ),
+    );
+    // نوع الائتمان (credit cities): the ملك/أوقاف toggle below drives
+    // `creditType` + the أوقاف note automatically.
+    // نوع الإصلاح (reform cities): a visible dropdown — the default إصلاح
+    // مُملك adds nothing to ملاحظات; any other choice both sets
+    // `reformType` and appends itself as a plain note (not a separate
+    // Copy All field), via `CreditTypeNotesSync.applyReformNoteSelected`.
+    final bool isReformCity =
+        widget.associationType == AssociationType.agriculturalReform;
+    final Widget? ownershipToggle = isReformCity
+        ? FieldRow(
+            label: 'holdings.fields.reform_type'.tr(),
+            value: widget.parcel.reformType,
+            isModified: _isModified((final p) => p.reformType),
+            onEdit: () => _editDropdown(
+              context,
+              title: 'holdings.fields.reform_type'.tr(),
+              initialValue: widget.parcel.reformType,
+              options: Parcel.reformTypeOptions,
+              allowClear: false,
+              apply: (final String? v) =>
+                  CreditTypeNotesSync.applyReformNoteSelected(
+                widget.parcel,
+                v ?? Parcel.defaultReformType,
+              ),
+            ),
+          )
+        : OwnershipToggle(
+            isAwqaf: widget.parcel.creditType != Parcel.defaultCreditType,
+            onChanged: (final bool isAwqaf) => widget.onFieldChanged(
+              CreditTypeNotesSync.applyOwnershipToggle(
+                widget.parcel,
+                isAwqaf,
+              ),
+            ),
+          );
+    final Widget directorate = FieldRow(
+      label: 'holdings.fields.directorate'.tr(),
+      value: widget.parcel.directorate,
+      isModified: _isModified((final p) => p.directorate),
+      onEdit: () => _editText(
+        context,
+        title: 'holdings.fields.directorate'.tr(),
+        initialValue: widget.parcel.directorate ?? '',
+        apply: (final String v) => widget.parcel.copyWith(
+          directorate: v.isEmpty ? null : v,
+        ),
+      ),
+    );
+    final Widget administration = FieldRow(
+      label: 'holdings.fields.administration'.tr(),
+      value: widget.parcel.administration,
+      isModified: _isModified((final p) => p.administration),
+      onEdit: () => _editText(
+        context,
+        title: 'holdings.fields.administration'.tr(),
+        initialValue: widget.parcel.administration ?? '',
+        apply: (final String v) => widget.parcel.copyWith(
+          administration: v.isEmpty ? null : v,
+        ),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _pairRow(inheritance, delegate),
+        verticalSpacing(8),
+        basinCode,
+        if (ownershipToggle != null) ...[
+          verticalSpacing(8),
+          ownershipToggle,
+        ],
+        if (UsageType.fromLabel(widget.parcel.usageType) ==
+            UsageType.agricultural) ...[
+          FieldRow(
+            label: 'holdings.fields.growth_stages'.tr(),
+            value: widget.parcel.growthStages,
+            isModified: _isModified((final p) => p.growthStages),
+            onEdit: () => _editDropdown(
+              context,
+              title: 'holdings.fields.growth_stages'.tr(),
+              initialValue: widget.parcel.growthStages,
+              options: Parcel.growthStageOptions,
+              allowClear: false,
+              apply: (final String? v) => widget.parcel.copyWith(
+                growthStages: v ?? Parcel.defaultGrowthStage,
+              ),
+            ),
+          ),
+          verticalSpacing(8),
+        ],
+        // Moved here from the primary card area (UI/UX redesign) — grouped
+        // with the other parcel-identity/measurement fields above rather
+        // than the administrative المديرية/الإدارة pair below.
+        FieldRow(
+          label: 'holdings.fields.land_number'.tr(),
+          value: widget.parcel.landNumber,
+          isModified: _isModified((final p) => p.landNumber),
+          onEdit: () => _editText(
+            context,
+            title: 'holdings.fields.land_number'.tr(),
+            initialValue: widget.parcel.landNumber ?? '',
+            apply: (final String v) => widget.parcel.copyWith(
+              landNumber: v.isEmpty ? null : v,
+            ),
+          ),
+        ),
+        verticalSpacing(8),
+        _pairRow(directorate, administration),
+        verticalSpacing(8),
+        FieldRow(
+          label: 'holdings.fields.association_name'.tr(),
+          value: widget.parcel.associationName,
+          isModified: _isModified((final p) => p.associationName),
+          onEdit: () => _editText(
+            context,
+            title: 'holdings.fields.association_name'.tr(),
+            initialValue: widget.parcel.associationName ?? '',
+            apply: (final String v) => widget.parcel.copyWith(
+              associationName: v.isEmpty ? null : v,
+            ),
+          ),
+        ),
+        verticalSpacing(8),
+        FieldRow(
+          label: 'holdings.fields.usage_type'.tr(),
+          value: widget.parcel.usageType,
+          isModified: _isModified((final p) => p.usageType),
+          onEdit: () => _editDropdown(
+            context,
+            title: 'holdings.fields.usage_type'.tr(),
+            initialValue: widget.parcel.usageType,
+            options: Parcel.usageTypeOptions,
+            allowClear: false,
+            apply: (final String? v) => UsageTypeNotesSync.applyUsageTypeChange(
+              widget.parcel,
+              v ?? Parcel.defaultUsageType,
+            ),
+          ),
         ),
       ],
     );

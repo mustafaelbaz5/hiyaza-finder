@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
 
 class SectionCard extends StatelessWidget {
   const SectionCard({

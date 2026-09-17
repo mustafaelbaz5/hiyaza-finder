@@ -1,5 +1,7 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
@@ -51,6 +53,45 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
     text: _numToText(widget.sahm),
   );
 
+  /// `added_holdings.feddan/qirat/sahm` are `numeric(10,4)` — a value at or
+  /// above this silently fails the sync with a raw "numeric field overflow"
+  /// error from Postgres (no useful message reaches the user, and the
+  /// outbox just retries the same doomed insert forever). Caught here,
+  /// before it ever leaves the device, with a message that actually says
+  /// what's wrong. فدان stays unbounded by this — a large-but-legitimate
+  /// فدان count is plausible; قيراط/سهم below have their own tighter,
+  /// domain-meaningful caps instead.
+  static const double _maxAreaValue = 999999.9999;
+
+  /// 24 قيراط make a فدان and 24 سهم make a قيراط — a value of 24 or more
+  /// in either field is never legitimate (it should have been carried over
+  /// into the next unit instead), so it's rejected the same way an
+  /// out-of-DB-range value is.
+  static const double _maxQiratOrSahm = 24;
+
+  String? _errorText;
+
+  void _save() {
+    final double? feddan = _parseLocalizedNum(_feddanController.text);
+    final double? qirat = _parseLocalizedNum(_qiratController.text);
+    final double? sahm = _parseLocalizedNum(_sahmController.text);
+
+    if (feddan != null && feddan.abs() >= _maxAreaValue) {
+      setState(() => _errorText = 'holdings.detail.area_value_too_large'.tr());
+      return;
+    }
+    if (qirat != null && qirat.abs() >= _maxQiratOrSahm) {
+      setState(() => _errorText = 'holdings.detail.qirat_max_exceeded'.tr());
+      return;
+    }
+    if (sahm != null && sahm.abs() >= _maxQiratOrSahm) {
+      setState(() => _errorText = 'holdings.detail.sahm_max_exceeded'.tr());
+      return;
+    }
+
+    Navigator.pop(context, (feddan: feddan, qirat: qirat, sahm: sahm));
+  }
+
   // Disposing here — rather than right after showDialog's Future resolves
   // — matters: this only runs once Flutter actually unmounts the dialog,
   // i.e. after its pop/exit animation finishes. Disposing immediately on
@@ -80,7 +121,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'المساحة',
+              'holdings.fields.area'.tr(),
               textAlign: TextAlign.center,
               style: AppTextStyles.font18Bold.copyWith(
                 color: colors.textPrimary,
@@ -88,7 +129,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(16),
             CustomTextForm(
-              hintText: 'فدان',
+              hintText: 'holdings.detail.feddan'.tr(),
               controller: _feddanController,
               isRTL: true,
               autofocus: true,
@@ -98,7 +139,7 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(10),
             CustomTextForm(
-              hintText: 'قيراط',
+              hintText: 'holdings.detail.qirat'.tr(),
               controller: _qiratController,
               isRTL: true,
               keyboardType: const TextInputType.numberWithOptions(
@@ -107,19 +148,29 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
             ),
             verticalSpacing(10),
             CustomTextForm(
-              hintText: 'سهم',
+              hintText: 'holdings.detail.sahm'.tr(),
               controller: _sahmController,
               isRTL: true,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
             ),
+            if (_errorText != null) ...[
+              verticalSpacing(10),
+              Text(
+                _errorText!,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.font12Regular.copyWith(
+                  color: AppColors.red200,
+                ),
+              ),
+            ],
             verticalSpacing(20),
             Row(
               children: [
                 Expanded(
                   child: CustomTextButton.outlined(
-                    text: 'إلغاء',
+                    text: 'app_dialogs.cancel'.tr(),
                     size: CustomButtonSize.small,
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -127,13 +178,9 @@ class _AreaEditDialogState extends State<_AreaEditDialog> {
                 horizontalSpacing(8),
                 Expanded(
                   child: CustomTextButton(
-                    text: 'حفظ',
+                    text: 'app_dialogs.save'.tr(),
                     size: CustomButtonSize.small,
-                    onPressed: () => Navigator.pop(context, (
-                      feddan: _parseLocalizedNum(_feddanController.text),
-                      qirat: _parseLocalizedNum(_qiratController.text),
-                      sahm: _parseLocalizedNum(_sahmController.text),
-                    )),
+                    onPressed: _save,
                   ),
                 ),
               ],

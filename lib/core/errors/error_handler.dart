@@ -1,17 +1,17 @@
-import 'package:hiyaza_finder/core/errors/failure.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async' as async_lib;
+import 'dart:io';
+
+import 'failure.dart';
 
 import 'exceptions.dart';
-import 'handlers/supabase_handler.dart';
 
 class ErrorHandler {
   /// Call this in your data sources — throws AppException
   static Never handleException(final dynamic error) {
     if (error is AppException) throw error;
 
-    if (error is AuthException || error is PostgrestException || error is StorageException) {
-      throw SupabaseHandler.handle(error);
-    }
+    final AppException? connectivity = _classifyConnectivityError(error);
+    if (connectivity != null) throw connectivity;
 
     throw ServerException(message: error?.toString() ?? 'Unknown error.');
   }
@@ -23,10 +23,39 @@ class ErrorHandler {
   }
 
   static AppException _toException(final dynamic error) {
-    if (error is AuthException || error is PostgrestException || error is StorageException) {
-      return SupabaseHandler.handle(error);
-    }
+    final AppException? connectivity = _classifyConnectivityError(error);
+    if (connectivity != null) return connectivity;
     return ServerException(message: error?.toString() ?? 'Unknown error.');
+  }
+
+  /// Distinguishes "the device genuinely couldn't reach the server at all"
+  /// from a real server-side rejection — a raw [SocketException] (no route/
+  /// DNS failure) or [HandshakeException] (TLS handshake never completed)
+  /// only ever happens when the request never got a response, which is
+  /// exactly what "check your internet connection" should mean. The
+  /// `http.ClientException` thrown by the `http` package (connection
+  /// refused/reset) surfaces the same way but is matched by its runtime
+  /// type name instead of an import, so a future `http` major-version bump
+  /// can't silently break this classification.
+  /// `.timeout()` calls throw `dart:async`'s [async_lib.TimeoutException]
+  /// (not this app's own [TimeoutException] in `exceptions.dart` — same
+  /// name, different type, hence the aliased import) when the server took
+  /// too long to respond — also a connectivity-shaped failure from the
+  /// user's point of view, not a server rejection. Without any of this,
+  /// every one of these fell through to a generic [ServerException] with no
+  /// useful `message`, which is exactly why "server error"/"check your
+  /// connection" messages showed up regardless of what actually failed
+  /// (`REFACTOR_ROADMAP.md` Phase 21).
+  static AppException? _classifyConnectivityError(final dynamic error) {
+    if (error is SocketException ||
+        error is HandshakeException ||
+        error.runtimeType.toString() == 'ClientException') {
+      return NetworkException();
+    }
+    if (error is async_lib.TimeoutException) {
+      return TimeoutException();
+    }
+    return null;
   }
 
   static Failure _toFailure(final AppException e) {

@@ -150,23 +150,23 @@ row 4. The importer must **locate the header row by matching known labels**, not
 
 **Columns A–T:**
 
-| Col | Header | Cell type | Domain field | Notes |
-|---|---|---|---|---|
-| A | رقم الحيازة | text | `holdingIdNumber` | Not unique — repeats loosely (`101`, `42`, `0148`), inconsistent zero-padding |
-| B | اسم الحائز | text | `holderName` | |
-| C | الرقم القومي | text | `nationalId` | 14 digits when present |
-| D | رقم الارض | **number** | `landNumber` | Stored as text in the domain — **coerce** |
-| E–G | فدان / قيراط / سهم | number | `feddan`/`qirat`/`sahm` | |
-| H | المساحه بالمتر | number | `totalSqm` | Can be fractional (`2260.74`) |
-| I–L | الشرقى / الغربى / القبلى / البحرى | text | `borderEast/West/South/North` | **Order differs** from the app's E/S/W/N — map by header text, never by position |
-| M | رقم الصفحة | **number** | `pageNumber` | **Coerce** to text |
-| N | كود الحوض | **number**, often blank | `basinCode` | Frequently empty — **coerce**, default `-1` |
-| O | اسم الحوض | text | `basinName` | |
-| P | **الجمعيه** | text | `associationName` | **A real per-row column.** The current app *derives* this from the filename and prompts the user to confirm it — that entire flow is deleted (see § 5) |
-| Q | الأداره | text | `administration` | |
-| R | المديريه | text | `directorate` | |
-| S | **عدد القطع بالحيازة** | number | *(not stored)* | Precomputed parcel count. Derivable via `COUNT(*)`; use it as an **import validation check** instead |
-| T | **الرقم الموحد للحيازة** | text | `unifiedNumber` | e.g. `06-3230-00323905-001159` — a stable official identifier, **better than رقم الحيازة for upserts** |
+| Col | Header                            | Cell type               | Domain field                  | Notes                                                                                                                                                  |
+| --- | --------------------------------- | ----------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A   | رقم الحيازة                       | text                    | `holdingIdNumber`             | Not unique — repeats loosely (`101`, `42`, `0148`), inconsistent zero-padding                                                                          |
+| B   | اسم الحائز                        | text                    | `holderName`                  |                                                                                                                                                        |
+| C   | الرقم القومي                      | text                    | `nationalId`                  | 14 digits when present                                                                                                                                 |
+| D   | رقم الارض                         | **number**              | `landNumber`                  | Stored as text in the domain — **coerce**                                                                                                              |
+| E–G | فدان / قيراط / سهم                | number                  | `feddan`/`qirat`/`sahm`       |                                                                                                                                                        |
+| H   | المساحه بالمتر                    | number                  | `totalSqm`                    | Can be fractional (`2260.74`)                                                                                                                          |
+| I–L | الشرقى / الغربى / القبلى / البحرى | text                    | `borderEast/West/South/North` | **Order differs** from the app's E/S/W/N — map by header text, never by position                                                                       |
+| M   | رقم الصفحة                        | **number**              | `pageNumber`                  | **Coerce** to text                                                                                                                                     |
+| N   | كود الحوض                         | **number**, often blank | `basinCode`                   | Frequently empty — **coerce**, default `-1`                                                                                                            |
+| O   | اسم الحوض                         | text                    | `basinName`                   |                                                                                                                                                        |
+| P   | **الجمعيه**                       | text                    | `associationName`             | **A real per-row column.** The current app _derives_ this from the filename and prompts the user to confirm it — that entire flow is deleted (see § 5) |
+| Q   | الأداره                           | text                    | `administration`              |                                                                                                                                                        |
+| R   | المديريه                          | text                    | `directorate`                 |                                                                                                                                                        |
+| S   | **عدد القطع بالحيازة**            | number                  | _(not stored)_                | Precomputed parcel count. Derivable via `COUNT(*)`; use it as an **import validation check** instead                                                   |
+| T   | **الرقم الموحد للحيازة**          | text                    | `unifiedNumber`               | e.g. `06-3230-00323905-001159` — a stable official identifier, **better than رقم الحيازة for upserts**                                                 |
 
 **Open:** whether every city's file uses this exact layout. The importer must fail loudly on an
 unrecognized shape rather than guess.
@@ -179,18 +179,18 @@ Concrete, file-by-file. Everything here is a **behavior-preserving** move except
 
 ### 5.1 Splitting `HoldingsRepository` (411 lines → 8 focused units)
 
-| Current responsibility | Becomes | Layer | Fate |
-|---|---|---|---|
-| `loadFromPickedFile()` — file picking | *(deleted)* | — | Retired with decision #4 |
-| `_cacheBytes()` — copying workbooks to disk | `HoldingsSnapshotCache` (city JSON, not xlsx) | data | Rewritten |
-| history: `getHistory`, `_rememberInHistory`, `_saveHistory`, `removeHistoryEntry` | *(deleted)* | — | Replaced by the city picker |
-| `compute(_parseHoldingsBytes)` — parse orchestration | *(deleted)* | — | Parsing moves to the dashboard |
-| `deriveAssociationName`, `confirmAssociationName` | *(deleted)* | — | Column P supplies it (§ 4) |
-| `_applyEdit`, `updateParcel`, `resetParcel`, `_edits` | `ParcelEditOverlay` | domain | Kept, extracted |
-| `search`, `availableBasins`, `basinHoldingCounts`, `parcelsForHolding` | `ParcelQueryService` | domain | Kept, extracted |
-| `bulkApplyField` | `BulkEditService` | domain | Kept, extracted |
-| *(new)* remote fetch | `SupabaseHoldingsDataSource` | data | New |
-| *(new)* offline queue | `SyncOutbox` | data | New |
+| Current responsibility                                                            | Becomes                                       | Layer  | Fate                           |
+| --------------------------------------------------------------------------------- | --------------------------------------------- | ------ | ------------------------------ |
+| `loadFromPickedFile()` — file picking                                             | _(deleted)_                                   | —      | Retired with decision #4       |
+| `_cacheBytes()` — copying workbooks to disk                                       | `HoldingsSnapshotCache` (city JSON, not xlsx) | data   | Rewritten                      |
+| history: `getHistory`, `_rememberInHistory`, `_saveHistory`, `removeHistoryEntry` | _(deleted)_                                   | —      | Replaced by the city picker    |
+| `compute(_parseHoldingsBytes)` — parse orchestration                              | _(deleted)_                                   | —      | Parsing moves to the dashboard |
+| `deriveAssociationName`, `confirmAssociationName`                                 | _(deleted)_                                   | —      | Column P supplies it (§ 4)     |
+| `_applyEdit`, `updateParcel`, `resetParcel`, `_edits`                             | `ParcelEditOverlay`                           | domain | Kept, extracted                |
+| `search`, `availableBasins`, `basinHoldingCounts`, `parcelsForHolding`            | `ParcelQueryService`                          | domain | Kept, extracted                |
+| `bulkApplyField`                                                                  | `BulkEditService`                             | domain | Kept, extracted                |
+| _(new)_ remote fetch                                                              | `SupabaseHoldingsDataSource`                  | data   | New                            |
+| _(new)_ offline queue                                                             | `SyncOutbox`                                  | data   | New                            |
 
 `HoldingsRepository` survives as a **thin coordinator** implementing the domain interfaces —
 target **under 120 lines**.
@@ -224,7 +224,7 @@ The `core/` layer is in better shape than the feature layer and already anticipa
 3. **`SharedPreferences` goes behind a `KeyValueStore` interface** (one implementation, injected).
    ~8 inline `getInstance()` calls disappear.
 4. **`_formatForClipboard` moves out of `ParcelDetailCard`** into
-   `domain/services/clipboard_formatter.dart`. The وراثة/مفوض prefix rules are real business logic
+   `domain/services/clipboard_formatter.dart`. The ورثة/مفوض prefix rules are real business logic
    with three interacting states — they deserve unit tests, and cannot have them inside a widget.
 5. **`HomeCubit` splits.** It currently drives loading, search, basin filtering, and refresh. Split
    into `SessionCubit` (auth), `CityCubit` (selection/download/staleness), and `SearchCubit`
@@ -540,7 +540,7 @@ create policy import_batches_staff on import_batches for all
 ```
 
 **Deliberate consequences worth understanding:** `holding_edits` has no update/delete policy, so it
-is append-only *by construction* — the audit trail cannot be rewritten. `field` users can't see
+is append-only _by construction_ — the audit trail cannot be rewritten. `field` users can't see
 draft cities, so a half-imported city can never reach the field team.
 
 ### 6.2 رقم الحيازة for app-added records
@@ -555,32 +555,38 @@ person is already official, only the parcel is new.
 ## 7. New features
 
 ### 7.1 Login
+
 Supabase Auth email/password, session persisted by `supabase_flutter`. `SessionCubit` exposes
 `authenticated`/`unauthenticated`; the router redirects on that. Arabic error messages for the
 common failures (wrong password, no network, disabled account).
 
 ### 7.2 City picker & download
+
 Lists `published` cities. Selecting one downloads `holdings` + `holding_edits_latest` +
 approved `added_holdings` for that city, merges them into `Parcel`s, and writes a **local snapshot**
 (JSON file via `path_provider`, not `SharedPreferences` — a 1,200-row city is too big for prefs).
 Shows progress; must be resumable/retryable on a flaky connection.
 
 ### 7.3 Staleness check
+
 On app open, fetch `cities.data_version` for the active city and compare with the snapshot's stored
 version. If the server is ahead, show a non-blocking banner with a "تحديث البيانات" action. **Never
 auto-download on a metered connection without asking** — field users are on mobile data.
 
 ### 7.4 Add new person (search found nothing)
+
 Triggered from the no-results state: `لا يوجد نتائج → إضافة بيانات جديدة`. Uses the same field set
 as the detail card, `Parcel`'s existing defaults (نوع الائتمان=ملك، نوع الاستخدام=زراعة،
-وراثة/مفوض=false، كود الحوض=`-1`), `holding_id_number` null. Saves to the local snapshot immediately
+ورثة/مفوض=false، كود الحوض=`-1`), `holding_id_number` null. Saves to the local snapshot immediately
 (usable offline) and enqueues an `AddRecord` sync operation.
 
 ### 7.5 Add parcel for existing person
+
 From the detail screen: `إضافة قطعة أرض جديدة لنفس الشخص`. Pre-filled per decision #8, with
 `parent_holding_id` set so the dashboard can see the link. Same save/enqueue path.
 
 ### 7.6 Sync status (new, small, important)
+
 A badge in the top bar showing pending-operation count, last-sync time, and a manual "مزامنة الآن".
 Without visible sync state, users can't tell whether their work is safe — this is not optional
 polish.
@@ -623,16 +629,18 @@ green.**
 > platform build unless explicitly asked.** Verification is `flutter analyze` + `flutter test`.
 
 ### Phase 0 — Refactor (no behavior change, no backend)
+
 Remove Firebase deps + pin versions (§ 3.4). Introduce `core/storage/key_value_store.dart`. Create
 the `domain/data/presentation` folders. Extract `ParcelQueryService`, `ParcelEditOverlay`,
 `BulkEditService`, `ClipboardFormatter` out of the repository and the detail card. Define the
 repository interfaces. Modularize DI. Split `HomeCubit`.
 
 > **Gate:** the app behaves **identically** to today — same search results, same copy-all output,
-> same bulk edit. New unit tests for the four extracted services, including the وراثة/مفوض prefix
+> same bulk edit. New unit tests for the four extracted services, including the ورثة/مفوض prefix
 > matrix (all four combinations) and the copy-all line grouping, all green.
 
 ### Phase 1 — Supabase schema
+
 Apply migrations 001–008 + RLS via the MCP. Seed: one admin, one field user, one city, and the real
 `الدير_ائتمان_مجمع.xlsx` data (import it manually/by script for now — the dashboard importer comes
 later).
@@ -641,13 +649,16 @@ later).
 > city, cannot update `holdings`, cannot delete a `holding_edits` row.
 
 ### Phase 2 — Auth + city download
+
 `supabase_flutter` init, login screen, `SessionCubit`, router guard, city picker, snapshot download
-+ local cache, staleness banner.
+
+- local cache, staleness banner.
 
 > **Gate:** log in, pick the seeded city, download it, kill the network, restart the app — full
 > search/detail/bulk-edit works offline from the snapshot.
 
 ### Phase 3 — Sync up existing edits ⭐ the priority feature
+
 `SyncOutbox` + `SyncRunner` + sync-status badge. Point the existing edit flow at the outbox.
 
 > **Gate:** edit a field offline → badge shows 1 pending → reconnect → it flushes → a
@@ -655,6 +666,7 @@ later).
 > shows the correction. Kill the app mid-flush and confirm **no duplicate rows** (idempotency).
 
 ### Phase 4 — Add new person / add parcel
+
 Both add flows (§ 7.4, § 7.5) with the shared form, plus `AddRecord` sync operations.
 
 > **Gate:** create a person offline, create a second parcel for an existing person, sync both,
@@ -662,6 +674,7 @@ Both add flows (§ 7.4, § 7.5) with the shared form, plus `AddRecord` sync oper
 > `holding_id_number`, and correct `client_id` idempotency on a forced retry.
 
 ### Phase 5 — Retire the Excel path
+
 Delete `holdings_excel_parser.dart`, `file_picker`/`spreadsheet_decoder` deps, history screens,
 `cached_file_entry.dart`, `association_name_sheet.dart`, and the file-status screen's
 association-editing section (association now comes from the server).
@@ -670,6 +683,7 @@ association-editing section (association now comes from the server).
 > flow still works.
 
 ### Phase 6 — Hardening
+
 Failed-operation UI, conflict surfacing, metered-connection handling, Arabic error messages
 everywhere, empty/error state audit, widget tests on the detail card, accessibility pass.
 
@@ -680,14 +694,14 @@ everywhere, empty/error state audit, widget tests on the detail card, accessibil
 
 ## 10. Testing strategy
 
-| Layer | What's tested | Target |
-|---|---|---|
-| `domain/services/` | Search ranking & Arabic normalization, area math, **clipboard formatting incl. the وراثة/مفوض matrix**, bulk-edit application, edit-overlay merge | **≥ 90%** — pure functions, no excuse |
-| `domain/usecases/` | Orchestration + failure paths, against fake repositories | Every use case |
-| `data/` | JSON ↔ entity mapping (esp. numeric→text coercions from § 4), outbox persistence/idempotency | Every model + the outbox |
-| Cubits | State transitions incl. error and offline states | Every cubit |
-| Widgets | The detail card renders/edits correctly; the 4 UI states | Complex widgets only |
-| RLS | Each role × table × operation | **Every policy** |
+| Layer              | What's tested                                                                                                                                    | Target                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| `domain/services/` | Search ranking & Arabic normalization, area math, **clipboard formatting incl. the ورثة/مفوض matrix**, bulk-edit application, edit-overlay merge | **≥ 90%** — pure functions, no excuse |
+| `domain/usecases/` | Orchestration + failure paths, against fake repositories                                                                                         | Every use case                        |
+| `data/`            | JSON ↔ entity mapping (esp. numeric→text coercions from § 4), outbox persistence/idempotency                                                     | Every model + the outbox              |
+| Cubits             | State transitions incl. error and offline states                                                                                                 | Every cubit                           |
+| Widgets            | The detail card renders/edits correctly; the 4 UI states                                                                                         | Complex widgets only                  |
+| RLS                | Each role × table × operation                                                                                                                    | **Every policy**                      |
 
 **Fakes over mocks.** `FakeHoldingsRepository` implementing the domain interface beats a
 `mockito` mock — that's what the interfaces are for. Keep `mockito` only for platform channels.
@@ -726,6 +740,6 @@ session; split them even if it means committing more often. **Branching:** one b
   constructor defaults; sanity-check against real field workflow once observed.
 - Whether `editor`/`viewer` need per-city scoping later — schema leaves room for a `user_cities`
   join table.
-- Whether the app should ever *edit* an `added_holdings` record after approval, or treat it as
+- Whether the app should ever _edit_ an `added_holdings` record after approval, or treat it as
   promoted-and-frozen. Current assumption: once promoted to `holdings`, edits go through
   `holding_edits` like any other record.

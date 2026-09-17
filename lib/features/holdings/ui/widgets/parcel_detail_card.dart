@@ -2,30 +2,35 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/responsive_fields_wrap.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/see_more_section.dart';
 
 import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/errors/error_message_resolver.dart';
+import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-import '../../../cities/domain/entities/association_type.dart';
-import '../../data/repository/holdings_repository.dart';
-import '../../domain/entities/parcel.dart';
-import '../../domain/services/clipboard_formatter.dart';
-import '../../domain/services/field_change_tracker.dart';
-import '../../logic/services/area_calculator.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../../crop_type/ui/widgets/crop_type_picker.dart';
+import '../../data/local/area_calculator.dart';
+import '../../data/local/clipboard_formatter.dart';
+import '../../data/local/credit_type_notes_sync.dart';
+import '../../data/local/field_change_tracker.dart';
+import '../../data/local/usage_type_notes_sync.dart';
+import '../../data/model/parcel.dart';
+import '../../data/model/usage_type.dart';
+import '../../data/repo/holdings_repository.dart';
+import 'basin_picker.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
-import 'crop_type_picker.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
-import 'status_badge.dart';
+import 'notes_field.dart';
+import 'parcel_detail_header.dart';
+import 'required_field_gaps.dart';
+import 'see_more_section.dart';
 
 class ParcelDetailCard extends StatelessWidget {
   const ParcelDetailCard({
@@ -39,8 +44,11 @@ class ParcelDetailCard extends StatelessWidget {
     this.animationDelay = Duration.zero,
     this.resolveBorderMatch,
     this.onDelete,
-    this.onFinish,
     this.onReopen,
+    this.onCompleted,
+    this.isDeleting = false,
+    this.isReopening = false,
+    this.onReviewBusyChanged,
   });
 
   final Parcel parcel;
@@ -52,8 +60,33 @@ class ParcelDetailCard extends StatelessWidget {
   final AssociationType? associationType;
   final Duration animationDelay;
   final Parcel? Function(String? borderText)? resolveBorderMatch;
-  final VoidCallback? onFinish;
   final VoidCallback? onReopen;
+
+  /// Passed straight through to [ParcelDetailTopRow] (`REFACTOR_ROADMAP.md`
+  /// Phase 21) — the caller tracks which parcel's delete/reopen call is
+  /// currently in flight (`DetailScreen._busyParcelIds`), since that's
+  /// screen-level state this stateless card has no way to know on its own.
+  final bool isDeleting;
+  final bool isReopening;
+
+  /// Fired by [_copyId] once `setParcelCompleted` is server-confirmed —
+  /// deliberately separate from [onFieldChanged] (`REFACTOR_ROADMAP.md`
+  /// Phase 20): reflecting a completion into the caller's local state must
+  /// never depend on a second, unrelated `updateParcel`/edit-overlay write
+  /// succeeding, or route through a handler built for field edits (wrong
+  /// snackbar, wrong `_isBusy` coupling, and a failure there could mask an
+  /// already-successful review). Falls back to [onFieldChanged] if unset,
+  /// so callers that haven't been updated yet keep working.
+  final void Function(Parcel updated)? onCompleted;
+
+  /// Reports when [_copyId]'s server write starts/stops being in flight —
+  /// lets `DetailScreen` fold Copy ID's busy window into the same
+  /// `_busyParcelIds` tracking `isDeleting`/`isReopening` already use, so a
+  /// same-parcel Reopen/Delete tap can't race a Copy ID write still in
+  /// flight. The chip's own spinner (driven by [_ReviewIdChipState]'s local
+  /// `_isLoading`) is unaffected — this is purely so the *parent* can see
+  /// the same window, not a replacement for the chip's own feedback.
+  final void Function(bool isBusy)? onReviewBusyChanged;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -68,85 +101,78 @@ class ParcelDetailCard extends StatelessWidget {
     final colors = context.customColors;
     final bool isAdded =
         parcel.isFieldAdded || parcel.sourceAddedHoldingId != null || isNew;
-    final bool isReviewed = parcel.reviewed;
-    return Container(
-      padding: EdgeInsets.all(rw(12)),
-      decoration: BoxDecoration(
-        color: isReviewed
-            ? colors.surface.withValues(alpha: 0.76)
-            : colors.backgroundSecondary,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isReviewed
-              ? AppColors.green200.withValues(alpha: 0.28)
-              : isAdded
-                  ? AppColors.blue200.withValues(alpha: 0.35)
-                  : colors.border,
-          width: isAdded || isReviewed ? 1.2 : 1,
-        ),
-        boxShadow: <BoxShadow>[
-          if (isReviewed)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-        ],
-      ),
-      child: Opacity(
-        opacity: isReviewed ? 0.68 : 1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _TopStateRow(
-              isAdded: isAdded,
-              isReviewed: isReviewed,
-              onFinish: onFinish,
-              onReopen: onReopen,
-              onDelete: onDelete,
-              onDeleteConfirmed: () => _confirmDelete(context),
-            ),
-            if (isAdded || isReviewed) verticalSpacing(8),
-            if (isAdded)
-              _InfoBanner(
-                icon: Icons.add_box_rounded,
-                label: 'holdings.detail.added_badge'.tr(),
-                subtitle: 'holdings.detail.added_badge_hint'.tr(),
-                color: AppColors.blue200,
-              ),
-            if (isAdded && isReviewed) verticalSpacing(8),
-            if (isReviewed)
-              _InfoBanner(
-                icon: Icons.check_circle_rounded,
-                label: 'holdings.detail.reviewed_badge'.tr(),
-                subtitle: 'holdings.detail.reviewed_hint'.tr(),
-                color: colors.success,
-              ),
-            verticalSpacing(10),
-            _ParcelIdChip(id: parcel.id, onCopy: () => _copyId(context)),
-            verticalSpacing(10),
-            BorderCompass(
-              holdingId: parcel.holdingId,
-              north: parcel.borderNorth,
-              south: parcel.borderSouth,
-              east: parcel.borderEast,
-              west: parcel.borderWest,
-              onTapBorder: resolveBorderMatch == null
-                  ? null
-                  : (final String? borderText) =>
-                      _openBorderPerson(context, borderText),
-              isBorderNavigable: resolveBorderMatch == null
-                  ? null
-                  : (final String? borderText) =>
-                      resolveBorderMatch!(borderText) != null,
-            ),
-            verticalSpacing(10),
-            CopyAllButton(onTap: () => _copyAll(context)),
-            verticalSpacing(12),
+    final bool isCompleted = parcel.completedAt != null;
+    // Completed parcels are locked (`REFACTOR_ROADMAP.md` Phase 10 §9): a
+    // stronger, darker treatment than the old subtle-fade look, and fields
+    // stop being directly tappable/editable — إعادة الفتح (top row, kept
+    // OUTSIDE the ignore-pointer scope below) is the only way back into an
+    // editable state, communicating that reopening is a deliberate,
+    // required step rather than something a stray tap on a field could
+    // bypass.
+    final Widget topRow = ParcelDetailTopRow(
+      isAdded: isAdded,
+      isReviewed: isCompleted,
+      onReopen: onReopen,
+      onDelete: onDelete,
+      onDeleteConfirmed: () => _confirmDelete(context),
+      isInheritance: parcel.isInheritance,
+      isDelegate: parcel.isDelegate,
+      isDeleting: isDeleting,
+      isReopening: isReopening,
+    );
+    final Widget body = Opacity(
+      opacity: isCompleted ? 0.55 : 1,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Action-area order is fixed (`REFACTOR_ROADMAP.md` Phase 11
+          // §3): status/badges → boundaries → Copy ID → Copy All. The
+          // large "تم مراجعة القطعة" banner that used to sit here for a
+          // completed parcel was removed (`REFACTOR_ROADMAP.md` Phase 18)
+          // — the small "تم المراجعة" `StatusBadge` in [topRow] already
+          // says this, and the card's own locked styling (stronger tint/
+          // border below) carries the rest; a second full banner repeating
+          // the same fact was redundant weight on an already-done record.
+          if (isAdded) ...[
             verticalSpacing(8),
-            ResponsiveFieldsWrap(
-              children: [
-                FieldRow(
+            _AddedByBanner(parcel: parcel),
+          ],
+          verticalSpacing(10),
+          BorderCompass(
+            holdingId: parcel.holdingId,
+            north: parcel.borderNorth,
+            south: parcel.borderSouth,
+            east: parcel.borderEast,
+            west: parcel.borderWest,
+            onTapBorder: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) =>
+                    _openBorderPerson(context, borderText),
+            isBorderNavigable: resolveBorderMatch == null
+                ? null
+                : (final String? borderText) =>
+                    resolveBorderMatch!(borderText) != null,
+          ),
+          verticalSpacing(10),
+          _ReviewIdChip(
+            id: parcel.id,
+            onCopy: _copyId,
+            onBusyChanged: onReviewBusyChanged,
+          ),
+          verticalSpacing(10),
+          CopyAllButton(onTap: () => _copyAll(context)),
+          verticalSpacing(12),
+          verticalSpacing(8),
+          // Row 1: رقم الحيازة + عدد القطع share one row (`REFACTOR_ROADMAP.md`
+          // Phase 10 §4) — every other primary field below gets its own
+          // full-width row instead of a multi-column grid, since these are
+          // the values field workers read/edit most and horizontal
+          // compression made them harder to scan and tap accurately.
+          Row(
+            children: [
+              Expanded(
+                flex: parcel.holdingsCount != null ? 2 : 1,
+                child: FieldRow(
                   label: 'holdings.detail.holding_id'.tr(),
                   value: parcel.isHoldingIdPending
                       ? 'holdings.detail.holding_id_pending'.tr()
@@ -160,123 +186,175 @@ class ParcelDetailCard extends StatelessWidget {
                     apply: (final String v) => parcel.copyWith(holdingId: v),
                   ),
                 ),
-                if (parcel.holdingsCount != null)
-                  FieldRow(
+              ),
+              if (parcel.holdingsCount != null) ...[
+                horizontalSpacing(8),
+                Expanded(
+                  child: FieldRow(
                     label: 'holdings.detail.holdings_count'.tr(),
                     value: parcel.holdingsCount.toString(),
                   ),
-                FieldRow(
-                  label: 'اسم المالك',
-                  value: _formatter.effectiveOwnerName(parcel),
-                  isModified: _isModified((final p) => p.ownerName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'اسم المالك',
-                    initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(ownerName: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'اسم الحائز',
-                  value: parcel.holderName,
-                  isModified: _isModified((final p) => p.holderName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'اسم الحائز',
-                    initialValue: parcel.holderName ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(holderName: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'الرقم القومي',
-                  value: parcel.nationalId,
-                  isModified: _isModified((final p) => p.nationalId),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'الرقم القومي',
-                    initialValue: parcel.nationalId ?? '',
-                    keyboardType: TextInputType.number,
-                    apply: (final String v) =>
-                        parcel.copyWith(nationalId: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'اسم الجمعية',
-                  value: parcel.associationName,
-                  isModified: _isModified((final p) => p.associationName),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'اسم الجمعية',
-                    initialValue: parcel.associationName ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(associationName: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'اسم الحوض',
-                  value: parcel.basinName,
-                  isModified: _isModified((final p) => p.basinName),
-                  onEdit: () => _editBasin(context),
-                ),
-                FieldRow(
-                  label: 'رقم الأرض',
-                  value: parcel.landNumber,
-                  isModified: _isModified((final p) => p.landNumber),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'رقم الأرض',
-                    initialValue: parcel.landNumber ?? '',
-                    apply: (final String v) =>
-                        parcel.copyWith(landNumber: v.isEmpty ? null : v),
-                  ),
-                ),
-                FieldRow(
-                  label: 'المساحة',
-                  value: _formatter.areaFraction(parcel),
-                  isModified: _isModified((final p) => p.feddan) ||
-                      _isModified((final p) => p.qirat) ||
-                      _isModified((final p) => p.sahm),
-                  onEdit: () => _editArea(context),
-                ),
-                FieldRow(
-                  label: 'المساحة بالمتر',
-                  value: _formatter.formatNumber(parcel.totalSqm),
-                  isModified: _isModified((final p) => p.totalSqm),
-                  onEdit: () => _editArea(context),
-                ),
-                FieldRow(
-                  label: 'نوع الزرع',
-                  value: parcel.cropType,
-                  isModified: _isModified((final p) => p.cropType),
-                  onEdit: () => _editCropType(context),
-                ),
-                FieldRow(
-                  label: 'ملاحظات',
-                  value: parcel.notes,
-                  isModified: _isModified((final p) => p.notes),
-                  onEdit: () => _editDropdown(
-                    context,
-                    title: 'ملاحظات',
-                    initialValue: parcel.notes,
-                    options: Parcel.notesOptions,
-                    apply: (final String? v) => parcel.copyWith(notes: v),
-                  ),
                 ),
               ],
+            ],
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.owner_name'.tr(),
+            // ورثة prefix shown here matches `ClipboardFormatter`'s exact
+            // "ورثة " rule (UI/UX Updates prompt "Change 2") — display
+            // only, the edit dialog below still opens with the raw name.
+            value: _formatter.displayOwnerName(parcel),
+            isModified: _isModified((final p) => p.ownerName),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.owner_name'.tr(),
+              initialValue: _formatter.effectiveOwnerName(parcel) ?? '',
+              apply: (final String v) =>
+                  parcel.copyWith(ownerName: v.isEmpty ? null : v),
             ),
-            verticalSpacing(12),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.holder_name'.tr(),
+            // اسم الحائز is never prefixed (UI/UX Updates prompt "Change
+            // 1"/"Change 2") — مفوض only ever shows up as a ملاحظات entry.
+            value: _formatter.displayHolderName(parcel),
+            isModified: _isModified((final p) => p.holderName),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.holder_name'.tr(),
+              initialValue: parcel.holderName ?? '',
+              apply: (final String v) =>
+                  parcel.copyWith(holderName: v.isEmpty ? null : v),
+            ),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.national_id'.tr(),
+            // Display-only fallback (UI/UX Updates prompt "Change 7") —
+            // never written back to `Parcel.nationalId` itself; the edit
+            // dialog below still opens with the real (possibly empty) value.
+            value: _formatter.displayNationalId(parcel),
+            isModified: _isModified((final p) => p.nationalId),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.national_id'.tr(),
+              initialValue: parcel.nationalId ?? '',
+              keyboardType: TextInputType.number,
+              apply: (final String v) =>
+                  parcel.copyWith(nationalId: v.isEmpty ? null : v),
+            ),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.basin_name'.tr(),
+            value: parcel.basinName,
+            isModified: _isModified((final p) => p.basinName),
+            onEdit: () => _editBasin(context),
+          ),
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.fields.area'.tr(),
+            value: _formatter.areaFraction(parcel),
+            isModified: _isModified((final p) => p.feddan) ||
+                _isModified((final p) => p.qirat) ||
+                _isModified((final p) => p.sahm),
+            onEdit: () => _editArea(context),
+          ),
+          verticalSpacing(8),
+          // Moved here from See More — المساحة بالمتر sits with the rest
+          // of the area info instead of being buried behind a second tap.
+          FieldRow(
+            label: 'holdings.fields.area_sqm'.tr(),
+            value: _formatter.formatNumber(parcel.totalSqm),
+            isModified: _isModified((final p) => p.totalSqm),
+          ),
+          if (UsageType.fromLabel(parcel.usageType) ==
+              UsageType.agricultural) ...[
             verticalSpacing(8),
-            SeeMoreSection(
-              parcel: parcel,
-              onFieldChanged: onFieldChanged,
-              originalParcel: originalParcel,
-              hideCreditType: hideCreditType,
-              associationType: associationType,
+            FieldRow(
+              label: 'holdings.fields.crop_type'.tr(),
+              value: parcel.cropType,
+              isModified: _isModified((final p) => p.cropType),
+              onEdit: () => _editCropType(context),
             ),
           ],
+          verticalSpacing(8),
+          NotesField(
+            notes: parcel.notes,
+            isModified: _isModified((final p) => p.notes),
+            associationType: associationType,
+            // Diffs the incoming list against the current one so removed
+            // quick-select notes (نوع الاستخدام/نوع الائتمان/نوع الإصلاح)
+            // revert their field to its default in the SAME update —
+            // `onNoteRemoved` fires separately/earlier against a
+            // now-stale `parcel`, so it can't safely be applied here too
+            // without one of the two writes clobbering the other.
+            onChanged: (final List<String> notes) {
+              Parcel updated = parcel.copyWith(notes: notes);
+              for (final String removedNote in parcel.notes
+                  .where((final String n) => !notes.contains(n))) {
+                updated = Parcel.reformTypeOptions.contains(removedNote) ||
+                        removedNote == CreditTypeNotesSync.awqafNote
+                    ? CreditTypeNotesSync.applyNoteRemoved(updated, removedNote)
+                    : UsageTypeNotesSync.applyNoteRemoved(updated, removedNote);
+              }
+              onFieldChanged(updated);
+            },
+            onNoteAdded: (final String note) => onFieldChanged(
+              Parcel.reformTypeOptions.contains(note)
+                  ? CreditTypeNotesSync.applyReformNoteSelected(parcel, note)
+                  : UsageTypeNotesSync.applyNoteAdded(parcel, note),
+            ),
+          ),
+          verticalSpacing(12),
+          verticalSpacing(8),
+          SeeMoreSection(
+            parcel: parcel,
+            onFieldChanged: onFieldChanged,
+            originalParcel: originalParcel,
+            hideCreditType: hideCreditType,
+            associationType: associationType,
+          ),
+        ],
+      ),
+    );
+
+    // A completed parcel needs to read as clearly locked/done at a glance,
+    // distinct from an active card, not just slightly faded
+    // (`REFACTOR_ROADMAP.md` Phase 18) — a visibly grey-tinted surface plus
+    // a solid (not translucent) grey border, rather than the previous
+    // barely-there tint that looked close to a normal card.
+    final Color lockedSurface = colors.textSecondary.withValues(alpha: 0.10);
+    final Color lockedBorder = colors.textSecondary.withValues(alpha: 0.55);
+
+    return Container(
+      padding: EdgeInsets.all(rw(12)),
+      decoration: BoxDecoration(
+        color: isCompleted ? lockedSurface : colors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isCompleted
+              ? lockedBorder
+              : isAdded
+                  ? AppColors.blue200.withValues(alpha: 0.35)
+                  : colors.border,
+          width: isCompleted ? 1.5 : (isAdded ? 1.2 : 1),
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          topRow,
+          // Fields become non-interactive once completed — إعادة الفتح
+          // (in [topRow], deliberately kept outside this ignore-pointer
+          // scope) is the one way back in. Delete similarly lives in the
+          // top row and stays reachable regardless of completion state (a
+          // completed field-added record can still be deleted, per
+          // `DetailScreen`'s own `onDelete` gating).
+          isCompleted ? IgnorePointer(child: body) : body,
+        ],
       ),
     )
         .animate(delay: animationDelay)
@@ -299,28 +377,6 @@ class ParcelDetailCard extends StatelessWidget {
     );
     if (value == null) return;
     onFieldChanged(apply(value));
-  }
-
-  Future<void> _editDropdown(
-    final BuildContext context, {
-    required final String title,
-    required final String? initialValue,
-    required final List<String> options,
-    required final Parcel Function(String? value) apply,
-    final bool allowClear = true,
-  }) async {
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
-      context,
-      title: title,
-      options: [
-        for (final String option in options)
-          ChoiceOption<String>(value: option, label: option),
-      ],
-      selected: initialValue,
-      clearLabel: allowClear ? '—' : null,
-    );
-    if (result == null) return;
-    onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
   Future<void> _editCropType(final BuildContext context) async {
@@ -361,7 +417,7 @@ class ParcelDetailCard extends StatelessWidget {
     if (basins.isEmpty) {
       await _editText(
         context,
-        title: 'اسم الحوض',
+        title: 'holdings.fields.basin_name'.tr(),
         initialValue: parcel.basinName ?? '',
         apply: (final String v) =>
             parcel.copyWith(basinName: v.isEmpty ? null : v),
@@ -369,20 +425,12 @@ class ParcelDetailCard extends StatelessWidget {
       return;
     }
 
-    final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+    final BasinPickResult? result = await pickBasin(
       context,
-      title: 'اسم الحوض',
-      options: [
-        for (final String basin in basins)
-          ChoiceOption<String>(value: basin, label: basin),
-      ],
       selected: parcel.basinName,
-      clearLabel: '—',
     );
     if (result == null) return;
-    onFieldChanged(
-      parcel.copyWith(basinName: result.isClear ? null : result.value),
-    );
+    onFieldChanged(applyBasinPick(parcel, result));
   }
 
   Future<void> _openBorderPerson(
@@ -403,18 +451,75 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 
+  /// Copy ID is the field-worker completion action, and now the *only* one
+  /// (`REFACTOR_ROADMAP.md` Phase 7, migrated to `completed_at`/
+  /// `completed_by` in Phase 9 #12, standalone Finish button removed in
+  /// Phase 9 #3): validates required fields, copies the id, then marks the
+  /// parcel completed via `setParcelCompleted` — unless it's already
+  /// completed, in which case this is a plain re-copy
+  /// (re-marking an already-completed parcel via Copy ID would be a
+  /// surprising side effect of an action the user takes repeatedly while
+  /// working, e.g. to paste the id elsewhere after completion).
+  ///
+  /// Reflects the result via [onCompleted], never [onFieldChanged] —
+  /// [onFieldChanged] routes to `DetailScreen._updateField`, which issues
+  /// its own separate `updateParcel` (edit-overlay) write that doesn't
+  /// carry `completedAt` at all.
   Future<void> _copyId(final BuildContext context) async {
+    final bool isCompleted = parcel.completedAt != null;
+    if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
+      final List<String> gaps = requiredFieldGapMessages(parcel);
+      context.showErrorSnackBar(gaps.first);
+      return;
+    }
+
     await Clipboard.setData(ClipboardData(text: parcel.id));
-    if (context.mounted) {
-      HapticFeedback.mediumImpact();
+    if (!context.mounted) return;
+    HapticFeedback.mediumImpact();
+
+    if (isNew || isCompleted) {
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
+      return;
+    }
+
+    try {
+      final Parcel? updated = await getIt<HoldingsRepository>()
+          .setParcelCompleted(parcel.id, completed: true);
+      if (!context.mounted) return;
+      final Parcel confirmed =
+          updated ?? parcel.copyWith(completedAt: DateTime.now());
+      (onCompleted ?? onFieldChanged)(confirmed);
+      context.showSuccessSnackBar('holdings.detail.copied_and_reviewed'.tr());
+    } catch (error) {
+      if (context.mounted) {
+        context.showErrorSnackBar(
+          resolveWriteErrorMessage(
+            error,
+            fallback: 'holdings.detail.copy_and_review_failed'.tr(),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    if (!Parcel.isValueFilled(parcel.cropType)) {
+    final bool cropTypeRequired =
+        UsageType.fromLabel(parcel.usageType) == UsageType.agricultural;
+    if (cropTypeRequired && !Parcel.isValueFilled(parcel.cropType)) {
       context
           .showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
+      return;
+    }
+    // المساحة must be a real, non-zero value — a saved 0 (or nothing
+    // entered at all) is indistinguishable otherwise, and copying it out
+    // would silently hand a field worker a record that reads as "no land"
+    // instead of "not yet surveyed" (`Parcel.isAreaFilled`'s own doc).
+    if (!Parcel.isAreaFilled(
+      feddan: parcel.feddan,
+      qirat: parcel.qirat,
+      sahm: parcel.sahm,
+    )) {
+      context.showErrorSnackBar('holdings.detail.area_required_to_copy'.tr());
       return;
     }
 
@@ -440,182 +545,68 @@ class ParcelDetailCard extends StatelessWidget {
   }
 }
 
-class _TopStateRow extends StatelessWidget {
-  const _TopStateRow({
-    required this.isAdded,
-    required this.isReviewed,
-    required this.onFinish,
-    required this.onReopen,
-    required this.onDelete,
-    required this.onDeleteConfirmed,
-  });
+/// The single "added" badge — the app no longer has a server-side profile
+/// table to resolve [Parcel.createdBy] against, so this shows the badge
+/// without a creator line.
+class _AddedByBanner extends StatelessWidget {
+  const _AddedByBanner({required this.parcel});
 
-  final bool isAdded;
-  final bool isReviewed;
-  final VoidCallback? onFinish;
-  final VoidCallback? onReopen;
-  final VoidCallback? onDelete;
-  final VoidCallback onDeleteConfirmed;
+  final Parcel parcel;
 
   @override
   Widget build(final BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              if (isAdded)
-                const StatusBadge(
-                  icon: Icons.add_box_rounded,
-                  label: 'مضافة من التطبيق',
-                  color: AppColors.blue200,
-                ),
-              if (!isReviewed && onFinish != null)
-                const StatusBadge(
-                  icon: Icons.task_alt_rounded,
-                  label: 'قيد المراجعة',
-                  color: AppColors.amber200,
-                ),
-              if (isReviewed)
-                const StatusBadge(
-                  icon: Icons.check_circle_rounded,
-                  label: 'تم المراجعة',
-                  color: AppColors.green200,
-                ),
-            ],
-          ),
-        ),
-        if (onDelete != null)
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded,
-                color: AppColors.red200),
-            tooltip: 'holdings.detail.delete'.tr(),
-            onPressed: onDeleteConfirmed,
-          ),
-        if (isReviewed && onReopen != null)
-          FilledButton.tonalIcon(
-            onPressed: onReopen,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: Text('holdings.detail.reopen'.tr()),
-          )
-        else if (!isReviewed && onFinish != null)
-          FilledButton.tonalIcon(
-            onPressed: onFinish,
-            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-            label: Text('holdings.detail.finished'.tr()),
-          ),
-      ],
+    return ParcelDetailInfoBanner(
+      icon: Icons.add_box_rounded,
+      label: 'holdings.detail.added_badge'.tr(),
+      subtitle: 'holdings.detail.added_badge_hint'.tr(),
+      color: AppColors.blue200,
+      creatorLine: null,
     );
   }
 }
 
-class _InfoBanner extends StatelessWidget {
-  const _InfoBanner({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.color,
+class _ReviewIdChip extends StatefulWidget {
+  const _ReviewIdChip({
+    required this.id,
+    required this.onCopy,
+    this.onBusyChanged,
   });
-
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final Color color;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.font14Bold.copyWith(
-                    color: colors.textPrimary,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: AppTextStyles.font12Bold.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ParcelIdChip extends StatelessWidget {
-  const _ParcelIdChip({required this.id, required this.onCopy});
 
   final String id;
-  final VoidCallback onCopy;
+
+  /// `ParcelDetailCard._copyId` — already handles its own snackbars/error
+  /// classification; this wrapper only needs to know when it starts/ends.
+  final Future<void> Function(BuildContext context) onCopy;
+
+  /// See `ParcelDetailCard.onReviewBusyChanged` — forwarded straight
+  /// through, called around the same window as [_isLoading] below.
+  final void Function(bool isBusy)? onBusyChanged;
+
+  @override
+  State<_ReviewIdChip> createState() => _ReviewIdChipState();
+}
+
+class _ReviewIdChipState extends State<_ReviewIdChip> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap(final BuildContext context) async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    widget.onBusyChanged?.call(true);
+    try {
+      await widget.onCopy(context);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+      widget.onBusyChanged?.call(false);
+    }
+  }
 
   @override
   Widget build(final BuildContext context) {
-    final colors = context.customColors;
-    return Material(
-      color: colors.background,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onCopy,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border:
-                Border.all(color: AppColors.green200.withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            children: <Widget>[
-              const Icon(Icons.fingerprint_rounded,
-                  size: 18, color: AppColors.green200),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'holdings.detail.parcel_id'.tr(),
-                      style: AppTextStyles.font12Bold.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                    Text(
-                      id,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.font14Bold,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded,
-                  size: 18, color: AppColors.green200),
-            ],
-          ),
-        ),
-      ),
+    return ParcelIdChip(
+      id: widget.id,
+      isLoading: _isLoading,
+      onCopy: () => _handleTap(context),
     );
   }
 }

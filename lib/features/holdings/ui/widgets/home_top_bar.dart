@@ -1,109 +1,88 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/config/app_config.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/top_bar_icon_button.dart';
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../data/repo/holdings_repository.dart';
+import 'top_bar_icon_button.dart';
 
+/// Home's header (UI/UX Updates prompt "Change 5") — city name +
+/// association-type subtitle on the right, 🏘 Basins page / ⚙️ City Tools /
+/// 🔄 change-city icons clearly spaced on the left. Taller and more
+/// generously padded than the old single-row bar so the title block and
+/// icon row each get their own breathing room instead of being squeezed
+/// into one thin strip. The search bar used to effectively live here too
+/// (right at the top of the body); it's now its own elevated card in
+/// `HomeScreen`, entirely separate from this bar. No Wi-Fi/connectivity
+/// indicator and no basin filter icon — internet is only relevant during a
+/// city download, which already surfaces its own error on failure; a
+/// persistent status badge added nothing the rest of the time.
 class HomeTopBar extends StatelessWidget {
-  const HomeTopBar({
-    super.key,
-    required this.onSettings,
-    this.onRefresh,
-    this.isRefreshing = false,
-  });
+  const HomeTopBar({super.key, required this.onChangeCity});
 
-  final VoidCallback onSettings;
-
-  /// Re-downloads the active city's latest data (after flushing any queued
-  /// local edits first) — `null` until a city is actually loaded, since
-  /// there's nothing to refresh before then.
-  final VoidCallback? onRefresh;
-
-  /// Whether a refresh triggered by [onRefresh] is currently in flight —
-  /// swaps the icon for a spinner and (via `onRefresh` itself being made
-  /// re-entrant-safe by the caller) prevents a second tap from starting a
-  /// concurrent refresh.
-  final bool isRefreshing;
-
-  /// Matches [TopBarIconButton]'s footprint so the centered title/brand
-  /// column stays visually centered without a second icon button on the
-  /// trailing side (the history button/screen was retired along with the
-  /// rest of the Excel-file flow — APP_PLAN.md Phase 5).
-  static const double _iconButtonFootprint = 42;
+  final VoidCallback onChangeCity;
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
+    final HoldingsRepository repository = getIt<HoldingsRepository>();
+    final String? cityName = repository.activeCityName;
+    final AssociationType? type = repository.activeAssociationType;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: rw(12), vertical: rh(8)),
-      child: Row(
+      padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          TopBarIconButton(
-            icon: Icons.settings_rounded,
-            tooltip: 'settings.title'.tr(),
-            onTap: onSettings,
-          ),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const Icon(
-                      Icons.landscape_rounded,
-                      color: AppColors.primary200,
-                      size: 22,
-                    ),
-                    horizontalSpacing(6),
-                    Text(
-                      'holdings.home.brand'.tr(),
-                      style: AppTextStyles.font20Bold.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'v${AppConfig.appVersion}',
-                  style: AppTextStyles.font12Regular.copyWith(
-                    color: colors.textHint,
-                  ),
-                ),
-              ],
+          if (cityName != null) ...[
+            Text(
+              cityName,
+              style: AppTextStyles.font20Bold.copyWith(
+                color: colors.textPrimary,
+              ),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+            if (type != null) ...[
+              verticalSpacing(2),
+              Text(
+                type == AssociationType.agriculturalReform
+                    ? 'holdings.association_type.agricultural_reform'.tr()
+                    : 'holdings.association_type.agricultural_credit'.tr(),
+                style: AppTextStyles.font12Regular.copyWith(
+                  color: colors.textSecondary,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ],
+            verticalSpacing(14),
+          ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              TopBarIconButton(
+                icon: Icons.holiday_village_rounded,
+                tooltip: 'holdings.basin.title'.tr(),
+                onTap: () => context.pushNamed(Routes.basins),
+              ),
+              horizontalSpacing(12),
+              TopBarIconButton(
+                icon: Icons.build_outlined,
+                tooltip: 'cities.tools.entry'.tr(),
+                onTap: () => context.pushNamed(Routes.cityTools),
+              ),
+              horizontalSpacing(12),
+              TopBarIconButton(
+                icon: Icons.swap_horiz_rounded,
+                tooltip: 'holdings.home.change_file'.tr(),
+                onTap: onChangeCity,
+              ),
+            ],
           ),
-          if (onRefresh == null)
-            const SizedBox(
-              width: _iconButtonFootprint,
-              height: _iconButtonFootprint,
-            )
-          else
-            SizedBox(
-              width: _iconButtonFootprint,
-              height: _iconButtonFootprint,
-              child: isRefreshing
-                  ? const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary200,
-                        ),
-                      ),
-                    )
-                  : TopBarIconButton(
-                      icon: Icons.refresh_rounded,
-                      tooltip: 'cities.stale_banner.refresh'.tr(),
-                      onTap: onRefresh!,
-                    ),
-            ),
         ],
       ),
     );

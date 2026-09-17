@@ -2,7 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/router/app_router.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/cities/domain/entities/city_snapshot.dart';
+import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
+
 
 void main() {
   // Regression test: `context.pushNamed<CitySnapshot>(Routes.cityPicker)`
@@ -26,7 +27,6 @@ void main() {
   test('every named route resolves to a non-null Route', () {
     for (final String name in <String>[
       Routes.aboutScreen,
-      Routes.login,
       Routes.cityPicker,
       Routes.home,
       Routes.fileStatus,

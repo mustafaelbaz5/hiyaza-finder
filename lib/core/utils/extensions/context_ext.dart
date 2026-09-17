@@ -39,18 +39,26 @@ extension LocaleExt on BuildContext {
 extension SnackBarExt on BuildContext {
   void hideKeyboard() => FocusScope.of(this).unfocus();
 
+  // Clears any snackbar still on/entering the queue before showing a new one
+  // — without this, a fast sequence of actions (e.g. tapping Copy ID right
+  // after a save) stacks messages that flash by unread instead of each
+  // being clearly seen.
   void showSnackBar(
     final String message, {
     final Duration duration = const Duration(seconds: 3),
     final SnackBarAction? action,
   }) {
-    ScaffoldMessenger.of(this).showSnackBar(
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(this);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(content: Text(message), duration: duration, action: action),
     );
   }
 
   void showErrorSnackBar(final String message) {
-    ScaffoldMessenger.of(this).showSnackBar(
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(this);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: colorScheme.error,
@@ -60,7 +68,9 @@ extension SnackBarExt on BuildContext {
   }
 
   void showSuccessSnackBar(final String message) {
-    ScaffoldMessenger.of(this).showSnackBar(
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(this);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.green,

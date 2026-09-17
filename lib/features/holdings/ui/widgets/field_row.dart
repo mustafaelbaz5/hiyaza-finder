@@ -1,7 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/tile_icon_button.dart';
+import 'tile_icon_button.dart';
+
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -107,12 +108,12 @@ class FieldRow extends StatelessWidget {
                 TileIconButton(
                   icon: Icons.edit_rounded,
                   onTap: onEdit!,
-                  tooltip: 'تعديل',
+                  tooltip: 'holdings.field.edit_tooltip'.tr(),
                 ),
               TileIconButton(
                 icon: Icons.copy_rounded,
                 onTap: () => _copy(context, displayValue),
-                tooltip: 'نسخ',
+                tooltip: 'holdings.field.copy_tooltip'.tr(),
               ),
             ],
           ),
@@ -146,7 +147,7 @@ class _ModifiedBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        'تم التعديل',
+        'holdings.field.modified_badge'.tr(),
         style: AppTextStyles.font12Bold.copyWith(
           color: AppColors.amber300,
           fontSize: 9,
