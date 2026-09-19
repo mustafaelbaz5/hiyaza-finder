@@ -11,10 +11,10 @@ final GetIt getIt = GetIt.instance;
 
 Future<void> setUpDependencies() async {
   await registerCoreModule(getIt);
+  registerJazlaModule(getIt);
   registerHoldingsModule(getIt);
   registerCitiesModule(getIt);
   registerCropTypeModule(getIt);
-  registerJazlaModule(getIt);
 
   // Starts polling immediately so the top-bar connectivity badge
   // (`HomeTopBar`) has a real classification on the very first frame,

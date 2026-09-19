@@ -6,6 +6,7 @@ import '../local/parcel_dataset_state.dart';
 import '../local/parcel_edit_overlay.dart';
 import '../local/parcel_edits_store.dart';
 import '../local/parcel_query_service.dart';
+import '../local/parcel_id_overrides_store.dart';
 import '../model/basin_progress.dart';
 import '../model/bulk_edit_outcome.dart';
 import '../model/bulk_editable_field.dart';
@@ -13,9 +14,9 @@ import '../model/parcel.dart';
 import 'holdings_reader.dart';
 import 'holdings_writer.dart';
 import 'package:uuid/uuid.dart';
-
 import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';
+import '../../../jazla/data/repo/jazla_repo.dart';
 
 class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   HoldingsRepository({
@@ -28,13 +29,21 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         const LocalAddedParcelsStore(),
     final LocalEditTracker editTracker = const LocalEditTracker(),
     final Uuid uuid = const Uuid(),
+    final JazlaRepo? jazlaRepo,
+    final ParcelIdOverridesStore idOverridesStore =
+        const ParcelIdOverridesStore(),
   })  : _dataset = datasetState ??
-            ParcelDatasetState(editsStore: editsStore, editOverlay: editOverlay),
+            ParcelDatasetState(
+              editsStore: editsStore,
+              editOverlay: editOverlay,
+              idOverridesStore: idOverridesStore,
+            ),
         _queryService = queryService,
         _bulkEditService = bulkEditService,
         _addedParcelsStore = addedParcelsStore,
         _editTracker = editTracker,
-        _uuid = uuid;
+        _uuid = uuid,
+        _jazlaRepo = jazlaRepo;
 
   final ParcelDatasetState _dataset;
   final ParcelQueryService _queryService;
@@ -42,6 +51,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   final LocalAddedParcelsStore _addedParcelsStore;
   final LocalEditTracker _editTracker;
   final Uuid _uuid;
+  final JazlaRepo? _jazlaRepo;
 
   @override
   List<Parcel> get parcels => _dataset.parcels;
@@ -242,6 +252,34 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     _dataset.rebuildBorderIndex();
     if (cityId != null) await _addedParcelsStore.delete(id, cityId);
     return true;
+  }
+
+  @override
+  Future<Parcel?> regenerateLocalParcelId(final String parcelId) async {
+    final int index = _dataset.indexOf(parcelId);
+    if (index < 0) return null;
+    final Parcel current = _dataset.parcels[index];
+    final String? cityId = _dataset.activeCityId;
+    if (cityId == null) return null;
+
+    final String newId = _uuid.v4();
+    final Parcel updated = current.copyWith(
+      id: newId,
+      sourceAddedHoldingId:
+          current.sourceAddedHoldingId == parcelId ? newId : current.sourceAddedHoldingId,
+      pendingGroupId:
+          current.pendingGroupId == parcelId ? newId : current.pendingGroupId,
+    );
+    _dataset.renameId(parcelId, newId);
+    _dataset.replaceAt(_dataset.indexOf(newId), updated);
+    _dataset.setOriginal(newId, updated);
+    await _dataset.persistEdits();
+    await _dataset.persistIdOverride(cityId, parcelId, newId);
+    if (current.isFieldAdded) {
+      await _addedParcelsStore.renameId(parcelId, updated, cityId);
+    }
+    await _jazlaRepo?.replaceParcelId(parcelId, newId, cityId);
+    return updated;
   }
 
   /// Persists an edited parcel to the local edit overlay and

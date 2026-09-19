@@ -69,18 +69,10 @@ class ClipboardFormatter {
     return trimmed;
   }
 
-  /// One "label: value" field per line, no trailing commas and no comma
-  /// separators between fields (Copy All Format Fix prompt) — nothing here
-  /// pastes into a spreadsheet template anymore, so per-field lines are the
-  /// norm. Two exceptions share one line each to keep the message short:
-  /// رقم الحيازة + عدد القطع (closely related — "which holding, how many
-  /// parcels"), and فدان/قيراط/سهم under المساحة: (already a single 3-part
-  /// unit, same as [areaFraction] shows on screen).
-  /// Field order: ID, رقم الحيازة + عدد القطع, اسم المالك, اسم الحائز,
-  /// الرقم القومي, اسم الحوض, كود الحوض, رقم الأرض, المساحة, نوع المحصول/
-  /// مرحلة النمو (زراعة only), نوع الاستخدام, الملاحظات — اسم الجمعية/
-  /// المساحة بالمتر are dropped entirely; الملاحظات is omitted (not shown
-  /// as a placeholder) when there's nothing to say.
+  /// Formats one compact, labeled line per copied field. Newlines are the
+  /// primary separator because names and notes may contain commas. Related
+  /// values share an Arabic comma, while semicolons are deliberately avoided
+  /// so the result remains natural when pasted into a message or form.
   /// [hideCreditType]/[associationType] are accepted for call-site
   /// compatibility but no longer affect the output — نوع الائتمان/نوع
   /// الإصلاح were never a Copy All field (`CreditTypeNotesSync` surfaces
@@ -100,29 +92,28 @@ class ClipboardFormatter {
     final int parcelCount = (p.holdingsCount ?? 0) < 1 ? 1 : p.holdingsCount!;
     final bool isAgricultural =
         UsageType.fromLabel(p.usageType) == UsageType.agricultural;
-    final String notesJoined = p.notes.join('، ').trim();
+    final String notesJoined = p.notes
+        .map((final String note) => note.replaceAll(RegExp(r'\s*\r?\n\s*'), '، '))
+        .join('، ')
+        .trim();
 
-    // Trailing ";" makes each field unambiguous to split on downstream
-    // (e.g. re-splitting the pasted text into a spreadsheet row), on top
-    // of the newline that already separates fields visually.
-    String field(final String label, final String value) => '$label: $value;';
+    String field(final String label, final String value) => '$label: $value';
 
     final List<String> lines = <String>[
-      field('ID', p.id),
-      '${field('رقم الحيازة', p.holdingId)} ${field('عدد القطع', parcelCount.toString())}',
-      field('اسم المالك', ownerSlot),
+      field('كود القطعة', p.id),
+      '${field('رقم الحيازة', p.holdingId)}، ${field('عدد القطع', parcelCount.toString())}',
+      field('اسم الجمعية', slot(p.associationName)),
       field('اسم الحائز', holderSlot),
+      field('اسم المالك', ownerSlot),
       field('الرقم القومي', displayNationalId(p)),
-      field('اسم الحوض', slot(p.basinName)),
-      field('كود الحوض', slot(p.basinCode)),
+      '${field('اسم الحوض', slot(p.basinName))}، ${field('كود الحوض', slot(p.basinCode))}',
       field('رقم الأرض', displayLandNumber(p)),
-      'المساحة:',
-      '  ${field('فدان', formatNumber(p.feddan) ?? emptyPlaceholder)} '
-          '${field('قيراط', formatNumber(p.qirat) ?? emptyPlaceholder)} '
-          '${field('سهم', formatNumber(p.sahm) ?? emptyPlaceholder)}',
+      'المساحة: ${formatNumber(p.feddan) ?? emptyPlaceholder} فدان، '
+          '${formatNumber(p.qirat) ?? emptyPlaceholder} قيراط، '
+          '${formatNumber(p.sahm) ?? emptyPlaceholder} سهم',
+      field('نوع الاستخدام', slot(p.usageType)),
       if (isAgricultural) field('نوع المحصول', slot(p.cropType)),
       if (isAgricultural) field('مرحلة النمو', slot(p.growthStages)),
-      field('نوع الاستخدام', slot(p.usageType)),
       if (notesJoined.isNotEmpty && notesJoined != emptyPlaceholder)
         field('الملاحظات', notesJoined),
     ];

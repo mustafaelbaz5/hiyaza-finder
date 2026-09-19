@@ -103,10 +103,10 @@ void main() {
   });
 
   group('format', () {
-    test('ID line is always first', () {
+    test('parcel code line is always first', () {
       const Parcel p = Parcel(id: 'uuid-123', holdingId: '55');
       final String text = formatter.format(p);
-      expect(text.split('\n').first, 'ID: uuid-123;');
+      expect(text.split('\n').first, 'كود القطعة: uuid-123');
     });
 
     test('رقم الأرض comes right after كود الحوض', () {
@@ -116,9 +116,8 @@ void main() {
         landNumber: '13113851',
       );
       final List<String> lines = formatter.format(p).split('\n');
-      final int basinCodeIndex =
-          lines.indexWhere((final String l) => l.startsWith('كود الحوض'));
-      expect(lines[basinCodeIndex + 1], 'رقم الأرض: 13113851;');
+      expect(lines, contains('اسم الحوض: -، كود الحوض: B1'));
+      expect(lines, contains('رقم الأرض: 13113851'));
     });
 
     test('رقم الأرض falls back to "0" when missing', () {
@@ -165,8 +164,8 @@ void main() {
     });
 
     test(
-        'نوع الائتمان/نوع الإصلاح/اسم الجمعية/المساحة بالمتر are never '
-        'Copy All fields (رقم الأرض IS included, per Change 8/10)', () {
+        'credit fields and total square meters are never Copy All fields '
+        '(association name and land number are included)', () {
       const Parcel p = Parcel(
         holdingId: '55',
         creditType: 'أوقاف',
@@ -178,22 +177,16 @@ void main() {
       final String text = formatter.format(p);
       expect(text, isNot(contains('نوع الائتمان')));
       expect(text, isNot(contains('نوع الإصلاح')));
-      expect(text, isNot(contains('اسم الجمعية')));
+      expect(text, contains('اسم الجمعية: جمعية الدير'));
       expect(text, isNot(contains('المساحة بالمتر')));
       expect(text, contains('رقم الأرض: 13113851'));
       expect(text, contains('الأرض تابعة لهيئة الأوقاف المصرية'));
     });
 
-    test(
-        'فدان/قيراط/سهم share one indented line under المساحة: (Copy All '
-        'height-reduction prompt)', () {
+    test('area values share one compact line', () {
       const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
       final List<String> lines = formatter.format(p).split('\n');
-      expect(lines, contains('المساحة:'));
-      expect(
-        lines,
-        contains('  فدان: 1; قيراط: 2; سهم: 3;'),
-      );
+      expect(lines, contains('المساحة: 1 فدان، 2 قيراط، 3 سهم'));
     });
 
     test(
@@ -201,20 +194,10 @@ void main() {
         'prompt)', () {
       const Parcel p = Parcel(holdingId: '55', holdingsCount: 3);
       final List<String> lines = formatter.format(p).split('\n');
-      expect(lines, contains('رقم الحيازة: 55; عدد القطع: 3;'));
+      expect(lines, contains('رقم الحيازة: 55، عدد القطع: 3'));
     });
 
-    test('every field line ends with ";" so fields are unambiguous to split',
-        () {
-      const Parcel p = Parcel(holdingId: '55', feddan: 1, qirat: 2, sahm: 3);
-      final List<String> lines = formatter.format(p).split('\n');
-      for (final String line in lines) {
-        if (line == 'المساحة:') continue; // the section header, not a field
-        expect(line, endsWith(';'));
-      }
-    });
-
-    test('no trailing commas anywhere in the output', () {
+    test('uses newlines as separators and no semicolons', () {
       const Parcel p = Parcel(
         holdingId: '55',
         feddan: 1,
@@ -222,7 +205,20 @@ void main() {
         sahm: 3,
         notes: <String>['ملاحظة'],
       );
-      expect(formatter.format(p), isNot(contains(',')));
+      final String text = formatter.format(p);
+      expect(text, contains('\n'));
+      expect(text, isNot(contains(';')));
+    });
+
+    test('normalizes line breaks inside notes', () {
+      const Parcel p = Parcel(
+        holdingId: '55',
+        notes: <String>['ملاحظة أولى\nملاحظة ثانية'],
+      );
+      expect(
+        formatter.format(p),
+        contains('الملاحظات: ملاحظة أولى، ملاحظة ثانية'),
+      );
     });
 
     test('نوع المحصول/مرحلة النمو show for زراعة usage', () {

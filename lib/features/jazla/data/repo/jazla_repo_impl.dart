@@ -101,6 +101,27 @@ class JazlaRepoImpl implements JazlaRepo {
   Future<bool> isParcelUsed(final String parcelId, final String cityId) async =>
       await getJazlaContaining(parcelId, cityId) != null;
 
+  @override
+  Future<void> replaceParcelId(
+    final String oldId,
+    final String newId,
+    final String cityId,
+  ) async {
+    final List<Jazla> jazlas = await _store.load(cityId);
+    await _store.save(
+      cityId,
+      jazlas
+          .map(
+            (final Jazla jazla) => jazla.copyWith(
+              parcelIds: jazla.parcelIds
+                  .map((final String id) => id == oldId ? newId : id)
+                  .toList(),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Future<void> _mutate(
     final String cityId,
     final String jazlaId,

@@ -6,6 +6,7 @@ import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';
 
 import 'parcel_edits_store.dart';
+import 'parcel_id_overrides_store.dart';
 
 /// Owns the active city's in-memory parcel dataset, its local edit overlay,
 /// and the derived border index — the state [HoldingsRepository] used to
@@ -19,11 +20,15 @@ class ParcelDatasetState {
   ParcelDatasetState({
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
     final ParcelEditOverlay editOverlay = const ParcelEditOverlay(),
+    final ParcelIdOverridesStore idOverridesStore =
+        const ParcelIdOverridesStore(),
   })  : _editsStore = editsStore,
-        _editOverlay = editOverlay;
+        _editOverlay = editOverlay,
+        _idOverridesStore = idOverridesStore;
 
   final ParcelEditsStore _editsStore;
   final ParcelEditOverlay _editOverlay;
+  final ParcelIdOverridesStore _idOverridesStore;
 
   String? _activeCityId;
   String? _activeCityName;
@@ -72,11 +77,22 @@ class ParcelDatasetState {
     _activeAssociationType = associationType;
     _activeAssociationSubtype = associationSubtype;
     _basins = basins;
+    final Map<String, String> idOverrides = await _idOverridesStore.load(cityId);
+    final List<Parcel> overriddenParcels = parcels.map((final Parcel parcel) {
+      final String? newId = idOverrides[parcel.id];
+      return newId == null ? parcel : parcel.copyWith(id: newId);
+    }).toList();
     _originalById = <String, Parcel>{
-      for (final Parcel p in parcels) p.id: p,
+      for (final Parcel p in overriddenParcels) p.id: p,
     };
-    _edits = await _editsStore.load(key);
-    _parcels = parcels.map(applyEdit).toList();
+    final Map<String, Map<String, dynamic>> storedEdits =
+        await _editsStore.load(key);
+    _edits = <String, Map<String, dynamic>>{
+      for (final MapEntry<String, Map<String, dynamic>> entry
+          in storedEdits.entries)
+        (idOverrides[entry.key] ?? entry.key): entry.value,
+    };
+    _parcels = overriddenParcels.map(applyEdit).toList();
     rebuildBorderIndex();
     return _parcels;
   }
@@ -130,6 +146,23 @@ class ParcelDatasetState {
   void removeOriginal(final String id) {
     _originalById.remove(id);
   }
+
+  void renameId(final String oldId, final String newId) {
+    final int index = indexOf(oldId);
+    if (index >= 0) {
+      _parcels[index] = _parcels[index].copyWith(id: newId);
+    }
+    final Parcel? original = _originalById.remove(oldId);
+    if (original != null) _originalById[newId] = original.copyWith(id: newId);
+    final Map<String, dynamic>? edit = _edits.remove(oldId);
+    if (edit != null) _edits[newId] = edit;
+  }
+
+  Future<void> persistIdOverride(
+    final String cityId,
+    final String oldId,
+    final String newId,
+  ) => _idOverridesStore.save(cityId, oldId, newId);
 
   int indexOf(final String id) =>
       _parcels.indexWhere((final Parcel p) => p.id == id);

@@ -55,8 +55,23 @@ void main() {
     expect(added!.id, isNotEmpty);
     expect(added.sourceAddedHoldingId, added.id);
     expect(added.isFieldAdded, isTrue);
+    expect(added.completedAt, isNull);
+    expect(added.completedBy, isNull);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.holderName, 'محمد');
+  });
+
+  test('regenerates only a local parcel id and persists the replacement', () async {
+    final Parcel added = (await repository.addLocalParcel(
+      const Parcel(holdingId: '', holderName: 'محمد'),
+    ))!;
+
+    final Parcel? regenerated =
+        await repository.regenerateLocalParcelId(added.id);
+
+    expect(regenerated, isNotNull);
+    expect(regenerated!.id, isNot(added.id));
+    expect(repository.parcels.single.id, regenerated.id);
   });
 
   test(

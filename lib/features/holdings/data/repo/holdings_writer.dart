@@ -11,6 +11,8 @@ abstract class HoldingsWriter {
 
   Future<void> resetParcel(final String id);
 
+  Future<Parcel?> regenerateLocalParcelId(final String parcelId);
+
   Future<BulkEditOutcome> bulkApplyField({
     required final BulkEditableField field,
     required final Object? value,

@@ -321,6 +321,8 @@ class _DetailScreenState extends State<DetailScreen>
       // this form with no way to bring it back (usage type isn't editable
       // in the add flow at all).
       usageType: Parcel.defaultUsageType,
+      completedAt: null,
+      completedBy: null,
       // عدد القطع في الحيازة grows by one for the new parcel being added.
       holdingsCount: (source.holdingsCount ?? 1) + 1,
       // الملاحظات = [] by default (§2.2) — not inherited from the source
@@ -371,6 +373,17 @@ class _DetailScreenState extends State<DetailScreen>
       isReopening: _isParcelBusy(parcel.id),
       onReviewBusyChanged: (final bool isBusy) =>
           _setReviewBusy(parcel.id, isBusy),
+      onRegenerate: (final String parcelId) async {
+        final Parcel? updated =
+            await _repository.regenerateLocalParcelId(parcelId);
+        if (!mounted) return;
+        if (updated == null) {
+          context.showErrorSnackBar('holdings.detail.regenerate_id_failed'.tr());
+          return;
+        }
+        _refreshFromRepository();
+        context.showSuccessSnackBar('holdings.detail.regenerate_id_done'.tr());
+      },
     );
   }
 

@@ -125,6 +125,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
         // would silently hide the required نوع الزرع field with no way to
         // bring it back.
         usageType: Parcel.defaultUsageType,
+        completedAt: null,
+        completedBy: null,
         holdingsCount: (source.holdingsCount ?? 1) + 1,
         notes: const <String>[],
       );

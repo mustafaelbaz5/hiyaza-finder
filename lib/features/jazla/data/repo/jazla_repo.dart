@@ -38,4 +38,10 @@ abstract class JazlaRepo {
   Future<Jazla?> getJazlaContaining(final String parcelId, final String cityId);
 
   Future<bool> isParcelUsed(final String parcelId, final String cityId);
+
+  Future<void> replaceParcelId(
+    final String oldId,
+    final String newId,
+    final String cityId,
+  );
 }

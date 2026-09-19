@@ -16,6 +16,7 @@ import '../../../cities/data/model/association_type.dart';
 import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
+import '../../data/local/copy_validation.dart';
 import '../../data/local/credit_type_notes_sync.dart';
 import '../../data/local/field_change_tracker.dart';
 import '../../data/local/usage_type_notes_sync.dart';
@@ -29,7 +30,6 @@ import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'notes_field.dart';
 import 'parcel_detail_header.dart';
-import 'required_field_gaps.dart';
 import 'see_more_section.dart';
 
 class ParcelDetailCard extends StatelessWidget {
@@ -49,6 +49,7 @@ class ParcelDetailCard extends StatelessWidget {
     this.isDeleting = false,
     this.isReopening = false,
     this.onReviewBusyChanged,
+    this.onRegenerate,
   });
 
   final Parcel parcel;
@@ -87,6 +88,7 @@ class ParcelDetailCard extends StatelessWidget {
   /// `_isLoading`) is unaffected — this is purely so the *parent* can see
   /// the same window, not a replacement for the chip's own feedback.
   final void Function(bool isBusy)? onReviewBusyChanged;
+  final Future<void> Function(String parcelId)? onRegenerate;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -158,6 +160,9 @@ class ParcelDetailCard extends StatelessWidget {
             id: parcel.id,
             onCopy: _copyId,
             onBusyChanged: onReviewBusyChanged,
+            onRegenerate: onRegenerate != null
+                ? () => _confirmRegenerate(context)
+                : null,
           ),
           verticalSpacing(10),
           CopyAllButton(onTap: () => _copyAll(context)),
@@ -281,16 +286,18 @@ class ParcelDetailCard extends StatelessWidget {
             ),
           ],
           verticalSpacing(8),
+          SeeMoreSection(
+            parcel: parcel,
+            onFieldChanged: onFieldChanged,
+            originalParcel: originalParcel,
+            hideCreditType: hideCreditType,
+            associationType: associationType,
+          ),
+          verticalSpacing(12),
           NotesField(
             notes: parcel.notes,
             isModified: _isModified((final p) => p.notes),
             associationType: associationType,
-            // Diffs the incoming list against the current one so removed
-            // quick-select notes (نوع الاستخدام/نوع الائتمان/نوع الإصلاح)
-            // revert their field to its default in the SAME update —
-            // `onNoteRemoved` fires separately/earlier against a
-            // now-stale `parcel`, so it can't safely be applied here too
-            // without one of the two writes clobbering the other.
             onChanged: (final List<String> notes) {
               Parcel updated = parcel.copyWith(notes: notes);
               for (final String removedNote in parcel.notes
@@ -307,15 +314,6 @@ class ParcelDetailCard extends StatelessWidget {
                   ? CreditTypeNotesSync.applyReformNoteSelected(parcel, note)
                   : UsageTypeNotesSync.applyNoteAdded(parcel, note),
             ),
-          ),
-          verticalSpacing(12),
-          verticalSpacing(8),
-          SeeMoreSection(
-            parcel: parcel,
-            onFieldChanged: onFieldChanged,
-            originalParcel: originalParcel,
-            hideCreditType: hideCreditType,
-            associationType: associationType,
           ),
         ],
       ),
@@ -467,17 +465,11 @@ class ParcelDetailCard extends StatelessWidget {
   /// carry `completedAt` at all.
   Future<void> _copyId(final BuildContext context) async {
     final bool isCompleted = parcel.completedAt != null;
-    if (!isNew && !isCompleted && !parcel.hasRequiredFieldsFilled) {
-      final List<String> gaps = requiredFieldGapMessages(parcel);
-      context.showErrorSnackBar(gaps.first);
-      return;
-    }
-
     await Clipboard.setData(ClipboardData(text: parcel.id));
     if (!context.mounted) return;
     HapticFeedback.mediumImpact();
 
-    if (isNew || isCompleted) {
+    if (isNew || isCompleted || !CopyValidation.canMarkCompleted(parcel)) {
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
       return;
     }
@@ -503,23 +495,15 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _copyAll(final BuildContext context) async {
-    final bool cropTypeRequired =
-        UsageType.fromLabel(parcel.usageType) == UsageType.agricultural;
-    if (cropTypeRequired && !Parcel.isValueFilled(parcel.cropType)) {
-      context
-          .showErrorSnackBar('holdings.detail.crop_type_required_to_copy'.tr());
-      return;
-    }
-    // المساحة must be a real, non-zero value — a saved 0 (or nothing
-    // entered at all) is indistinguishable otherwise, and copying it out
-    // would silently hand a field worker a record that reads as "no land"
-    // instead of "not yet surveyed" (`Parcel.isAreaFilled`'s own doc).
-    if (!Parcel.isAreaFilled(
-      feddan: parcel.feddan,
-      qirat: parcel.qirat,
-      sahm: parcel.sahm,
-    )) {
-      context.showErrorSnackBar('holdings.detail.area_required_to_copy'.tr());
+    if (!CopyValidation.canCopyAll(parcel)) {
+      final bool cropMissing =
+          UsageType.fromLabel(parcel.usageType) == UsageType.agricultural &&
+          !Parcel.isValueFilled(parcel.cropType);
+      context.showErrorSnackBar(
+        cropMissing
+            ? 'holdings.detail.crop_type_required_to_copy'.tr()
+            : 'holdings.detail.area_required_to_copy'.tr(),
+      );
       return;
     }
 
@@ -541,6 +525,15 @@ class ParcelDetailCard extends StatelessWidget {
       message: 'holdings.detail.delete_confirm'.tr(),
       confirmText: 'holdings.detail.delete'.tr(),
       onConfirm: onDelete!,
+    );
+  }
+
+  Future<void> _confirmRegenerate(final BuildContext context) async {
+    await AppDialogs.showConfirm(
+      context,
+      message: 'holdings.detail.regenerate_id_confirm'.tr(),
+      confirmText: 'holdings.detail.regenerate_id'.tr(),
+      onConfirm: () => onRegenerate?.call(parcel.id),
     );
   }
 }
@@ -570,6 +563,7 @@ class _ReviewIdChip extends StatefulWidget {
     required this.id,
     required this.onCopy,
     this.onBusyChanged,
+    this.onRegenerate,
   });
 
   final String id;
@@ -581,6 +575,7 @@ class _ReviewIdChip extends StatefulWidget {
   /// See `ParcelDetailCard.onReviewBusyChanged` — forwarded straight
   /// through, called around the same window as [_isLoading] below.
   final void Function(bool isBusy)? onBusyChanged;
+  final VoidCallback? onRegenerate;
 
   @override
   State<_ReviewIdChip> createState() => _ReviewIdChipState();
@@ -607,6 +602,7 @@ class _ReviewIdChipState extends State<_ReviewIdChip> {
       id: widget.id,
       isLoading: _isLoading,
       onCopy: () => _handleTap(context),
+      onRegenerate: widget.onRegenerate,
     );
   }
 }

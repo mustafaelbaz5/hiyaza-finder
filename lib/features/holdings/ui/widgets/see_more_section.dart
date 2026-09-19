@@ -1,8 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
@@ -17,10 +15,9 @@ import 'field_row.dart';
 import 'ownership_toggle.dart';
 import 'toggle_field_row.dart';
 
-/// Collapsed-by-default section for the less-frequently-needed fields
-/// (المديرية/الإدارة/كود الحوض/نوع الاستخدام), toggled independently per
-/// card so stacking many cards on the detail screen doesn't overwhelm the
-/// view by default.
+/// Additional parcel fields rendered directly in the detail card. The fields
+/// are intentionally always visible; hiding editable data behind an expansion
+/// control made the detail workflow slower and caused copy/completion mistakes.
 class SeeMoreSection extends StatefulWidget {
   const SeeMoreSection({
     super.key,
@@ -55,8 +52,6 @@ class SeeMoreSection extends StatefulWidget {
 }
 
 class SeeMoreSectionState extends State<SeeMoreSection> {
-  bool _expanded = false;
-
   /// See `ParcelDetailCard._isModified` — same comparison, against
   /// [SeeMoreSection.originalParcel] instead.
   bool _isModified<T>(final T Function(Parcel p) current) {
@@ -146,47 +141,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
 
   @override
   Widget build(final BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _expanded
-                      ? 'holdings.detail.see_less'.tr()
-                      : 'holdings.detail.see_more'.tr(),
-                  style: AppTextStyles.font12Bold.copyWith(
-                    color: AppColors.primary200,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                AnimatedRotation(
-                  turns: _expanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.primary200,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          child: _expanded
-              ? _buildFields(context)
-              : const SizedBox(width: double.infinity),
-        ),
-      ],
-    );
+    return _buildFields(context);
   }
 
   Widget _pairRow(final Widget left, final Widget right) => Row(
@@ -246,7 +201,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     // Copy All field), via `CreditTypeNotesSync.applyReformNoteSelected`.
     final bool isReformCity =
         widget.associationType == AssociationType.agriculturalReform;
-    final Widget? ownershipToggle = isReformCity
+    final Widget ownershipToggle = isReformCity
         ? FieldRow(
             label: 'holdings.fields.reform_type'.tr(),
             value: widget.parcel.reformType,
@@ -273,6 +228,22 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               ),
             ),
           );
+    final Widget usageType = FieldRow(
+      label: 'holdings.fields.usage_type'.tr(),
+      value: widget.parcel.usageType,
+      isModified: _isModified((final p) => p.usageType),
+      onEdit: () => _editDropdown(
+        context,
+        title: 'holdings.fields.usage_type'.tr(),
+        initialValue: widget.parcel.usageType,
+        options: Parcel.usageTypeOptions,
+        allowClear: false,
+        apply: (final String? v) => UsageTypeNotesSync.applyUsageTypeChange(
+          widget.parcel,
+          v ?? Parcel.defaultUsageType,
+        ),
+      ),
+    );
     final Widget directorate = FieldRow(
       label: 'holdings.fields.directorate'.tr(),
       value: widget.parcel.directorate,
@@ -303,10 +274,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _pairRow(inheritance, delegate),
-        verticalSpacing(8),
-        basinCode,
-        if (ownershipToggle != null) ...[
+        usageType,
+        ...[
           verticalSpacing(8),
           ownershipToggle,
         ],
@@ -329,6 +298,9 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           ),
           verticalSpacing(8),
         ],
+        _pairRow(inheritance, delegate),
+        verticalSpacing(8),
+        basinCode,
         // Moved here from the primary card area (UI/UX redesign) — grouped
         // with the other parcel-identity/measurement fields above rather
         // than the administrative المديرية/الإدارة pair below.
@@ -358,23 +330,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
             initialValue: widget.parcel.associationName ?? '',
             apply: (final String v) => widget.parcel.copyWith(
               associationName: v.isEmpty ? null : v,
-            ),
-          ),
-        ),
-        verticalSpacing(8),
-        FieldRow(
-          label: 'holdings.fields.usage_type'.tr(),
-          value: widget.parcel.usageType,
-          isModified: _isModified((final p) => p.usageType),
-          onEdit: () => _editDropdown(
-            context,
-            title: 'holdings.fields.usage_type'.tr(),
-            initialValue: widget.parcel.usageType,
-            options: Parcel.usageTypeOptions,
-            allowClear: false,
-            apply: (final String? v) => UsageTypeNotesSync.applyUsageTypeChange(
-              widget.parcel,
-              v ?? Parcel.defaultUsageType,
             ),
           ),
         ),

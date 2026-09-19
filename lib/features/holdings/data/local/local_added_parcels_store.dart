@@ -45,6 +45,21 @@ class LocalAddedParcelsStore {
     );
   }
 
+  Future<void> renameId(
+    final String oldId,
+    final Parcel parcel,
+    final String cityId,
+  ) async {
+    final List<Parcel> current = await loadAll(cityId);
+    await _persist(
+      cityId,
+      current
+          .where((final Parcel p) => p.id != oldId && p.id != parcel.id)
+          .followedBy(<Parcel>[parcel])
+          .toList(),
+    );
+  }
+
   Future<void> clear(final String cityId) async {
     await _store.remove(_key(cityId));
   }

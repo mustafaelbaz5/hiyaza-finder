@@ -218,10 +218,12 @@ class ParcelIdChip extends StatelessWidget {
     required this.id,
     required this.onCopy,
     this.isLoading = false,
+    this.onRegenerate,
   });
 
   final String id;
   final VoidCallback onCopy;
+  final VoidCallback? onRegenerate;
 
   /// While `setParcelCompleted` is in flight for this parcel
   /// (`REFACTOR_ROADMAP.md` Phase 21) — swaps the fingerprint icon for a
@@ -276,7 +278,18 @@ class ParcelIdChip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.copy_rounded, size: 20, color: Colors.white),
+              if (onRegenerate != null) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'holdings.detail.regenerate_id'.tr(),
+                  onPressed: isLoading ? null : onRegenerate,
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
