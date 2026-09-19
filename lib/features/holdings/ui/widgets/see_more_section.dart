@@ -15,9 +15,8 @@ import 'field_row.dart';
 import 'ownership_toggle.dart';
 import 'toggle_field_row.dart';
 
-/// Additional parcel fields rendered directly in the detail card. The fields
-/// are intentionally always visible; hiding editable data behind an expansion
-/// control made the detail workflow slower and caused copy/completion mistakes.
+/// Keeps secondary administrative fields collapsed by default so the detail
+/// screen stays compact while every field remains available.
 class SeeMoreSection extends StatefulWidget {
   const SeeMoreSection({
     super.key,
@@ -52,6 +51,7 @@ class SeeMoreSection extends StatefulWidget {
 }
 
 class SeeMoreSectionState extends State<SeeMoreSection> {
+  bool _expanded = false;
   /// See `ParcelDetailCard._isModified` — same comparison, against
   /// [SeeMoreSection.originalParcel] instead.
   bool _isModified<T>(final T Function(Parcel p) current) {
@@ -141,7 +141,40 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
 
   @override
   Widget build(final BuildContext context) {
-    return _buildFields(context);
+    final String label = _expanded
+        ? 'holdings.detail.see_less'.tr()
+        : 'holdings.detail.see_more'.tr();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildPrimaryFields(context),
+        verticalSpacing(8),
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Row(
+              children: [
+                Icon(Icons.tune_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
+                AnimatedRotation(
+                  turns: _expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: const Icon(Icons.expand_more_rounded),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          child: _expanded ? _buildFields(context) : const SizedBox.shrink(),
+        ),
+      ],
+    );
   }
 
   Widget _pairRow(final Widget left, final Widget right) => Row(
@@ -153,55 +186,10 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         ],
       );
 
-  /// Exact row layout per `REFACTOR_ROADMAP.md` Phase 11 §5:
-  /// Row 1 ورثة/مفوض, Row 2 كود الحوض/نوع الائتمان أو الإصلاح, Row 3
-  /// مراحل النمو (full-width), Row 4 المديرية/الإدارة. اسم الجمعية (moved
-  /// here from the primary area, §4) and نوع الاستخدام (kept, not in the
-  /// spec's 4 named rows) come after as their own full-width rows rather
-  /// than inventing a 5th/6th named pairing the spec didn't specify.
-  Widget _buildFields(final BuildContext context) {
-    final Widget inheritance = ToggleFieldRow(
-      label: 'holdings.fields.inheritance'.tr(),
-      value: widget.parcel.isInheritance,
-      activeLabel: 'holdings.fields.inheritance'.tr(),
-      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
-      isModified: _isModified((final p) => p.isInheritance),
-      onChanged: (final bool v) => widget.onFieldChanged(
-        widget.parcel.copyWith(isInheritance: v),
-      ),
-    );
-    final Widget delegate = ToggleFieldRow(
-      label: 'holdings.fields.delegate'.tr(),
-      value: widget.parcel.isDelegate,
-      activeLabel: 'holdings.fields.delegate'.tr(),
-      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
-      isModified: _isModified((final p) => p.isDelegate),
-      onChanged: (final bool v) =>
-          v ? _enableDelegate(context) : _disableDelegate(),
-    );
-    final Widget basinCode = FieldRow(
-      label: 'holdings.fields.basin_code'.tr(),
-      value: widget.parcel.basinCode,
-      placeholder: '-1',
-      isModified: _isModified((final p) => p.basinCode),
-      onEdit: () => _editText(
-        context,
-        title: 'holdings.fields.basin_code'.tr(),
-        initialValue: widget.parcel.basinCode ?? '',
-        apply: (final String v) => widget.parcel.copyWith(
-          basinCode: v.isEmpty ? null : v,
-        ),
-      ),
-    );
-    // نوع الائتمان (credit cities): the ملك/أوقاف toggle below drives
-    // `creditType` + the أوقاف note automatically.
-    // نوع الإصلاح (reform cities): a visible dropdown — the default إصلاح
-    // مُملك adds nothing to ملاحظات; any other choice both sets
-    // `reformType` and appends itself as a plain note (not a separate
-    // Copy All field), via `CreditTypeNotesSync.applyReformNoteSelected`.
+  Widget _buildPrimaryFields(final BuildContext context) {
     final bool isReformCity =
         widget.associationType == AssociationType.agriculturalReform;
-    final Widget ownershipToggle = isReformCity
+    final Widget ownership = isReformCity
         ? FieldRow(
             label: 'holdings.fields.reform_type'.tr(),
             value: widget.parcel.reformType,
@@ -221,14 +209,11 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           )
         : OwnershipToggle(
             isAwqaf: widget.parcel.creditType != Parcel.defaultCreditType,
-            onChanged: (final bool isAwqaf) => widget.onFieldChanged(
-              CreditTypeNotesSync.applyOwnershipToggle(
-                widget.parcel,
-                isAwqaf,
-              ),
+            onChanged: (final bool value) => widget.onFieldChanged(
+              CreditTypeNotesSync.applyOwnershipToggle(widget.parcel, value),
             ),
           );
-    final Widget usageType = FieldRow(
+    final Widget usage = FieldRow(
       label: 'holdings.fields.usage_type'.tr(),
       value: widget.parcel.usageType,
       isModified: _isModified((final p) => p.usageType),
@@ -238,9 +223,57 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         initialValue: widget.parcel.usageType,
         options: Parcel.usageTypeOptions,
         allowClear: false,
-        apply: (final String? v) => UsageTypeNotesSync.applyUsageTypeChange(
+        apply: (final String? value) => UsageTypeNotesSync.applyUsageTypeChange(
           widget.parcel,
-          v ?? Parcel.defaultUsageType,
+          value ?? Parcel.defaultUsageType,
+        ),
+      ),
+    );
+    final Widget inheritance = ToggleFieldRow(
+      label: 'holdings.fields.inheritance'.tr(),
+      value: widget.parcel.isInheritance,
+      activeLabel: 'holdings.fields.inheritance'.tr(),
+      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
+      isModified: _isModified((final p) => p.isInheritance),
+      onChanged: (final bool value) => widget.onFieldChanged(
+        widget.parcel.copyWith(isInheritance: value),
+      ),
+    );
+    final Widget delegate = ToggleFieldRow(
+      label: 'holdings.fields.delegate'.tr(),
+      value: widget.parcel.isDelegate,
+      activeLabel: 'holdings.fields.delegate'.tr(),
+      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
+      isModified: _isModified((final p) => p.isDelegate),
+      onChanged: (final bool value) =>
+          value ? _enableDelegate(context) : _disableDelegate(),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        usage,
+        verticalSpacing(8),
+        ownership,
+        verticalSpacing(8),
+        _pairRow(inheritance, delegate),
+      ],
+    );
+  }
+
+  /// Secondary fields only. Usage, credit/reform, and inheritance/delegate
+  /// remain in the primary detail area because they are used frequently.
+  Widget _buildFields(final BuildContext context) {
+    final Widget basinCode = FieldRow(
+      label: 'holdings.fields.basin_code'.tr(),
+      value: widget.parcel.basinCode,
+      placeholder: '-1',
+      isModified: _isModified((final p) => p.basinCode),
+      onEdit: () => _editText(
+        context,
+        title: 'holdings.fields.basin_code'.tr(),
+        initialValue: widget.parcel.basinCode ?? '',
+        apply: (final String v) => widget.parcel.copyWith(
+          basinCode: v.isEmpty ? null : v,
         ),
       ),
     );
@@ -274,13 +307,40 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        usageType,
-        ...[
+        FieldRow(
+          label: 'holdings.fields.association_name'.tr(),
+          value: widget.parcel.associationName,
+          isModified: _isModified((final p) => p.associationName),
+          onEdit: () => _editText(
+            context,
+            title: 'holdings.fields.association_name'.tr(),
+            initialValue: widget.parcel.associationName ?? '',
+            apply: (final String v) => widget.parcel.copyWith(
+              associationName: v.isEmpty ? null : v,
+            ),
+          ),
+        ),
+        verticalSpacing(8),
+        _pairRow(directorate, administration),
+        verticalSpacing(8),
+        _pairRow(
+          basinCode,
+          FieldRow(
+          label: 'holdings.fields.land_number'.tr(),
+          value: widget.parcel.landNumber,
+          isModified: _isModified((final p) => p.landNumber),
+          onEdit: () => _editText(
+            context,
+            title: 'holdings.fields.land_number'.tr(),
+            initialValue: widget.parcel.landNumber ?? '',
+            apply: (final String v) => widget.parcel.copyWith(
+              landNumber: v.isEmpty ? null : v,
+            ),
+          ),
+          ),
+        ),
+        if (UsageType.fromLabel(widget.parcel.usageType) == UsageType.agricultural) ...[
           verticalSpacing(8),
-          ownershipToggle,
-        ],
-        if (UsageType.fromLabel(widget.parcel.usageType) ==
-            UsageType.agricultural) ...[
           FieldRow(
             label: 'holdings.fields.growth_stages'.tr(),
             value: widget.parcel.growthStages,
@@ -296,43 +356,14 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               ),
             ),
           ),
-          verticalSpacing(8),
         ],
-        _pairRow(inheritance, delegate),
-        verticalSpacing(8),
-        basinCode,
-        // Moved here from the primary card area (UI/UX redesign) — grouped
-        // with the other parcel-identity/measurement fields above rather
-        // than the administrative المديرية/الإدارة pair below.
-        FieldRow(
-          label: 'holdings.fields.land_number'.tr(),
-          value: widget.parcel.landNumber,
-          isModified: _isModified((final p) => p.landNumber),
-          onEdit: () => _editText(
-            context,
-            title: 'holdings.fields.land_number'.tr(),
-            initialValue: widget.parcel.landNumber ?? '',
-            apply: (final String v) => widget.parcel.copyWith(
-              landNumber: v.isEmpty ? null : v,
-            ),
+        if (widget.parcel.holdingsCount != null) ...[
+          verticalSpacing(8),
+          FieldRow(
+            label: 'holdings.detail.holdings_count'.tr(),
+            value: widget.parcel.holdingsCount.toString(),
           ),
-        ),
-        verticalSpacing(8),
-        _pairRow(directorate, administration),
-        verticalSpacing(8),
-        FieldRow(
-          label: 'holdings.fields.association_name'.tr(),
-          value: widget.parcel.associationName,
-          isModified: _isModified((final p) => p.associationName),
-          onEdit: () => _editText(
-            context,
-            title: 'holdings.fields.association_name'.tr(),
-            initialValue: widget.parcel.associationName ?? '',
-            apply: (final String v) => widget.parcel.copyWith(
-              associationName: v.isEmpty ? null : v,
-            ),
-          ),
-        ),
+        ],
       ],
     );
   }

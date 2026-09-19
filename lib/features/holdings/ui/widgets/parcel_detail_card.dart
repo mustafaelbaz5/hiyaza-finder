@@ -160,48 +160,25 @@ class ParcelDetailCard extends StatelessWidget {
             id: parcel.id,
             onCopy: _copyId,
             onBusyChanged: onReviewBusyChanged,
-            onRegenerate: onRegenerate != null
-                ? () => _confirmRegenerate(context)
-                : null,
+            onRegenerate:
+                onRegenerate != null ? () => _confirmRegenerate(context) : null,
           ),
           verticalSpacing(10),
           CopyAllButton(onTap: () => _copyAll(context)),
           verticalSpacing(12),
           verticalSpacing(8),
-          // Row 1: رقم الحيازة + عدد القطع share one row (`REFACTOR_ROADMAP.md`
-          // Phase 10 §4) — every other primary field below gets its own
-          // full-width row instead of a multi-column grid, since these are
-          // the values field workers read/edit most and horizontal
-          // compression made them harder to scan and tap accurately.
-          Row(
-            children: [
-              Expanded(
-                flex: parcel.holdingsCount != null ? 2 : 1,
-                child: FieldRow(
-                  label: 'holdings.detail.holding_id'.tr(),
-                  value: parcel.isHoldingIdPending
-                      ? 'holdings.detail.holding_id_pending'.tr()
-                      : parcel.holdingId,
-                  isModified: _isModified((final p) => p.holdingId),
-                  onEdit: () => _editText(
-                    context,
-                    title: 'holdings.detail.holding_id'.tr(),
-                    initialValue:
-                        parcel.isHoldingIdPending ? '' : parcel.holdingId,
-                    apply: (final String v) => parcel.copyWith(holdingId: v),
-                  ),
-                ),
-              ),
-              if (parcel.holdingsCount != null) ...[
-                horizontalSpacing(8),
-                Expanded(
-                  child: FieldRow(
-                    label: 'holdings.detail.holdings_count'.tr(),
-                    value: parcel.holdingsCount.toString(),
-                  ),
-                ),
-              ],
-            ],
+          FieldRow(
+            label: 'holdings.detail.holding_id'.tr(),
+            value: parcel.isHoldingIdPending
+                ? 'holdings.detail.holding_id_pending'.tr()
+                : parcel.holdingId,
+            isModified: _isModified((final p) => p.holdingId),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.detail.holding_id'.tr(),
+              initialValue: parcel.isHoldingIdPending ? '' : parcel.holdingId,
+              apply: (final String v) => parcel.copyWith(holdingId: v),
+            ),
           ),
           verticalSpacing(8),
           FieldRow(
@@ -330,7 +307,7 @@ class ParcelDetailCard extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(rw(12)),
       decoration: BoxDecoration(
-        color: isCompleted ? lockedSurface : colors.backgroundSecondary,
+        color: isCompleted ? lockedSurface : colors.background,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isCompleted
@@ -453,8 +430,10 @@ class ParcelDetailCard extends StatelessWidget {
   /// (`REFACTOR_ROADMAP.md` Phase 7, migrated to `completed_at`/
   /// `completed_by` in Phase 9 #12, standalone Finish button removed in
   /// Phase 9 #3): validates required fields, copies the id, then marks the
-  /// parcel completed via `setParcelCompleted` — unless it's already
-  /// completed, in which case this is a plain re-copy
+  /// parcel completed via `setParcelCompleted` — including locally added
+  /// parcels. Copy ID is an explicit review action, so it must not be blocked
+  /// by optional or usage-specific fields. If it is already completed, this
+  /// is a plain re-copy.
   /// (re-marking an already-completed parcel via Copy ID would be a
   /// surprising side effect of an action the user takes repeatedly while
   /// working, e.g. to paste the id elsewhere after completion).
@@ -465,11 +444,17 @@ class ParcelDetailCard extends StatelessWidget {
   /// carry `completedAt` at all.
   Future<void> _copyId(final BuildContext context) async {
     final bool isCompleted = parcel.completedAt != null;
+    if (!isCompleted && !CopyValidation.canMarkCompleted(parcel)) {
+      context.showErrorSnackBar(
+        'holdings.detail.required_fields_to_review'.tr(),
+      );
+      return;
+    }
     await Clipboard.setData(ClipboardData(text: parcel.id));
     if (!context.mounted) return;
     HapticFeedback.mediumImpact();
 
-    if (isNew || isCompleted || !CopyValidation.canMarkCompleted(parcel)) {
+    if (isCompleted) {
       context.showSuccessSnackBar('holdings.detail.copied'.tr());
       return;
     }
@@ -498,7 +483,7 @@ class ParcelDetailCard extends StatelessWidget {
     if (!CopyValidation.canCopyAll(parcel)) {
       final bool cropMissing =
           UsageType.fromLabel(parcel.usageType) == UsageType.agricultural &&
-          !Parcel.isValueFilled(parcel.cropType);
+              !Parcel.isValueFilled(parcel.cropType);
       context.showErrorSnackBar(
         cropMissing
             ? 'holdings.detail.crop_type_required_to_copy'.tr()

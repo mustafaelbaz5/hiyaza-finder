@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../data/repo/holdings_repository.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
@@ -11,6 +10,7 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../data/model/parcel.dart';
+import '../data/repo/holdings_repository.dart';
 import 'add_record_screen.dart';
 import 'widgets/detail_screen_header.dart';
 import 'widgets/parcel_detail_card.dart';
@@ -365,9 +365,10 @@ class _DetailScreenState extends State<DetailScreen>
       onFieldChanged: _updateField,
       onCompleted: _onParcelCompleted,
       resolveBorderMatch: _repository.findByBorderText,
-      onDelete: parcel.sourceAddedHoldingId != null && parcel.completedAt == null
-          ? () => _deleteParcel(parcel)
-          : null,
+      onDelete:
+          parcel.sourceAddedHoldingId != null && parcel.completedAt == null
+              ? () => _deleteParcel(parcel)
+              : null,
       onReopen: () => _reopenParcel(parcel),
       isDeleting: _isParcelBusy(parcel.id),
       isReopening: _isParcelBusy(parcel.id),
@@ -378,7 +379,8 @@ class _DetailScreenState extends State<DetailScreen>
             await _repository.regenerateLocalParcelId(parcelId);
         if (!mounted) return;
         if (updated == null) {
-          context.showErrorSnackBar('holdings.detail.regenerate_id_failed'.tr());
+          context
+              .showErrorSnackBar('holdings.detail.regenerate_id_failed'.tr());
           return;
         }
         _refreshFromRepository();
@@ -432,10 +434,12 @@ class _DetailScreenState extends State<DetailScreen>
                       // parcels, always rendered (disabled, never hidden)
                       // even for a single-parcel holding.
                       onPreviousParcel: pagedIndex > 0
-                          ? () => setState(() => _visibleParcelIndex = pagedIndex - 1)
+                          ? () => setState(
+                              () => _visibleParcelIndex = pagedIndex - 1)
                           : null,
                       onNextParcel: pagedIndex < visibleParcels.length - 1
-                          ? () => setState(() => _visibleParcelIndex = pagedIndex + 1)
+                          ? () => setState(
+                              () => _visibleParcelIndex = pagedIndex + 1)
                           : null,
                     ),
                     // Exactly three tabs, always shown (`REFACTOR_ROADMAP.md`
