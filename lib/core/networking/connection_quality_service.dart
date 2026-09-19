@@ -44,8 +44,7 @@ class ConnectionQualityService {
   ConnectionQuality get current => _current;
 
   /// Starts polling immediately and subscribing to status-change events —
-  /// call once at app start (mirrors `SyncRunner`/other singleton services'
-  /// own explicit start step, no work happens just from construction/DI
+  /// call once at app start. No work happens just from construction/DI
   /// resolution).
   void start() {
     unawaited(_check());

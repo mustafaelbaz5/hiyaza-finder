@@ -6,8 +6,8 @@ abstract class NetworkInfo {
 }
 
 /// Same check in both flavors — no dev/production split. [connectionChecker]
-/// is configured (see `core_module.dart`) to check the app's own Supabase
-/// backend plus a couple of well-known fallback hosts, rather than an
+/// is configured (see `core_module.dart`) to check stable public hosts rather
+/// than an
 /// arbitrary public endpoint unrelated to what the app actually needs to
 /// reach.
 class NetworkInfoImpl implements NetworkInfo {

@@ -35,7 +35,7 @@ class _DetailScreenState extends State<DetailScreen>
 
   /// The identifying [Parcel.groupKey] shared by every parcel on this
   /// screen — captured once at [initState] so [_refreshFromRepository] and
-  /// [_remoteChangesSub] can always re-derive the current, complete set of
+  /// the repository can always re-derive the current, complete set of
   /// this person's parcels from the repository (the source of truth),
   /// rather than growing/patching [_parcels] by hand at each call site.
   /// Every parcel passed into this screen shares one groupKey by
@@ -131,16 +131,10 @@ class _DetailScreenState extends State<DetailScreen>
   /// single source of truth — and reflects it on screen. Called after every
   /// successful write this screen makes (so the new/changed state is
   /// visible immediately, without requiring the user to leave and return)
-  /// and on every incoming Realtime event.
+  /// and after every local repository update.
   ///
-  /// A remote change this screen didn't cause (e.g. another parcel entirely
-  /// being reconciled/promoted elsewhere, which still fires the same shared
-  /// `onRemoteChange` stream) can occasionally follow a captured [_groupKey]
-  /// that's gone stale in ways this screen has no direct way to detect —
-  /// falls back to re-deriving it from any currently-shown parcel's own
-  /// (possibly now-different) `groupKey` before giving up and showing an
-  /// empty list, so a spurious unrelated notification never blanks a
-  /// holding that's still genuinely there.
+  /// The refresh is local-only and therefore never blanks a holding because of
+  /// an unrelated backend notification.
   void _refreshFromRepository() {
     final String? groupKey = _groupKey;
     if (groupKey == null || !mounted) return;

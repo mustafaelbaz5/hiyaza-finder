@@ -1,6 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/jazla/ui/widgets/add_parcel_tab.dart';
+import 'package:hiyaza_finder/features/jazla/ui/widgets/parcels_tab.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/router/routes.dart';
@@ -17,16 +19,11 @@ import '../../holdings/ui/add_record_screen.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_add_parcel_cubit.dart';
-import '../logic/cubit/jazla_add_parcel_state.dart';
 import '../logic/cubit/jazla_detail_cubit.dart';
 import '../logic/cubit/jazla_detail_state.dart';
-
 import 'widgets/jazla_bulk_apply_sheet.dart';
 import 'widgets/jazla_export_button.dart';
-import 'widgets/jazla_parcel_result_tile.dart';
-import 'widgets/jazla_parcel_tile.dart';
 import 'widgets/jazla_quick_view_sheet.dart';
-import 'widgets/jazla_search_bar.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
 /// instance (so both "القطع الموجودة" and "إضافة قطعة" always see the same,
@@ -81,7 +78,8 @@ class _JazlaDetailView extends StatefulWidget {
 
 class _JazlaDetailViewState extends State<_JazlaDetailView>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController = TabController(length: 2, vsync: this);
+  late final TabController _tabController =
+      TabController(length: 2, vsync: this);
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -148,7 +146,8 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     }
   }
 
-  Future<void> _openBulkApply(final String jazlaId, final List<Parcel> parcels) async {
+  Future<void> _openBulkApply(
+      final String jazlaId, final List<Parcel> parcels) async {
     await showJazlaBulkApplySheet(context, jazlaId: jazlaId, parcels: parcels);
     if (mounted) context.read<JazlaDetailCubit>().load();
   }
@@ -166,7 +165,8 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
             if (state.status == JazlaDetailStatus.loading) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state.status == JazlaDetailStatus.notFound || state.jazla == null) {
+            if (state.status == JazlaDetailStatus.notFound ||
+                state.jazla == null) {
               return Column(
                 children: [
                   ScreenHeader(title: 'jazla.title'.tr()),
@@ -190,13 +190,15 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         child: ScreenHeader(title: state.jazla!.name),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.bolt_rounded, color: AppColors.amber200),
+                        icon: const Icon(Icons.bolt_rounded,
+                            color: AppColors.amber200),
                         tooltip: 'jazla.detail.bulk_apply'.tr(),
                         onPressed: parcels.isEmpty
                             ? null
                             : () => _openBulkApply(jazlaId, parcels),
                       ),
-                      JazlaExportButton(jazlaName: state.jazla!.name, parcels: parcels),
+                      JazlaExportButton(
+                          jazlaName: state.jazla!.name, parcels: parcels),
                       horizontalSpacing(8),
                     ],
                   ),
@@ -220,16 +222,18 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _ParcelsTab(
+                      ParcelsTab(
                         parcels: parcels,
                         onReorder: cubit.reorder,
-                        onTapParcel: (final Parcel p) => _openParcelDetail(context, p),
+                        onTapParcel: (final Parcel p) =>
+                            _openParcelDetail(context, p),
                         onLongPressParcel: (final Parcel p) =>
                             _confirmRemove(context, cubit, p),
                       ),
-                      _AddParcelTab(
+                      AddParcelTab(
                         searchController: _searchController,
-                        onAddTap: (final Parcel p) => _openQuickView(p, jazlaId),
+                        onAddTap: (final Parcel p) =>
+                            _openQuickView(p, jazlaId),
                         onAddNewPerson: () => _addNewPerson(jazlaId),
                       ),
                     ],
@@ -240,155 +244,6 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
           },
         ),
       ),
-    );
-  }
-}
-
-class _ParcelsTab extends StatelessWidget {
-  const _ParcelsTab({
-    required this.parcels,
-    required this.onReorder,
-    required this.onTapParcel,
-    required this.onLongPressParcel,
-  });
-
-  final List<Parcel> parcels;
-  final void Function(List<String> newOrderIds) onReorder;
-  final void Function(Parcel parcel) onTapParcel;
-  final void Function(Parcel parcel) onLongPressParcel;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    if (parcels.isEmpty) {
-      return Center(
-        child: Text(
-          'jazla.detail.empty'.tr(),
-          style: TextStyle(color: colors.textSecondary),
-        ),
-      );
-    }
-
-    return ReorderableListView.builder(
-      padding: EdgeInsets.fromLTRB(rw(16), 0, rw(16), rh(24)),
-      itemCount: parcels.length,
-      onReorder: (final int oldIndex, int newIndex) {
-        if (newIndex > oldIndex) newIndex -= 1;
-        final List<String> ids = parcels.map((final Parcel p) => p.id).toList();
-        final String moved = ids.removeAt(oldIndex);
-        ids.insert(newIndex, moved);
-        onReorder(ids);
-      },
-      itemBuilder: (final BuildContext context, final int i) {
-        final Parcel parcel = parcels[i];
-        return Padding(
-          key: ValueKey<String>(parcel.id),
-          padding: const EdgeInsets.only(bottom: 10),
-          child: JazlaParcelTile(
-            index: i + 1,
-            parcel: parcel,
-            onTap: () => onTapParcel(parcel),
-            onLongPress: () => onLongPressParcel(parcel),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _AddParcelTab extends StatelessWidget {
-  const _AddParcelTab({
-    required this.searchController,
-    required this.onAddTap,
-    required this.onAddNewPerson,
-  });
-
-  final TextEditingController searchController;
-  final ValueChanged<Parcel> onAddTap;
-  final VoidCallback onAddNewPerson;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: rw(16)),
-          child: JazlaSearchBar(
-            controller: searchController,
-            onChanged: (final String q) =>
-                context.read<JazlaAddParcelCubit>().search(q),
-          ),
-        ),
-        verticalSpacing(12),
-        Expanded(
-          child: BlocBuilder<JazlaAddParcelCubit, JazlaAddParcelState>(
-            builder: (final BuildContext context, final JazlaAddParcelState state) {
-              if (state.query.trim().isEmpty) {
-                return const SizedBox.shrink();
-              }
-              if (state.results.isEmpty) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(vertical: rh(24)),
-                  child: Column(
-                    children: [
-                      Text(
-                        'jazla.add_sheet.no_results'.tr(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: colors.textSecondary),
-                      ),
-                      verticalSpacing(12),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                        child: OutlinedButton.icon(
-                          onPressed: onAddNewPerson,
-                          icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                          label: Text(
-                            'jazla.add_sheet.add_new_person'.tr(),
-                            style: AppTextStyles.font14SemiBold
-                                .copyWith(color: AppColors.primary200),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)),
-                itemCount: state.results.length,
-                itemBuilder: (final BuildContext context, final int i) {
-                  final ParcelSearchResult result = state.results[i];
-                  return JazlaParcelResultTile(
-                    result: result,
-                    onAddTap: () => onAddTap(result.parcel),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(rw(16), 0, rw(16), rh(16)),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onAddNewPerson,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: Text(
-                    'jazla.add_sheet.add_new_person'.tr(),
-                    style: AppTextStyles.font14SemiBold.copyWith(color: AppColors.primary200),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
