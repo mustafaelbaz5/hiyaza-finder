@@ -6,6 +6,8 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/features/app_control/data/model/app_control.dart';
 
 import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
@@ -14,6 +16,8 @@ import 'core/settings/cubit/app_settings_cubit.dart';
 import 'core/settings/cubit/app_settings_state.dart';
 import 'core/themes/theme_data/theme_data_dark.dart';
 import 'core/themes/theme_data/theme_data_light.dart';
+import 'features/app_control/logic/cubit/app_control_cubit.dart';
+import 'features/app_control/ui/app_blocked_screen.dart';
 
 class HiyazaFinderApp extends StatelessWidget {
   const HiyazaFinderApp({super.key});
@@ -74,38 +78,46 @@ class HiyazaFinderApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (final BuildContext context, final Widget? child) {
-        return BlocProvider(
+        return BlocProvider<AppSettingsCubit>(
           create: (final _) => AppSettingsCubit(),
-          child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-            builder: (
-              final BuildContext context,
-              final AppSettingsState settings,
-            ) {
-              return MaterialApp(
-                navigatorKey: navigatorKey,
-                scaffoldMessengerKey: scaffoldMessengerKey,
-                localizationsDelegates: context.localizationDelegates,
-                supportedLocales: context.supportedLocales,
-                locale: settings.locale, // driven by cubit
-                debugShowCheckedModeBanner: false,
-                scrollBehavior: const _AppScrollBehavior(),
-                initialRoute: Routes.home,
-                onGenerateRoute: AppRouter.generateRoute,
-                title: AppConfig.appName,
-                // font family injected into both themes
-                theme: getLightTheme().copyWith(
-                  textTheme: getLightTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
+          child: BlocProvider.value(
+            value: getIt<AppControlCubit>()..initialize(),
+            child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
+              builder: (final BuildContext context,
+                  final AppSettingsState settings) {
+                return BlocBuilder<AppControlCubit, AppControl>(
+                  builder:
+                      (final BuildContext context, final AppControl control) {
+                    if (control.isBlocked)
+                      return AppBlockedScreen(control: control);
+                    return MaterialApp(
+                      navigatorKey: navigatorKey,
+                      scaffoldMessengerKey: scaffoldMessengerKey,
+                      localizationsDelegates: context.localizationDelegates,
+                      supportedLocales: context.supportedLocales,
+                      locale: settings.locale, // driven by cubit
+                      debugShowCheckedModeBanner: false,
+                      scrollBehavior: const _AppScrollBehavior(),
+                      initialRoute: Routes.home,
+                      onGenerateRoute: AppRouter.generateRoute,
+                      title: AppConfig.appName,
+                      // font family injected into both themes
+                      theme: getLightTheme().copyWith(
+                        textTheme: getLightTheme().textTheme.apply(
+                              fontFamily: settings.fontFamily,
+                            ),
                       ),
-                ),
-                darkTheme: getDarkTheme().copyWith(
-                  textTheme: getDarkTheme().textTheme.apply(
-                        fontFamily: settings.fontFamily,
+                      darkTheme: getDarkTheme().copyWith(
+                        textTheme: getDarkTheme().textTheme.apply(
+                              fontFamily: settings.fontFamily,
+                            ),
                       ),
-                ),
-                themeMode: settings.themeMode,
-              );
-            },
+                      themeMode: settings.themeMode,
+                    );
+                  },
+                );
+              },
+            ),
           ),
         );
       },

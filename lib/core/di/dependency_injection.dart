@@ -6,6 +6,7 @@ import 'modules/core_module.dart';
 import 'modules/crop_type_module.dart';
 import 'modules/holdings_module.dart';
 import 'modules/jazla_module.dart';
+import 'modules/app_control_module.dart';
 
 final GetIt getIt = GetIt.instance;
 
@@ -15,6 +16,7 @@ Future<void> setUpDependencies() async {
   registerHoldingsModule(getIt);
   registerCitiesModule(getIt);
   registerCropTypeModule(getIt);
+  registerAppControlModule(getIt);
 
   // Starts polling immediately so the top-bar connectivity badge
   // (`HomeTopBar`) has a real classification on the very first frame,
