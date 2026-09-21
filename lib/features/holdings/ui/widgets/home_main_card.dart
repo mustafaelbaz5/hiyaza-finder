@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -108,14 +109,14 @@ class HomeMainCard extends StatelessWidget {
                   onTap: onChangeCity,
                 ),
               ),
-              horizontalSpacing(10),
-              Expanded(
-                child: _PillButton(
-                  icon: Icons.layers_outlined,
-                  label: 'jazla.title'.tr(),
-                  onTap: () => context.pushNamed(Routes.jazlaList),
-                ),
-              ),
+              // horizontalSpacing(10),
+              // Expanded(
+              //   child: _PillButton(
+              //     icon: Icons.layers_outlined,
+              //     label: 'jazla.title'.tr(),
+              //     onTap: () => context.pushNamed(Routes.jazlaList),
+              //   ),
+              // ),
             ],
           ),
           verticalSpacing(10),
