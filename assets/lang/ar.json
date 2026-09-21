@@ -503,6 +503,8 @@
     "delete_confirm_title": "حذف الجزلة",
     "delete_confirm_message": "سيتم حذف الجزلة، وستبقى القطع كما هي ويمكن إضافتها لجزلة أخرى.",
     "empty_list": "لا توجد جزل بعد",
+    "basin_required": "اختر الحوض أولاً لتحديد موقع الجزلة",
+    "basin": "الحوض",
     "area": {
       "dialog_title": "المساحة المستهدفة",
       "dialog_hint": "يمكن ترك المساحة فارغة وتحديدها لاحقًا",
@@ -542,6 +544,7 @@
       "add_new_person": "شخص جديد",
       "added": "تمت إضافة القطعة إلى الجزلة",
       "undo": "تراجع",
+      "area_missing": "المساحة غير محددة",
       "add_parcel_for_person": "قطعة لشخص",
       "locked_badge": "في {jazlaName}"
     },
@@ -554,7 +557,9 @@
     },
     "export": {
       "success": "تم تصدير الملف بنجاح",
-      "empty": "لا توجد قطع لتصديرها"
+      "empty": "لا توجد قطع لتصديرها",
+      "pdf": "مشاركة PDF",
+      "pdf_failed": "تعذر إنشاء أو مشاركة ملف PDF"
     },
     "bulk_apply": {
       "title": "تطبيق جماعي على {jazlaName}",

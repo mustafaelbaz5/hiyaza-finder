@@ -16,6 +16,7 @@ import '../../holdings/data/model/parcel.dart';
 import '../../holdings/data/repo/holdings_reader.dart';
 import '../../holdings/data/repo/holdings_repository.dart';
 import '../../holdings/ui/add_record_screen.dart';
+import '../../holdings/ui/widgets/basin_picker.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
@@ -26,6 +27,7 @@ import 'widgets/jazla_bulk_apply_sheet.dart';
 import 'widgets/jazla_export_button.dart';
 import 'widgets/jazla_area_summary.dart';
 import 'widgets/jazla_area_dialog.dart';
+import 'widgets/jazla_pdf_share_button.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
 /// instance (so both "القطع الموجودة" and "إضافة قطعة" always see the same,
@@ -120,7 +122,9 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     final JazlaAddParcelCubit addCubit = context.read<JazlaAddParcelCubit>();
     await addCubit.addFreeParcel(parcel.id);
     if (!mounted || addCubit.state.lastAddedParcelId != parcel.id) return;
-    context.read<JazlaDetailCubit>().load();
+    await context.read<JazlaDetailCubit>().load();
+    if (!mounted) return;
+    _goToParcelsTab();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('jazla.add_sheet.added'.tr()),
@@ -156,6 +160,15 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
       sahm: area.sahm,
       squareMeters: area.squareMeters,
     );
+  }
+
+  Future<void> _editBasin(final JazlaDetailCubit cubit) async {
+    final BasinPickResult? result = await pickBasin(
+      context,
+      selected: cubit.state.jazla?.basinName,
+    );
+    if (!mounted || result == null || result.basinName == null) return;
+    await cubit.updateBasin(result.basinName);
   }
 
   Future<void> _addNewPerson(final String jazlaId) async {
@@ -215,12 +228,30 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                   child: Row(
                     children: [
                       Expanded(
-                        child: ScreenHeader(title: state.jazla!.name),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ScreenHeader(title: state.jazla!.name),
+                            if (state.jazla!.basinName != null)
+                              Padding(
+                                padding: EdgeInsetsDirectional.only(start: rw(16)),
+                                child: Text(
+                                  state.jazla!.basinName!,
+                                  style: TextStyle(color: colors.textSecondary),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.straighten_rounded),
                         tooltip: 'jazla.area.target'.tr(),
                         onPressed: () => _editTargetArea(cubit),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.location_on_outlined),
+                        tooltip: 'jazla.basin'.tr(),
+                        onPressed: () => _editBasin(cubit),
                       ),
                       IconButton(
                         icon: const Icon(Icons.bolt_rounded,
@@ -232,6 +263,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                       ),
                       JazlaExportButton(
                           jazlaName: state.jazla!.name, parcels: parcels),
+                      JazlaPdfShareButton(jazla: state.jazla!, parcels: parcels),
                       horizontalSpacing(8),
                     ],
                   ),

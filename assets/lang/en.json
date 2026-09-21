@@ -503,6 +503,8 @@
     "delete_confirm_title": "Delete Jazla",
     "delete_confirm_message": "The Jazla will be deleted; its parcels stay as-is and can be added to another Jazla.",
     "empty_list": "No Jazlas yet",
+    "basin_required": "Select a basin first to define the Jazla location",
+    "basin": "Basin",
     "area": {
       "dialog_title": "Target area",
       "dialog_hint": "You can leave the area empty and set it later",
@@ -542,6 +544,7 @@
       "add_new_person": "New person",
       "added": "Parcel added to Jazla",
       "undo": "Undo",
+      "area_missing": "Area not specified",
       "add_parcel_for_person": "Parcel for person",
       "locked_badge": "In {jazlaName}"
     },
@@ -554,7 +557,9 @@
     },
     "export": {
       "success": "File exported successfully",
-      "empty": "No parcels to export"
+      "empty": "No parcels to export",
+      "pdf": "Share PDF",
+      "pdf_failed": "Could not create or share the PDF"
     },
     "bulk_apply": {
       "title": "Bulk apply on {jazlaName}",

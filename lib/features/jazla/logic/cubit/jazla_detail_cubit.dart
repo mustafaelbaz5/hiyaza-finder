@@ -86,6 +86,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       id: current.id,
       cityId: current.cityId,
       name: current.name,
+      basinName: current.basinName,
       parcelIds: current.parcelIds,
       targetFeddan: feddan,
       targetQirat: qirat,
@@ -103,6 +104,33 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
         targetSahm: sahm,
         targetAreaSqm: squareMeters,
       );
+    } on AppException catch (e) {
+      await load();
+      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+    }
+  }
+
+  Future<void> updateBasin(final String? basinName) async {
+    final Jazla? current = state.jazla;
+    if (current == null) return;
+    emit(
+      state.copyWith(
+        jazla: Jazla(
+          id: current.id,
+          cityId: current.cityId,
+          name: current.name,
+          basinName: basinName,
+          parcelIds: current.parcelIds,
+          targetFeddan: current.targetFeddan,
+          targetQirat: current.targetQirat,
+          targetSahm: current.targetSahm,
+          targetAreaSqmOverride: current.targetAreaSqmOverride,
+          createdAt: current.createdAt,
+        ),
+      ),
+    );
+    try {
+      await _repo.updateBasin(jazlaId, cityId, basinName);
     } on AppException catch (e) {
       await load();
       emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));

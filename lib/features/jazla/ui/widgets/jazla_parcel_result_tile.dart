@@ -1,4 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -31,9 +33,7 @@ class JazlaParcelResultTile extends StatelessWidget {
     final String basin = result.parcel.basinName?.trim().isNotEmpty == true
         ? result.parcel.basinName!.trim()
         : '—';
-    final String feddan = _formatter.formatNumber(result.parcel.feddan) ?? '0';
-    final String qirat = _formatter.formatNumber(result.parcel.qirat) ?? '0';
-    final String sahm = _formatter.formatNumber(result.parcel.sahm) ?? '0';
+    final String area = _areaText(result.parcel);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -65,7 +65,7 @@ class JazlaParcelResultTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$holder | $basin',
+                  '$holder | $basin | ${result.parcel.holdingId}',
                   style: AppTextStyles.font14SemiBold.copyWith(color: colors.textPrimary),
                   textAlign: TextAlign.right,
                   maxLines: 1,
@@ -73,7 +73,7 @@ class JazlaParcelResultTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$feddanف | $qiratق | $sahmس',
+                  area,
                   style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
                   textAlign: TextAlign.right,
                 ),
@@ -83,5 +83,16 @@ class JazlaParcelResultTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+
+  String _areaText(final Parcel parcel) {
+    final String? feddan = _formatter.formatNumber(parcel.feddan);
+    final String? qirat = _formatter.formatNumber(parcel.qirat);
+    final String? sahm = _formatter.formatNumber(parcel.sahm);
+    if (feddan == null && qirat == null && sahm == null) {
+      return 'jazla.add_sheet.area_missing'.tr();
+    }
+    return '${feddan ?? '0'} فدان، ${qirat ?? '0'} قيراط، ${sahm ?? '0'} سهم';
   }
 }

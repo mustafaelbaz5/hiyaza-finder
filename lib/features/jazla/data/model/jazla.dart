@@ -11,6 +11,7 @@ class Jazla extends Equatable {
     required this.id,
     required this.cityId,
     required this.name,
+    this.basinName,
     this.parcelIds = const <String>[],
     this.targetFeddan,
     this.targetQirat,
@@ -22,6 +23,7 @@ class Jazla extends Equatable {
   final String id;
   final String cityId;
   final String name;
+  final String? basinName;
 
   /// Insertion/display order — reordering rewrites this list wholesale.
   final List<String> parcelIds;
@@ -43,6 +45,7 @@ class Jazla extends Equatable {
 
   Jazla copyWith({
     final String? name,
+    final String? basinName,
     final List<String>? parcelIds,
     final double? targetFeddan,
     final double? targetQirat,
@@ -53,6 +56,7 @@ class Jazla extends Equatable {
         id: id,
         cityId: cityId,
         name: name ?? this.name,
+        basinName: basinName ?? this.basinName,
         parcelIds: parcelIds ?? this.parcelIds,
         targetFeddan: targetFeddan ?? this.targetFeddan,
         targetQirat: targetQirat ?? this.targetQirat,
@@ -66,6 +70,7 @@ class Jazla extends Equatable {
         'id': id,
         'cityId': cityId,
         'name': name,
+        'basinName': basinName,
         'parcelIds': parcelIds,
         'targetFeddan': targetFeddan,
         'targetQirat': targetQirat,
@@ -78,6 +83,7 @@ class Jazla extends Equatable {
         id: json['id'] as String,
         cityId: json['cityId'] as String,
         name: json['name'] as String,
+        basinName: json['basinName'] as String?,
         parcelIds: (json['parcelIds'] as List<dynamic>).cast<String>(),
         targetFeddan: (json['targetFeddan'] as num?)?.toDouble(),
         targetQirat: (json['targetQirat'] as num?)?.toDouble(),
@@ -91,6 +97,7 @@ class Jazla extends Equatable {
         id,
         cityId,
         name,
+        basinName,
         parcelIds,
         targetFeddan,
         targetQirat,

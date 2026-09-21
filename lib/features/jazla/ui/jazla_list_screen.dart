@@ -10,6 +10,7 @@ import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../holdings/data/repo/holdings_repository.dart';
+import '../../holdings/ui/widgets/basin_picker.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_list_cubit.dart';
@@ -44,8 +45,19 @@ class _JazlaListView extends StatelessWidget {
     if (name != null && name.trim().isNotEmpty) {
       final JazlaAreaValue? area = await showJazlaAreaDialog(context);
       if (area == null) return;
+      final BasinPickResult? basin = await pickBasin(context, selected: null);
+      if (basin == null || basin.basinName == null) {
+        if (context.mounted) {
+          await AppDialogs.showWarning(
+            context,
+            message: 'jazla.basin_required'.tr(),
+          );
+        }
+        return;
+      }
       await cubit.createJazla(
         name,
+        basinName: basin.basinName,
         targetFeddan: area.feddan,
         targetQirat: area.qirat,
         targetSahm: area.sahm,

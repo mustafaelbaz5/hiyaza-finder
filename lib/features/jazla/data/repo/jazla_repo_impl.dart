@@ -18,6 +18,7 @@ class JazlaRepoImpl implements JazlaRepo {
   Future<Jazla> create(
     final String name,
     final String cityId, {
+    final String? basinName,
     final double? targetFeddan,
     final double? targetQirat,
     final double? targetSahm,
@@ -28,6 +29,7 @@ class JazlaRepoImpl implements JazlaRepo {
       id: _uuid.v4(),
       cityId: cityId,
       name: name,
+      basinName: basinName,
       targetFeddan: targetFeddan,
       targetQirat: targetQirat,
       targetSahm: targetSahm,
@@ -149,6 +151,7 @@ class JazlaRepoImpl implements JazlaRepo {
           id: j.id,
           cityId: j.cityId,
           name: j.name,
+          basinName: j.basinName,
           parcelIds: j.parcelIds,
           targetFeddan: targetFeddan,
           targetQirat: targetQirat,
@@ -156,6 +159,18 @@ class JazlaRepoImpl implements JazlaRepo {
           targetAreaSqmOverride: targetAreaSqm,
           createdAt: j.createdAt,
         ),
+      );
+
+  @override
+  Future<void> updateBasin(
+    final String jazlaId,
+    final String cityId,
+    final String? basinName,
+  ) =>
+      _mutate(
+        cityId,
+        jazlaId,
+        (final Jazla j) => j.copyWith(basinName: basinName),
       );
 
 

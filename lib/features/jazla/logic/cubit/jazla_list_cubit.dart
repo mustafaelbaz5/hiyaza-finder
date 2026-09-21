@@ -25,6 +25,7 @@ class JazlaListCubit extends Cubit<JazlaListState> {
 
   Future<void> createJazla(
     final String name, {
+    final String? basinName,
     final double? targetFeddan,
     final double? targetQirat,
     final double? targetSahm,
@@ -35,6 +36,7 @@ class JazlaListCubit extends Cubit<JazlaListState> {
       await _repo.create(
         name.trim(),
         cityId,
+        basinName: basinName,
         targetFeddan: targetFeddan,
         targetQirat: targetQirat,
         targetSahm: targetSahm,

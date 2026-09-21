@@ -64,10 +64,25 @@ class JazlaCard extends StatelessWidget {
                     style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
                     textAlign: TextAlign.right,
                   ),
+                  if (jazla.basinName?.trim().isNotEmpty == true)
+                    Text(
+                      jazla.basinName!,
+                      style: AppTextStyles.font12Regular.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  if (jazla.targetAreaSqm != null)
+                    Text(
+                      '${'jazla.area.target'.tr()}: ${jazla.targetAreaSqm!.toStringAsFixed(2)} م²',
+                      style: AppTextStyles.font12Regular.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_back_ios_new_rounded, size: 14, color: colors.textHint),
           ],
         ),
       ),

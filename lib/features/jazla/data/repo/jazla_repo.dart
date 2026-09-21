@@ -10,6 +10,7 @@ abstract class JazlaRepo {
   Future<Jazla> create(
     final String name,
     final String cityId, {
+    final String? basinName,
     final double? targetFeddan,
     final double? targetQirat,
     final double? targetSahm,
@@ -24,6 +25,12 @@ abstract class JazlaRepo {
     final double? targetSahm,
     final double? targetAreaSqm,
   });
+
+  Future<void> updateBasin(
+    final String jazlaId,
+    final String cityId,
+    final String? basinName,
+  );
 
   Future<void> delete(final String jazlaId, final String cityId);
 
