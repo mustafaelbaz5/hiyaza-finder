@@ -7,7 +7,23 @@ import '../model/jazla.dart';
 abstract class JazlaRepo {
   Future<List<Jazla>> getAll(final String cityId);
 
-  Future<Jazla> create(final String name, final String cityId);
+  Future<Jazla> create(
+    final String name,
+    final String cityId, {
+    final double? targetFeddan,
+    final double? targetQirat,
+    final double? targetSahm,
+    final double? targetAreaSqm,
+  });
+
+  Future<void> updateArea(
+    final String jazlaId,
+    final String cityId, {
+    final double? targetFeddan,
+    final double? targetQirat,
+    final double? targetSahm,
+    final double? targetAreaSqm,
+  });
 
   Future<void> delete(final String jazlaId, final String cityId);
 

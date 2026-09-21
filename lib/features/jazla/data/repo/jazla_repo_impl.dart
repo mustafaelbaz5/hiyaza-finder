@@ -15,12 +15,23 @@ class JazlaRepoImpl implements JazlaRepo {
   Future<List<Jazla>> getAll(final String cityId) => _store.load(cityId);
 
   @override
-  Future<Jazla> create(final String name, final String cityId) async {
+  Future<Jazla> create(
+    final String name,
+    final String cityId, {
+    final double? targetFeddan,
+    final double? targetQirat,
+    final double? targetSahm,
+    final double? targetAreaSqm,
+  }) async {
     final List<Jazla> jazlas = await _store.load(cityId);
     final Jazla created = Jazla(
       id: _uuid.v4(),
       cityId: cityId,
       name: name,
+      targetFeddan: targetFeddan,
+      targetQirat: targetQirat,
+      targetSahm: targetSahm,
+      targetAreaSqmOverride: targetAreaSqm,
       createdAt: DateTime.now(),
     );
     await _store.save(cityId, <Jazla>[...jazlas, created]);
@@ -121,6 +132,32 @@ class JazlaRepoImpl implements JazlaRepo {
           .toList(),
     );
   }
+
+  @override
+  Future<void> updateArea(
+    final String jazlaId,
+    final String cityId, {
+    final double? targetFeddan,
+    final double? targetQirat,
+    final double? targetSahm,
+    final double? targetAreaSqm,
+  }) =>
+      _mutate(
+        cityId,
+        jazlaId,
+        (final Jazla j) => Jazla(
+          id: j.id,
+          cityId: j.cityId,
+          name: j.name,
+          parcelIds: j.parcelIds,
+          targetFeddan: targetFeddan,
+          targetQirat: targetQirat,
+          targetSahm: targetSahm,
+          targetAreaSqmOverride: targetAreaSqm,
+          createdAt: j.createdAt,
+        ),
+      );
+
 
   Future<void> _mutate(
     final String cityId,

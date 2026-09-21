@@ -74,6 +74,41 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
     }
   }
 
+  Future<void> updateArea({
+    final double? feddan,
+    final double? qirat,
+    final double? sahm,
+    final double? squareMeters,
+  }) async {
+    final Jazla? current = state.jazla;
+    if (current == null) return;
+    final Jazla updated = Jazla(
+      id: current.id,
+      cityId: current.cityId,
+      name: current.name,
+      parcelIds: current.parcelIds,
+      targetFeddan: feddan,
+      targetQirat: qirat,
+      targetSahm: sahm,
+      targetAreaSqmOverride: squareMeters,
+      createdAt: current.createdAt,
+    );
+    emit(state.copyWith(jazla: updated));
+    try {
+      await _repo.updateArea(
+        jazlaId,
+        cityId,
+        targetFeddan: feddan,
+        targetQirat: qirat,
+        targetSahm: sahm,
+        targetAreaSqm: squareMeters,
+      );
+    } on AppException catch (e) {
+      await load();
+      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+    }
+  }
+
   /// Removes a parcel from this Jazla only — the parcel itself is never
   /// touched, deleted, or otherwise mutated (`JazlaRepo` never sees a
   /// `Parcel`, only its id).

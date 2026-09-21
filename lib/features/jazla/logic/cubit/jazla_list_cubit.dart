@@ -23,10 +23,23 @@ class JazlaListCubit extends Cubit<JazlaListState> {
     }
   }
 
-  Future<void> createJazla(final String name) async {
+  Future<void> createJazla(
+    final String name, {
+    final double? targetFeddan,
+    final double? targetQirat,
+    final double? targetSahm,
+    final double? targetAreaSqm,
+  }) async {
     if (name.trim().isEmpty) return;
     try {
-      await _repo.create(name.trim(), cityId);
+      await _repo.create(
+        name.trim(),
+        cityId,
+        targetFeddan: targetFeddan,
+        targetQirat: targetQirat,
+        targetSahm: targetSahm,
+        targetAreaSqm: targetAreaSqm,
+      );
       await load();
     } on AppException catch (e) {
       emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.message));

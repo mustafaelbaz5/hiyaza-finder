@@ -15,6 +15,7 @@ import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_list_cubit.dart';
 import '../logic/cubit/jazla_list_state.dart';
 import 'widgets/jazla_card.dart';
+import 'widgets/jazla_area_dialog.dart';
 
 /// Lists every [Jazla] for the active city — tap opens its detail screen,
 /// long-press offers rename/delete, "+ جزلة جديدة" creates a new one.
@@ -41,7 +42,15 @@ class _JazlaListView extends StatelessWidget {
       initialValue: '',
     );
     if (name != null && name.trim().isNotEmpty) {
-      await cubit.createJazla(name);
+      final JazlaAreaValue? area = await showJazlaAreaDialog(context);
+      if (area == null) return;
+      await cubit.createJazla(
+        name,
+        targetFeddan: area.feddan,
+        targetQirat: area.qirat,
+        targetSahm: area.sahm,
+        targetAreaSqm: area.squareMeters,
+      );
     }
   }
 

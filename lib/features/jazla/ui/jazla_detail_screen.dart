@@ -17,13 +17,15 @@ import '../../holdings/data/repo/holdings_reader.dart';
 import '../../holdings/data/repo/holdings_repository.dart';
 import '../../holdings/ui/add_record_screen.dart';
 import '../data/local/jazla_search_service.dart';
+import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_add_parcel_cubit.dart';
 import '../logic/cubit/jazla_detail_cubit.dart';
 import '../logic/cubit/jazla_detail_state.dart';
 import 'widgets/jazla_bulk_apply_sheet.dart';
 import 'widgets/jazla_export_button.dart';
-import 'widgets/jazla_quick_view_sheet.dart';
+import 'widgets/jazla_area_summary.dart';
+import 'widgets/jazla_area_dialog.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
 /// instance (so both "القطع الموجودة" and "إضافة قطعة" always see the same,
@@ -114,20 +116,46 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     );
   }
 
-  Future<void> _openQuickView(final Parcel parcel, final String jazlaId) async {
-    final bool? added = await showJazlaQuickViewSheet(
-      context,
-      parcel: parcel,
-      jazlaId: jazlaId,
+  Future<void> _addParcelDirect(final Parcel parcel) async {
+    final JazlaAddParcelCubit addCubit = context.read<JazlaAddParcelCubit>();
+    await addCubit.addFreeParcel(parcel.id);
+    if (!mounted || addCubit.state.lastAddedParcelId != parcel.id) return;
+    context.read<JazlaDetailCubit>().load();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('jazla.add_sheet.added'.tr()),
+        action: SnackBarAction(
+          label: 'jazla.add_sheet.undo'.tr(),
+          onPressed: () async {
+            await context.read<JazlaDetailCubit>().removeParcel(parcel.id);
+            if (mounted) {
+              context.read<JazlaAddParcelCubit>().search(_searchController.text);
+            }
+          },
+        ),
+      ),
     );
-    if (added == true && mounted) {
-      // The underlying parcel/Jazla data changed via a different cubit
-      // (Quick View writes through `HoldingsWriter`/`JazlaRepo` directly) —
-      // reload this screen's own `JazlaDetailCubit` instance so Tab 1
-      // reflects the addition immediately, then switch to it.
-      context.read<JazlaDetailCubit>().load();
-      _goToParcelsTab();
-    }
+  }
+
+  Future<void> _editTargetArea(final JazlaDetailCubit cubit) async {
+    final Jazla? jazla = cubit.state.jazla;
+    if (jazla == null || !mounted) return;
+    final JazlaAreaValue? area = await showJazlaAreaDialog(
+      context,
+      initial: JazlaAreaValue(
+        feddan: jazla.targetFeddan,
+        qirat: jazla.targetQirat,
+        sahm: jazla.targetSahm,
+        squareMeters: jazla.targetAreaSqmOverride,
+      ),
+    );
+    if (area == null || !mounted) return;
+    await cubit.updateArea(
+      feddan: area.feddan,
+      qirat: area.qirat,
+      sahm: area.sahm,
+      squareMeters: area.squareMeters,
+    );
   }
 
   Future<void> _addNewPerson(final String jazlaId) async {
@@ -190,6 +218,11 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         child: ScreenHeader(title: state.jazla!.name),
                       ),
                       IconButton(
+                        icon: const Icon(Icons.straighten_rounded),
+                        tooltip: 'jazla.area.target'.tr(),
+                        onPressed: () => _editTargetArea(cubit),
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.bolt_rounded,
                             color: AppColors.amber200),
                         tooltip: 'jazla.detail.bulk_apply'.tr(),
@@ -203,6 +236,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                     ],
                   ),
                 ),
+                JazlaAreaSummary(jazla: state.jazla!, parcels: parcels),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: rw(16)),
                   child: TabBar(
@@ -232,8 +266,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                       ),
                       AddParcelTab(
                         searchController: _searchController,
-                        onAddTap: (final Parcel p) =>
-                            _openQuickView(p, jazlaId),
+                        onAddTap: _addParcelDirect,
                         onAddNewPerson: () => _addNewPerson(jazlaId),
                       ),
                     ],
