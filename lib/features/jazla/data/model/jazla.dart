@@ -18,7 +18,8 @@ class Jazla extends Equatable {
     this.targetSahm,
     this.targetAreaSqmOverride,
     required this.createdAt,
-  });
+    final DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? createdAt;
 
   final String id;
   final String cityId;
@@ -32,6 +33,7 @@ class Jazla extends Equatable {
   final double? targetSahm;
   final double? targetAreaSqmOverride;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   int get parcelCount => parcelIds.length;
 
@@ -51,6 +53,7 @@ class Jazla extends Equatable {
     final double? targetQirat,
     final double? targetSahm,
     final double? targetAreaSqmOverride,
+    final DateTime? updatedAt,
   }) =>
       Jazla(
         id: id,
@@ -64,6 +67,7 @@ class Jazla extends Equatable {
         targetAreaSqmOverride:
             targetAreaSqmOverride ?? this.targetAreaSqmOverride,
         createdAt: createdAt,
+        updatedAt: updatedAt ?? DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -77,6 +81,7 @@ class Jazla extends Equatable {
         'targetSahm': targetSahm,
         'targetAreaSqm': targetAreaSqmOverride,
         'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   factory Jazla.fromJson(final Map<String, dynamic> json) => Jazla(
@@ -90,6 +95,9 @@ class Jazla extends Equatable {
         targetSahm: (json['targetSahm'] as num?)?.toDouble(),
         targetAreaSqmOverride: (json['targetAreaSqm'] as num?)?.toDouble(),
         createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: json['updatedAt'] == null
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.parse(json['updatedAt'] as String),
       );
 
   @override
@@ -104,5 +112,6 @@ class Jazla extends Equatable {
         targetSahm,
         targetAreaSqmOverride,
         createdAt,
+        updatedAt,
       ];
 }

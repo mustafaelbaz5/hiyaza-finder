@@ -28,6 +28,8 @@ import 'widgets/jazla_export_button.dart';
 import 'widgets/jazla_area_summary.dart';
 import 'widgets/jazla_area_dialog.dart';
 import 'widgets/jazla_pdf_share_button.dart';
+import 'widgets/jazla_actions_sheet.dart';
+import 'jazla_review_screen.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
 /// instance (so both "القطع الموجودة" and "إضافة قطعة" always see the same,
@@ -95,10 +97,22 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
 
   void _goToParcelsTab() => _tabController.animateTo(0);
 
-  void _openParcelDetail(final BuildContext context, final Parcel parcel) {
-    final List<Parcel> group =
-        getIt<HoldingsRepository>().parcelsForHolding(parcel.groupKey);
-    context.pushNamed(Routes.holdingDetail, arguments: group);
+  void _openParcelDetail(
+    final BuildContext context,
+    final List<Parcel> parcels,
+    final Parcel parcel,
+  ) {
+    final int index = parcels.indexWhere((final Parcel p) => p.id == parcel.id);
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => JazlaReviewScreen(
+          jazlaName: context.read<JazlaDetailCubit>().state.jazla?.name ?? '',
+          parcels: parcels,
+          initialIndex: index < 0 ? 0 : index,
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmRemove(
@@ -244,26 +258,27 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.straighten_rounded),
-                        tooltip: 'jazla.area.target'.tr(),
-                        onPressed: () => _editTargetArea(cubit),
+                        icon: const Icon(Icons.more_vert_rounded),
+                        tooltip: 'jazla.actions.title'.tr(),
+                        onPressed: () => showJazlaActionsSheet(
+                          context,
+                          jazla: state.jazla!,
+                          parcels: parcels,
+                          onEditArea: () => _editTargetArea(cubit),
+                          onEditBasin: () => _editBasin(cubit),
+                          exportExcelAction: JazlaExportButton(
+                            jazlaName: state.jazla!.name,
+                            parcels: parcels,
+                          ),
+                          sharePdfAction: JazlaPdfShareButton(
+                            jazla: state.jazla!,
+                            parcels: parcels,
+                          ),
+                          onBulkApply: parcels.isEmpty
+                              ? () {}
+                              : () => _openBulkApply(jazlaId, parcels),
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.location_on_outlined),
-                        tooltip: 'jazla.basin'.tr(),
-                        onPressed: () => _editBasin(cubit),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.bolt_rounded,
-                            color: AppColors.amber200),
-                        tooltip: 'jazla.detail.bulk_apply'.tr(),
-                        onPressed: parcels.isEmpty
-                            ? null
-                            : () => _openBulkApply(jazlaId, parcels),
-                      ),
-                      JazlaExportButton(
-                          jazlaName: state.jazla!.name, parcels: parcels),
-                      JazlaPdfShareButton(jazla: state.jazla!, parcels: parcels),
                       horizontalSpacing(8),
                     ],
                   ),
@@ -292,7 +307,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         parcels: parcels,
                         onReorder: cubit.reorder,
                         onTapParcel: (final Parcel p) =>
-                            _openParcelDetail(context, p),
+                            _openParcelDetail(context, parcels, p),
                         onLongPressParcel: (final Parcel p) =>
                             _confirmRemove(context, cubit, p),
                       ),

@@ -89,24 +89,6 @@ class AddParcelTab extends StatelessWidget {
             },
           ),
         ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(rw(16), 0, rw(16), rh(16)),
-          child: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onAddNewPerson,
-                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: Text(
-                    'jazla.add_sheet.add_new_person'.tr(),
-                    style: AppTextStyles.font14SemiBold
-                        .copyWith(color: AppColors.primary200),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }

@@ -71,7 +71,8 @@ class JazlaRepoImpl implements JazlaRepo {
     await _mutate(
       cityId,
       jazlaId,
-      (final Jazla j) => j.copyWith(parcelIds: <String>[...j.parcelIds, parcelId]),
+      (final Jazla j) =>
+          j.copyWith(parcelIds: <String>[...j.parcelIds, parcelId]),
     );
   }
 
@@ -96,7 +97,8 @@ class JazlaRepoImpl implements JazlaRepo {
     final List<String> newOrder,
     final String cityId,
   ) =>
-      _mutate(cityId, jazlaId, (final Jazla j) => j.copyWith(parcelIds: newOrder));
+      _mutate(
+          cityId, jazlaId, (final Jazla j) => j.copyWith(parcelIds: newOrder));
 
   @override
   Future<Jazla?> getJazlaContaining(
@@ -158,6 +160,7 @@ class JazlaRepoImpl implements JazlaRepo {
           targetSahm: targetSahm,
           targetAreaSqmOverride: targetAreaSqm,
           createdAt: j.createdAt,
+          updatedAt: DateTime.now(),
         ),
       );
 
@@ -173,16 +176,14 @@ class JazlaRepoImpl implements JazlaRepo {
         (final Jazla j) => j.copyWith(basinName: basinName),
       );
 
-
   Future<void> _mutate(
     final String cityId,
     final String jazlaId,
     final Jazla Function(Jazla) update,
   ) async {
     final List<Jazla> jazlas = await _store.load(cityId);
-    final List<Jazla> updated = jazlas
-        .map((final Jazla j) => j.id == jazlaId ? update(j) : j)
-        .toList();
+    final List<Jazla> updated =
+        jazlas.map((final Jazla j) => j.id == jazlaId ? update(j) : j).toList();
     await _store.save(cityId, updated);
   }
 }

@@ -36,6 +36,8 @@
     "retry": "Retry"
   },
   "app_dialogs": {
+    "back": "Back",
+    "next": "Next",
     "info": "Info",
     "success": "Success",
     "error": "Error",
@@ -505,6 +507,25 @@
     "empty_list": "No Jazlas yet",
     "basin_required": "Select a basin first to define the Jazla location",
     "basin": "Basin",
+    "actions": {
+      "title": "Jazla actions",
+      "edit_area": "Edit target area",
+      "edit_basin": "Edit basin",
+      "export_excel": "Export Excel",
+      "share_pdf": "Share PDF",
+      "bulk_apply": "Bulk apply"
+    },
+    "review": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "sort": {
+      "title": "Sort Jazlas",
+      "newest": "Newest",
+      "updated": "Recently updated",
+      "name": "Name",
+      "parcelCount": "Parcel count"
+    },
     "area": {
       "dialog_title": "Target area",
       "dialog_hint": "You can leave the area empty and set it later",

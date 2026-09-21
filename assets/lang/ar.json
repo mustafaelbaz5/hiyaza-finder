@@ -36,6 +36,8 @@
     "retry": "إعادة المحاولة"
   },
   "app_dialogs": {
+    "back": "رجوع",
+    "next": "التالي",
     "info": "معلومة",
     "success": "تم بنجاح",
     "error": "خطأ",
@@ -505,6 +507,25 @@
     "empty_list": "لا توجد جزل بعد",
     "basin_required": "اختر الحوض أولاً لتحديد موقع الجزلة",
     "basin": "الحوض",
+    "actions": {
+      "title": "إجراءات الجزلة",
+      "edit_area": "تعديل المساحة المستهدفة",
+      "edit_basin": "تعديل الحوض",
+      "export_excel": "تصدير Excel",
+      "share_pdf": "مشاركة PDF",
+      "bulk_apply": "تطبيق جماعي"
+    },
+    "review": {
+      "previous": "السابق",
+      "next": "التالي"
+    },
+    "sort": {
+      "title": "ترتيب الجزل",
+      "newest": "الأحدث إضافة",
+      "updated": "آخر تعديل",
+      "name": "الاسم",
+      "parcelCount": "عدد القطع"
+    },
     "area": {
       "dialog_title": "المساحة المستهدفة",
       "dialog_hint": "يمكن ترك المساحة فارغة وتحديدها لاحقًا",

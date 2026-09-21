@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/router/routes.dart';
@@ -8,15 +9,14 @@ import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../holdings/data/repo/holdings_repository.dart';
-import '../../holdings/ui/widgets/basin_picker.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_list_cubit.dart';
 import '../logic/cubit/jazla_list_state.dart';
+import '../data/local/jazla_preferences.dart';
 import 'widgets/jazla_card.dart';
-import 'widgets/jazla_area_dialog.dart';
+import 'widgets/jazla_create_wizard.dart';
 
 /// Lists every [Jazla] for the active city — tap opens its detail screen,
 /// long-press offers rename/delete, "+ جزلة جديدة" creates a new one.
@@ -37,31 +37,23 @@ class _JazlaListView extends StatelessWidget {
   const _JazlaListView();
 
   Future<void> _createJazla(final BuildContext context, final JazlaListCubit cubit) async {
-    final String? name = await showTextInputDialog(
+    final List<String> basins = getIt<HoldingsRepository>().availableBasins;
+    if (basins.isEmpty) {
+      await AppDialogs.showWarning(context, message: 'jazla.basin_required'.tr());
+      return;
+    }
+    final JazlaCreateValue? value = await showJazlaCreateWizard(
       context,
-      title: 'jazla.name_hint'.tr(),
-      initialValue: '',
+      basins: basins,
     );
-    if (name != null && name.trim().isNotEmpty) {
-      final JazlaAreaValue? area = await showJazlaAreaDialog(context);
-      if (area == null) return;
-      final BasinPickResult? basin = await pickBasin(context, selected: null);
-      if (basin == null || basin.basinName == null) {
-        if (context.mounted) {
-          await AppDialogs.showWarning(
-            context,
-            message: 'jazla.basin_required'.tr(),
-          );
-        }
-        return;
-      }
+    if (value != null) {
       await cubit.createJazla(
-        name,
-        basinName: basin.basinName,
-        targetFeddan: area.feddan,
-        targetQirat: area.qirat,
-        targetSahm: area.sahm,
-        targetAreaSqm: area.squareMeters,
+        value.name,
+        basinName: value.basinName,
+        targetFeddan: value.area.feddan,
+        targetQirat: value.area.qirat,
+        targetSahm: value.area.sahm,
+        targetAreaSqm: value.area.squareMeters,
       );
     }
   }
@@ -79,6 +71,23 @@ class _JazlaListView extends StatelessWidget {
     if (name != null && name.trim().isNotEmpty) {
       await cubit.renameJazla(jazla.id, name);
     }
+  }
+
+  Future<void> _pickSort(final BuildContext context, final JazlaListCubit cubit) async {
+    final JazlaSort? sort = await showDialog<JazlaSort>(
+      context: context,
+      builder: (final BuildContext dialogContext) => SimpleDialog(
+        title: Text('jazla.sort.title'.tr()),
+        children: [
+          for (final JazlaSort value in JazlaSort.values)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, value),
+              child: Text('jazla.sort.${value.name}'.tr(), textAlign: TextAlign.right),
+            ),
+        ],
+      ),
+    );
+    if (sort != null) await cubit.setSort(sort);
   }
 
   void _showOptions(
@@ -135,7 +144,16 @@ class _JazlaListView extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ScreenHeader(title: 'jazla.title'.tr()),
+                Row(
+                  children: [
+                    Expanded(child: ScreenHeader(title: 'jazla.title'.tr())),
+                    IconButton(
+                      tooltip: 'jazla.sort.title'.tr(),
+                      icon: const Icon(Icons.sort_rounded),
+                      onPressed: () => _pickSort(context, cubit),
+                    ),
+                  ],
+                ),
                 Expanded(
                   child: BlocBuilder<JazlaListCubit, JazlaListState>(
                     builder: (final BuildContext context, final JazlaListState state) {
