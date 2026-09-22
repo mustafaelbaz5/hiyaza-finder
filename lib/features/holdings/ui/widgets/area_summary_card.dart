@@ -1,4 +1,6 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
@@ -57,7 +59,18 @@ class AreaSummaryCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.edit_outlined, size: 15, color: colors.textHint),
+                  IconButton(
+                    onPressed: () => _copyArea(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 30,
+                      minHeight: 30,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.copy_rounded,
+                        size: 16, color: colors.textHint),
+                    tooltip: 'holdings.field.copy_tooltip'.tr(),
+                  ),
                 ],
               ),
               verticalSpacing(8),
@@ -123,6 +136,16 @@ class AreaSummaryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _copyArea(final BuildContext context) async {
+    final String text =
+        '${_formatter.areaFraction(parcel)} | ${_formatter.formatNumber(parcel.totalSqm) ?? '-'} م²';
+    await Clipboard.setData(ClipboardData(text: text));
+    if (context.mounted) {
+      HapticFeedback.lightImpact();
+      context.showSuccessSnackBar('holdings.detail.copied'.tr());
+    }
   }
 }
 

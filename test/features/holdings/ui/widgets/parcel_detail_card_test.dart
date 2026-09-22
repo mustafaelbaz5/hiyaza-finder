@@ -171,7 +171,7 @@ void main() {
   );
 
   testWidgets(
-    'shows the added badge for promoted app-created parcels even when isFieldAdded is false',
+    'does not show an added badge for promoted app-created parcels',
     (final tester) async {
       const Parcel promotedAddedParcel = Parcel(
         id: 'p3',
@@ -190,7 +190,7 @@ void main() {
         ),
       );
 
-      expect(find.text('مضافة من التطبيق'), findsOneWidget);
+      expect(find.text('مضافة من التطبيق'), findsNothing);
     },
   );
 
@@ -285,7 +285,8 @@ void main() {
           reason: 'onFieldChanged (routed to DetailScreen._updateField in '
               'production) must never be invoked by the review action.',
         );
-        expect(find.text('تم نسخ المعرّف وتحديد الحيازة كمُراجعة'), findsOneWidget);
+        expect(find.text('تم نسخ المعرّف وتحديد الحيازة كمُراجعة'),
+            findsOneWidget);
       },
     );
 
