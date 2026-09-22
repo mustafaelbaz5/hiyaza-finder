@@ -8,14 +8,12 @@ import 'package:hiyaza_finder/features/cities/data/model/city.dart';
 import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
+import 'package:hiyaza_finder/features/cities/ui/helper_tools_screen.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
-/// Consolidation regression: "إدارة المدن المحملة" used to live only in the
-/// settings sheet — it's now also (only) reachable as a tile on
-/// `CityToolsScreen`, alongside missing-holding-id and crop-types.
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
 
@@ -33,7 +31,8 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 
 class _FakeCityRepo implements CityRepo {
   @override
-  Future<CitySnapshot> downloadCity(final City city) => throw UnimplementedError();
+  Future<CitySnapshot> downloadCity(final City city) =>
+      throw UnimplementedError();
 
   @override
   Future<List<City>> listPublishedCities() => throw UnimplementedError();
@@ -42,10 +41,15 @@ class _FakeCityRepo implements CityRepo {
   Future<CitySnapshot?> loadActiveCachedSnapshot() async => null;
 
   @override
-  Future<int> remoteDataVersion(final String cityId) => throw UnimplementedError();
+  Future<CitySnapshot?> loadCachedCity(final String cityId) async => null;
 
   @override
-  Future<List<CachedCityMeta>> listCachedCities() async => const <CachedCityMeta>[];
+  Future<int> remoteDataVersion(final String cityId) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<CachedCityMeta>> listCachedCities() async =>
+      const <CachedCityMeta>[];
 
   @override
   Future<void> deleteCachedCity(final String cityId) async {}
@@ -69,7 +73,34 @@ void main() {
   });
 
   testWidgets(
-      'the manage-cities tile is present and navigates to Routes.manageCities',
+    'the manage-cities tile is present and navigates correctly',
+    (final tester) async {
+      final List<String?> pushedRoutes = <String?>[];
+
+      await tester.pumpWidget(
+        wrapLocalizedScreen(
+          Navigator(
+            onGenerateRoute: (final RouteSettings settings) {
+              pushedRoutes.add(settings.name);
+              return MaterialPageRoute<void>(
+                settings: settings,
+                builder: (final _) => const CityToolsScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('إدارة المدن المحملة'), findsOneWidget);
+      await tester.tap(find.text('إدارة المدن المحملة'));
+      await tester.pumpAndSettle();
+
+      expect(pushedRoutes, contains(Routes.manageCities));
+    },
+  );
+
+  testWidgets('helper tools are moved to their dedicated screen',
       (final tester) async {
     final List<String?> pushedRoutes = <String?>[];
 
@@ -88,34 +119,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('إدارة المدن المحملة'), findsOneWidget);
+    expect(find.text('أدوات مساعدة'), findsOneWidget);
+    expect(find.text('أنواع الزرع'), findsNothing);
+    expect(find.text('السجلات الناقصة لرقم الحيازة'), findsNothing);
 
-    await tester.tap(find.text('إدارة المدن المحملة'));
+    await tester.tap(find.text('أدوات مساعدة'));
     await tester.pumpAndSettle();
 
-    expect(pushedRoutes, contains(Routes.manageCities));
+    expect(pushedRoutes, contains(Routes.helperTools));
   });
 
-  testWidgets('missing-holding-id and crop-types tiles are still present',
-      (final tester) async {
-    await pumpLocalizedScreen(tester, const CityToolsScreen());
+  testWidgets('helper screen displays all helper tools', (final tester) async {
+    await pumpLocalizedScreen(tester, const HelperToolsScreen());
     await tester.pumpAndSettle();
 
-    // Both tiles now live further down the reorganized list (inside the
-    // "أدوات مساعدة" section) — scroll to bring them into the fixed test
-    // viewport before asserting on them.
-    await tester.dragUntilVisible(
-      find.text('أنواع الزرع'),
-      find.byType(ListView),
-      const Offset(0, -100),
-    );
     expect(find.text('أنواع الزرع'), findsOneWidget);
-
-    await tester.dragUntilVisible(
-      find.text('السجلات الناقصة لرقم الحيازة'),
-      find.byType(ListView),
-      const Offset(0, -100),
-    );
+    expect(find.text('قائمة الملاحظات'), findsOneWidget);
     expect(find.text('السجلات الناقصة لرقم الحيازة'), findsOneWidget);
   });
 }

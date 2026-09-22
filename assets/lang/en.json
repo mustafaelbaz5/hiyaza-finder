@@ -164,7 +164,16 @@
         "subtitle": "View basins and their progress"
       },
       "helper_tools": {
-        "title": "Helper tools"
+        "title": "Helper tools",
+        "subtitle": "Quick settings and daily record processing",
+        "field_settings": "Field settings",
+        "data_processing": "Data processing"
+      },
+      "city_management": {
+        "title": "City management"
+      },
+      "data_operations": {
+        "title": "Data operations"
       }
     }
   },
@@ -596,3 +605,5 @@
     }
   }
 }
+
+

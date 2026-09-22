@@ -17,7 +17,7 @@ abstract class CityRepo {
   /// cleared). Works fully offline.
   Future<CitySnapshot?> loadActiveCachedSnapshot();
 
-  Future<CitySnapshot?> loadCachedCity(String cityId);
+  Future<CitySnapshot?> loadCachedCity(final String cityId);
 
   /// The server's current `data_version` for [cityId] — used to compare
   /// against a cached snapshot's stored version.

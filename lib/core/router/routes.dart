@@ -9,6 +9,7 @@ class Routes {
   static const String fileStatus = '/fileStatus';
   static const String manageCities = '/manageCities';
   static const String cityTools = '/cityTools';
+  static const String helperTools = '/helperTools';
   static const String missingHoldingId = '/missingHoldingId';
   static const String cropTypeSettings = '/cropTypeSettings';
   static const String export = '/export';

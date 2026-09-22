@@ -18,7 +18,6 @@ import '../data/repo/holdings_repository.dart';
 import 'widgets/picker_row.dart';
 import 'widgets/section_card.dart';
 import 'widgets/specify_other_picker.dart';
-import 'widgets/status_summary_cards.dart';
 
 /// Localized display label for a [BulkEditableField] — kept here (UI layer)
 /// rather than as a `.label` getter on the enum itself, since
@@ -234,20 +233,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final List<Parcel> parcels = _repository.parcels;
-    // Same four counts `HomeState` computes for the (now-removed) home-screen
-    // summary cards (`REFACTOR_ROADMAP.md` Phase 11 §1) — recomputed directly
-    // from the repository rather than routed through `HomeState`/`HomeCubit`,
-    // since this screen has no cubit of its own and these are plain filters
-    // over `parcels`, not state worth duplicating a whole state object for.
-    final int addedCount =
-        parcels.where((final Parcel p) => p.isFieldAdded).length;
-    final int completedCount =
-        parcels.where((final Parcel p) => p.completedAt != null).length;
-    final int modifiedCount = parcels
-        .where((final Parcel p) => _repository.isParcelEdited(p.id))
-        .length;
-
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
@@ -294,7 +279,8 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
-                                value: _applyProgress == 0 ? null : _applyProgress,
+                                value:
+                                    _applyProgress == 0 ? null : _applyProgress,
                                 minHeight: 6,
                               ),
                             ),
@@ -302,7 +288,8 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                           verticalSpacing(16),
                           CustomTextButton(
                             text: 'holdings.bulk_edit.apply'.tr(),
-                            onPressed: _isApplying ? null : _confirmAndApplyBulkEdit,
+                            onPressed:
+                                _isApplying ? null : _confirmAndApplyBulkEdit,
                             isLoading: _isApplying,
                             prefixIcon: const Icon(
                               Icons.done_all_rounded,
@@ -311,17 +298,6 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                           ),
                         ],
                       ),
-                    ),
-                    verticalSpacing(16),
-                    // Moved here from the home screen (`REFACTOR_ROADMAP.md`
-                    // Phase 11 §1) — status counts are a city-tools concern,
-                    // not something that needs to be prominent every time the
-                    // home screen opens.
-                    StatusSummaryCards(
-                      addedCount: addedCount,
-                      modifiedCount: modifiedCount,
-                      pendingCompletionCount: parcels.length - completedCount,
-                      completedCount: completedCount,
                     ),
                   ],
                 ),

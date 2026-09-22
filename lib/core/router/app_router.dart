@@ -10,6 +10,7 @@ import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_picker_cubit.dart';
 import 'package:hiyaza_finder/features/cities/ui/city_picker_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
+import 'package:hiyaza_finder/features/cities/ui/helper_tools_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/manage_cities_screen.dart';
 import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
@@ -76,6 +77,8 @@ class AppRouter {
         return _buildRoute(const ManageCitiesScreen(), settings);
       case Routes.cityTools:
         return _buildRoute(const CityToolsScreen(), settings);
+      case Routes.helperTools:
+        return _buildRoute(const HelperToolsScreen(), settings);
       case Routes.missingHoldingId:
         return _buildRoute(const MissingHoldingIdScreen(), settings);
       case Routes.cropTypeSettings:
