@@ -33,13 +33,6 @@ class CityToolsScreen extends StatelessWidget {
                   rh(24),
                 ),
                 children: <Widget>[
-                  CityToolTile(
-                    icon: Icons.build_circle_outlined,
-                    title: 'cities.tools.helper_tools.title'.tr(),
-                    subtitle: 'cities.tools.helper_tools.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.helperTools),
-                  ),
-                  verticalSpacing(24),
                   _SectionHeader(
                     icon: Icons.location_city_outlined,
                     title: 'cities.tools.city_management.title'.tr(),
@@ -72,10 +65,10 @@ class CityToolsScreen extends StatelessWidget {
                   ),
                   verticalSpacing(10),
                   CityToolTile(
-                    icon: Icons.dashboard_customize_outlined,
-                    title: 'holdings.bulk_edit.entry_pill'.tr(),
-                    subtitle: 'cities.tools.bulk_edit.subtitle'.tr(),
-                    onTap: () => context.pushNamed(Routes.fileStatus),
+                    icon: Icons.build_circle_outlined,
+                    title: 'cities.tools.helper_tools.title'.tr(),
+                    subtitle: 'cities.tools.helper_tools.subtitle'.tr(),
+                    onTap: () => context.pushNamed(Routes.helperTools),
                   ),
                 ],
               ),

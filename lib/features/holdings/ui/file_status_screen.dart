@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/dependency_injection.dart';
+import '../../../core/router/routes.dart';
 import '../../../core/errors/error_message_resolver.dart';
 import '../../../core/themes/app_colors.dart';
 import '../../../core/utils/extensions/context_ext.dart';
@@ -11,11 +12,13 @@ import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../crop_type/ui/widgets/crop_type_picker.dart';
+import '../../cities/ui/widgets/city_tool_tile.dart';
 import '../data/model/bulk_edit_outcome.dart';
 import '../data/model/bulk_editable_field.dart';
 import '../data/model/parcel.dart';
 import '../data/repo/holdings_repository.dart';
 import 'widgets/picker_row.dart';
+import 'widgets/notes_settings_sheet.dart';
 import 'widgets/section_card.dart';
 import 'widgets/specify_other_picker.dart';
 
@@ -294,6 +297,47 @@ class _FileStatusScreenState extends State<FileStatusScreen> {
                             prefixIcon: const Icon(
                               Icons.done_all_rounded,
                               color: AppColors.white,
+                            ),
+                          ),
+                          verticalSpacing(16),
+                          SectionCard(
+                            title: 'cities.tools.helper_tools.title'.tr(),
+                            subtitle: 'cities.tools.helper_tools.subtitle'.tr(),
+                            child: Column(
+                              children: <Widget>[
+                                CityToolTile(
+                                  embedded: true,
+                                  icon: Icons.grass_outlined,
+                                  title: 'cities.tools.crop_types.title'.tr(),
+                                  subtitle:
+                                      'cities.tools.crop_types.subtitle'.tr(),
+                                  onTap: () => context
+                                      .pushNamed(Routes.cropTypeSettings),
+                                ),
+                                Divider(color: colors.border, height: 1),
+                                CityToolTile(
+                                  embedded: true,
+                                  icon: Icons.sticky_note_2_outlined,
+                                  title:
+                                      'cities.tools.notes_settings.title'.tr(),
+                                  subtitle:
+                                      'cities.tools.notes_settings.subtitle'
+                                          .tr(),
+                                  onTap: () => showNotesSettingsSheet(context),
+                                ),
+                                Divider(color: colors.border, height: 1),
+                                CityToolTile(
+                                  embedded: true,
+                                  icon: Icons.assignment_late_outlined,
+                                  title: 'cities.tools.missing_holding_id.title'
+                                      .tr(),
+                                  subtitle:
+                                      'cities.tools.missing_holding_id.subtitle'
+                                          .tr(),
+                                  onTap: () => context
+                                      .pushNamed(Routes.missingHoldingId),
+                                ),
+                              ],
                             ),
                           ),
                         ],
