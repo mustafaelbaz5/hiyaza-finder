@@ -10,7 +10,6 @@ class AppControlLocalStore {
 
   final KeyValueStore _store;
 
-
   Future<AppControl?> read() async {
     final String? blockedValue = await _store.getString(_blockedKey);
     if (blockedValue == null) return null;

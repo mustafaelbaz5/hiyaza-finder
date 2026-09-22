@@ -88,8 +88,6 @@ class HiyazaFinderApp extends StatelessWidget {
                 return BlocBuilder<AppControlCubit, AppControl>(
                   builder:
                       (final BuildContext context, final AppControl control) {
-                    if (control.isBlocked)
-                      return AppBlockedScreen(control: control);
                     return MaterialApp(
                       navigatorKey: navigatorKey,
                       scaffoldMessengerKey: scaffoldMessengerKey,
@@ -99,6 +97,11 @@ class HiyazaFinderApp extends StatelessWidget {
                       debugShowCheckedModeBanner: false,
                       scrollBehavior: const _AppScrollBehavior(),
                       initialRoute: Routes.home,
+                      builder:
+                          (final BuildContext context, final Widget? child) =>
+                              control.isBlocked
+                                  ? AppBlockedScreen(control: control)
+                                  : (child ?? const SizedBox.shrink()),
                       onGenerateRoute: AppRouter.generateRoute,
                       title: AppConfig.appName,
                       // font family injected into both themes

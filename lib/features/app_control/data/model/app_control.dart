@@ -12,7 +12,8 @@ class AppControl extends Equatable {
     return AppControl(
       isBlocked: json['is_blocked'] == true,
       messageAr: json['message_ar'] as String? ?? 'التطبيق متوقف مؤقتًا.',
-      messageEn: json['message_en'] as String? ?? 'The app is temporarily unavailable.',
+      messageEn: json['message_en'] as String? ??
+          'The app is temporarily unavailable.',
       updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
     );
   }
@@ -28,8 +29,10 @@ class AppControl extends Equatable {
   final String messageEn;
   final DateTime? updatedAt;
 
-  String messageFor(final String languageCode) => languageCode == 'ar' ? messageAr : messageEn;
+  String messageFor(final String languageCode) =>
+      languageCode == 'ar' ? messageAr : messageEn;
 
   @override
-  List<Object?> get props => <Object?>[isBlocked, messageAr, messageEn, updatedAt];
+  List<Object?> get props =>
+      <Object?>[isBlocked, messageAr, messageEn, updatedAt];
 }
