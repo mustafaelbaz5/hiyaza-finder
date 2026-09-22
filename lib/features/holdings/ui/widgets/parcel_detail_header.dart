@@ -4,10 +4,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import 'status_badge.dart';
 
-/// The status/actions row at the top of [ParcelDetailCard] — badges for
-/// added/pending-review/reviewed state, plus delete/reopen actions. Copy ID
+/// The compact actions row at the top of [ParcelDetailCard]. Status is
+/// communicated by the card surface, while this row contains only actions.
 /// is the sole completion trigger (`REFACTOR_ROADMAP.md` Phase 9 #3) — a
 /// standalone "Finish" action used to exist here too and wrote the same
 /// `completedAt` field via a second, independent path; removed so there's
@@ -51,47 +50,7 @@ class ParcelDetailTopRow extends StatelessWidget {
   Widget build(final BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              // The single "added" badge is `ParcelDetailInfoBanner` below
-              // this top row (`REFACTOR_ROADMAP.md` Phase 11 §12) — this row
-              // previously ALSO showed a small "added_from_app" StatusBadge
-              // here, duplicating the same information the banner already
-              // states more fully (label + hint + now the creator email).
-              if (isInheritance)
-                StatusBadge(
-                  icon: Icons.groups_rounded,
-                  label: 'holdings.status.inheritance'.tr(),
-                  color: AppColors.amber200,
-                ),
-              if (isDelegate)
-                StatusBadge(
-                  icon: Icons.assignment_ind_rounded,
-                  label: 'holdings.status.delegate'.tr(),
-                  color: AppColors.amber200,
-                ),
-              if (!isReviewed)
-                StatusBadge(
-                  icon: Icons.task_alt_rounded,
-                  label: 'holdings.status.pending_review'.tr(),
-                  color: AppColors.amber200,
-                ),
-              if (isReviewed)
-                // Lock icon (not a plain checkmark) reinforces that this
-                // parcel is locked/read-only, not just "successfully
-                // marked" — matches the card's own strengthened locked
-                // styling below (`REFACTOR_ROADMAP.md` Phase 18).
-                StatusBadge(
-                  icon: Icons.lock_rounded,
-                  label: 'holdings.status.reviewed'.tr(),
-                  color: AppColors.green200,
-                ),
-            ],
-          ),
-        ),
+        const Spacer(),
         if (onDelete != null)
           IconButton(
             icon: isDeleting

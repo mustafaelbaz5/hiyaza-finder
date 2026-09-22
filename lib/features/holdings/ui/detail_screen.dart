@@ -471,7 +471,7 @@ class _DetailScreenState extends State<DetailScreen>
                             )
                           : SingleChildScrollView(
                               padding: EdgeInsets.symmetric(
-                                horizontal: rw(16),
+                                horizontal: rw(6),
                               ).copyWith(
                                   bottom: rh(16 + (showAddFab ? 64 : 0))),
                               child: _buildParcelCard(

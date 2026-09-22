@@ -23,6 +23,7 @@ import '../../data/local/usage_type_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
 import '../../data/repo/holdings_repository.dart';
+import 'area_summary_card.dart';
 import 'basin_picker.dart';
 import 'border_compass.dart';
 import 'copy_all_button.dart';
@@ -135,10 +136,7 @@ class ParcelDetailCard extends StatelessWidget {
           // says this, and the card's own locked styling (stronger tint/
           // border below) carries the rest; a second full banner repeating
           // the same fact was redundant weight on an already-done record.
-          if (isAdded) ...[
-            verticalSpacing(8),
-            _AddedByBanner(parcel: parcel),
-          ],
+
           verticalSpacing(10),
           BorderCompass(
             holdingId: parcel.holdingId,
@@ -236,22 +234,15 @@ class ParcelDetailCard extends StatelessWidget {
             onEdit: () => _editBasin(context),
           ),
           verticalSpacing(8),
-          FieldRow(
-            label: 'holdings.fields.area'.tr(),
-            value: _formatter.areaFraction(parcel),
+          AreaSummaryCard(
+            parcel: parcel,
             isModified: _isModified((final p) => p.feddan) ||
                 _isModified((final p) => p.qirat) ||
-                _isModified((final p) => p.sahm),
-            onEdit: () => _editArea(context),
+                _isModified((final p) => p.sahm) ||
+                _isModified((final p) => p.totalSqm),
+            onTap: () => _editArea(context),
           ),
           verticalSpacing(8),
-          // Moved here from See More — المساحة بالمتر sits with the rest
-          // of the area info instead of being buried behind a second tap.
-          FieldRow(
-            label: 'holdings.fields.area_sqm'.tr(),
-            value: _formatter.formatNumber(parcel.totalSqm),
-            isModified: _isModified((final p) => p.totalSqm),
-          ),
           if (UsageType.fromLabel(parcel.usageType) ==
               UsageType.agricultural) ...[
             verticalSpacing(8),
@@ -301,20 +292,30 @@ class ParcelDetailCard extends StatelessWidget {
     // (`REFACTOR_ROADMAP.md` Phase 18) — a visibly grey-tinted surface plus
     // a solid (not translucent) grey border, rather than the previous
     // barely-there tint that looked close to a normal card.
-    final Color lockedSurface = colors.textSecondary.withValues(alpha: 0.10);
-    final Color lockedBorder = colors.textSecondary.withValues(alpha: 0.55);
+    final Color lockedSurface = AppColors.green200.withValues(alpha: 0.08);
+    final Color lockedBorder = AppColors.green200.withValues(alpha: 0.45);
+    final bool hasFamilyMarker = parcel.isInheritance || parcel.isDelegate;
+    final Color familySurface = AppColors.amber200.withValues(alpha: 0.055);
+    final Color familyBorder = AppColors.amber200.withValues(alpha: 0.35);
 
-    return Container(
+    return AnimatedContainer(
+      duration: 220.ms,
       padding: EdgeInsets.all(rw(12)),
       decoration: BoxDecoration(
-        color: isCompleted ? lockedSurface : colors.background,
+        color: isCompleted
+            ? lockedSurface
+            : hasFamilyMarker
+                ? familySurface
+                : colors.background,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isCompleted
               ? lockedBorder
-              : isAdded
-                  ? AppColors.blue200.withValues(alpha: 0.35)
-                  : colors.border,
+              : hasFamilyMarker
+                  ? familyBorder
+                  : isAdded
+                      ? AppColors.blue200.withValues(alpha: 0.35)
+                      : colors.border,
           width: isCompleted ? 1.5 : (isAdded ? 1.2 : 1),
         ),
       ),
@@ -519,26 +520,6 @@ class ParcelDetailCard extends StatelessWidget {
       message: 'holdings.detail.regenerate_id_confirm'.tr(),
       confirmText: 'holdings.detail.regenerate_id'.tr(),
       onConfirm: () => onRegenerate?.call(parcel.id),
-    );
-  }
-}
-
-/// The single "added" badge — the app no longer has a server-side profile
-/// table to resolve [Parcel.createdBy] against, so this shows the badge
-/// without a creator line.
-class _AddedByBanner extends StatelessWidget {
-  const _AddedByBanner({required this.parcel});
-
-  final Parcel parcel;
-
-  @override
-  Widget build(final BuildContext context) {
-    return ParcelDetailInfoBanner(
-      icon: Icons.add_box_rounded,
-      label: 'holdings.detail.added_badge'.tr(),
-      subtitle: 'holdings.detail.added_badge_hint'.tr(),
-      color: AppColors.blue200,
-      creatorLine: null,
     );
   }
 }

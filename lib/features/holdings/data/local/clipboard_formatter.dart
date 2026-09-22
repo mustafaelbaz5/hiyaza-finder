@@ -28,19 +28,23 @@ class ClipboardFormatter {
 
   /// اسم الحائز never gets a prefix (UI/UX Updates prompt "Change 1"/
   /// "Change 2") — مفوض is represented purely by the automatic
-  /// "مفوض عنه {holder}" ملاحظات entry, and ورثة only ever prefixes اسم
-  /// المالك, never اسم الحائز. Kept as a method (not inlined at call sites)
-  /// so a future rule change has one place to land.
-  String? holderNamePrefix(final Parcel p) => null;
+  /// Inheritance without delegation prefixes both displayed names. When
+  /// delegation is active, only the owner receives the inheritance prefix.
+  /// Kept as a method so the rule has one place to land.
+  String? holderNamePrefix(final Parcel p) =>
+      p.isInheritance && !p.isDelegate ? 'ورثة ' : null;
 
-  /// ورثة prefix for اسم المالك display — "ورثة " (no brackets, trailing
-  /// space; UI/UX Updates prompt "Change 2"). مفوض never affects اسم المالك.
+  /// ورثة prefix for the displayed owner. Delegation does not affect it.
   String? ownerNamePrefix(final Parcel p) => p.isInheritance ? 'ورثة ' : null;
 
-  /// اسم الحائز as shown anywhere in the UI/copy-all/export — never
-  /// prefixed (see [holderNamePrefix]). The stored [Parcel.holderName]
-  /// value itself is never touched by this; only the display/output text is.
-  String displayHolderName(final Parcel p) => p.holderName?.trim() ?? '';
+  /// اسم الحائز as shown in the UI/copy-all/export. The stored value is never
+  /// changed; only the display/output text is transformed.
+  String displayHolderName(final Parcel p) {
+    final String name = p.holderName?.trim() ?? '';
+    if (name.isEmpty) return name;
+    final String? prefix = holderNamePrefix(p);
+    return prefix == null ? name : '$prefix$name';
+  }
 
   /// اسم المالك as shown anywhere in the UI/copy-all/export — prefixed with
   /// [ownerNamePrefix] ("ورثة ") when ورثة is set, applied to
@@ -93,14 +97,15 @@ class ClipboardFormatter {
     final bool isAgricultural =
         UsageType.fromLabel(p.usageType) == UsageType.agricultural;
     final String notesJoined = p.notes
-        .map((final String note) => note.replaceAll(RegExp(r'\s*\r?\n\s*'), '، '))
+        .map((final String note) =>
+            note.replaceAll(RegExp(r'\s*\r?\n\s*'), '، '))
         .join('، ')
         .trim();
 
     String field(final String label, final String value) => '$label: $value';
 
     final List<String> lines = <String>[
-      field('كود القطعة', p.id),
+      field('id', p.id),
       '${field('رقم الحيازة', p.holdingId)}، ${field('عدد القطع', parcelCount.toString())}',
       field('اسم الجمعية', slot(p.associationName)),
       field('اسم الحائز', holderSlot),
@@ -118,7 +123,7 @@ class ClipboardFormatter {
         field('الملاحظات', notesJoined),
     ];
 
-    return lines.join('\n');
+    return lines.join(' | ');
   }
 
   /// `null`/empty values are formatted with [emptyPlaceholder] so the
