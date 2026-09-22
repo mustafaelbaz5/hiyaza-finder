@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../data/local/holding_search_service.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
+import '../../data/local/holding_search_service.dart';
 import 'status_badge.dart';
 
 class RecommendationTile extends StatelessWidget {
@@ -71,7 +71,8 @@ class RecommendationTile extends StatelessWidget {
                         else
                           StatusBadge(
                             icon: Icons.hourglass_bottom_rounded,
-                            label: '${result.completedCount}/${result.parcelCount}',
+                            label:
+                                '${result.completedCount}/${result.parcelCount}',
                             color: AppColors.amber200,
                           ),
                       ],
@@ -90,7 +91,7 @@ class RecommendationTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             const Icon(
-              Icons.arrow_back_ios_new_rounded,
+              Icons.arrow_forward_ios_rounded,
               size: 16,
               color: AppColors.primary200,
             ),
