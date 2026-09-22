@@ -36,7 +36,6 @@ class ConnectionQualityService {
   final StreamController<ConnectionQuality> _controller =
       StreamController<ConnectionQuality>.broadcast();
   StreamSubscription<Object?>? _statusSubscription;
-  Timer? _pollTimer;
   ConnectionQuality _current = ConnectionQuality.strong;
 
   Stream<ConnectionQuality> get onQualityChanged => _controller.stream;
@@ -48,10 +47,9 @@ class ConnectionQualityService {
   /// resolution).
   void start() {
     unawaited(_check());
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(pollInterval, (final _) => unawaited(_check()));
     _statusSubscription?.cancel();
-    _statusSubscription = _networkInfo.onStatusChange.listen((final _) => unawaited(_check()));
+    _statusSubscription =
+        _networkInfo.onStatusChange.listen((final _) => unawaited(_check()));
   }
 
   /// Runs one classification pass immediately, outside the poll schedule —
@@ -77,7 +75,6 @@ class ConnectionQualityService {
   }
 
   void dispose() {
-    _pollTimer?.cancel();
     unawaited(_statusSubscription?.cancel());
     unawaited(_controller.close());
   }

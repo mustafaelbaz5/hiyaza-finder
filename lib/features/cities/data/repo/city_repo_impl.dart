@@ -3,7 +3,8 @@ import '../local/city_snapshot_cache.dart';
 import '../model/cached_city_meta.dart';
 import '../model/city.dart';
 import '../model/city_snapshot.dart';
-import '../remote/city_remote_ds.dart' show CityDownloadResult, CityRemoteDataSource;
+import '../remote/city_remote_ds.dart'
+    show CityDownloadResult, CityRemoteDataSource;
 import 'city_repo.dart';
 
 class CityRepoImpl implements CityRepo {
@@ -26,7 +27,8 @@ class CityRepoImpl implements CityRepo {
 
   @override
   Future<CitySnapshot> downloadCity(final City city) async {
-    final CityDownloadResult result = await _dataSource.downloadCityData(city.id);
+    final CityDownloadResult result =
+        await _dataSource.downloadCityData(city.id);
     final CitySnapshot snapshot = CitySnapshot(
       cityId: city.id,
       cityName: city.name,
@@ -46,6 +48,10 @@ class CityRepoImpl implements CityRepo {
     await _keyValueStore.setString(_activeCityIdKey, city.id);
     return snapshot;
   }
+
+  @override
+  Future<CitySnapshot?> loadCachedCity(final String cityId) =>
+      _cache.load(cityId);
 
   @override
   Future<CitySnapshot?> loadActiveCachedSnapshot() async {

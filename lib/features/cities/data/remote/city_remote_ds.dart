@@ -87,7 +87,12 @@ class CityRemoteDataSource {
   Future<List<City>> listPublishedCities() async {
     final List<Map<String, dynamic>> rows = await _fetchAllPages(
       'cities',
-      <String, String>{'is_published': 'eq.true', 'order': 'name'},
+      <String, String>{
+        'select':
+            'id,name,directorate,administration,is_published,data_version,association_type,association_subtype',
+        'is_published': 'eq.true',
+        'order': 'name'
+      },
     );
     return rows.map(_cityFromRow).toList();
   }
@@ -95,7 +100,11 @@ class CityRemoteDataSource {
   Future<int> remoteDataVersion(final String cityId) async {
     final List<Map<String, dynamic>> rows = await _fetchAllPages(
       'cities',
-      <String, String>{'id': 'eq.$cityId', 'select': 'data_version'},
+      <String, String>{
+        'id': 'eq.$cityId',
+        'select': 'data_version',
+        'limit': '1'
+      },
     );
     return rows.single['data_version'] as int;
   }
@@ -106,7 +115,11 @@ class CityRemoteDataSource {
   Future<List<Parcel>> downloadHoldings(final String cityId) async {
     final List<Map<String, dynamic>> rows = await _fetchAllPages(
       'parcels',
-      <String, String>{'city_id': 'eq.$cityId'},
+      <String, String>{
+        'city_id': 'eq.$cityId',
+        'select':
+            'id,holding_id_number,directorate,administration,basin_name,basin_code,holder_name,national_id,border_east,border_south,border_west,border_north,land_number,area_feddan,area_qirat,area_sahm,area_sqm,association_name,association_code,parcel_count_in_holding'
+      },
     );
     return rows.map(parcelRowToParcel).toList();
   }
@@ -118,7 +131,11 @@ class CityRemoteDataSource {
     final List<Parcel> parcels = await downloadHoldings(cityId);
     final List<Map<String, dynamic>> basinRows = await _fetchAllPages(
       'basins',
-      <String, String>{'city_id': 'eq.$cityId'},
+      <String, String>{
+        'city_id': 'eq.$cityId',
+        'select':
+            'id,city_id,basin_name,basin_code,total_feddan,total_qirat,total_sahm,total_sqm,parcel_count'
+      },
     );
     return CityDownloadResult(
       parcels: parcels,

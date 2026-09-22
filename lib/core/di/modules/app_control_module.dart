@@ -7,10 +7,15 @@ import '../../../features/app_control/data/repo/app_control_repository.dart';
 import '../../../features/app_control/data/repo/app_control_repository_impl.dart';
 import '../../../features/app_control/logic/cubit/app_control_cubit.dart';
 import '../../storage/key_value_store.dart';
+import '../../networking/network_info.dart';
 
 void registerAppControlModule(final GetIt getIt) {
-  getIt.registerLazySingleton<AppControlRemoteDataSource>(() => AppControlRemoteDataSource(getIt<http.Client>()));
-  getIt.registerLazySingleton<AppControlLocalStore>(() => AppControlLocalStore(getIt<KeyValueStore>()));
-  getIt.registerLazySingleton<AppControlRepository>(() => AppControlRepositoryImpl(remote: getIt(), local: getIt()));
-  getIt.registerLazySingleton<AppControlCubit>(() => AppControlCubit(getIt<AppControlRepository>()));
+  getIt.registerLazySingleton<AppControlRemoteDataSource>(
+      () => AppControlRemoteDataSource(getIt<http.Client>()));
+  getIt.registerLazySingleton<AppControlLocalStore>(
+      () => AppControlLocalStore(getIt<KeyValueStore>()));
+  getIt.registerLazySingleton<AppControlRepository>(
+      () => AppControlRepositoryImpl(remote: getIt(), local: getIt()));
+  getIt.registerLazySingleton<AppControlCubit>(() =>
+      AppControlCubit(getIt<AppControlRepository>(), getIt<NetworkInfo>()));
 }
