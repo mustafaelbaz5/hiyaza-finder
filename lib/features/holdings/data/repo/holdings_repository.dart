@@ -19,6 +19,13 @@ import '../../../cities/data/model/basin.dart';
 import '../../../jazla/data/repo/jazla_repo.dart';
 
 class HoldingsRepository implements HoldingsReader, HoldingsWriter {
+  /// Added to every locally-created parcel that belongs to a person who does
+  /// not yet have a holding registered in the system. Keeping this rule at
+  /// the repository boundary covers both the first parcel and later sibling
+  /// parcels added while the person's holding number is still pending.
+  static const String unregisteredHoldingNote = 'الحيازة غير مسجل علي المنظومة';
+  static const String unregisteredNationalId = '11111111111111';
+
   HoldingsRepository({
     final ParcelDatasetState? datasetState,
     final ParcelEditsStore editsStore = const ParcelEditsStore(),
@@ -174,9 +181,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final Parcel? parent = parentHoldingId == null
         ? null
         : _dataset.parcels.cast<Parcel?>().firstWhere(
-            (final Parcel? p) => p?.id == parentHoldingId,
-            orElse: () => null,
-          );
+              (final Parcel? p) => p?.id == parentHoldingId,
+              orElse: () => null,
+            );
 
     // A sibling parcel added under a still-pending person (no real رقم
     // الحيازة yet) must join the *same* pending group as its parent —
@@ -191,6 +198,16 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         (parent != null && parent.isHoldingIdPending
             ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
             : generatedId);
+    final bool hasUnregisteredNationalId =
+        parcel.nationalId?.trim() == unregisteredNationalId ||
+            parent?.nationalId?.trim() == unregisteredNationalId;
+    final bool belongsToUnregisteredPerson = parentHoldingId == null ||
+        (parent?.isHoldingIdPending ?? false) ||
+        hasUnregisteredNationalId;
+    final List<String> notes = belongsToUnregisteredPerson &&
+            !parcel.notes.contains(unregisteredHoldingNote)
+        ? <String>[...parcel.notes, unregisteredHoldingNote]
+        : parcel.notes;
     final Parcel withId = _withDerivedFarmerCardNames(
       parcel.copyWith(
         id: generatedId,
@@ -198,6 +215,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         personId: personId,
         pendingGroupId: pendingGroupId,
         isFieldAdded: true,
+        notes: notes,
       ),
     );
 
@@ -265,8 +283,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String newId = _uuid.v4();
     final Parcel updated = current.copyWith(
       id: newId,
-      sourceAddedHoldingId:
-          current.sourceAddedHoldingId == parcelId ? newId : current.sourceAddedHoldingId,
+      sourceAddedHoldingId: current.sourceAddedHoldingId == parcelId
+          ? newId
+          : current.sourceAddedHoldingId,
       pendingGroupId:
           current.pendingGroupId == parcelId ? newId : current.pendingGroupId,
     );
@@ -356,7 +375,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       _queryService.search(_dataset.parcels, query, basin: basin);
 
   @override
-  List<SearchResult> get allHoldings => _queryService.allHoldings(_dataset.parcels);
+  List<SearchResult> get allHoldings =>
+      _queryService.allHoldings(_dataset.parcels);
 
   /// Distinct اسم الحوض values in the active dataset, sorted.
   @override

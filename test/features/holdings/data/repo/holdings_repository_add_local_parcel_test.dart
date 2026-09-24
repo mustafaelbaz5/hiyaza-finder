@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
@@ -21,6 +22,8 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late HoldingsRepository repository;
 
   setUp(() async {
@@ -29,6 +32,7 @@ void main() {
       datasetState: null,
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
     // Simulate an active city (addLocalParcel is a no-op without one).
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
@@ -39,6 +43,7 @@ void main() {
     final HoldingsRepository noCityRepo = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
     final Parcel? result = await noCityRepo.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
@@ -46,7 +51,8 @@ void main() {
     expect(result, isNull);
   });
 
-  test('appends the new parcel to the in-memory dataset with a fresh id', () async {
+  test('appends the new parcel to the in-memory dataset with a fresh id',
+      () async {
     final Parcel? added = await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     );
@@ -59,9 +65,55 @@ void main() {
     expect(added.completedBy, isNull);
     expect(repository.parcels, hasLength(1));
     expect(repository.parcels.single.holderName, 'محمد');
+    expect(
+      repository.parcels.single.notes,
+      contains(HoldingsRepository.unregisteredHoldingNote),
+    );
   });
 
-  test('regenerates only a local parcel id and persists the replacement', () async {
+  test('adds the note to every sibling parcel for a pending person', () async {
+    final Parcel parent = (await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'محمد'),
+    ))!;
+
+    final Parcel sibling = (await repository.addLocalParcel(
+      const Parcel(holdingId: '-1', holderName: 'محمد'),
+      parentHoldingId: parent.id,
+    ))!;
+
+    expect(sibling.notes, contains(HoldingsRepository.unregisteredHoldingNote));
+    expect(
+      sibling.notes.where(
+        (final String note) =>
+            note == HoldingsRepository.unregisteredHoldingNote,
+      ),
+      hasLength(1),
+    );
+  });
+
+  test('adds the note when the person uses the unregistered national ID',
+      () async {
+    final Parcel parent = (await repository.addLocalParcel(
+      const Parcel(
+        holdingId: '878',
+        holderName: 'محمد',
+        nationalId: HoldingsRepository.unregisteredNationalId,
+      ),
+    ))!;
+
+    final Parcel sibling = (await repository.addLocalParcel(
+      const Parcel(holdingId: '878', holderName: 'محمد'),
+      parentHoldingId: parent.id,
+    ))!;
+
+    expect(
+      sibling.notes,
+      contains(HoldingsRepository.unregisteredHoldingNote),
+    );
+  });
+
+  test('regenerates only a local parcel id and persists the replacement',
+      () async {
     final Parcel added = (await repository.addLocalParcel(
       const Parcel(holdingId: '', holderName: 'محمد'),
     ))!;
