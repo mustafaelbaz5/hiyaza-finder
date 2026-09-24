@@ -113,9 +113,9 @@ class ClipboardFormatter {
       field('الرقم القومي', displayNationalId(p)),
       '${field('اسم الحوض', slot(p.basinName))}، ${field('كود الحوض', slot(p.basinCode))}',
       field('رقم الأرض', displayLandNumber(p)),
-      'المساحة: ${formatNumber(p.feddan) ?? emptyPlaceholder} فدان، '
-          '${formatNumber(p.qirat) ?? emptyPlaceholder} قيراط، '
-          '${formatNumber(p.sahm) ?? emptyPlaceholder} سهم',
+      'المساحة: ${formatNumber(p.feddan) ?? 0} فدان، '
+          '${formatNumber(p.qirat) ?? 0} قيراط، '
+          '${formatNumber(p.sahm) ?? 0} سهم',
       field('نوع الاستخدام', slot(p.usageType)),
       if (isAgricultural) field('نوع المحصول', slot(p.cropType)),
       if (isAgricultural) field('مرحلة النمو', slot(p.growthStages)),
@@ -135,9 +135,9 @@ class ClipboardFormatter {
   }
 
   String areaFraction(final Parcel p) {
-    final String feddan = formatNumber(p.feddan) ?? emptyPlaceholder;
-    final String qirat = formatNumber(p.qirat) ?? emptyPlaceholder;
-    final String sahm = formatNumber(p.sahm) ?? emptyPlaceholder;
+    final String feddan = formatNumber(p.feddan) ?? '0';
+    final String qirat = formatNumber(p.qirat) ?? '0';
+    final String sahm = formatNumber(p.sahm) ?? '0';
     return '$feddan فدان، $qirat قيراط، $sahm سهم';
   }
 }
