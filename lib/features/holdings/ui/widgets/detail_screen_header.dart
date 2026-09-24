@@ -55,6 +55,7 @@ class DetailScreenHeader extends StatelessWidget {
               horizontalSpacing(24),
               IconButton(
                 tooltip: 'holdings.detail.previous_parcel'.tr(),
+                iconSize: 28,
                 onPressed: onPreviousParcel == null
                     ? null
                     : () => _navigate(onPreviousParcel!),
@@ -95,11 +96,11 @@ class DetailScreenHeader extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'holdings.detail.next_parcel'.tr(),
+                iconSize: 28,
                 onPressed: onNextParcel == null
                     ? null
                     : () => _navigate(onNextParcel!),
                 icon: Icon(
-                  
                   Icons.chevron_right_outlined,
                   color: onNextParcel == null
                       ? colors.textHint
