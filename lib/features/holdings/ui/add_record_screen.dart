@@ -1,8 +1,21 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../../../core/di/dependency_injection.dart';
+import '../../../core/errors/error_message_resolver.dart';
+import '../../../core/themes/app_text_styles.dart';
+import '../../../core/utils/extensions/context_ext.dart';
+import '../../../core/utils/spacing.dart';
+import '../../../core/widgets/custom_text_button.dart';
+import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
+import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../data/local/area_calculator.dart';
 import '../data/local/field_change_tracker.dart';
+import '../data/local/local_holding_note_policy.dart';
 import '../data/local/parcel_notes_sync.dart';
 import '../data/model/parcel.dart';
 import '../data/model/usage_type.dart';
@@ -17,17 +30,6 @@ import 'widgets/field_row.dart';
 import 'widgets/notes_field.dart';
 import 'widgets/required_field_gaps.dart';
 import 'widgets/toggle_field_row.dart';
-
-import '../../../core/di/dependency_injection.dart';
-import '../../../core/errors/error_message_resolver.dart';
-import '../../../core/themes/app_text_styles.dart';
-import '../../../core/utils/extensions/context_ext.dart';
-import '../../../core/utils/spacing.dart';
-import '../../../core/widgets/custom_text_button.dart';
-import '../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
-import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 
 /// Navigation arguments for the add-record route.
 class AddRecordArgs {
@@ -82,7 +84,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   void initState() {
     super.initState();
-    _parcel = widget.initialParcel;
+    _parcel = widget.parentHoldingId == null &&
+            (widget.initialParcel.nationalId?.trim().isEmpty ?? true)
+        ? widget.initialParcel.copyWith(
+            nationalId: LocalHoldingNotePolicy.unregisteredNationalId,
+          )
+        : widget.initialParcel;
   }
 
   bool get _showModeToggle =>
@@ -102,30 +109,34 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   /// `_addParcelForPerson` (§ 2.2).
   void _onExistingPersonConfirmed(final List<Parcel> matchedParcels) {
     final Parcel source = matchedParcels.first;
+    final Parcel reset = source.copyWith(
+      landNumber: '0',
+      feddan: null,
+      qirat: null,
+      sahm: null,
+      totalSqm: null,
+      basinName: null,
+      basinCode: null,
+      cropType: null,
+      growthStages: null,
+      // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
+      // [source]'s value.
+      usageType: Parcel.defaultUsageType,
+      completedAt: null,
+      completedBy: null,
+      holdingsCount: (source.holdingsCount ?? 1) + 1,
+      notes: const <String>[],
+    );
+    final Parcel next = reset.copyWith(
+      notes: LocalHoldingNotePolicy.apply(
+        parcel: reset,
+        parent: source,
+        forceUnregistered: source.isFieldAdded,
+      ),
+    );
     setState(() {
       _inheritedParentHoldingId = source.id;
-      _parcel = source.copyWith(
-        landNumber: '0',
-        feddan: null,
-        qirat: null,
-        sahm: null,
-        totalSqm: null,
-        basinName: null,
-        basinCode: null,
-        cropType: null,
-        growthStages: null,
-        // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
-        // [source]'s value — same reasoning as `DetailScreen
-        // ._addParcelForPerson`: a new parcel is a fresh survey, and usage
-        // type isn't editable in this screen, so inheriting مباني/بور here
-        // would silently hide the required نوع الزرع field with no way to
-        // bring it back.
-        usageType: Parcel.defaultUsageType,
-        completedAt: null,
-        completedBy: null,
-        holdingsCount: (source.holdingsCount ?? 1) + 1,
-        notes: const <String>[],
-      );
+      _parcel = next;
     });
   }
 
@@ -223,15 +234,32 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     required final String initialValue,
     required final Parcel Function(String value) apply,
     final TextInputType? keyboardType,
+    final List<TextInputFormatter>? inputFormatters,
   }) async {
     final String? value = await showTextInputDialog(
       context,
       title: title,
       initialValue: initialValue,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
     );
     if (value == null) return;
     setState(() => _parcel = apply(value));
+  }
+
+  Parcel _applyHoldingId(final String value) {
+    final Parcel updated = _parcel.copyWith(holdingId: value);
+    final HoldingsRepository repository = getIt<HoldingsRepository>();
+    final String? parentId = _effectiveParentHoldingId;
+    final Parcel? parent = parentId == null
+        ? null
+        : repository.parcels.cast<Parcel?>().firstWhere(
+              (final Parcel? parcel) => parcel?.id == parentId,
+              orElse: () => null,
+            );
+    return updated.copyWith(
+      notes: LocalHoldingNotePolicy.apply(parcel: updated, parent: parent),
+    );
   }
 
   Future<void> _editCropType(final BuildContext context) async {
@@ -372,6 +400,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                       ? null
                       : _parcel.holderName ?? '',
                 ),
+                verticalSpacing(16),
                 if (_showModeToggle)
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: rw(16)),
@@ -410,18 +439,14 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                   context,
                                   title: 'holdings.fields.holding_id'.tr(),
                                   initialValue: _parcel.holdingId,
-                                  // Deliberately left as-is when cleared — no
-                                  // longer silently resets to "-1". The field
-                                  // is required (`Parcel
-                                  // .hasRequiredFieldsFilled`), so Save simply
-                                  // stays disabled until the user types
-                                  // something; typing "-1" themselves is still
-                                  // allowed as an explicit sortable
-                                  // placeholder, just never auto-applied.
-                                  apply: (final String v) =>
-                                      _parcel.copyWith(holdingId: v),
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  apply: _applyHoldingId,
                                 ),
                               ),
+                              verticalSpacing(8),
                               FieldRow(
                                 label:
                                     '${'holdings.fields.holder_name'.tr()} *',
@@ -449,6 +474,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                     title: 'holdings.fields.national_id'.tr(),
                                     initialValue: _parcel.nationalId ?? '',
                                     keyboardType: TextInputType.number,
+                                    inputFormatters: <TextInputFormatter>[
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
                                     apply: (final String v) => _parcel.copyWith(
                                       nationalId: v.isEmpty ? null : v,
                                     ),

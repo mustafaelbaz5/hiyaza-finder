@@ -73,10 +73,10 @@ class ClipboardFormatter {
     return trimmed;
   }
 
-  /// Formats one compact, labeled line per copied field. Newlines are the
-  /// primary separator because names and notes may contain commas. Related
-  /// values share an Arabic comma, while semicolons are deliberately avoided
-  /// so the result remains natural when pasted into a message or form.
+  /// Formats one compact, labeled field per copied message. The pipe is the
+  /// primary separator because Google Earth/KML descriptions may flatten line
+  /// breaks. Related values share an Arabic comma, while semicolons are
+  /// deliberately avoided.
   /// [hideCreditType]/[associationType] are accepted for call-site
   /// compatibility but no longer affect the output — نوع الائتمان/نوع
   /// الإصلاح were never a Copy All field (`CreditTypeNotesSync` surfaces
@@ -123,7 +123,7 @@ class ClipboardFormatter {
         field('الملاحظات', notesJoined),
     ];
 
-    return lines.join(' |\n ');
+    return lines.join(' | ');
   }
 
   /// `null`/empty values are formatted with [emptyPlaceholder] so the

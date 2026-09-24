@@ -161,6 +161,58 @@ void main() {
     expect(repository.parcels, hasLength(2));
   });
 
+  test('a zero holding keeps the same person identity for a sibling', () async {
+    final Parcel? parcelA = await repository.addLocalParcel(
+      const Parcel(
+        holdingId: '0',
+        holderName: 'أحمد',
+        nationalId: HoldingsRepository.unregisteredNationalId,
+      ),
+    );
+    final Parcel? parcelB = await repository.addLocalParcel(
+      const Parcel(
+        holdingId: '0',
+        holderName: 'أحمد',
+        nationalId: HoldingsRepository.unregisteredNationalId,
+        holdingsCount: 2,
+      ),
+      parentHoldingId: parcelA!.id,
+    );
+
+    expect(parcelB!.personId, parcelA.personId);
+    expect(parcelB.groupKey, parcelA.groupKey);
+    expect(parcelB.notes, contains('غير محيز'));
+    expect(repository.search('0').single.parcelCount, 2);
+  });
+
+  test('locally added parcels are restored when the city is loaded again',
+      () async {
+    final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
+    final HoldingsRepository first = HoldingsRepository(
+      editsStore: ParcelEditsStore(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
+    );
+    await first.loadParcelsForCity('city-restore', const <Parcel>[]);
+    final Parcel added = (await first.addLocalParcel(
+      const Parcel(
+        holdingId: '0',
+        holderName: 'أحمد',
+        nationalId: HoldingsRepository.unregisteredNationalId,
+      ),
+    ))!;
+
+    final HoldingsRepository second = HoldingsRepository(
+      editsStore: ParcelEditsStore(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
+    );
+    await second.loadParcelsForCity('city-restore', const <Parcel>[]);
+
+    expect(second.parcels.map((final Parcel p) => p.id), contains(added.id));
+    expect(second.search('أحمد'), hasLength(1));
+  });
+
   test(
       'adding a sibling parcel bumps holdingsCount across every parcel '
       'sharing the same holding', () async {

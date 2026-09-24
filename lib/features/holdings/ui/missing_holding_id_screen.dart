@@ -46,21 +46,14 @@ class _MissingHoldingIdScreenState extends State<MissingHoldingIdScreen> {
       .where((final Parcel p) => p.isHoldingIdMissingOrZero)
       .toList();
 
-  /// [Parcel.groupKey] treats a literal `"0"` رقم الحيازة as a normal,
-  /// non-shared value (by design — see [Parcel.isHoldingIdMissingOrZero]),
-  /// so grouping by it directly here would wrongly merge every unrelated
-  /// person who happens to have `"0"` into one result. Falls back to the
-  /// parcel's own [Parcel.id] for that one case; [Parcel.groupKey] already
-  /// handles the pending-placeholder case (blank/"-"/"-1") correctly.
-  String _worklistGroupKey(final Parcel parcel) =>
-      parcel.holdingId.trim() == '0' ? parcel.id : parcel.groupKey;
+  /// Uses the same identity as Home search and basin navigation. Zero-valued
+  /// parcels are grouped by personId (or holder name fallback), never by the
+  /// shared literal zero.
+  String _worklistGroupKey(final Parcel parcel) => parcel.groupKey;
 
   /// Keyed by [_worklistGroupKey] so [_openDetail] can look parcels up
-  /// directly instead of going through `HoldingsRepository.parcelsForHolding`
-  /// — that method matches on `Parcel.groupKey`, which (by design, see
-  /// [Parcel.isHoldingIdMissingOrZero]'s doc) does NOT special-case a
-  /// literal `"0"` رقم الحيازة, so it can't resolve the [Parcel.id]-based
-  /// key this screen uses for that one case.
+  /// directly and preserve the same zero/person grouping as the rest of the
+  /// app.
   Map<String, List<Parcel>> _groupsByKey = <String, List<Parcel>>{};
 
   List<SearchResult> _groupResults(final List<Parcel> parcels) {

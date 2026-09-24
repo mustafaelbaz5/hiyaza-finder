@@ -1,6 +1,7 @@
 import '../local/bulk_edit_service.dart';
 import '../local/holding_search_service.dart';
 import '../local/local_added_parcels_store.dart';
+import '../local/local_holding_note_policy.dart';
 import '../local/local_edit_tracker.dart';
 import '../local/parcel_dataset_state.dart';
 import '../local/parcel_edit_overlay.dart';
@@ -23,8 +24,10 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// not yet have a holding registered in the system. Keeping this rule at
   /// the repository boundary covers both the first parcel and later sibling
   /// parcels added while the person's holding number is still pending.
-  static const String unregisteredHoldingNote = 'الحيازة غير مسجل علي المنظومة';
-  static const String unregisteredNationalId = '11111111111111';
+  static const String unregisteredHoldingNote =
+      LocalHoldingNotePolicy.unregisteredHoldingNote;
+  static const String unregisteredNationalId =
+      LocalHoldingNotePolicy.unregisteredNationalId;
 
   HoldingsRepository({
     final ParcelDatasetState? datasetState,
@@ -85,9 +88,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final String? associationSubtype,
     final List<Basin> basins = const <Basin>[],
   }) async {
+    final List<Parcel> localParcels = await _loadLocalParcels(cityId);
+    final Map<String, Parcel> mergedById = <String, Parcel>{
+      for (final Parcel parcel in parcels) parcel.id: parcel,
+    };
+    for (final Parcel parcel in localParcels) {
+      // Local state wins if a snapshot already contains the same id.
+      mergedById[parcel.id] = parcel;
+    }
     final List<Parcel> result = await _dataset.adopt(
       cityId,
-      parcels,
+      mergedById.values.toList(),
       cityName: cityName,
       directorate: directorate,
       administration: administration,
@@ -96,6 +107,17 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       basins: basins,
     );
     return result;
+  }
+
+  /// A broken/unavailable local preference store must not prevent the last
+  /// valid city snapshot from opening. The store itself is never cleared;
+  /// the next successful load can still restore the records.
+  Future<List<Parcel>> _loadLocalParcels(final String cityId) async {
+    try {
+      return await _addedParcelsStore.loadAll(cityId);
+    } catch (_) {
+      return const <Parcel>[];
+    }
   }
 
   /// The active city's أحواض, downloaded alongside its parcels — server
@@ -189,25 +211,23 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     // الحيازة yet) must join the *same* pending group as its parent —
     // otherwise Parcel.groupKey (keyed on each parcel's own id while
     // pending) would treat it as an unrelated new person.
-    final String? pendingGroupId = (parent != null && parent.isHoldingIdPending)
+    final bool parentSharesPerson =
+        parent != null && (parent.isHoldingIdPending || parent.isZeroHoldingId);
+    final String? pendingGroupId = parentSharesPerson
         ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
         : null;
 
     final String generatedId = _uuid.v4();
     final String personId = parcel.personId ??
-        (parent != null && parent.isHoldingIdPending
+        (parentSharesPerson
             ? (parent.personId ?? parent.pendingGroupId ?? parent.id)
             : generatedId);
-    final bool hasUnregisteredNationalId =
-        parcel.nationalId?.trim() == unregisteredNationalId ||
-            parent?.nationalId?.trim() == unregisteredNationalId;
-    final bool belongsToUnregisteredPerson = parentHoldingId == null ||
-        (parent?.isHoldingIdPending ?? false) ||
-        hasUnregisteredNationalId;
-    final List<String> notes = belongsToUnregisteredPerson &&
-            !parcel.notes.contains(unregisteredHoldingNote)
-        ? <String>[...parcel.notes, unregisteredHoldingNote]
-        : parcel.notes;
+    final List<String> notes = LocalHoldingNotePolicy.apply(
+      parcel: parcel,
+      parent: parent,
+      forceUnregistered:
+          parentHoldingId == null || (parent?.isFieldAdded ?? false),
+    );
     final Parcel withId = _withDerivedFarmerCardNames(
       parcel.copyWith(
         id: generatedId,
@@ -223,13 +243,19 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     // this holding — the new parcel's count already reflects the total (set
     // by the caller), so every sibling parcel is bumped to match it.
     if (parent != null) {
-      _dataset.replaceAll(<Parcel>[
+      final List<Parcel> updatedParcels = <Parcel>[
         for (final Parcel p in _dataset.parcels)
           if (p.groupKey == parent.groupKey)
             p.copyWith(holdingsCount: withId.holdingsCount)
           else
             p,
-      ]);
+      ];
+      _dataset.replaceAll(updatedParcels);
+      for (final Parcel sibling in updatedParcels) {
+        if (sibling.isFieldAdded && sibling.groupKey == parent.groupKey) {
+          await _addedParcelsStore.save(sibling, cityId);
+        }
+      }
     }
     _dataset.upsert(withId);
     _dataset.setOriginal(withId.id, withId);
@@ -305,7 +331,19 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// [LocalEditTracker].
   @override
   Future<void> updateParcel(final Parcel rawEdited) async {
-    final Parcel edited = _withDerivedFarmerCardNames(rawEdited);
+    final Parcel? current = _dataset.originalParcel(rawEdited.id);
+    final Parcel edited = _withDerivedFarmerCardNames(
+      rawEdited.isFieldAdded
+          ? rawEdited.copyWith(
+              notes: LocalHoldingNotePolicy.apply(
+                parcel: rawEdited,
+                parent: current,
+                forceUnregistered:
+                    rawEdited.isFieldAdded || (current?.isFieldAdded ?? false),
+              ),
+            )
+          : rawEdited,
+    );
     final int idx = _dataset.indexOf(edited.id);
     if (idx < 0) return;
     final Map<String, dynamic> snapshot = _dataset.editSnapshot(edited);

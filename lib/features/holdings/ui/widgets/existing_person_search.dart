@@ -55,7 +55,7 @@ class _ExistingPersonSearchState extends State<ExistingPersonSearch> {
       _searched = true;
       _matchedParcels = matches.isEmpty
           ? null
-          : _repository.parcelsForHolding(matches.first.parcel.holdingId);
+          : _repository.parcelsForHolding(matches.first.parcel.groupKey);
     });
   }
 
@@ -82,7 +82,8 @@ class _ExistingPersonSearchState extends State<ExistingPersonSearch> {
           if (_searched && matched == null)
             Text(
               'holdings.add.search_no_match'.tr(),
-              style: AppTextStyles.font14Regular.copyWith(color: colors.textHint),
+              style:
+                  AppTextStyles.font14Regular.copyWith(color: colors.textHint),
               textAlign: TextAlign.center,
             )
           else if (matched != null) ...[
@@ -127,7 +128,8 @@ class _ExistingPersonSearchState extends State<ExistingPersonSearch> {
                 onPressed: () => widget.onConfirm(matched),
                 child: Text(
                   'holdings.add.confirm_person'.tr(),
-                  style: AppTextStyles.font14Bold.copyWith(color: AppColors.white),
+                  style:
+                      AppTextStyles.font14Bold.copyWith(color: AppColors.white),
                 ),
               ),
             ),

@@ -207,10 +207,31 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
         ),
       ),
     );
+    final Widget inheritance = ToggleFieldRow(
+      label: 'holdings.fields.inheritance'.tr(),
+      value: widget.parcel.isInheritance,
+      activeLabel: 'holdings.fields.inheritance'.tr(),
+      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
+      isModified: _isModified((final p) => p.isInheritance),
+      onChanged: (final bool value) => widget.onFieldChanged(
+        widget.parcel.copyWith(isInheritance: value),
+      ),
+    );
+    final Widget delegate = ToggleFieldRow(
+      label: 'holdings.fields.delegate'.tr(),
+      value: widget.parcel.isDelegate,
+      activeLabel: 'holdings.fields.delegate'.tr(),
+      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
+      isModified: _isModified((final p) => p.isDelegate),
+      onChanged: (final bool value) =>
+          value ? _enableDelegate(context) : _disableDelegate(),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         usage,
+        verticalSpacing(8),
+        _pairRow(inheritance, delegate),
       ],
     );
   }
@@ -259,26 +280,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               CreditTypeNotesSync.applyOwnershipToggle(widget.parcel, value),
             ),
           );
-    final Widget inheritance = ToggleFieldRow(
-      label: 'holdings.fields.inheritance'.tr(),
-      value: widget.parcel.isInheritance,
-      activeLabel: 'holdings.fields.inheritance'.tr(),
-      inactiveLabel: 'holdings.fields.not_inheritance'.tr(),
-      isModified: _isModified((final p) => p.isInheritance),
-      onChanged: (final bool value) => widget.onFieldChanged(
-        widget.parcel.copyWith(isInheritance: value),
-      ),
-    );
-    final Widget delegate = ToggleFieldRow(
-      label: 'holdings.fields.delegate'.tr(),
-      value: widget.parcel.isDelegate,
-      activeLabel: 'holdings.fields.delegate'.tr(),
-      inactiveLabel: 'holdings.fields.not_delegate'.tr(),
-      isModified: _isModified((final p) => p.isDelegate),
-      onChanged: (final bool value) =>
-          value ? _enableDelegate(context) : _disableDelegate(),
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -295,8 +296,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
             ),
           ),
         ),
-        verticalSpacing(8),
-        _pairRow(inheritance, delegate),
         verticalSpacing(8),
         ownership,
         verticalSpacing(8),

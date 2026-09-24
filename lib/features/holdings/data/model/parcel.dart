@@ -1,3 +1,5 @@
+import 'parcel_holding_identity.dart';
+
 /// One row of the merged holdings workbook (`البيانات المجمعة` sheet).
 /// A holding ID can legitimately repeat across several parcels — this
 /// class represents a single parcel row, not a deduplicated holding.
@@ -194,6 +196,10 @@ class Parcel {
     return trimmed.isEmpty || trimmed == '-' || trimmed == '-1';
   }
 
+  /// A deliberate zero means the parcel is not attached to a registered
+  /// holding, rather than being an ordinary holding whose number is zero.
+  bool get isZeroHoldingId => holdingId.trim() == '0';
+
   /// Broader than [isHoldingIdPending] — also flags a literal `"0"`
   /// رقم الحيازة as missing/lost data (a field worker reported this counts
   /// as data loss, distinct from `"-1"`'s deliberate "I don't have the
@@ -215,9 +221,13 @@ class Parcel {
   /// until given a real number — grouping by it directly would silently
   /// merge unrelated new people into one search result/detail screen, so
   /// pending records group by their own unique [id] instead.
-  String get groupKey => isHoldingIdPending
-      ? 'pending:${personId ?? pendingGroupId ?? id}'
-      : holdingId;
+  String get groupKey => ParcelHoldingIdentity.groupKey(
+        id: id,
+        holdingId: holdingId,
+        personId: personId,
+        pendingGroupId: pendingGroupId,
+        holderName: holderName,
+      );
 
   /// Whether a required text/choice field actually has a value — blank,
   /// whitespace-only, and the literal `"-"` placeholder (used elsewhere for
