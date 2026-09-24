@@ -36,8 +36,8 @@ class AppRouter {
         return _buildRoute(const AboutScreen(), settings);
       case Routes.cityPicker:
         return _buildRoute<CitySnapshot>(
-          BlocProvider<CityPickerCubit>(
-            create: (final _) => getIt<CityPickerCubit>(),
+          BlocProvider<CityPickerCubit>.value(
+            value: getIt<CityPickerCubit>(),
             child: const CityPickerScreen(),
           ),
           settings,

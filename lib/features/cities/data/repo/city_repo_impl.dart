@@ -1,4 +1,5 @@
 import '../../../../core/storage/key_value_store.dart';
+import '../local/city_catalog_store.dart';
 import '../local/city_snapshot_cache.dart';
 import '../model/cached_city_meta.dart';
 import '../model/city.dart';
@@ -12,15 +13,25 @@ class CityRepoImpl implements CityRepo {
     required final CityRemoteDataSource dataSource,
     required final CitySnapshotCache cache,
     required final KeyValueStore keyValueStore,
+    final CityCatalogStore catalogStore = const CityCatalogStore(),
   })  : _dataSource = dataSource,
         _cache = cache,
-        _keyValueStore = keyValueStore;
+        _keyValueStore = keyValueStore,
+        _catalogStore = catalogStore;
 
   static const String _activeCityIdKey = 'active_city_id';
 
   final CityRemoteDataSource _dataSource;
   final CitySnapshotCache _cache;
   final KeyValueStore _keyValueStore;
+  final CityCatalogStore _catalogStore;
+
+  @override
+  Future<List<City>> loadCachedPublishedCities() => _catalogStore.load();
+
+  @override
+  Future<void> savePublishedCities(final List<City> cities) =>
+      _catalogStore.save(cities);
 
   @override
   Future<List<City>> listPublishedCities() => _dataSource.listPublishedCities();
@@ -52,6 +63,10 @@ class CityRepoImpl implements CityRepo {
   @override
   Future<CitySnapshot?> loadCachedCity(final String cityId) =>
       _cache.load(cityId);
+
+  @override
+  Future<void> activateCachedCity(final String cityId) =>
+      _keyValueStore.setString(_activeCityIdKey, cityId);
 
   @override
   Future<CitySnapshot?> loadActiveCachedSnapshot() async {

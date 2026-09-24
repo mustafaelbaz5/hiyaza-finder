@@ -13,11 +13,13 @@ class CityTile extends StatelessWidget {
     super.key,
     required this.city,
     required this.onTap,
+    this.isCached = false,
     this.isDownloading = false,
   });
 
   final City city;
   final VoidCallback onTap;
+  final bool isCached;
   final bool isDownloading;
 
   /// Short badge label for [city.associationType] — `null` when the
@@ -74,6 +76,16 @@ class CityTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (isCached) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'cities.picker.cached'.tr(),
+                      style: AppTextStyles.font12Bold.copyWith(
+                        color: AppColors.primary200,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
                   if (city.directorate != null || typeLabel != null) ...[
                     const SizedBox(height: 6),
                     Wrap(

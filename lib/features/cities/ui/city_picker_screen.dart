@@ -41,7 +41,6 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<CityPickerCubit>().loadCities();
     _searchController.addListener(() {
       if (_query == _searchController.text) return;
       setState(() => _query = _searchController.text);
@@ -94,153 +93,212 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
         final bool isTablet = constraints.maxWidth >= 600;
         final double horizontalPadding = isTablet ? rw(64) : rw(16);
 
-        return Scaffold(
-          backgroundColor: colors.background,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                verticalSpacing(16),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const AppBackButton(),
-                          horizontalSpacing(12),
-                          Expanded(
-                            child: Text(
-                              'cities.picker.title'.tr(),
-                              style: AppTextStyles.font20Bold.copyWith(
-                                color: colors.textPrimary,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                      verticalSpacing(16),
-                      CustomTextForm(
-                        hintText: 'cities.picker.search_hint'.tr(),
-                        controller: _searchController,
-                        isRTL: true,
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colors.iconSecondary,
-                        ),
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                icon: Icon(Icons.close_rounded,
-                                    color: colors.iconSecondary),
-                                tooltip: 'holdings.search.clear'.tr(),
-                                onPressed: () => _searchController.clear(),
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-                verticalSpacing(12),
-                Expanded(
-                  child: BlocBuilder<CityPickerCubit, CityPickerState>(
-                    builder: (final BuildContext context,
-                        final CityPickerState state) {
-                      if (state.status == CityPickerStatus.loading) {
-                        return CityPickerLoadingList(
-                            horizontalPadding: horizontalPadding);
-                      }
-
-                      if (state.status == CityPickerStatus.error &&
-                          state.cities.isEmpty) {
-                        return CityListErrorState(
-                          message: state.errorMessage ?? 'errors.unknown'.tr(),
-                          onRetry: () =>
-                              context.read<CityPickerCubit>().loadCities(),
-                        );
-                      }
-
-                      if (state.cities.isEmpty) {
-                        return CityListEmptyState(
-                          icon: Icons.location_city_rounded,
-                          title: 'cities.picker.empty'.tr(),
-                        );
-                      }
-
-                      final List<City> filtered = _filter(state.cities);
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_query.isNotEmpty)
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                      horizontal: horizontalPadding)
-                                  .copyWith(bottom: rh(8)),
+        return BlocListener<CityPickerCubit, CityPickerState>(
+          listener: (final BuildContext context, final CityPickerState state) {
+            if (state.status == CityPickerStatus.error &&
+                state.cities.isNotEmpty &&
+                state.errorMessage != null) {
+              context.showErrorSnackBar(state.errorMessage!);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: colors.background,
+            body: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  verticalSpacing(16),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const AppBackButton(),
+                            horizontalSpacing(12),
+                            Expanded(
                               child: Text(
-                                'cities.picker.results_count'.tr(
-                                  namedArgs: {
-                                    'count': filtered.length.toString()
-                                  },
-                                ),
-                                style: AppTextStyles.font12Regular.copyWith(
-                                  color: colors.textHint,
+                                'cities.picker.title'.tr(),
+                                style: AppTextStyles.font20Bold.copyWith(
+                                  color: colors.textPrimary,
                                 ),
                                 textAlign: TextAlign.right,
                               ),
                             ),
-                          Expanded(
-                            child: filtered.isEmpty
-                                ? CityListEmptyState(
-                                    icon: Icons.search_off_rounded,
-                                    title: 'cities.picker.no_results'.tr(
-                                      namedArgs: {'query': _query.trim()},
-                                    ),
-                                    subtitle:
-                                        'cities.picker.no_results_hint'.tr(),
-                                  )
-                                : AbsorbPointer(
-                                    absorbing: _downloadingCity != null,
-                                    child: ListView.builder(
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal: horizontalPadding,
-                                      ).copyWith(bottom: rh(24)),
-                                      itemCount: filtered.length,
-                                      itemBuilder: (final BuildContext context,
-                                          final int i) {
-                                        final City city = filtered[i];
-                                        return CityTile(
-                                          key: ValueKey<String>(city.id),
-                                          city: city,
-                                          isDownloading:
-                                              _downloadingCity?.id == city.id,
-                                          onTap: () => _pick(city),
-                                        )
-                                            .animate(
-                                                key: ValueKey<String>(
-                                                    '${city.id}-anim'))
-                                            .fadeIn(
-                                              duration: 200.ms,
-                                              delay: (i * 20).ms,
-                                            )
-                                            .slideY(
-                                              begin: 0.06,
-                                              end: 0,
-                                              duration: 200.ms,
-                                              delay: (i * 20).ms,
-                                              curve: Curves.easeOutCubic,
-                                            );
-                                      },
-                                    ),
-                                  ),
+                          ],
+                        ),
+                        verticalSpacing(16),
+                        CustomTextForm(
+                          hintText: 'cities.picker.search_hint'.tr(),
+                          controller: _searchController,
+                          isRTL: true,
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: colors.iconSecondary,
                           ),
-                        ],
-                      );
-                    },
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: Icon(Icons.close_rounded,
+                                      color: colors.iconSecondary),
+                                  tooltip: 'holdings.search.clear'.tr(),
+                                  onPressed: () => _searchController.clear(),
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  verticalSpacing(12),
+                  Expanded(
+                    child: BlocBuilder<CityPickerCubit, CityPickerState>(
+                      builder: (final BuildContext context,
+                          final CityPickerState state) {
+                        if (state.status == CityPickerStatus.loading) {
+                          return CityPickerLoadingList(
+                              horizontalPadding: horizontalPadding);
+                        }
+
+                        if (state.status == CityPickerStatus.error &&
+                            state.cities.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh:
+                                context.read<CityPickerCubit>().refreshCities,
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(height: rh(120)),
+                                CityListErrorState(
+                                  message: state.errorMessage ??
+                                      'errors.unknown'.tr(),
+                                  onRetry: context
+                                      .read<CityPickerCubit>()
+                                      .refreshCities,
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        if (state.cities.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh:
+                                context.read<CityPickerCubit>().refreshCities,
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(height: rh(120)),
+                                CityListEmptyState(
+                                  icon: Icons.location_city_rounded,
+                                  title: 'cities.picker.empty'.tr(),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final List<City> filtered = _filter(state.cities);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_query.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.symmetric(
+                                        horizontal: horizontalPadding)
+                                    .copyWith(bottom: rh(8)),
+                                child: Text(
+                                  'cities.picker.results_count'.tr(
+                                    namedArgs: {
+                                      'count': filtered.length.toString()
+                                    },
+                                  ),
+                                  style: AppTextStyles.font12Regular.copyWith(
+                                    color: colors.textHint,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                            Expanded(
+                              child: filtered.isEmpty
+                                  ? RefreshIndicator(
+                                      onRefresh: context
+                                          .read<CityPickerCubit>()
+                                          .refreshCities,
+                                      child: ListView(
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        children: [
+                                          SizedBox(height: rh(120)),
+                                          CityListEmptyState(
+                                            icon: Icons.search_off_rounded,
+                                            title:
+                                                'cities.picker.no_results'.tr(
+                                              namedArgs: {
+                                                'query': _query.trim()
+                                              },
+                                            ),
+                                            subtitle:
+                                                'cities.picker.no_results_hint'
+                                                    .tr(),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : RefreshIndicator(
+                                      onRefresh: context
+                                          .read<CityPickerCubit>()
+                                          .refreshCities,
+                                      child: AbsorbPointer(
+                                        absorbing: _downloadingCity != null,
+                                        child: ListView.builder(
+                                          physics:
+                                              const AlwaysScrollableScrollPhysics(),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: horizontalPadding,
+                                          ).copyWith(bottom: rh(24)),
+                                          itemCount: filtered.length,
+                                          itemBuilder:
+                                              (final BuildContext context,
+                                                  final int i) {
+                                            final City city = filtered[i];
+                                            return CityTile(
+                                              key: ValueKey<String>(city.id),
+                                              city: city,
+                                              isCached: state.cachedCityIds
+                                                  .contains(city.id),
+                                              isDownloading:
+                                                  _downloadingCity?.id ==
+                                                      city.id,
+                                              onTap: () => _pick(city),
+                                            )
+                                                .animate(
+                                                    key: ValueKey<String>(
+                                                        '${city.id}-anim'))
+                                                .fadeIn(
+                                                  duration: 200.ms,
+                                                  delay: (i * 20).ms,
+                                                )
+                                                .slideY(
+                                                  begin: 0.06,
+                                                  end: 0,
+                                                  duration: 200.ms,
+                                                  delay: (i * 20).ms,
+                                                  curve: Curves.easeOutCubic,
+                                                );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

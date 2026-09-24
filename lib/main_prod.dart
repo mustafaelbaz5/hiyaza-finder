@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:path_provider/path_provider.dart';
 import 'core/di/dependency_injection.dart';
+import 'features/cities/logic/cubit/city_picker_cubit.dart';
 import 'core/localization/localization_manager.dart';
 import 'core/widgets/error_screen.dart';
 import 'hiyaza_finder_app.dart';
@@ -40,6 +41,7 @@ Future<void> _bootstrap() async {
         : HydratedStorageDirectory((await getTemporaryDirectory()).path),
   );
   await setUpDependencies();
+  unawaited(getIt<CityPickerCubit>().initialize());
   runApp(
     EasyLocalization(
       supportedLocales: LocalizationManager.supportedLocales,

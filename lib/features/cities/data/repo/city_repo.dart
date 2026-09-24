@@ -3,6 +3,10 @@ import '../model/city.dart';
 import '../model/city_snapshot.dart';
 
 abstract class CityRepo {
+  Future<List<City>> loadCachedPublishedCities();
+
+  Future<void> savePublishedCities(final List<City> cities);
+
   /// Cities the app is allowed to offer for download — `published` only,
   /// enforced both by this query and by RLS server-side.
   Future<List<City>> listPublishedCities();
@@ -18,6 +22,8 @@ abstract class CityRepo {
   Future<CitySnapshot?> loadActiveCachedSnapshot();
 
   Future<CitySnapshot?> loadCachedCity(final String cityId);
+
+  Future<void> activateCachedCity(final String cityId);
 
   /// The server's current `data_version` for [cityId] — used to compare
   /// against a cached snapshot's stored version.

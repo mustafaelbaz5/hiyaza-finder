@@ -8,6 +8,10 @@ import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_picker_cubit.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_state.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_edit_tracker.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
@@ -31,6 +35,12 @@ class _FakeCityRepo implements CityRepo {
   Object? listError;
 
   @override
+  Future<List<City>> loadCachedPublishedCities() async => const <City>[];
+
+  @override
+  Future<void> savePublishedCities(final List<City> cities) async {}
+
+  @override
   Future<List<City>> listPublishedCities() async {
     if (listError != null) throw listError!;
     return const <City>[
@@ -47,7 +57,11 @@ class _FakeCityRepo implements CityRepo {
       dataVersion: city.dataVersion,
       downloadedAt: DateTime(2026),
       parcels: const <Parcel>[
-        Parcel(id: 'h1', holdingId: '101', holderName: 'محمد', basinName: 'البشيط'),
+        Parcel(
+            id: 'h1',
+            holdingId: '101',
+            holderName: 'محمد',
+            basinName: 'البشيط'),
       ],
     );
   }
@@ -56,10 +70,17 @@ class _FakeCityRepo implements CityRepo {
   Future<CitySnapshot?> loadActiveCachedSnapshot() async => null;
 
   @override
+  Future<CitySnapshot?> loadCachedCity(final String cityId) async => null;
+
+  @override
+  Future<void> activateCachedCity(final String cityId) async {}
+
+  @override
   Future<int> remoteDataVersion(final String cityId) async => 1;
 
   @override
-  Future<List<CachedCityMeta>> listCachedCities() async => const <CachedCityMeta>[];
+  Future<List<CachedCityMeta>> listCachedCities() async =>
+      const <CachedCityMeta>[];
 
   @override
   Future<void> deleteCachedCity(final String cityId) async {}
@@ -74,11 +95,16 @@ void main() {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     holdingsRepository = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
+      editTracker: LocalEditTracker(store: store),
+      completionStore: ParcelCompletionStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
   });
 
   test('loadCities emits loaded with the fetched cities', () async {
-    final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
+    final CityPickerCubit cubit =
+        CityPickerCubit(cityRepository, holdingsRepository);
     await cubit.loadCities();
 
     expect(cubit.state.status, CityPickerStatus.loaded);
@@ -88,15 +114,19 @@ void main() {
 
   test('loadCities emits error on failure', () async {
     cityRepository.listError = UnauthorizedException(message: 'nope');
-    final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
+    final CityPickerCubit cubit =
+        CityPickerCubit(cityRepository, holdingsRepository);
     await cubit.loadCities();
 
     expect(cubit.state.status, CityPickerStatus.error);
     expect(cubit.state.errorMessage, 'nope');
   });
 
-  test('downloadAndActivate returns the snapshot and populates HoldingsRepository', () async {
-    final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
+  test(
+      'downloadAndActivate returns the snapshot and populates HoldingsRepository',
+      () async {
+    final CityPickerCubit cubit =
+        CityPickerCubit(cityRepository, holdingsRepository);
     const City city =
         City(id: 'c1', name: 'مدينة اختبار', isPublished: true, dataVersion: 1);
 
@@ -108,9 +138,11 @@ void main() {
     expect(holdingsRepository.parcels.first.holdingId, '101');
   });
 
-  test('downloadAndActivate returns null and surfaces the error on failure', () async {
+  test('downloadAndActivate returns null and surfaces the error on failure',
+      () async {
     cityRepository.downloadError = UnauthorizedException(message: 'denied');
-    final CityPickerCubit cubit = CityPickerCubit(cityRepository, holdingsRepository);
+    final CityPickerCubit cubit =
+        CityPickerCubit(cityRepository, holdingsRepository);
     const City city =
         City(id: 'c1', name: 'مدينة اختبار', isPublished: true, dataVersion: 1);
 

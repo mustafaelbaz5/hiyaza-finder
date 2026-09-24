@@ -121,7 +121,8 @@ class ExportService {
   }
 
   List<xlsx.CellValue> _rowFor(final Parcel p) {
-    String text(final String? value) => value?.trim().isNotEmpty ?? false ? value!.trim() : '-';
+    String text(final String? value) =>
+        value?.trim().isNotEmpty ?? false ? value!.trim() : '-';
     xlsx.CellValue cell(final String? value) => xlsx.TextCellValue(text(value));
     xlsx.CellValue numberCell(final double? value) =>
         value == null ? xlsx.TextCellValue('-') : xlsx.DoubleCellValue(value);
@@ -138,7 +139,9 @@ class ExportService {
       numberCell(p.feddan),
       numberCell(p.qirat),
       numberCell(p.sahm),
-      cell(p.basinCode == null ? p.basinName : '${p.basinCode} - ${p.basinName ?? ''}'),
+      cell(p.basinCode == null
+          ? p.basinName
+          : '${p.basinCode} - ${p.basinName ?? ''}'),
       cell(p.usageType),
       cell(p.cropType),
       cell(p.growthStages),

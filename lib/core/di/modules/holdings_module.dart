@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import '../../../features/holdings/data/local/bulk_edit_service.dart';
 import '../../../features/holdings/data/local/local_added_parcels_store.dart';
 import '../../../features/holdings/data/local/local_edit_tracker.dart';
+import '../../../features/holdings/data/local/parcel_completion_store.dart';
 import '../../../features/holdings/data/local/notes_list_service.dart';
 import '../../../features/holdings/data/local/parcel_edit_overlay.dart';
 import '../../../features/holdings/data/local/parcel_edits_store.dart';
@@ -32,6 +33,9 @@ void registerHoldingsModule(final GetIt getIt) {
     () => LocalEditTracker(store: getIt<KeyValueStore>()),
   );
   getIt.registerLazySingleton(
+    () => ParcelCompletionStore(store: getIt<KeyValueStore>()),
+  );
+  getIt.registerLazySingleton(
     () => ParcelIdOverridesStore(store: getIt<KeyValueStore>()),
   );
   getIt.registerLazySingleton(
@@ -46,10 +50,13 @@ void registerHoldingsModule(final GetIt getIt) {
       bulkEditService: getIt(),
       addedParcelsStore: getIt(),
       editTracker: getIt(),
+      completionStore: getIt(),
       jazlaRepo: getIt(),
       idOverridesStore: getIt(),
     ),
   );
-  getIt.registerLazySingleton<HoldingsReader>(() => getIt<HoldingsRepository>());
-  getIt.registerLazySingleton<HoldingsWriter>(() => getIt<HoldingsRepository>());
+  getIt
+      .registerLazySingleton<HoldingsReader>(() => getIt<HoldingsRepository>());
+  getIt
+      .registerLazySingleton<HoldingsWriter>(() => getIt<HoldingsRepository>());
 }

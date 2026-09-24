@@ -95,6 +95,7 @@
       "no_results": "لا توجد نتائج لـ \"{query}\"",
       "no_results_hint": "جرّب كلمة بحث مختلفة",
       "results_count": "{count} مدينة"
+      ,"cached": "محملة على الجهاز"
     },
     "stale_banner": {
       "message": "توجد بيانات أحدث على الخادم",

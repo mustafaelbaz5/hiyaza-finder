@@ -31,6 +31,12 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 
 class _FakeCityRepo implements CityRepo {
   @override
+  Future<List<City>> loadCachedPublishedCities() async => const <City>[];
+
+  @override
+  Future<void> savePublishedCities(final List<City> cities) async {}
+
+  @override
   Future<CitySnapshot> downloadCity(final City city) =>
       throw UnimplementedError();
 
@@ -42,6 +48,9 @@ class _FakeCityRepo implements CityRepo {
 
   @override
   Future<CitySnapshot?> loadCachedCity(final String cityId) async => null;
+
+  @override
+  Future<void> activateCachedCity(final String cityId) async {}
 
   @override
   Future<int> remoteDataVersion(final String cityId) =>

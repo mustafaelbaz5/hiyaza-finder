@@ -2,6 +2,7 @@ import '../local/bulk_edit_service.dart';
 import '../local/holding_search_service.dart';
 import '../local/local_added_parcels_store.dart';
 import '../local/local_holding_note_policy.dart';
+import '../local/parcel_completion_store.dart';
 import '../local/local_edit_tracker.dart';
 import '../local/parcel_dataset_state.dart';
 import '../local/parcel_edit_overlay.dart';
@@ -42,6 +43,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final JazlaRepo? jazlaRepo,
     final ParcelIdOverridesStore idOverridesStore =
         const ParcelIdOverridesStore(),
+    final ParcelCompletionStore completionStore = const ParcelCompletionStore(),
   })  : _dataset = datasetState ??
             ParcelDatasetState(
               editsStore: editsStore,
@@ -53,7 +55,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         _addedParcelsStore = addedParcelsStore,
         _editTracker = editTracker,
         _uuid = uuid,
-        _jazlaRepo = jazlaRepo;
+        _jazlaRepo = jazlaRepo,
+        _completionStore = completionStore;
 
   final ParcelDatasetState _dataset;
   final ParcelQueryService _queryService;
@@ -62,6 +65,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   final LocalEditTracker _editTracker;
   final Uuid _uuid;
   final JazlaRepo? _jazlaRepo;
+  final ParcelCompletionStore _completionStore;
 
   @override
   List<Parcel> get parcels => _dataset.parcels;
@@ -89,6 +93,8 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     final List<Basin> basins = const <Basin>[],
   }) async {
     final List<Parcel> localParcels = await _loadLocalParcels(cityId);
+    final Map<String, ParcelCompletionStatus> completionStatuses =
+        await _loadCompletionStatuses(cityId);
     final Map<String, Parcel> mergedById = <String, Parcel>{
       for (final Parcel parcel in parcels) parcel.id: parcel,
     };
@@ -96,7 +102,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       // Local state wins if a snapshot already contains the same id.
       mergedById[parcel.id] = parcel;
     }
-    final List<Parcel> result = await _dataset.adopt(
+    final List<Parcel> adopted = await _dataset.adopt(
       cityId,
       mergedById.values.toList(),
       cityName: cityName,
@@ -106,6 +112,16 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       associationSubtype: associationSubtype,
       basins: basins,
     );
+    final List<Parcel> result = adopted.map((final Parcel parcel) {
+      final ParcelCompletionStatus? status = completionStatuses[parcel.id];
+      return status == null
+          ? parcel
+          : parcel.copyWith(
+              completedAt: status.completedAt,
+              completedBy: status.completedBy,
+            );
+    }).toList();
+    _dataset.replaceAll(result);
     return result;
   }
 
@@ -117,6 +133,19 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
       return await _addedParcelsStore.loadAll(cityId);
     } catch (_) {
       return const <Parcel>[];
+    }
+  }
+
+  Future<Map<String, ParcelCompletionStatus>> _loadCompletionStatuses(
+    final String cityId,
+  ) async {
+    try {
+      return await _completionStore.load(cityId);
+    } catch (_) {
+      // Local persistence must never prevent an imported snapshot from
+      // opening. The next successful completion/reopen operation can restore
+      // the store when the platform storage is available again.
+      return <String, ParcelCompletionStatus>{};
     }
   }
 
@@ -295,6 +324,11 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     await _dataset.persistEdits();
     _dataset.rebuildBorderIndex();
     if (cityId != null) await _addedParcelsStore.delete(id, cityId);
+    if (cityId != null) {
+      try {
+        await _completionStore.remove(cityId, id);
+      } catch (_) {}
+    }
     return true;
   }
 
@@ -323,6 +357,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     if (current.isFieldAdded) {
       await _addedParcelsStore.renameId(parcelId, updated, cityId);
     }
+    try {
+      await _completionStore.renameParcelId(cityId, parcelId, newId);
+    } catch (_) {}
     await _jazlaRepo?.replaceParcelId(parcelId, newId, cityId);
     return updated;
   }
@@ -358,9 +395,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     if (cityId != null) await _editTracker.markEdited(edited.id, cityId);
   }
 
-  /// Marks [parcelId] completed/reopened — the field-worker signal. Writes
-  /// `completed_at`/`completed_by` only; never touches the edit overlay,
-  /// since completion status is not part of the editable-field overlay.
+  /// Marks [parcelId] completed/reopened and persists the local review state.
   Future<Parcel?> setParcelCompleted(
     final String parcelId, {
     required final bool completed,
@@ -382,6 +417,25 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
         completedBy: updated.completedBy,
       ),
     );
+    final String? cityId = _dataset.activeCityId;
+    if (cityId != null) {
+      if (completed && completedAt != null) {
+        try {
+          await _completionStore.saveCompleted(
+            cityId,
+            parcelId,
+            ParcelCompletionStatus(
+              completedAt: completedAt,
+              completedBy: updated.completedBy,
+            ),
+          );
+        } catch (_) {}
+      } else {
+        try {
+          await _completionStore.remove(cityId, parcelId);
+        } catch (_) {}
+      }
+    }
     return updated;
   }
 

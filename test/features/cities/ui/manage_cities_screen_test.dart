@@ -9,6 +9,12 @@ import 'package:hiyaza_finder/features/cities/ui/manage_cities_screen.dart';
 import '../../../support/localized_widget_test_harness.dart';
 
 class _FakeCityRepo implements CityRepo {
+  @override
+  Future<List<City>> loadCachedPublishedCities() async => const <City>[];
+
+  @override
+  Future<void> savePublishedCities(final List<City> cities) async {}
+
   List<CachedCityMeta> cachedCities = const <CachedCityMeta>[];
   bool throwOnList = false;
   final List<String> deletedCityIds = <String>[];
@@ -23,20 +29,29 @@ class _FakeCityRepo implements CityRepo {
   Future<CitySnapshot?> loadActiveCachedSnapshot() async => null;
 
   @override
+  Future<CitySnapshot?> loadCachedCity(final String cityId) async => null;
+
+  @override
+  Future<void> activateCachedCity(final String cityId) async {}
+
+  @override
   Future<void> deleteCachedCity(final String cityId) async {
     deletedCityIds.add(cityId);
-    cachedCities =
-        cachedCities.where((final CachedCityMeta c) => c.cityId != cityId).toList();
+    cachedCities = cachedCities
+        .where((final CachedCityMeta c) => c.cityId != cityId)
+        .toList();
   }
 
   @override
-  Future<CitySnapshot> downloadCity(final City city) => throw UnimplementedError();
+  Future<CitySnapshot> downloadCity(final City city) =>
+      throw UnimplementedError();
 
   @override
   Future<List<City>> listPublishedCities() => throw UnimplementedError();
 
   @override
-  Future<int> remoteDataVersion(final String cityId) => throw UnimplementedError();
+  Future<int> remoteDataVersion(final String cityId) =>
+      throw UnimplementedError();
 }
 
 CachedCityMeta _city(final String id, final String name) => CachedCityMeta(
