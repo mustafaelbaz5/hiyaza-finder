@@ -161,19 +161,24 @@ class _BorderCell extends StatelessWidget {
     final String displayText =
         (text == null || text!.trim().isEmpty) ? '—' : text!;
 
+    final Color navigableSurface = Color.alphaBlend(
+      AppColors.blue200.withValues(alpha: 0.14),
+      colors.surfaceVariant,
+    );
+
     return InkWell(
       onTap: isNavigable ? onTap : null,
       borderRadius: BorderRadius.circular(10),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
         decoration: BoxDecoration(
-          color: isNavigable
-              ? AppColors.primary50.withValues(alpha: 0.25)
-              : colors.surface,
+          color: isNavigable ? navigableSurface : colors.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isNavigable ? AppColors.primary200 : colors.border,
+            color: isNavigable ? AppColors.blue200 : colors.border,
             width: isNavigable ? 1.5 : 1,
           ),
         ),
@@ -197,9 +202,9 @@ class _BorderCell extends StatelessWidget {
                 if (isNavigable) ...[
                   const SizedBox(width: 2),
                   const Icon(
-                    Icons.touch_app_rounded,
+                    Icons.open_in_new_rounded,
                     size: 11,
-                    color: AppColors.primary200,
+                    color: AppColors.blue200,
                   ),
                 ],
               ],
@@ -208,12 +213,12 @@ class _BorderCell extends StatelessWidget {
             Text(
               displayText,
               style: AppTextStyles.font14SemiBold.copyWith(
-                color: isNavigable ? AppColors.primary300 : colors.textPrimary,
+                color: colors.textPrimary,
                 fontSize: 12,
                 decoration: isNavigable
                     ? TextDecoration.underline
                     : TextDecoration.none,
-                decorationColor: AppColors.primary200,
+                decorationColor: AppColors.blue200,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

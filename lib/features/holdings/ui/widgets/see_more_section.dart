@@ -245,14 +245,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       value: widget.parcel.basinCode,
       placeholder: '-1',
       isModified: _isModified((final p) => p.basinCode),
-      onEdit: () => _editText(
-        context,
-        title: 'holdings.fields.basin_code'.tr(),
-        initialValue: widget.parcel.basinCode ?? '',
-        apply: (final String v) => widget.parcel.copyWith(
-          basinCode: v.isEmpty ? null : v,
-        ),
-      ),
     );
     final bool isReformCity =
         widget.associationType == AssociationType.agriculturalReform;
@@ -287,14 +279,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           label: 'holdings.fields.association_name'.tr(),
           value: widget.parcel.associationName,
           isModified: _isModified((final p) => p.associationName),
-          onEdit: () => _editText(
-            context,
-            title: 'holdings.fields.association_name'.tr(),
-            initialValue: widget.parcel.associationName ?? '',
-            apply: (final String v) => widget.parcel.copyWith(
-              associationName: v.isEmpty ? null : v,
-            ),
-          ),
         ),
         verticalSpacing(8),
         ownership,

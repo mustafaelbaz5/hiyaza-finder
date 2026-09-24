@@ -164,7 +164,6 @@ class ParcelDetailCard extends StatelessWidget {
           CustomTextButton.outlined(
               text: 'holdings.detail.copy_all'.tr(),
               onPressed: () => _copyAll(context)),
-          // CopyAllButton(onTap: () => _copyAll(context)),
           verticalSpacing(12),
           verticalSpacing(8),
           FieldRow(
@@ -177,6 +176,13 @@ class ParcelDetailCard extends StatelessWidget {
               context,
               title: 'holdings.detail.holding_id'.tr(),
               initialValue: parcel.isHoldingIdPending ? '' : parcel.holdingId,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: false,
+                signed: false,
+              ),
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
               apply: (final String v) => parcel.copyWith(holdingId: v),
             ),
           ),
@@ -333,12 +339,14 @@ class ParcelDetailCard extends StatelessWidget {
     required final String initialValue,
     required final Parcel Function(String value) apply,
     final TextInputType? keyboardType,
+    final List<TextInputFormatter>? inputFormatters,
   }) async {
     final String? value = await showTextInputDialog(
       context,
       title: title,
       initialValue: initialValue,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
     );
     if (value == null) return;
     onFieldChanged(apply(value));
