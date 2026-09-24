@@ -67,25 +67,25 @@ class CityTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    city.name,
-                    style: AppTextStyles.font16SemiBold.copyWith(
-                      color: colors.textPrimary,
-                    ),
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (isCached) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      'cities.picker.cached'.tr(),
-                      style: AppTextStyles.font12Bold.copyWith(
-                        color: AppColors.primary200,
+                  Row(
+                    children: [
+                      Text(
+                        city.name,
+                        style: AppTextStyles.font16SemiBold.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                        textAlign: TextAlign.right,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
+                      horizontalSpacing(2),
+                      if (isCached) ...[
+                        const SizedBox(height: 5),
+                        Icon(Icons.download_done_rounded,
+                            size: 16, color: colors.successBackground),
+                      ],
+                    ],
+                  ),
                   if (city.directorate != null || typeLabel != null) ...[
                     const SizedBox(height: 6),
                     Wrap(
@@ -137,8 +137,8 @@ class CityTile extends StatelessWidget {
               )
             else
               const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 14,
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
                 color: AppColors.primary200,
               ),
           ],
