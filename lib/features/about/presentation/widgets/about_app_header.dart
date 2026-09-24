@@ -1,11 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import '../../../../core/utils/app_assets.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/app_assets.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 
@@ -26,7 +25,7 @@ class AboutAppHeader extends StatelessWidget {
             color: AppColors.grey500.withAlpha(50),
             borderRadius: BorderRadius.circular(18),
           ),
-          child: SvgPicture.asset(AppAssets.appLogoSvg),
+          child: Image.asset(AppAssets.appLogoImage, fit: BoxFit.cover),
         ),
         horizontalSpacing(16),
         Column(
@@ -40,7 +39,7 @@ class AboutAppHeader extends StatelessWidget {
             ),
             verticalSpacing(2),
             Text(
-              'v${AppConfig.appVersion} (${AppConfig.buildNumber})',
+              'V${AppConfig.appVersion} (${AppConfig.buildNumber})',
               style: AppTextStyles.font14Regular.copyWith(
                 color: colors.textHint,
               ),
@@ -60,7 +59,8 @@ class AboutAppHeader extends StatelessWidget {
                 ),
                 child: Text(
                   'about.app_info.development_badge'.tr(),
-                  style: AppTextStyles.font12Bold.copyWith(color: AppColors.white),
+                  style:
+                      AppTextStyles.font12Bold.copyWith(color: AppColors.white),
                 ),
               ),
             ],

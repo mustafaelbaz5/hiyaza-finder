@@ -59,7 +59,7 @@ class AppIdentityHeader extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  'v${AppConfig.appVersion}',
+                  'V${AppConfig.appVersion}',
                   style: AppTextStyles.font12Regular.copyWith(
                     color: colors.textSecondary,
                   ),

@@ -21,10 +21,10 @@ class AboutConstants {
 
   // ── Support ─────────────────────────────────────────────────
   static String get bugReportSubject =>
-      '[${AppConfig.appName}] Bug Report - v${AppConfig.appVersion}';
+      '[${AppConfig.appName}] Bug Report - V${AppConfig.appVersion}';
 
   static String get bugReportBody =>
-      'App Version: v${AppConfig.appVersion} (${AppConfig.buildNumber})\n'
+      'App Version: V${AppConfig.appVersion} (${AppConfig.buildNumber})\n'
       'Platform: ${AppConfig.appName}\n\n'
       'Describe the bug:\n';
 

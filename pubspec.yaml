@@ -1,7 +1,7 @@
 name: hiyaza_finder
 description: "Hiyaza app"
 publish_to: "none"
-version: 1.1.7+7
+version: 1.1.8+8
 
 # ----------------------------------------------------------------
 # ENVIRONMENT
@@ -118,9 +118,13 @@ flutter:
 # ----------------------------------------------------------------
 # APP ICON
 # ----------------------------------------------------------------
-flutter_icons:
+flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/images/logo.png"
   adaptive_icon_background: "#ff20643f"
   adaptive_icon_foreground: "assets/images/logo.png"
+  windows:
+    generate: true
+    image_path: "assets/images/logo.png"
+    icon_size: 48

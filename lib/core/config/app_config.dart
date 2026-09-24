@@ -14,10 +14,10 @@ class AppConfig {
   // App Info
   static const String appName = String.fromEnvironment(
     'APP_NAME',
-    defaultValue: 'HiyazaFinder Dev',
+    defaultValue: 'HiyazaFinder',
   );
-  static const String appVersion = '1.1.7';
-  static const String buildNumber = '16';
+  static const String appVersion = '1.1.8';
+  static const String buildNumber = '17';
 
   // Developer Info
   static const String developerName = 'Mustafa Elbaz';
