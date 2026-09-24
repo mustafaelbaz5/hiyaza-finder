@@ -52,6 +52,7 @@ class SeeMoreSection extends StatefulWidget {
 
 class SeeMoreSectionState extends State<SeeMoreSection> {
   bool _expanded = false;
+
   /// See `ParcelDetailCard._isModified` — same comparison, against
   /// [SeeMoreSection.originalParcel] instead.
   bool _isModified<T>(final T Function(Parcel p) current) {
@@ -156,9 +157,12 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
             child: Row(
               children: [
-                Icon(Icons.tune_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.tune_rounded,
+                    size: 18, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Expanded(child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
+                Expanded(
+                    child: Text(label,
+                        style: Theme.of(context).textTheme.labelLarge)),
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 180),
@@ -187,6 +191,48 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       );
 
   Widget _buildPrimaryFields(final BuildContext context) {
+    final Widget usage = FieldRow(
+      label: 'holdings.fields.usage_type'.tr(),
+      value: widget.parcel.usageType,
+      isModified: _isModified((final p) => p.usageType),
+      onEdit: () => _editDropdown(
+        context,
+        title: 'holdings.fields.usage_type'.tr(),
+        initialValue: widget.parcel.usageType,
+        options: Parcel.usageTypeOptions,
+        allowClear: false,
+        apply: (final String? value) => UsageTypeNotesSync.applyUsageTypeChange(
+          widget.parcel,
+          value ?? Parcel.defaultUsageType,
+        ),
+      ),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        usage,
+      ],
+    );
+  }
+
+  /// Secondary fields stay behind See More to keep the primary detail card
+  /// compact. The toggle row intentionally comes before its linked
+  /// ownership/reform field so the relationship is clear to the user.
+  Widget _buildFields(final BuildContext context) {
+    final Widget basinCode = FieldRow(
+      label: 'holdings.fields.basin_code'.tr(),
+      value: widget.parcel.basinCode,
+      placeholder: '-1',
+      isModified: _isModified((final p) => p.basinCode),
+      onEdit: () => _editText(
+        context,
+        title: 'holdings.fields.basin_code'.tr(),
+        initialValue: widget.parcel.basinCode ?? '',
+        apply: (final String v) => widget.parcel.copyWith(
+          basinCode: v.isEmpty ? null : v,
+        ),
+      ),
+    );
     final bool isReformCity =
         widget.associationType == AssociationType.agriculturalReform;
     final Widget ownership = isReformCity
@@ -213,22 +259,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
               CreditTypeNotesSync.applyOwnershipToggle(widget.parcel, value),
             ),
           );
-    final Widget usage = FieldRow(
-      label: 'holdings.fields.usage_type'.tr(),
-      value: widget.parcel.usageType,
-      isModified: _isModified((final p) => p.usageType),
-      onEdit: () => _editDropdown(
-        context,
-        title: 'holdings.fields.usage_type'.tr(),
-        initialValue: widget.parcel.usageType,
-        options: Parcel.usageTypeOptions,
-        allowClear: false,
-        apply: (final String? value) => UsageTypeNotesSync.applyUsageTypeChange(
-          widget.parcel,
-          value ?? Parcel.defaultUsageType,
-        ),
-      ),
-    );
     final Widget inheritance = ToggleFieldRow(
       label: 'holdings.fields.inheritance'.tr(),
       value: widget.parcel.isInheritance,
@@ -248,61 +278,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       onChanged: (final bool value) =>
           value ? _enableDelegate(context) : _disableDelegate(),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        usage,
-        verticalSpacing(8),
-        ownership,
-        verticalSpacing(8),
-        _pairRow(inheritance, delegate),
-      ],
-    );
-  }
-
-  /// Secondary fields only. Usage, credit/reform, and inheritance/delegate
-  /// remain in the primary detail area because they are used frequently.
-  Widget _buildFields(final BuildContext context) {
-    final Widget basinCode = FieldRow(
-      label: 'holdings.fields.basin_code'.tr(),
-      value: widget.parcel.basinCode,
-      placeholder: '-1',
-      isModified: _isModified((final p) => p.basinCode),
-      onEdit: () => _editText(
-        context,
-        title: 'holdings.fields.basin_code'.tr(),
-        initialValue: widget.parcel.basinCode ?? '',
-        apply: (final String v) => widget.parcel.copyWith(
-          basinCode: v.isEmpty ? null : v,
-        ),
-      ),
-    );
-    final Widget directorate = FieldRow(
-      label: 'holdings.fields.directorate'.tr(),
-      value: widget.parcel.directorate,
-      isModified: _isModified((final p) => p.directorate),
-      onEdit: () => _editText(
-        context,
-        title: 'holdings.fields.directorate'.tr(),
-        initialValue: widget.parcel.directorate ?? '',
-        apply: (final String v) => widget.parcel.copyWith(
-          directorate: v.isEmpty ? null : v,
-        ),
-      ),
-    );
-    final Widget administration = FieldRow(
-      label: 'holdings.fields.administration'.tr(),
-      value: widget.parcel.administration,
-      isModified: _isModified((final p) => p.administration),
-      onEdit: () => _editText(
-        context,
-        title: 'holdings.fields.administration'.tr(),
-        initialValue: widget.parcel.administration ?? '',
-        apply: (final String v) => widget.parcel.copyWith(
-          administration: v.isEmpty ? null : v,
-        ),
-      ),
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -321,25 +296,33 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
           ),
         ),
         verticalSpacing(8),
-        _pairRow(directorate, administration),
+        _pairRow(inheritance, delegate),
+        verticalSpacing(8),
+        ownership,
+        verticalSpacing(8),
+        basinCode,
         verticalSpacing(8),
         _pairRow(
-          basinCode,
           FieldRow(
-          label: 'holdings.fields.land_number'.tr(),
-          value: widget.parcel.landNumber,
-          isModified: _isModified((final p) => p.landNumber),
-          onEdit: () => _editText(
-            context,
-            title: 'holdings.fields.land_number'.tr(),
-            initialValue: widget.parcel.landNumber ?? '',
-            apply: (final String v) => widget.parcel.copyWith(
-              landNumber: v.isEmpty ? null : v,
+            label: 'holdings.detail.holdings_count'.tr(),
+            value: widget.parcel.holdingsCount?.toString() ?? '-',
+          ),
+          FieldRow(
+            label: 'holdings.fields.land_number'.tr(),
+            value: widget.parcel.landNumber,
+            isModified: _isModified((final p) => p.landNumber),
+            onEdit: () => _editText(
+              context,
+              title: 'holdings.fields.land_number'.tr(),
+              initialValue: widget.parcel.landNumber ?? '',
+              apply: (final String v) => widget.parcel.copyWith(
+                landNumber: v.isEmpty ? null : v,
+              ),
             ),
           ),
-          ),
         ),
-        if (UsageType.fromLabel(widget.parcel.usageType) == UsageType.agricultural) ...[
+        if (UsageType.fromLabel(widget.parcel.usageType) ==
+            UsageType.agricultural) ...[
           verticalSpacing(8),
           FieldRow(
             label: 'holdings.fields.growth_stages'.tr(),
@@ -355,13 +338,6 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
                 growthStages: v ?? Parcel.defaultGrowthStage,
               ),
             ),
-          ),
-        ],
-        if (widget.parcel.holdingsCount != null) ...[
-          verticalSpacing(8),
-          FieldRow(
-            label: 'holdings.detail.holdings_count'.tr(),
-            value: widget.parcel.holdingsCount.toString(),
           ),
         ],
       ],

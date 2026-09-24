@@ -490,7 +490,10 @@
       "code_title": "كود الحوض",
       "total_parcels": "إجمالي القطع",
       "total_area": "المساحة الكلية",
-      "total_area_value": "{value} م²"
+      "total_area_value": "{value} م²",
+      "copy_name": "نسخ اسم الحوض",
+      "copy_code": "نسخ كود الحوض",
+      "open_parcels": "عرض قطع الحوض"
     }
   },
   "settings": {

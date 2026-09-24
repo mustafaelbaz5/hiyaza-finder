@@ -200,7 +200,7 @@ class ParcelIdChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: isLoading ? null : onCopy,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: <Widget>[
               isLoading

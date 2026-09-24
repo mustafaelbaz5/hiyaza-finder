@@ -125,7 +125,7 @@ class CityTile extends StatelessWidget {
               )
             else
               const Icon(
-                Icons.arrow_forward_ios_rounded,
+                Icons.arrow_back_ios_new_rounded,
                 size: 14,
                 color: AppColors.primary200,
               ),

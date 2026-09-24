@@ -68,8 +68,8 @@ class CityToolTile extends StatelessWidget {
           ),
           horizontalSpacing(8),
           Icon(
-            Icons.chevron_left_rounded,
-            size: 21,
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
             color: colors.textHint,
           ),
         ],

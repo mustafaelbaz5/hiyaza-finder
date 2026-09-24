@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:hiyaza_finder/core/widgets/custom_text_button.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
@@ -17,16 +18,14 @@ import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
 import '../../data/local/copy_validation.dart';
-import '../../data/local/credit_type_notes_sync.dart';
 import '../../data/local/field_change_tracker.dart';
-import '../../data/local/usage_type_notes_sync.dart';
+import '../../data/local/parcel_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
 import '../../data/repo/holdings_repository.dart';
 import 'area_summary_card.dart';
 import 'basin_picker.dart';
 import 'border_compass.dart';
-import 'copy_all_button.dart';
 import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'notes_field.dart';
@@ -153,7 +152,7 @@ class ParcelDetailCard extends StatelessWidget {
                 : (final String? borderText) =>
                     resolveBorderMatch!(borderText) != null,
           ),
-          verticalSpacing(10),
+          verticalSpacing(8),
           _ReviewIdChip(
             id: parcel.id,
             onCopy: _copyId,
@@ -161,8 +160,11 @@ class ParcelDetailCard extends StatelessWidget {
             onRegenerate:
                 onRegenerate != null ? () => _confirmRegenerate(context) : null,
           ),
-          verticalSpacing(10),
-          CopyAllButton(onTap: () => _copyAll(context)),
+          verticalSpacing(12),
+          CustomTextButton.outlined(
+              text: 'holdings.detail.copy_all'.tr(),
+              onPressed: () => _copyAll(context)),
+          // CopyAllButton(onTap: () => _copyAll(context)),
           verticalSpacing(12),
           verticalSpacing(8),
           FieldRow(
@@ -267,21 +269,8 @@ class ParcelDetailCard extends StatelessWidget {
             isModified: _isModified((final p) => p.notes),
             associationType: associationType,
             onChanged: (final List<String> notes) {
-              Parcel updated = parcel.copyWith(notes: notes);
-              for (final String removedNote in parcel.notes
-                  .where((final String n) => !notes.contains(n))) {
-                updated = Parcel.reformTypeOptions.contains(removedNote) ||
-                        removedNote == CreditTypeNotesSync.awqafNote
-                    ? CreditTypeNotesSync.applyNoteRemoved(updated, removedNote)
-                    : UsageTypeNotesSync.applyNoteRemoved(updated, removedNote);
-              }
-              onFieldChanged(updated);
+              onFieldChanged(ParcelNotesSync.applyChangedNotes(parcel, notes));
             },
-            onNoteAdded: (final String note) => onFieldChanged(
-              Parcel.reformTypeOptions.contains(note)
-                  ? CreditTypeNotesSync.applyReformNoteSelected(parcel, note)
-                  : UsageTypeNotesSync.applyNoteAdded(parcel, note),
-            ),
           ),
         ],
       ),

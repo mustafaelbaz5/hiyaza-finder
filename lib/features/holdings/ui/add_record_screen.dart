@@ -2,9 +2,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../data/local/area_calculator.dart';
-import '../data/local/credit_type_notes_sync.dart';
 import '../data/local/field_change_tracker.dart';
-import '../data/local/usage_type_notes_sync.dart';
+import '../data/local/parcel_notes_sync.dart';
 import '../data/model/parcel.dart';
 import '../data/model/usage_type.dart';
 import '../data/repo/holdings_repository.dart';
@@ -17,12 +16,10 @@ import 'widgets/field_edit_dialogs.dart';
 import 'widgets/field_row.dart';
 import 'widgets/notes_field.dart';
 import 'widgets/required_field_gaps.dart';
-import 'widgets/responsive_fields_wrap.dart';
 import 'widgets/toggle_field_row.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/errors/error_message_resolver.dart';
-import '../../../core/themes/app_colors.dart';
 import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
@@ -31,7 +28,6 @@ import '../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
 import '../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../core/widgets/ui/dialogs/text_input_dialog.dart';
-
 
 /// Navigation arguments for the add-record route.
 class AddRecordArgs {
@@ -393,209 +389,194 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                     ),
                   )
                 else
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
-                      bottom: rh(24),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        ResponsiveFieldsWrap(
-                          children: [
-                            FieldRow(
-                              label: '${'holdings.fields.holding_id'.tr()} *',
-                              value: _parcel.holdingId,
-                              isModified: _isModified((final p) => p.holdingId),
-                              onEdit: () => _editText(
-                                context,
-                                title: 'holdings.fields.holding_id'.tr(),
-                                initialValue: _parcel.holdingId,
-                                // Deliberately left as-is when cleared — no
-                                // longer silently resets to "-1". The field
-                                // is required (`Parcel
-                                // .hasRequiredFieldsFilled`), so Save simply
-                                // stays disabled until the user types
-                                // something; typing "-1" themselves is still
-                                // allowed as an explicit sortable
-                                // placeholder, just never auto-applied.
-                                apply: (final String v) =>
-                                    _parcel.copyWith(holdingId: v),
-                              ),
-                            ),
-                            FieldRow(
-                              label: '${'holdings.fields.holder_name'.tr()} *',
-                              value: _parcel.holderName,
-                              isModified:
-                                  _isModified((final p) => p.holderName),
-                              onEdit: () => _editText(
-                                context,
-                                title: 'holdings.fields.holder_name'.tr(),
-                                initialValue: _parcel.holderName ?? '',
-                                apply: (final String v) => _parcel.copyWith(
-                                  holderName: v.isEmpty ? null : v,
-                                ),
-                              ),
-                            ),
-                            FieldRow(
-                              label: 'holdings.fields.basin_name'.tr(),
-                              value: _parcel.basinName,
-                              isModified: _isModified((final p) => p.basinName),
-                              onEdit: () => _editBasin(context),
-                            ),
-                            FieldRow(
-                              label: 'holdings.fields.land_number'.tr(),
-                              value: _parcel.landNumber,
-                              isModified:
-                                  _isModified((final p) => p.landNumber),
-                              onEdit: () => _editText(
-                                context,
-                                title: 'holdings.fields.land_number'.tr(),
-                                initialValue: _parcel.landNumber ?? '',
-                                apply: (final String v) => _parcel.copyWith(
-                                  landNumber: v.isEmpty ? null : v,
-                                ),
-                              ),
-                            ),
-                            if (effectiveParentId != null &&
-                                _parcel.landNumber == '-1')
-                              Padding(
-                                padding: EdgeInsets.only(top: rh(4)),
-                                child: Text(
-                                  'holdings.add.land_number_hint'.tr(),
-                                  style: AppTextStyles.font12Regular.copyWith(
-                                    color: AppColors.amber300,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            FieldRow(
-                              label: 'holdings.fields.area'.tr(),
-                              value: _areaFraction(_parcel),
-                              isModified: _isModified((final p) => p.feddan) ||
-                                  _isModified((final p) => p.qirat) ||
-                                  _isModified((final p) => p.sahm),
-                              onEdit: () => _editArea(context),
-                            ),
-                            if (UsageType.fromLabel(_parcel.usageType) ==
-                                UsageType.agricultural)
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: rw(16)).copyWith(
+                        bottom: rh(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
                               FieldRow(
-                                label: '${'holdings.fields.crop_type'.tr()} *',
-                                value: _parcel.cropType,
+                                label: '${'holdings.fields.holding_id'.tr()} *',
+                                value: _parcel.holdingId,
                                 isModified:
-                                    _isModified((final p) => p.cropType),
-                                onEdit: () => _editCropType(context),
-                              ),
-                            NotesField(
-                              notes: _parcel.notes,
-                              isModified: _isModified((final p) => p.notes),
-                              associationType: getIt<HoldingsRepository>()
-                                  .activeAssociationType,
-                              // Diffs against the current list so removed
-                              // quick-select notes revert their field to
-                              // its default in the same update — mirrors
-                              // `ParcelDetailCard`'s identical pattern.
-                              onChanged: (final List<String> notes) =>
-                                  setState(() {
-                                Parcel updated =
-                                    _parcel.copyWith(notes: notes);
-                                for (final String removedNote in _parcel.notes
-                                    .where((final String n) =>
-                                        !notes.contains(n))) {
-                                  updated = Parcel.reformTypeOptions
-                                              .contains(removedNote) ||
-                                          removedNote ==
-                                              CreditTypeNotesSync.awqafNote
-                                      ? CreditTypeNotesSync.applyNoteRemoved(
-                                          updated, removedNote)
-                                      : UsageTypeNotesSync.applyNoteRemoved(
-                                          updated, removedNote);
-                                }
-                                _parcel = updated;
-                              }),
-                              onNoteAdded: (final String note) => setState(
-                                () => _parcel = Parcel.reformTypeOptions
-                                        .contains(note)
-                                    ? CreditTypeNotesSync
-                                        .applyReformNoteSelected(
-                                            _parcel, note)
-                                    : UsageTypeNotesSync.applyNoteAdded(
-                                        _parcel, note),
-                              ),
-                            ),
-                            if (effectiveParentId == null)
-                              FieldRow(
-                                label: 'holdings.fields.national_id'.tr(),
-                                value: _parcel.nationalId,
-                                isModified:
-                                    _isModified((final p) => p.nationalId),
+                                    _isModified((final p) => p.holdingId),
                                 onEdit: () => _editText(
                                   context,
-                                  title: 'holdings.fields.national_id'.tr(),
-                                  initialValue: _parcel.nationalId ?? '',
-                                  keyboardType: TextInputType.number,
-                                  apply: (final String v) => _parcel.copyWith(
-                                    nationalId: v.isEmpty ? null : v,
-                                  ),
+                                  title: 'holdings.fields.holding_id'.tr(),
+                                  initialValue: _parcel.holdingId,
+                                  // Deliberately left as-is when cleared — no
+                                  // longer silently resets to "-1". The field
+                                  // is required (`Parcel
+                                  // .hasRequiredFieldsFilled`), so Save simply
+                                  // stays disabled until the user types
+                                  // something; typing "-1" themselves is still
+                                  // allowed as an explicit sortable
+                                  // placeholder, just never auto-applied.
+                                  apply: (final String v) =>
+                                      _parcel.copyWith(holdingId: v),
                                 ),
                               ),
-                            ToggleFieldRow(
-                              label: 'holdings.fields.inheritance'.tr(),
-                              value: _parcel.isInheritance,
-                              isModified:
-                                  _isModified((final p) => p.isInheritance),
-                              onChanged: (final bool v) => setState(
-                                () => _parcel =
-                                    _parcel.copyWith(isInheritance: v),
-                              ),
-                            ),
-                            ToggleFieldRow(
-                              label: 'holdings.fields.delegate'.tr(),
-                              value: _parcel.isDelegate,
-                              isModified:
-                                  _isModified((final p) => p.isDelegate),
-                              onChanged: (final bool v) => v
-                                  ? _enableDelegate(context)
-                                  : setState(_disableDelegate),
-                            ),
-                            if (_parcel.isDelegate)
                               FieldRow(
-                                label: 'holdings.fields.owner_name'.tr(),
-                                value: _parcel.ownerName,
+                                label:
+                                    '${'holdings.fields.holder_name'.tr()} *',
+                                value: _parcel.holderName,
                                 isModified:
-                                    _isModified((final p) => p.ownerName),
+                                    _isModified((final p) => p.holderName),
                                 onEdit: () => _editText(
                                   context,
-                                  title: 'holdings.fields.owner_name'.tr(),
-                                  initialValue: _parcel.ownerName ?? '',
+                                  title: 'holdings.fields.holder_name'.tr(),
+                                  initialValue: _parcel.holderName ?? '',
                                   apply: (final String v) => _parcel.copyWith(
-                                    ownerName: v.isEmpty ? null : v,
+                                    holderName: v.isEmpty ? null : v,
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
-                        verticalSpacing(24),
-                        CustomTextButton(
-                          text: 'holdings.add.save'.tr(),
-                          onPressed: _canSave ? _save : null,
-                          isLoading: _isSaving,
-                          size: CustomButtonSize.large,
-                        ),
-                        for (final String message in _missingFieldMessages) ...[
-                          verticalSpacing(8),
-                          Text(
-                            message,
-                            style: AppTextStyles.font12Regular.copyWith(
-                              color: colors.textHint,
-                            ),
-                            textAlign: TextAlign.center,
+                              if (effectiveParentId == null) ...[
+                                verticalSpacing(8),
+                                FieldRow(
+                                  label: 'holdings.fields.national_id'.tr(),
+                                  value: _parcel.nationalId,
+                                  isModified:
+                                      _isModified((final p) => p.nationalId),
+                                  onEdit: () => _editText(
+                                    context,
+                                    title: 'holdings.fields.national_id'.tr(),
+                                    initialValue: _parcel.nationalId ?? '',
+                                    keyboardType: TextInputType.number,
+                                    apply: (final String v) => _parcel.copyWith(
+                                      nationalId: v.isEmpty ? null : v,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              verticalSpacing(8),
+                              FieldRow(
+                                label: 'holdings.fields.basin_name'.tr(),
+                                value: _parcel.basinName,
+                                isModified:
+                                    _isModified((final p) => p.basinName),
+                                onEdit: () => _editBasin(context),
+                              ),
+                              verticalSpacing(8),
+                              FieldRow(
+                                label: 'holdings.fields.area'.tr(),
+                                value: _areaFraction(_parcel),
+                                isModified:
+                                    _isModified((final p) => p.feddan) ||
+                                        _isModified((final p) => p.qirat) ||
+                                        _isModified((final p) => p.sahm),
+                                onEdit: () => _editArea(context),
+                              ),
+                              if (UsageType.fromLabel(_parcel.usageType) ==
+                                  UsageType.agricultural) ...[
+                                verticalSpacing(8),
+                                FieldRow(
+                                  label:
+                                      '${'holdings.fields.crop_type'.tr()} *',
+                                  value: _parcel.cropType,
+                                  isModified:
+                                      _isModified((final p) => p.cropType),
+                                  onEdit: () => _editCropType(context),
+                                ),
+                              ],
+                              verticalSpacing(8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ToggleFieldRow(
+                                      label: 'holdings.fields.inheritance'.tr(),
+                                      value: _parcel.isInheritance,
+                                      isModified: _isModified(
+                                        (final p) => p.isInheritance,
+                                      ),
+                                      onChanged: (final bool v) => setState(
+                                        () => _parcel = _parcel.copyWith(
+                                          isInheritance: v,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  horizontalSpacing(8),
+                                  Expanded(
+                                    child: ToggleFieldRow(
+                                      label: 'holdings.fields.delegate'.tr(),
+                                      value: _parcel.isDelegate,
+                                      isModified: _isModified(
+                                        (final p) => p.isDelegate,
+                                      ),
+                                      onChanged: (final bool v) => v
+                                          ? _enableDelegate(context)
+                                          : setState(_disableDelegate),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_parcel.isDelegate) ...[
+                                verticalSpacing(8),
+                                FieldRow(
+                                  label: 'holdings.fields.owner_name'.tr(),
+                                  value: _parcel.ownerName,
+                                  isModified:
+                                      _isModified((final p) => p.ownerName),
+                                  onEdit: () => _editText(
+                                    context,
+                                    title: 'holdings.fields.owner_name'.tr(),
+                                    initialValue: _parcel.ownerName ?? '',
+                                    apply: (final String v) => _parcel.copyWith(
+                                      ownerName: v.isEmpty ? null : v,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              verticalSpacing(8),
+                              NotesField(
+                                notes: _parcel.notes,
+                                isModified: _isModified((final p) => p.notes),
+                                associationType: getIt<HoldingsRepository>()
+                                    .activeAssociationType,
+                                // Diffs against the current list so removed
+                                // quick-select notes revert their field to
+                                // its default in the same update — mirrors
+                                // `ParcelDetailCard`'s identical pattern.
+                                onChanged: (final List<String> notes) =>
+                                    setState(
+                                  () => _parcel =
+                                      ParcelNotesSync.applyChangedNotes(
+                                    _parcel,
+                                    notes,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                          verticalSpacing(24),
+                          CustomTextButton(
+                            text: 'holdings.add.save'.tr(),
+                            onPressed: _canSave ? _save : null,
+                            isLoading: _isSaving,
+                            size: CustomButtonSize.large,
+                          ),
+                          for (final String message
+                              in _missingFieldMessages) ...[
+                            verticalSpacing(8),
+                            Text(
+                              message,
+                              style: AppTextStyles.font12Regular.copyWith(
+                                color: colors.textHint,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

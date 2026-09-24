@@ -11,6 +11,21 @@ class CreditTypeNotesSync {
 
   static const String awqafNote = 'الأرض تابعة لهيئة الأوقاف المصرية';
 
+  static bool isLinkedNote(final String note) =>
+      note == awqafNote || Parcel.reformTypeOptions.contains(note);
+
+  /// Applies a linked ownership/reform note selected from the notes list.
+  /// Ordinary notes are intentionally handled by the usage-note policy.
+  static Parcel applyNoteAdded(final Parcel parcel, final String note) {
+    if (note == awqafNote) {
+      return applyOwnershipToggle(parcel, true);
+    }
+    if (Parcel.reformTypeOptions.contains(note)) {
+      return applyReformNoteSelected(parcel, note);
+    }
+    return parcel;
+  }
+
   /// The اوقاف toggle for a credit city — ملك (default) removes the note,
   /// أوقاف adds it. Mirrors `UsageTypeNotesSync.applyUsageTypeChange`'s
   /// shape.
@@ -29,7 +44,8 @@ class CreditTypeNotesSync {
   /// note *is* the selection. Picking إصلاح مُملك removes every other
   /// reform-type note and adds nothing itself, since it never needs to
   /// appear in ملاحظات.
-  static Parcel applyReformNoteSelected(final Parcel parcel, final String note) {
+  static Parcel applyReformNoteSelected(
+      final Parcel parcel, final String note) {
     if (!Parcel.reformTypeOptions.contains(note)) {
       return parcel.notes.contains(note)
           ? parcel
@@ -64,7 +80,8 @@ class CreditTypeNotesSync {
     return parcel;
   }
 
-  static List<String> _addIfAbsent(final List<String> notes, final String note) =>
+  static List<String> _addIfAbsent(
+          final List<String> notes, final String note) =>
       notes.contains(note) ? notes : <String>[...notes, note];
 
   static List<String> _remove(final List<String> notes, final String note) =>

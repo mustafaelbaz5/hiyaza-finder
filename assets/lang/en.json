@@ -490,7 +490,10 @@
       "code_title": "Basin code",
       "total_parcels": "Total parcels",
       "total_area": "Total area",
-      "total_area_value": "{value} m²"
+      "total_area_value": "{value} m²",
+      "copy_name": "Copy basin name",
+      "copy_code": "Copy basin code",
+      "open_parcels": "View basin parcels"
     }
   },
   "settings": {
