@@ -30,6 +30,7 @@ import 'field_edit_dialogs.dart';
 import 'field_row.dart';
 import 'notes_field.dart';
 import 'parcel_detail_header.dart';
+import 'parcel_quick_choice_sheet.dart';
 import 'see_more_section.dart';
 
 class ParcelDetailCard extends StatelessWidget {
@@ -258,7 +259,8 @@ class ParcelDetailCard extends StatelessWidget {
               label: 'holdings.fields.crop_type'.tr(),
               value: parcel.cropType,
               isModified: _isModified((final p) => p.cropType),
-              onEdit: () => _editCropType(context),
+              onTap: () => _editCropType(context),
+              showEditAction: false,
             ),
           ],
           verticalSpacing(8),
@@ -353,14 +355,27 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _editCropType(final BuildContext context) async {
-    final ChoiceDialogResult<String>? result = await pickCropType(
+    final List<String> options = await resolveCropTypeOptions();
+    if (!context.mounted) return;
+    final String? selected = await showParcelQuickChoiceSheet(
       context,
+      title: 'holdings.fields.crop_type'.tr(),
       selected: parcel.cropType,
+      options: options,
     );
-    if (result == null) return;
-    onFieldChanged(
-      parcel.copyWith(cropType: result.isClear ? null : result.value),
-    );
+    if (selected == null || selected == parcel.cropType) return;
+    if (selected == cropTypeOtherOption) {
+      if (!context.mounted) return;
+      final ChoiceDialogResult<String>? result = await pickCropType(
+        context,
+        selected: selected,
+        options: const <String>[cropTypeOtherOption],
+      );
+      if (result == null) return;
+      onFieldChanged(parcel.copyWith(cropType: result.value));
+      return;
+    }
+    onFieldChanged(parcel.copyWith(cropType: selected));
   }
 
   Future<void> _editArea(final BuildContext context) async {

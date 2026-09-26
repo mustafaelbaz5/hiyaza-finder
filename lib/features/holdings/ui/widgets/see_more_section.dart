@@ -13,6 +13,7 @@ import '../../data/model/usage_type.dart';
 import 'delegate_owner_dialog.dart';
 import 'field_row.dart';
 import 'ownership_toggle.dart';
+import 'parcel_quick_choice_sheet.dart';
 import 'toggle_field_row.dart';
 
 /// Keeps secondary administrative fields collapsed by default so the detail
@@ -140,6 +141,19 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     widget.onFieldChanged(apply(result.isClear ? null : result.value));
   }
 
+  Future<void> _editUsageType(final BuildContext context) async {
+    final String? selected = await showParcelQuickChoiceSheet(
+      context,
+      title: 'holdings.fields.usage_type'.tr(),
+      selected: widget.parcel.usageType,
+      options: Parcel.usageTypeOptions,
+    );
+    if (selected == null || selected == widget.parcel.usageType) return;
+    widget.onFieldChanged(
+      UsageTypeNotesSync.applyUsageTypeChange(widget.parcel, selected),
+    );
+  }
+
   @override
   Widget build(final BuildContext context) {
     final String label = _expanded
@@ -195,17 +209,8 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
       label: 'holdings.fields.usage_type'.tr(),
       value: widget.parcel.usageType,
       isModified: _isModified((final p) => p.usageType),
-      onEdit: () => _editDropdown(
-        context,
-        title: 'holdings.fields.usage_type'.tr(),
-        initialValue: widget.parcel.usageType,
-        options: Parcel.usageTypeOptions,
-        allowClear: false,
-        apply: (final String? value) => UsageTypeNotesSync.applyUsageTypeChange(
-          widget.parcel,
-          value ?? Parcel.defaultUsageType,
-        ),
-      ),
+      onTap: () => _editUsageType(context),
+      showEditAction: false,
     );
     final Widget inheritance = ToggleFieldRow(
       label: 'holdings.fields.inheritance'.tr(),

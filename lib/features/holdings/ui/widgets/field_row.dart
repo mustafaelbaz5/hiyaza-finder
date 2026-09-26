@@ -16,6 +16,8 @@ class FieldRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.onEdit,
+    this.onTap,
+    this.showEditAction = true,
     this.placeholder,
     this.isModified = false,
   });
@@ -26,6 +28,16 @@ class FieldRow extends StatelessWidget {
   /// Shown as a small pencil icon beside the copy icon when non-null — lets
   /// the caller open an inline editor scoped to just this field.
   final VoidCallback? onEdit;
+
+  /// Makes the whole value portion a fast edit target.  This is useful for
+  /// high-frequency fields (such as usage and crop type) where a tiny pencil
+  /// unnecessarily slows the field workflow.  The copy control remains a
+  /// separate action.
+  final VoidCallback? onTap;
+
+  /// Keeps backwards-compatible inline editing for ordinary fields while
+  /// allowing quick-sheet fields to use their complete row as the affordance.
+  final bool showEditAction;
 
   /// Overrides [emptyPlaceholder] for this one field (e.g. كود الحوض shows
   /// "-1" specifically, while every other empty field shows "-").
@@ -64,47 +76,57 @@ class FieldRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: AppTextStyles.font12Regular.copyWith(
-                          color: colors.textSecondary,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: onTap ?? onEdit,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              label,
+                              style: AppTextStyles.font12Regular.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                              textAlign: TextAlign.right,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isModified) ...[
+                            const SizedBox(width: 4),
+                            const _ModifiedBadge(),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        displayValue,
+                        style: AppTextStyles.font14SemiBold.copyWith(
+                          color: colors.textPrimary,
                         ),
                         textAlign: TextAlign.right,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    if (isModified) ...[
-                      const SizedBox(width: 4),
-                      const _ModifiedBadge(),
                     ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  displayValue,
-                  style: AppTextStyles.font14SemiBold.copyWith(
-                    color: colors.textPrimary,
                   ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
+              ),
             ),
           ),
           Wrap(
             spacing: 4,
             children: <Widget>[
-              if (onEdit != null)
+              if (onEdit != null && showEditAction)
                 TileIconButton(
                   icon: Icons.edit_rounded,
                   onTap: onEdit!,

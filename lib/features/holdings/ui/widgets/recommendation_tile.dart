@@ -30,77 +30,79 @@ class RecommendationTile extends StatelessWidget {
           )
         : '';
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Flexible(
-                        child: Text(
-                          '$holderName$suffix',
-                          style: AppTextStyles.font16SemiBold.copyWith(
-                            color: colors.textPrimary,
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Flexible(
+                          child: Text(
+                            '$holderName$suffix',
+                            style: AppTextStyles.font16SemiBold.copyWith(
+                              color: colors.textPrimary,
+                            ),
+                            textAlign: TextAlign.right,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          textAlign: TextAlign.right,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      if (result.completedCount > 0) ...<Widget>[
-                        const SizedBox(width: 6),
-                        if (result.completedCount >= result.parcelCount)
-                          StatusBadge(
-                            icon: Icons.check_circle_rounded,
-                            label: 'holdings.detail.reviewed_badge'.tr(),
-                            color: colors.success,
-                          )
-                        else
-                          StatusBadge(
-                            icon: Icons.hourglass_bottom_rounded,
-                            label:
-                                '${result.completedCount}/${result.parcelCount}',
-                            color: AppColors.amber200,
-                          ),
+                        if (result.completedCount > 0) ...<Widget>[
+                          const SizedBox(width: 6),
+                          if (result.completedCount >= result.parcelCount)
+                            StatusBadge(
+                              icon: Icons.check_circle_rounded,
+                              label: 'holdings.detail.reviewed_badge'.tr(),
+                              color: colors.success,
+                            )
+                          else
+                            StatusBadge(
+                              icon: Icons.hourglass_bottom_rounded,
+                              label:
+                                  '${result.completedCount}/${result.parcelCount}',
+                              color: AppColors.amber200,
+                            ),
+                        ],
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '#${result.holdingId}',
-                    style: AppTextStyles.font14Regular.copyWith(
-                      color: colors.textSecondary,
                     ),
-                    textAlign: TextAlign.right,
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '#${result.holdingId}',
+                      style: AppTextStyles.font14Regular.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColors.primary200,
-            ),
-          ],
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppColors.primary200,
+              ),
+            ],
+          ),
         ),
-      ),
-    )
-        .animate(delay: animationDelay)
-        .fadeIn(duration: 220.ms)
-        .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic);
+      )
+          .animate(delay: animationDelay)
+          .fadeIn(duration: 220.ms)
+          .slideY(begin: 0.08, end: 0, curve: Curves.easeOutCubic),
+    );
   }
 }

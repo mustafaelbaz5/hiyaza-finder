@@ -37,130 +37,132 @@ class BasinCard extends StatelessWidget {
             ? (colors.textHint, Icons.circle_outlined)
             : (AppColors.amber300, Icons.circle);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: colors.border),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                horizontalSpacing(10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              basin.basinName,
-                              style: AppTextStyles.font18Bold.copyWith(
-                                color: colors.textPrimary,
-                              ),
-                              textAlign: TextAlign.right,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          _CopyButton(
-                            tooltip: 'holdings.basin.copy_name'.tr(),
-                            onTap: () => _copy(context, basin.basinName),
-                          ),
-                        ],
-                      ),
-                      if (basin.basinCode != null) ...[
-                        verticalSpacing(2),
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colors.border),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  horizontalSpacing(10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                'holdings.basin.code_label'.tr(
-                                  namedArgs: {'code': basin.basinCode!},
-                                ),
-                                style: AppTextStyles.font12Regular.copyWith(
-                                  color: colors.textSecondary,
+                                basin.basinName,
+                                style: AppTextStyles.font18Bold.copyWith(
+                                  color: colors.textPrimary,
                                 ),
                                 textAlign: TextAlign.right,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             _CopyButton(
-                              tooltip: 'holdings.basin.copy_code'.tr(),
-                              onTap: () => _copy(context, basin.basinCode!),
+                              tooltip: 'holdings.basin.copy_name'.tr(),
+                              onTap: () => _copy(context, basin.basinName),
                             ),
                           ],
                         ),
+                        if (basin.basinCode != null) ...[
+                          verticalSpacing(2),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'holdings.basin.code_label'.tr(
+                                    namedArgs: {'code': basin.basinCode!},
+                                  ),
+                                  style: AppTextStyles.font12Regular.copyWith(
+                                    color: colors.textSecondary,
+                                  ),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ),
+                              _CopyButton(
+                                tooltip: 'holdings.basin.copy_code'.tr(),
+                                onTap: () => _copy(context, basin.basinCode!),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
+                    ),
+                  ),
+                  horizontalSpacing(10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${basin.completedCount}/${basin.totalCount}',
+                        style: AppTextStyles.font16Bold.copyWith(
+                          color: dotColor,
+                        ),
+                      ),
+                      Text(
+                        'holdings.basin.total_parcels'.tr(),
+                        style: AppTextStyles.font12Regular.copyWith(
+                          color: colors.textHint,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                horizontalSpacing(10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${basin.completedCount}/${basin.totalCount}',
-                      style: AppTextStyles.font16Bold.copyWith(
-                        color: dotColor,
+                ],
+              ),
+              verticalSpacing(14),
+              BasinProgressBar(
+                progress: basin.progress,
+                isFullyCompleted: basin.isFullyCompleted,
+              ),
+              verticalSpacing(12),
+              Divider(height: 1, color: colors.border),
+              verticalSpacing(8),
+              Row(
+                children: [
+                  const Icon(Icons.arrow_back_ios_new_rounded,
+                      size: 12, color: AppColors.primary200),
+                  horizontalSpacing(6),
+                  Expanded(
+                    child: Text(
+                      'holdings.basin.open_parcels'.tr(),
+                      style: AppTextStyles.font12Bold.copyWith(
+                        color: AppColors.primary200,
                       ),
+                      textAlign: TextAlign.right,
                     ),
-                    Text(
-                      'holdings.basin.total_parcels'.tr(),
-                      style: AppTextStyles.font12Regular.copyWith(
-                        color: colors.textHint,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            verticalSpacing(14),
-            BasinProgressBar(
-              progress: basin.progress,
-              isFullyCompleted: basin.isFullyCompleted,
-            ),
-            verticalSpacing(12),
-            Divider(height: 1, color: colors.border),
-            verticalSpacing(8),
-            Row(
-              children: [
-                const Icon(Icons.arrow_back_ios_new_rounded,
-                    size: 12, color: AppColors.primary200),
-                horizontalSpacing(6),
-                Expanded(
-                  child: Text(
-                    'holdings.basin.open_parcels'.tr(),
-                    style: AppTextStyles.font12Bold.copyWith(
-                      color: AppColors.primary200,
-                    ),
-                    textAlign: TextAlign.right,
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    )
-        .animate(delay: (animationIndex * 30).ms)
-        .fadeIn(duration: 200.ms)
-        .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic);
+      )
+          .animate(delay: (animationIndex * 30).ms)
+          .fadeIn(duration: 200.ms)
+          .slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic),
+    );
   }
 
   Future<void> _copy(final BuildContext context, final String value) async {

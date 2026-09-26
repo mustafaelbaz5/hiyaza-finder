@@ -34,7 +34,7 @@ Future<ChoiceDialogResult<String>?> pickCropType(
   final List<String>? options,
 }) async {
   final List<String> resolvedOptions =
-      options ?? await _resolveCropTypeOptions();
+      options ?? await resolveCropTypeOptions();
   if (!context.mounted) return null;
   final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
     context,
@@ -60,7 +60,9 @@ Future<ChoiceDialogResult<String>?> pickCropType(
   return ChoiceDialogResult<String>.value(trimmed);
 }
 
-Future<List<String>> _resolveCropTypeOptions() async {
+/// Resolves the active city's list without exposing persistence details to
+/// parcel widgets. It also keeps the static defaults usable offline.
+Future<List<String>> resolveCropTypeOptions() async {
   final String? cityId = getIt<HoldingsRepository>().activeCityId;
   if (cityId == null) return Parcel.cropTypeOptions;
   try {
