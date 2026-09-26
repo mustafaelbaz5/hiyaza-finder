@@ -7,7 +7,7 @@ import '../../../features/cities/data/remote/city_remote_ds.dart';
 import '../../../features/cities/data/repo/city_repo.dart';
 import '../../../features/cities/data/repo/city_repo_impl.dart';
 import '../../../features/cities/logic/cubit/city_picker_cubit.dart';
-import '../../../features/holdings/data/repo/holdings_repository.dart';
+import '../../../features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../storage/key_value_store.dart';
 
 void registerCitiesModule(final GetIt getIt) {
@@ -27,6 +27,6 @@ void registerCitiesModule(final GetIt getIt) {
   );
 
   getIt.registerLazySingleton<CityPickerCubit>(
-    () => CityPickerCubit(getIt<CityRepo>(), getIt<HoldingsRepository>()),
+    () => CityPickerCubit(getIt<CityRepo>(), getIt<ParcelCatalogRepository>()),
   );
 }

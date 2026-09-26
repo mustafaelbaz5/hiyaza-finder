@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/widgets/home_top_bar.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'package:hiyaza_finder/features/home/ui/widgets/home_top_bar.dart';
 
 import '../../../../support/localized_widget_test_harness.dart';
 
@@ -11,7 +11,7 @@ import '../../../../support/localized_widget_test_harness.dart';
 /// icon (APP_UPDATES_CLAUDE.md § 9.1/9.4) — just the three navigation
 /// icons: basins page, city tools, and change city (a direct callback,
 /// since Home owns the city-picker flow itself). It also now reads the
-/// active city's name/association type directly from `HoldingsRepository`
+/// active city's name/association type directly from `ParcelCatalogRepository`
 /// (UI/UX Updates prompt "Change 3"), so every test registers one via
 /// `getIt` before pumping.
 void main() {
@@ -19,7 +19,8 @@ void main() {
 
   setUp(() async {
     await getIt.reset();
-    getIt.registerLazySingleton<HoldingsRepository>(HoldingsRepository.new);
+    getIt.registerLazySingleton<ParcelCatalogRepository>(
+        ParcelCatalogRepository.new);
   });
 
   Future<List<String?>> pumpAndCapturePushedRoutes(

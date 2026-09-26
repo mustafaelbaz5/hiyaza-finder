@@ -3,10 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'package:hiyaza_finder/features/parcel_review/ui/missing_holding_id_screen.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
@@ -27,11 +27,11 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 
 Future<void> _registerRepository(final List<Parcel> parcels) async {
   await getIt.reset();
-  final HoldingsRepository repository = HoldingsRepository(
+  final ParcelCatalogRepository repository = ParcelCatalogRepository(
     editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
   );
   await repository.loadParcelsForCity('city-1', parcels);
-  getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+  getIt.registerLazySingleton<ParcelCatalogRepository>(() => repository);
 }
 
 void main() {

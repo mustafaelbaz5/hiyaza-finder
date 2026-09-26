@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/credit_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_notes_sync.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/credit_type_notes_sync.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 void main() {
   const Parcel baseParcel = Parcel(

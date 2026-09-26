@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_completion_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -21,13 +23,16 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 }
 
 void main() {
-  late HoldingsRepository repository;
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late ParcelCatalogRepository repository;
 
   setUp(() async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    repository = HoldingsRepository(
+    repository = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
+      completionStore: ParcelCompletionStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
     await repository.loadParcelsForCity('city-1', const <Parcel>[]);
   });

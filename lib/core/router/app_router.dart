@@ -5,6 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/about/presentation/about_screen.dart';
+import 'package:hiyaza_finder/features/basins/logic/cubit/basins_cubit.dart';
+import 'package:hiyaza_finder/features/basins/logic/cubit/basin_holdings_cubit.dart';
+import 'package:hiyaza_finder/features/basins/ui/basin_screen.dart';
+import 'package:hiyaza_finder/features/basins/ui/basins_page.dart';
 import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_picker_cubit.dart';
@@ -13,21 +17,21 @@ import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/helper_tools_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/manage_cities_screen.dart';
 import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_reader.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/parcel_catalog_session.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/parcel_detail_actions.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_search_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_editor_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/basin_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/basins_page.dart';
-import 'package:hiyaza_finder/features/holdings/ui/detail_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/export_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/file_status_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/home_screen.dart';
-import 'package:hiyaza_finder/features/holdings/ui/missing_holding_id_screen.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_session.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_detail_actions.dart';
+import 'package:hiyaza_finder/features/home/logic/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_add/ui/add_record_screen.dart';
+import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'package:hiyaza_finder/features/parcel_details/ui/detail_screen.dart';
+import 'package:hiyaza_finder/features/parcel_export/ui/export_screen.dart';
+import 'package:hiyaza_finder/features/parcel_review/ui/file_status_screen.dart';
+import 'package:hiyaza_finder/features/home/ui/home_screen.dart';
+import 'package:hiyaza_finder/features/parcel_review/ui/missing_holding_id_screen.dart';
 import 'package:hiyaza_finder/features/jazla/ui/jazla_detail_screen.dart';
 import 'package:hiyaza_finder/features/jazla/ui/jazla_list_screen.dart';
 
@@ -53,23 +57,40 @@ class AppRouter {
               BlocProvider<HomeCubit>(
                 create: (final _) => HomeCubit(
                   getIt<ParcelCatalogSession>(),
-                  getIt<HoldingsReader>(),
+                  getIt<ParcelCatalogReader>(),
                   getIt<CityRepo>(),
                 )..init(),
               ),
               BlocProvider<ParcelSearchCubit>(
-                create: (final _) => ParcelSearchCubit(getIt<HoldingsReader>()),
+                create: (final _) =>
+                    ParcelSearchCubit(getIt<ParcelCatalogReader>()),
               ),
             ],
-            child: const HomeScreen(),
+            child:
+                HomeScreen(readerFactory: () => getIt<ParcelCatalogReader>()),
           ),
           settings,
         );
       case Routes.basins:
-        return _buildRoute(const BasinsPage(), settings);
+        return _buildRoute(
+          BlocProvider<BasinsCubit>(
+            create: (final _) => BasinsCubit(getIt<ParcelCatalogReader>()),
+            child: const BasinsPage(),
+          ),
+          settings,
+        );
       case Routes.basin:
         final String basinName = settings.arguments as String? ?? '';
-        return _buildRoute(BasinScreen(basinName: basinName), settings);
+        return _buildRoute(
+          BlocProvider<BasinHoldingsCubit>(
+            create: (final _) => BasinHoldingsCubit(
+              getIt<ParcelCatalogReader>(),
+              basinName: basinName,
+            ),
+            child: BasinScreen(basinName: basinName),
+          ),
+          settings,
+        );
       case Routes.holdingDetail:
         final List<Parcel> parcels =
             (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
@@ -78,7 +99,7 @@ class AppRouter {
             create: (final _) => getIt<ParcelEditorCubit>(),
             child: DetailScreen(
               parcels: parcels,
-              reader: getIt<HoldingsReader>(),
+              reader: getIt<ParcelCatalogReader>(),
               actions: getIt<ParcelDetailActions>(),
             ),
           ),
@@ -90,6 +111,7 @@ class AppRouter {
         return _buildRoute<Parcel?>(
           AddRecordScreen(
             initialParcel: args.initialParcel,
+            repository: getIt<ParcelCatalogRepository>(),
             parentHoldingId: args.parentHoldingId,
           ),
           settings,

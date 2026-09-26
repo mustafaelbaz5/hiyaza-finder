@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/clipboard_formatter.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_details/data/local/clipboard_formatter.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 void main() {
   const ClipboardFormatter formatter = ClipboardFormatter();

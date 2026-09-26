@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_edit_outcome.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_writer.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_editor_cubit.dart';
-import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_editor_state.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_edit_outcome.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_writer.dart';
+import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_state.dart';
 
-class _RecordingWriter implements HoldingsWriter {
+class _RecordingWriter implements ParcelCatalogWriter {
   Parcel? savedParcel;
   Object? error;
 

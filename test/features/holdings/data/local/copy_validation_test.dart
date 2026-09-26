@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/copy_validation.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_details/data/local/copy_validation.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 void main() {
   test('non-agricultural usage can copy without crop data', () {

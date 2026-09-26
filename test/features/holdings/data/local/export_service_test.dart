@@ -1,7 +1,7 @@
 import 'package:excel/excel.dart' as xlsx;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/export_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_export/data/local/export_service.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 void main() {
   const ExportService service = ExportService();

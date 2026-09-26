@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/bulk_edit_service.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/local/bulk_edit_service.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 void main() {
   const BulkEditService service = BulkEditService();

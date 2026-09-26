@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/ui/detail_screen.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'package:hiyaza_finder/features/parcel_details/ui/detail_screen.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
@@ -47,7 +47,7 @@ void main() {
       'reviewed via Copy ID — the list is no longer re-sorted to sink '
       'reviewed parcels to the bottom', (final tester) async {
     await getIt.reset();
-    final HoldingsRepository repository = HoldingsRepository(
+    final ParcelCatalogRepository repository = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
     );
     const List<Parcel> parcels = <Parcel>[
@@ -71,7 +71,7 @@ void main() {
       ),
     ];
     await repository.loadParcelsForCity('city-1', parcels);
-    getIt.registerLazySingleton<HoldingsRepository>(() => repository);
+    getIt.registerLazySingleton<ParcelCatalogRepository>(() => repository);
 
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;

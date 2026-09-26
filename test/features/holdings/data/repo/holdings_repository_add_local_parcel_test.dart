@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -24,11 +24,11 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late HoldingsRepository repository;
+  late ParcelCatalogRepository repository;
 
   setUp(() async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    repository = HoldingsRepository(
+    repository = ParcelCatalogRepository(
       datasetState: null,
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
@@ -40,7 +40,7 @@ void main() {
 
   test('returns null when no city is active', () async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    final HoldingsRepository noCityRepo = HoldingsRepository(
+    final ParcelCatalogRepository noCityRepo = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
       idOverridesStore: ParcelIdOverridesStore(store: store),
@@ -67,7 +67,7 @@ void main() {
     expect(repository.parcels.single.holderName, 'محمد');
     expect(
       repository.parcels.single.notes,
-      contains(HoldingsRepository.unregisteredHoldingNote),
+      contains(ParcelCatalogRepository.unregisteredHoldingNote),
     );
   });
 
@@ -81,11 +81,12 @@ void main() {
       parentHoldingId: parent.id,
     ))!;
 
-    expect(sibling.notes, contains(HoldingsRepository.unregisteredHoldingNote));
+    expect(sibling.notes,
+        contains(ParcelCatalogRepository.unregisteredHoldingNote));
     expect(
       sibling.notes.where(
         (final String note) =>
-            note == HoldingsRepository.unregisteredHoldingNote,
+            note == ParcelCatalogRepository.unregisteredHoldingNote,
       ),
       hasLength(1),
     );
@@ -97,7 +98,7 @@ void main() {
       const Parcel(
         holdingId: '878',
         holderName: 'محمد',
-        nationalId: HoldingsRepository.unregisteredNationalId,
+        nationalId: ParcelCatalogRepository.unregisteredNationalId,
       ),
     ))!;
 
@@ -108,7 +109,7 @@ void main() {
 
     expect(
       sibling.notes,
-      contains(HoldingsRepository.unregisteredHoldingNote),
+      contains(ParcelCatalogRepository.unregisteredHoldingNote),
     );
   });
 
@@ -166,14 +167,14 @@ void main() {
       const Parcel(
         holdingId: '0',
         holderName: 'أحمد',
-        nationalId: HoldingsRepository.unregisteredNationalId,
+        nationalId: ParcelCatalogRepository.unregisteredNationalId,
       ),
     );
     final Parcel? parcelB = await repository.addLocalParcel(
       const Parcel(
         holdingId: '0',
         holderName: 'أحمد',
-        nationalId: HoldingsRepository.unregisteredNationalId,
+        nationalId: ParcelCatalogRepository.unregisteredNationalId,
         holdingsCount: 2,
       ),
       parentHoldingId: parcelA!.id,
@@ -188,7 +189,7 @@ void main() {
   test('locally added parcels are restored when the city is loaded again',
       () async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    final HoldingsRepository first = HoldingsRepository(
+    final ParcelCatalogRepository first = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
       idOverridesStore: ParcelIdOverridesStore(store: store),
@@ -198,11 +199,11 @@ void main() {
       const Parcel(
         holdingId: '0',
         holderName: 'أحمد',
-        nationalId: HoldingsRepository.unregisteredNationalId,
+        nationalId: ParcelCatalogRepository.unregisteredNationalId,
       ),
     ))!;
 
-    final HoldingsRepository second = HoldingsRepository(
+    final ParcelCatalogRepository second = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
       idOverridesStore: ParcelIdOverridesStore(store: store),

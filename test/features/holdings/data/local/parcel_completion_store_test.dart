@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_completion_store.dart';
 
 class _MemoryStore implements KeyValueStore {
   final Map<String, String> values = <String, String>{};

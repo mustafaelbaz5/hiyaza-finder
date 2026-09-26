@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_edit_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_edit_outcome.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_edit_tracker.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_completion_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_edit_outcome.dart';
+import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -26,7 +26,7 @@ class _InMemoryKeyValueStore implements KeyValueStore {
 }
 
 void main() {
-  late HoldingsRepository repository;
+  late ParcelCatalogRepository repository;
 
   final List<Parcel> seed = List<Parcel>.generate(
     5,
@@ -35,7 +35,7 @@ void main() {
 
   setUp(() async {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    repository = HoldingsRepository(
+    repository = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       editTracker: LocalEditTracker(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
