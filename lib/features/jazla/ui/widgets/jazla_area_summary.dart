@@ -9,7 +9,8 @@ import '../../../holdings/data/model/parcel.dart';
 import '../../data/model/jazla.dart';
 
 class JazlaAreaSummary extends StatelessWidget {
-  const JazlaAreaSummary({super.key, required this.jazla, required this.parcels});
+  const JazlaAreaSummary(
+      {super.key, required this.jazla, required this.parcels});
 
   final Jazla jazla;
   final List<Parcel> parcels;
@@ -20,18 +21,23 @@ class JazlaAreaSummary extends StatelessWidget {
     final double added = parcels.fold<double>(
       0,
       (final double total, final Parcel parcel) =>
-          total + (AreaCalculator.totalSqm(
+          total +
+          (AreaCalculator.totalSqm(
                 feddan: parcel.feddan,
                 qirat: parcel.qirat,
                 sahm: parcel.sahm,
-              ) ?? 0),
+              ) ??
+              0),
     );
-    final int missing = parcels.where((final Parcel parcel) =>
-        AreaCalculator.totalSqm(
-          feddan: parcel.feddan,
-          qirat: parcel.qirat,
-          sahm: parcel.sahm,
-        ) == null).length;
+    final int missing = parcels
+        .where((final Parcel parcel) =>
+            AreaCalculator.totalSqm(
+              feddan: parcel.feddan,
+              qirat: parcel.qirat,
+              sahm: parcel.sahm,
+            ) ==
+            null)
+        .length;
     final double? target = jazla.targetAreaSqm;
     final double difference = target == null ? 0 : target - added;
     final bool exceeded = target != null && difference < 0;
@@ -64,8 +70,12 @@ class JazlaAreaSummary extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.w700))),
-              Text('${parcels.length} ${'jazla.parcel_count_short'.tr()}', style: TextStyle(color: colors.textSecondary)),
+              Expanded(
+                  child: Text(status,
+                      style: TextStyle(
+                          color: statusColor, fontWeight: FontWeight.w700))),
+              Text('${parcels.length} ${'jazla.parcel_count_short'.tr()}',
+                  style: TextStyle(color: colors.textSecondary)),
             ],
           ),
           verticalSpacing(10),
@@ -73,10 +83,25 @@ class JazlaAreaSummary extends StatelessWidget {
             spacing: 20,
             runSpacing: 8,
             children: [
-              _Metric(label: 'jazla.area.added'.tr(), value: _format(added), color: colors.textPrimary),
-              if (target != null) _Metric(label: 'jazla.area.target'.tr(), value: _format(target), color: colors.textPrimary),
-              if (target != null) _Metric(label: status, value: _format(difference.abs()), color: statusColor),
-              if (missing > 0) _Metric(label: 'jazla.area.missing'.tr(), value: missing.toString(), color: AppColors.amber200),
+              _Metric(
+                  label: 'jazla.area.added'.tr(),
+                  value: _format(added),
+                  color: colors.textPrimary),
+              if (target != null)
+                _Metric(
+                    label: 'jazla.area.target'.tr(),
+                    value: _format(target),
+                    color: colors.textPrimary),
+              if (target != null)
+                _Metric(
+                    label: status,
+                    value: _format(difference.abs()),
+                    color: statusColor),
+              if (missing > 0)
+                _Metric(
+                    label: 'jazla.area.missing'.tr(),
+                    value: missing.toString(),
+                    color: AppColors.amber200),
             ],
           ),
         ],
@@ -88,7 +113,8 @@ class JazlaAreaSummary extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value, required this.color});
+  const _Metric(
+      {required this.label, required this.value, required this.color});
 
   final String label;
   final String value;
@@ -98,8 +124,12 @@ class _Metric extends StatelessWidget {
   Widget build(final BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 11, color: context.customColors.textSecondary)),
-          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, color: context.customColors.textSecondary)),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w700, color: color)),
         ],
       );
 }

@@ -37,12 +37,14 @@ class _JazlaPdfShareButtonState extends State<JazlaPdfShareButton> {
         jazla: widget.jazla,
         parcels: widget.parcels,
       );
-      final String safeName = widget.jazla.name
-          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
-          .trim();
+      final String safeName =
+          widget.jazla.name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile.fromData(bytes, name: '${safeName}_jazla.pdf', mimeType: 'application/pdf')],
+          files: [
+            XFile.fromData(bytes,
+                name: '${safeName}_jazla.pdf', mimeType: 'application/pdf')
+          ],
           subject: widget.jazla.name,
         ),
       );
@@ -57,7 +59,10 @@ class _JazlaPdfShareButtonState extends State<JazlaPdfShareButton> {
   Widget build(final BuildContext context) => IconButton(
         tooltip: 'jazla.export.pdf'.tr(),
         icon: _busy
-            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.picture_as_pdf_outlined),
         onPressed: _busy ? null : _share,
       );

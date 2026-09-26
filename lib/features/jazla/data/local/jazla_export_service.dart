@@ -45,9 +45,15 @@ class JazlaExportService {
         xlsx.TextCellValue(_formatter.displayHolderName(p)),
         xlsx.TextCellValue(_formatter.displayOwnerName(p)),
         xlsx.TextCellValue(p.holdingId),
-        p.sahm == null ? xlsx.TextCellValue('-') : xlsx.DoubleCellValue(p.sahm!),
-        p.qirat == null ? xlsx.TextCellValue('-') : xlsx.DoubleCellValue(p.qirat!),
-        p.feddan == null ? xlsx.TextCellValue('-') : xlsx.DoubleCellValue(p.feddan!),
+        p.sahm == null
+            ? xlsx.TextCellValue('-')
+            : xlsx.DoubleCellValue(p.sahm!),
+        p.qirat == null
+            ? xlsx.TextCellValue('-')
+            : xlsx.DoubleCellValue(p.qirat!),
+        p.feddan == null
+            ? xlsx.TextCellValue('-')
+            : xlsx.DoubleCellValue(p.feddan!),
         xlsx.TextCellValue(p.notes.isEmpty ? '-' : p.notes.join('، ')),
       ]);
     }
@@ -65,8 +71,10 @@ class JazlaExportService {
     final DateTime now = DateTime.now();
     final String dd = now.day.toString().padLeft(2, '0');
     final String mm = now.month.toString().padLeft(2, '0');
-    final String cleanCity = cityName.replaceAll('-', '_').replaceAll(' ', '_').trim();
-    final String cleanJazla = jazlaName.replaceAll('-', '_').replaceAll(' ', '_').trim();
+    final String cleanCity =
+        cityName.replaceAll('-', '_').replaceAll(' ', '_').trim();
+    final String cleanJazla =
+        jazlaName.replaceAll('-', '_').replaceAll(' ', '_').trim();
     return '${cleanCity}_${cleanJazla}_${dd}_${mm}_${now.year}.xlsx';
   }
 }

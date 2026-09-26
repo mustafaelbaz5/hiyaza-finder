@@ -52,7 +52,8 @@ class CityInfoCard extends StatelessWidget {
               type == AssociationType.agriculturalReform
                   ? 'holdings.association_type.agricultural_reform'.tr()
                   : 'holdings.association_type.agricultural_credit'.tr(),
-              style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.font12Regular
+                  .copyWith(color: colors.textSecondary),
               textAlign: TextAlign.right,
             ),
           ],
@@ -126,7 +127,8 @@ class _CopyableRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+          style:
+              AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
           textAlign: TextAlign.right,
         ),
         verticalSpacing(4),
@@ -148,7 +150,8 @@ class _CopyableRow extends StatelessWidget {
             Expanded(
               child: Text(
                 value,
-                style: AppTextStyles.font14SemiBold.copyWith(color: colors.textPrimary),
+                style: AppTextStyles.font14SemiBold
+                    .copyWith(color: colors.textPrimary),
                 textAlign: TextAlign.right,
               ),
             ),
@@ -174,13 +177,15 @@ class _PlainRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+          style:
+              AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
           textAlign: TextAlign.right,
         ),
         const SizedBox(height: 2),
         Text(
           value,
-          style: AppTextStyles.font14SemiBold.copyWith(color: colors.textPrimary),
+          style:
+              AppTextStyles.font14SemiBold.copyWith(color: colors.textPrimary),
           textAlign: TextAlign.right,
         ),
       ],

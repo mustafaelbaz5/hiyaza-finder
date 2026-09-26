@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'tile_icon_button.dart';
 
-
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -53,8 +52,9 @@ class FieldRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color:
-            isModified ? AppColors.amber300.withValues(alpha: 0.08) : colors.surface,
+        color: isModified
+            ? AppColors.amber300.withValues(alpha: 0.08)
+            : colors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isModified ? AppColors.amber300 : colors.border,

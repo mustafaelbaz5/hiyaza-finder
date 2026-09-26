@@ -22,10 +22,12 @@ class JazlaLockedBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.amber200),
+          const Icon(Icons.lock_outline_rounded,
+              size: 14, color: AppColors.amber200),
           const SizedBox(width: 4),
           Text(
-            'jazla.add_sheet.locked_badge'.tr(namedArgs: {'jazlaName': jazlaName}),
+            'jazla.add_sheet.locked_badge'
+                .tr(namedArgs: {'jazlaName': jazlaName}),
             style: AppTextStyles.font12Bold.copyWith(color: AppColors.amber200),
           ),
         ],

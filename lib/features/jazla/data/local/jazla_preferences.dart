@@ -3,7 +3,9 @@ import '../../../../core/storage/key_value_store.dart';
 enum JazlaSort { newest, updated, name, parcelCount }
 
 class JazlaPreferences {
-  const JazlaPreferences({final KeyValueStore store = const SharedPreferencesKeyValueStore()}) : _store = store;
+  const JazlaPreferences(
+      {final KeyValueStore store = const SharedPreferencesKeyValueStore()})
+      : _store = store;
   final KeyValueStore _store;
 
   String _key(final String cityId) => 'jazla_sort::$cityId';

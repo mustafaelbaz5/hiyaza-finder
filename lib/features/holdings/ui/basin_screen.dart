@@ -97,7 +97,8 @@ class _BasinScreenState extends State<BasinScreen> {
     final List<SearchResult> allResults = _groupResults(basinParcels)
       ..sort(
         (final SearchResult a, final SearchResult b) =>
-            _holdingNumberValue(a.holdingId).compareTo(_holdingNumberValue(b.holdingId)),
+            _holdingNumberValue(a.holdingId)
+                .compareTo(_holdingNumberValue(b.holdingId)),
       );
 
     final List<SearchResult> filtered = switch (_filter) {
@@ -117,7 +118,8 @@ class _BasinScreenState extends State<BasinScreen> {
 
     final int completedHoldings = allResults
         .where(
-          (final SearchResult r) => r.parcelCount > 0 && r.completedCount >= r.parcelCount,
+          (final SearchResult r) =>
+              r.parcelCount > 0 && r.completedCount >= r.parcelCount,
         )
         .length;
 
@@ -128,7 +130,8 @@ class _BasinScreenState extends State<BasinScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
               child: Row(
                 children: [
                   const AppBackButton(),
@@ -164,9 +167,9 @@ class _BasinScreenState extends State<BasinScreen> {
               ),
             ),
             BasinInfoCard(
-              basin: _repository.activeBasins
-                  .cast<Basin?>()
-                  .firstWhere((final Basin? b) => b?.basinName == widget.basinName, orElse: () => null),
+              basin: _repository.activeBasins.cast<Basin?>().firstWhere(
+                  (final Basin? b) => b?.basinName == widget.basinName,
+                  orElse: () => null),
             ),
             verticalSpacing(8),
             Padding(
@@ -185,7 +188,8 @@ class _BasinScreenState extends State<BasinScreen> {
                     child: _FilterChip(
                       label: 'holdings.basin_screen.filter_pending'.tr(),
                       isSelected: _filter == BasinFilter.pending,
-                      onTap: () => setState(() => _filter = BasinFilter.pending),
+                      onTap: () =>
+                          setState(() => _filter = BasinFilter.pending),
                     ),
                   ),
                   horizontalSpacing(8),
@@ -193,7 +197,8 @@ class _BasinScreenState extends State<BasinScreen> {
                     child: _FilterChip(
                       label: 'holdings.basin_screen.filter_completed'.tr(),
                       isSelected: _filter == BasinFilter.completed,
-                      onTap: () => setState(() => _filter = BasinFilter.completed),
+                      onTap: () =>
+                          setState(() => _filter = BasinFilter.completed),
                     ),
                   ),
                 ],
@@ -215,7 +220,8 @@ class _BasinScreenState extends State<BasinScreen> {
                           padding: EdgeInsets.symmetric(horizontal: rw(16))
                               .copyWith(bottom: rh(80)),
                           itemCount: filtered.length,
-                          itemBuilder: (final BuildContext context, final int i) {
+                          itemBuilder:
+                              (final BuildContext context, final int i) {
                             final SearchResult result = filtered[i];
                             return RecommendationTile(
                               result: result,

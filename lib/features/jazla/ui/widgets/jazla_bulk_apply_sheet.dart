@@ -13,7 +13,8 @@ import '../../../holdings/data/model/bulk_edit_outcome.dart';
 import '../../../holdings/data/model/bulk_editable_field.dart';
 import '../../../holdings/data/model/parcel.dart';
 import '../../../holdings/data/repo/holdings_writer.dart';
-import '../../../holdings/ui/file_status_screen.dart' show bulkEditableFieldLabel;
+import '../../../holdings/ui/file_status_screen.dart'
+    show bulkEditableFieldLabel;
 import '../../../holdings/ui/widgets/picker_row.dart';
 
 /// تطبيق جماعي on one Jazla's own parcels — reuses the exact same
@@ -36,7 +37,8 @@ Future<void> showJazlaBulkApplySheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (final BuildContext context) => JazlaBulkApplySheet(parcels: parcels),
+    builder: (final BuildContext context) =>
+        JazlaBulkApplySheet(parcels: parcels),
   );
 }
 
@@ -74,7 +76,8 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
       title: 'jazla.bulk_apply.field_label'.tr(),
       options: [
         for (final BulkEditableField f in _applicableFields)
-          ChoiceOption<BulkEditableField>(value: f, label: bulkEditableFieldLabel(f)),
+          ChoiceOption<BulkEditableField>(
+              value: f, label: bulkEditableFieldLabel(f)),
       ],
       selected: _field,
     );
@@ -91,8 +94,10 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
         context,
         title: bulkEditableFieldLabel(_field),
         options: [
-          ChoiceOption<bool>(value: true, label: 'holdings.bulk_edit.inheritance_true'.tr()),
-          ChoiceOption<bool>(value: false, label: 'holdings.bulk_edit.inheritance_false'.tr()),
+          ChoiceOption<bool>(
+              value: true, label: 'holdings.bulk_edit.inheritance_true'.tr()),
+          ChoiceOption<bool>(
+              value: false, label: 'holdings.bulk_edit.inheritance_false'.tr()),
         ],
         selected: _value as bool?,
       );
@@ -115,11 +120,13 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
       context,
       title: bulkEditableFieldLabel(_field),
       options: [
-        for (final String o in _field.textOptions) ChoiceOption<String>(value: o, label: o),
+        for (final String o in _field.textOptions)
+          ChoiceOption<String>(value: o, label: o),
       ],
       selected: _value as String?,
-      clearLabel:
-          _field.allowClear ? 'holdings.bulk_edit.value_placeholder'.tr() : null,
+      clearLabel: _field.allowClear
+          ? 'holdings.bulk_edit.value_placeholder'.tr()
+          : null,
     );
     if (result == null) return;
     setState(() => _value = result.isClear ? null : result.value);
@@ -141,8 +148,10 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
       _progress = 0;
     });
     try {
-      final Set<String> parcelIds = widget.parcels.map((final Parcel p) => p.id).toSet();
-      final BulkEditOutcome outcome = await getIt<HoldingsWriter>().bulkApplyField(
+      final Set<String> parcelIds =
+          widget.parcels.map((final Parcel p) => p.id).toSet();
+      final BulkEditOutcome outcome =
+          await getIt<HoldingsWriter>().bulkApplyField(
         field: _field,
         value: _value,
         parcelIds: parcelIds,
@@ -213,13 +222,16 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
                     children: [
                       Text(
                         'jazla.detail.bulk_apply'.tr(),
-                        style: AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
+                        style: AppTextStyles.font18Bold
+                            .copyWith(color: colors.textPrimary),
                         textAlign: TextAlign.right,
                       ),
                       Text(
-                        'jazla.bulk_apply.parcel_count'
-                            .tr(namedArgs: {'count': widget.parcels.length.toString()}),
-                        style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+                        'jazla.bulk_apply.parcel_count'.tr(namedArgs: {
+                          'count': widget.parcels.length.toString()
+                        }),
+                        style: AppTextStyles.font12Regular
+                            .copyWith(color: colors.textSecondary),
                         textAlign: TextAlign.right,
                       ),
                     ],
@@ -259,7 +271,8 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
                 Expanded(
                   child: CustomTextButton.outlined(
                     text: 'jazla.bulk_apply.cancel'.tr(),
-                    onPressed: _isApplying ? null : () => Navigator.pop(context),
+                    onPressed:
+                        _isApplying ? null : () => Navigator.pop(context),
                   ),
                 ),
                 horizontalSpacing(8),

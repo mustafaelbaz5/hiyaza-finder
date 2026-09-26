@@ -82,7 +82,8 @@ class _NotesSettingsSheetState extends State<_NotesSettingsSheet> {
           children: [
             Text(
               'cities.tools.notes_settings.title'.tr(),
-              style: AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
+              style:
+                  AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
               textAlign: TextAlign.center,
             ),
             verticalSpacing(16),

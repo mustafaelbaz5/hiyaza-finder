@@ -70,7 +70,8 @@ class JazlaParcelTile extends StatelessWidget {
                 ),
                 child: Text(
                   '$index',
-                  style: AppTextStyles.font12Bold.copyWith(color: AppColors.primary200),
+                  style: AppTextStyles.font12Bold
+                      .copyWith(color: AppColors.primary200),
                 ),
               ),
               const SizedBox(width: 12),
@@ -80,7 +81,8 @@ class JazlaParcelTile extends StatelessWidget {
                   children: [
                     Text(
                       holder,
-                      style: AppTextStyles.font16SemiBold.copyWith(color: colors.textPrimary),
+                      style: AppTextStyles.font16SemiBold
+                          .copyWith(color: colors.textPrimary),
                       textAlign: TextAlign.right,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -125,7 +127,8 @@ class JazlaParcelTile extends StatelessWidget {
 }
 
 class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.label, required this.value, required this.colors});
+  const _InfoLine(
+      {required this.label, required this.value, required this.colors});
 
   final String label;
   final String value;
@@ -138,11 +141,13 @@ class _InfoLine extends StatelessWidget {
         children: [
           TextSpan(
             text: '$label: ',
-            style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.font12Regular
+                .copyWith(color: colors.textSecondary),
           ),
           TextSpan(
             text: value,
-            style: AppTextStyles.font12Regular.copyWith(color: colors.textPrimary),
+            style:
+                AppTextStyles.font12Regular.copyWith(color: colors.textPrimary),
           ),
         ],
       ),

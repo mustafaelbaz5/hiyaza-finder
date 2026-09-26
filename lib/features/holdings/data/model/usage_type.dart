@@ -14,7 +14,8 @@ enum UsageType {
   /// The exact Arabic string stored on [Parcel.usageType].
   final String label;
 
-  static UsageType fromLabel(final String? label) => UsageType.values.firstWhere(
+  static UsageType fromLabel(final String? label) =>
+      UsageType.values.firstWhere(
         (final UsageType t) => t.label == label,
         orElse: () => UsageType.agricultural,
       );

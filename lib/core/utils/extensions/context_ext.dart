@@ -14,8 +14,9 @@ extension ThemeExt on BuildContext {
 }
 
 extension CustomColorsExtension on ThemeData {
-  CustomColors get customColors =>
-      brightness == Brightness.light ? CustomColors.light() : CustomColors.dark();
+  CustomColors get customColors => brightness == Brightness.light
+      ? CustomColors.light()
+      : CustomColors.dark();
 }
 
 // ─── MediaQuery ───────────────────────────────────────────────────────────────
@@ -93,7 +94,8 @@ extension NavigationExt on BuildContext {
         result: result,
       );
 
-  Future<T?> pushAndRemoveAll<T>(final Widget page) => Navigator.pushAndRemoveUntil(
+  Future<T?> pushAndRemoveAll<T>(final Widget page) =>
+      Navigator.pushAndRemoveUntil(
         this,
         MaterialPageRoute(builder: (final _) => page),
         (final _) => false,

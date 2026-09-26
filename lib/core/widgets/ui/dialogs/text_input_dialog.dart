@@ -70,7 +70,8 @@ class _TextInputDialogState extends State<_TextInputDialog> {
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(horizontal: rw(32)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
       backgroundColor: colors.surface,
       child: Padding(
         padding: EdgeInsets.all(rw(24)),
@@ -109,7 +110,8 @@ class _TextInputDialogState extends State<_TextInputDialog> {
                   child: CustomTextButton(
                     text: 'app_dialogs.save'.tr(),
                     size: CustomButtonSize.small,
-                    onPressed: () => Navigator.pop(context, _controller.text.trim()),
+                    onPressed: () =>
+                        Navigator.pop(context, _controller.text.trim()),
                   ),
                 ),
               ],

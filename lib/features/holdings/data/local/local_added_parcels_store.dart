@@ -55,8 +55,7 @@ class LocalAddedParcelsStore {
       cityId,
       current
           .where((final Parcel p) => p.id != oldId && p.id != parcel.id)
-          .followedBy(<Parcel>[parcel])
-          .toList(),
+          .followedBy(<Parcel>[parcel]).toList(),
     );
   }
 

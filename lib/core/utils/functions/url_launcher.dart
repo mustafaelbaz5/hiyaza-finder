@@ -54,7 +54,8 @@ class AppLauncher {
   }
 
   /// Opens SMS
-  static Future<bool> openSms(final String phone, {final String message = ''}) async {
+  static Future<bool> openSms(final String phone,
+      {final String message = ''}) async {
     final uri = Uri(
       scheme: 'sms',
       path: phone,

@@ -4,7 +4,6 @@ import '../../../holdings/data/model/parcel.dart';
 
 import '../../../../core/storage/key_value_store.dart';
 
-
 /// Per-city نوع الزرع option list, stored on-device only — replaces the old
 /// `city_crop_types` Supabase table now that the app never writes to the
 /// server. Falls back to [Parcel.cropTypeOptions] wherever a city has no

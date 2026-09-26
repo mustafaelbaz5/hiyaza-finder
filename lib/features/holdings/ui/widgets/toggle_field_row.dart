@@ -4,7 +4,6 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 
-
 /// A boolean-valued sibling to [FieldRow] — same tile styling, but the
 /// value is flipped directly with a [Switch] instead of opening a dialog,
 /// since a two-state choice doesn't need a confirm step.
@@ -38,8 +37,9 @@ class ToggleFieldRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color:
-            isModified ? AppColors.amber300.withValues(alpha: 0.08) : colors.surface,
+        color: isModified
+            ? AppColors.amber300.withValues(alpha: 0.08)
+            : colors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isModified ? AppColors.amber300 : colors.border,
@@ -70,8 +70,8 @@ class ToggleFieldRow extends StatelessWidget {
                     if (isModified) ...[
                       const SizedBox(width: 4),
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
                           color: AppColors.amber300.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(20),

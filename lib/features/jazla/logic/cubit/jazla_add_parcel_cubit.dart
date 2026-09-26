@@ -34,7 +34,8 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
   Future<void> search(final String query) async {
     emit(state.copyWith(status: JazlaAddParcelStatus.searching, query: query));
     try {
-      final Map<String, String> jazlaNameByParcelId = await _jazlaNameByParcelId();
+      final Map<String, String> jazlaNameByParcelId =
+          await _jazlaNameByParcelId();
       final List<ParcelSearchResult> results = _searchService.search(
         _holdingsReader.parcels,
         query,
@@ -42,7 +43,8 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
       );
       emit(state.copyWith(status: JazlaAddParcelStatus.idle, results: results));
     } catch (e) {
-      emit(state.copyWith(status: JazlaAddParcelStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: JazlaAddParcelStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -67,13 +69,15 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
       );
       await search(state.query);
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaAddParcelStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaAddParcelStatus.error, errorMessage: e.message));
     }
   }
 
   /// Called when the reused add-person/add-parcel-for-existing-person flow
   /// returns a newly created [Parcel] — auto-adds it to this Jazla.
-  Future<void> onExternalParcelCreated(final Parcel parcel) => addFreeParcel(parcel.id);
+  Future<void> onExternalParcelCreated(final Parcel parcel) =>
+      addFreeParcel(parcel.id);
 }
 
 extension<T> on Iterable<T> {

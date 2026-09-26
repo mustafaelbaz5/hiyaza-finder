@@ -100,7 +100,8 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                     widget.original.holderName?.trim().isNotEmpty == true
                         ? widget.original.holderName!.trim()
                         : 'jazla.quick_view.title'.tr(),
-                    style: AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.font18Bold
+                        .copyWith(color: colors.textPrimary),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -116,7 +117,8 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FieldRow(label: 'رقم الحيازة', value: widget.original.holdingId),
+                    FieldRow(
+                        label: 'رقم الحيازة', value: widget.original.holdingId),
                     verticalSpacing(8),
                     FieldRow(
                       label: 'اسم الحائز',
@@ -137,7 +139,8 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                       label: 'المساحة',
                       // Same formatter the main Detail Screen uses — plain
                       // `.toString()` rendering, always Western digits.
-                      value: '${_formatter.formatNumber(widget.original.feddan) ?? '0'}ف '
+                      value:
+                          '${_formatter.formatNumber(widget.original.feddan) ?? '0'}ف '
                           '${_formatter.formatNumber(widget.original.qirat) ?? '0'}ق '
                           '${_formatter.formatNumber(widget.original.sahm) ?? '0'}س',
                     ),
@@ -145,15 +148,15 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                     ToggleFieldRow(
                       label: 'jazla.quick_view.inheritance'.tr(),
                       value: _draft.isInheritance,
-                      onChanged: (final bool v) =>
-                          setState(() => _draft = _draft.copyWith(isInheritance: v)),
+                      onChanged: (final bool v) => setState(
+                          () => _draft = _draft.copyWith(isInheritance: v)),
                     ),
                     verticalSpacing(8),
                     ToggleFieldRow(
                       label: 'jazla.quick_view.delegate'.tr(),
                       value: _draft.isDelegate,
-                      onChanged: (final bool v) =>
-                          setState(() => _draft = _draft.copyWith(isDelegate: v)),
+                      onChanged: (final bool v) => setState(
+                          () => _draft = _draft.copyWith(isDelegate: v)),
                     ),
                   ],
                 ),
@@ -165,7 +168,8 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                 Expanded(
                   child: CustomTextButton.outlined(
                     text: 'jazla.quick_view.cancel'.tr(),
-                    onPressed: _isSaving ? null : () => Navigator.pop(context, false),
+                    onPressed:
+                        _isSaving ? null : () => Navigator.pop(context, false),
                   ),
                 ),
                 horizontalSpacing(8),
@@ -184,4 +188,3 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
     );
   }
 }
-

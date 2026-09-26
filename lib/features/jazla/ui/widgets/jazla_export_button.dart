@@ -43,7 +43,8 @@ class _JazlaExportButtonState extends State<JazlaExportButton> {
         return;
       }
       final String cityName = getIt<HoldingsRepository>().activeCityName ?? '';
-      final String fileName = JazlaExportService.buildFileName(cityName, widget.jazlaName);
+      final String fileName =
+          JazlaExportService.buildFileName(cityName, widget.jazlaName);
       await saveExportFile(bytes: bytes, fileName: fileName);
       if (mounted) context.showSuccessSnackBar('jazla.export.success'.tr());
     } finally {

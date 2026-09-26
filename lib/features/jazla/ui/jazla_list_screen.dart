@@ -36,10 +36,12 @@ class JazlaListScreen extends StatelessWidget {
 class _JazlaListView extends StatelessWidget {
   const _JazlaListView();
 
-  Future<void> _createJazla(final BuildContext context, final JazlaListCubit cubit) async {
+  Future<void> _createJazla(
+      final BuildContext context, final JazlaListCubit cubit) async {
     final List<String> basins = getIt<HoldingsRepository>().availableBasins;
     if (basins.isEmpty) {
-      await AppDialogs.showWarning(context, message: 'jazla.basin_required'.tr());
+      await AppDialogs.showWarning(context,
+          message: 'jazla.basin_required'.tr());
       return;
     }
     final JazlaCreateValue? value = await showJazlaCreateWizard(
@@ -73,7 +75,8 @@ class _JazlaListView extends StatelessWidget {
     }
   }
 
-  Future<void> _pickSort(final BuildContext context, final JazlaListCubit cubit) async {
+  Future<void> _pickSort(
+      final BuildContext context, final JazlaListCubit cubit) async {
     final JazlaSort? sort = await showDialog<JazlaSort>(
       context: context,
       builder: (final BuildContext dialogContext) => SimpleDialog(
@@ -82,7 +85,8 @@ class _JazlaListView extends StatelessWidget {
           for (final JazlaSort value in JazlaSort.values)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(dialogContext, value),
-              child: Text('jazla.sort.${value.name}'.tr(), textAlign: TextAlign.right),
+              child: Text('jazla.sort.${value.name}'.tr(),
+                  textAlign: TextAlign.right),
             ),
         ],
       ),
@@ -156,7 +160,8 @@ class _JazlaListView extends StatelessWidget {
                 ),
                 Expanded(
                   child: BlocBuilder<JazlaListCubit, JazlaListState>(
-                    builder: (final BuildContext context, final JazlaListState state) {
+                    builder: (final BuildContext context,
+                        final JazlaListState state) {
                       if (state.status == JazlaListStatus.loading) {
                         return const Center(child: CircularProgressIndicator());
                       }
@@ -187,7 +192,8 @@ class _JazlaListView extends StatelessWidget {
                               // without leaving and re-entering this screen.
                               cubit.load();
                             },
-                            onLongPress: () => _showOptions(context, cubit, jazla),
+                            onLongPress: () =>
+                                _showOptions(context, cubit, jazla),
                           );
                         },
                       );

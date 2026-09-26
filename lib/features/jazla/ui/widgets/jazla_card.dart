@@ -42,7 +42,8 @@ class JazlaCard extends StatelessWidget {
                 color: AppColors.primary50.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.layers_outlined, color: AppColors.primary200),
+              child: const Icon(Icons.layers_outlined,
+                  color: AppColors.primary200),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -51,7 +52,8 @@ class JazlaCard extends StatelessWidget {
                 children: [
                   Text(
                     jazla.name,
-                    style: AppTextStyles.font16SemiBold.copyWith(color: colors.textPrimary),
+                    style: AppTextStyles.font16SemiBold
+                        .copyWith(color: colors.textPrimary),
                     textAlign: TextAlign.right,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -61,7 +63,8 @@ class JazlaCard extends StatelessWidget {
                     'jazla.parcel_count'.tr(
                       namedArgs: {'count': jazla.parcelCount.toString()},
                     ),
-                    style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+                    style: AppTextStyles.font12Regular
+                        .copyWith(color: colors.textSecondary),
                     textAlign: TextAlign.right,
                   ),
                   if (jazla.basinName?.trim().isNotEmpty == true)

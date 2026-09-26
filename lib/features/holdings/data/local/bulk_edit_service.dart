@@ -1,7 +1,6 @@
 import '../model/bulk_editable_field.dart';
 import '../model/parcel.dart';
 
-
 /// Result of a [BulkEditService.apply] call: the updated parcel list plus
 /// how many parcels were actually changed, for user feedback.
 class BulkEditResult {

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +10,8 @@ import '../../../core/widgets/custom_text_form_.dart';
 import '../../cities/data/model/city_snapshot.dart';
 import '../logic/cubit/home_cubit.dart';
 import '../logic/cubit/home_state.dart';
+import '../logic/cubit/parcel_search_cubit.dart';
+import '../logic/cubit/parcel_search_state.dart';
 import 'widgets/app_identity_header.dart';
 import 'widgets/empty_body.dart';
 import 'widgets/error_body.dart';
@@ -27,7 +27,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _controller = TextEditingController();
-  Timer? _debounce;
 
   @override
   void initState() {
@@ -38,19 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _controller.removeListener(_onTextChanged);
-    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _onTextChanged() => setState(() {});
-
-  void _onQueryChanged(final String query, final HomeCubit cubit) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      cubit.search(query);
-    });
-  }
 
   Future<void> _openCityPicker(final HomeCubit cubit) async {
     final CitySnapshot? snapshot =
@@ -74,7 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: BlocBuilder<HomeCubit, HomeState>(
           builder: (final BuildContext context, final HomeState state) {
-            final bool isSearching = state.query.trim().isNotEmpty;
             return Column(
               children: <Widget>[
                 const AppIdentityHeader(),
@@ -109,10 +99,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               tooltip: 'holdings.search.clear'.tr(),
                               onPressed: () {
                                 _controller.clear();
-                                _onQueryChanged('', cubit);
+                                context.read<ParcelSearchCubit>().clear();
                               },
                             ),
-                      onChanged: (final String q) => _onQueryChanged(q, cubit),
+                      onChanged: context.read<ParcelSearchCubit>().updateQuery,
                     ),
                   ),
                 ],
@@ -131,14 +121,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             onPickFile: () => _openCityPicker(cubit),
                           ),
                         HomeStatus.loaded => LoadedBody(
-                            state: state,
                             cubit: cubit,
                           ),
                       },
                     ),
                   ),
                 ),
-                DeveloperFooterBadge(isSearching: isSearching),
+                BlocSelector<ParcelSearchCubit, ParcelSearchState, bool>(
+                  selector: (final ParcelSearchState state) =>
+                      state.query.trim().isNotEmpty,
+                  builder:
+                      (final BuildContext context, final bool isSearching) =>
+                          DeveloperFooterBadge(isSearching: isSearching),
+                ),
               ],
             );
           },

@@ -20,11 +20,16 @@ class JazlaListCubit extends Cubit<JazlaListState> {
     try {
       final JazlaSort sort = await _preferences.loadSort(cityId);
       final List<Jazla> jazlas = await _repo.getAll(cityId);
-      emit(state.copyWith(status: JazlaListStatus.loaded, jazlas: _sort(jazlas, sort), sort: sort));
+      emit(state.copyWith(
+          status: JazlaListStatus.loaded,
+          jazlas: _sort(jazlas, sort),
+          sort: sort));
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaListStatus.error, errorMessage: e.message));
     } catch (e) {
-      emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: JazlaListStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -65,7 +70,8 @@ class JazlaListCubit extends Cubit<JazlaListState> {
       );
       await load();
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaListStatus.error, errorMessage: e.message));
     }
   }
 
@@ -75,7 +81,8 @@ class JazlaListCubit extends Cubit<JazlaListState> {
       await _repo.rename(jazlaId, newName.trim(), cityId);
       await load();
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaListStatus.error, errorMessage: e.message));
     }
   }
 
@@ -84,7 +91,8 @@ class JazlaListCubit extends Cubit<JazlaListState> {
       await _repo.delete(jazlaId, cityId);
       await load();
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaListStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaListStatus.error, errorMessage: e.message));
     }
   }
 }

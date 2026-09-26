@@ -8,7 +8,8 @@ import 'package:path_provider/path_provider.dart';
 /// offer the OS share sheet (only meaningful once a real file exists on
 /// disk).
 class ExportSaveResult {
-  const ExportSaveResult({required this.filePath, required this.userChoseLocation});
+  const ExportSaveResult(
+      {required this.filePath, required this.userChoseLocation});
 
   final String filePath;
 

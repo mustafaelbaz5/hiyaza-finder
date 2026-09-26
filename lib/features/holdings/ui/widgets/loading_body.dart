@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../core/di/dependency_injection.dart';
@@ -11,7 +12,8 @@ import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
 import '../../data/repo/holdings_repository.dart';
 import '../../logic/cubit/home_cubit.dart';
-import '../../logic/cubit/home_state.dart';
+import '../../logic/cubit/parcel_search_cubit.dart';
+import '../../logic/cubit/parcel_search_state.dart';
 import '../add_record_screen.dart';
 import 'home_empty_state.dart';
 import 'recommendation_list.dart';
@@ -36,11 +38,9 @@ class LoadingBody extends StatelessWidget {
 class LoadedBody extends StatefulWidget {
   const LoadedBody({
     super.key,
-    required this.state,
     required this.cubit,
   });
 
-  final HomeState state;
   final HomeCubit cubit;
 
   @override
@@ -85,45 +85,47 @@ class LoadedBodyState extends State<LoadedBody> {
 
   @override
   Widget build(final BuildContext context) {
-    final bool isSearching = widget.state.query.trim().isNotEmpty;
+    return BlocBuilder<ParcelSearchCubit, ParcelSearchState>(
+      builder: (final BuildContext context, final ParcelSearchState state) =>
+          LayoutBuilder(
+        builder:
+            (final BuildContext context, final BoxConstraints constraints) {
+          final bool isTablet = constraints.maxWidth >= 600;
+          final double horizontalPadding = isTablet ? rw(64) : rw(16);
 
-    return LayoutBuilder(
-      builder: (final BuildContext context, final BoxConstraints constraints) {
-        final bool isTablet = constraints.maxWidth >= 600;
-        final double horizontalPadding = isTablet ? rw(64) : rw(16);
-
-        return Stack(
-          children: <Widget>[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: isSearching
-                  ? RecommendationList(
-                      query: widget.state.query,
-                      results: widget.state.results,
-                      onSelect: (final SearchResult result) async =>
-                          _openDetail(context, result),
-                      onAddNew: () => _openAddPerson(context),
-                    )
-                  : const HomeEmptyState(),
-            ),
-            // Always-visible add-person entry point — previously only
-            // reachable after typing a search that returned no results,
-            // which meant a brand-new person could only be added by first
-            // proving they weren't already in the data.
-            PositionedDirectional(
-              bottom: rh(20),
-              end: rw(20),
-              child: FloatingActionButton.extended(
-                onPressed: () => _openAddPerson(context),
-                backgroundColor: AppColors.primary200,
-                foregroundColor: AppColors.white,
-                icon: const Icon(Icons.person_add_alt_1_rounded),
-                label: Text('holdings.add.new_person_cta'.tr()),
+          return Stack(
+            children: <Widget>[
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: state.query.trim().isNotEmpty
+                    ? RecommendationList(
+                        query: state.query,
+                        results: state.results,
+                        onSelect: (final SearchResult result) async =>
+                            _openDetail(context, result),
+                        onAddNew: () => _openAddPerson(context),
+                      )
+                    : const HomeEmptyState(),
               ),
-            ),
-          ],
-        ).animate().fadeIn(duration: 250.ms);
-      },
+              // Always-visible add-person entry point — previously only
+              // reachable after typing a search that returned no results,
+              // which meant a brand-new person could only be added by first
+              // proving they weren't already in the data.
+              PositionedDirectional(
+                bottom: rh(20),
+                end: rw(20),
+                child: FloatingActionButton.extended(
+                  onPressed: () => _openAddPerson(context),
+                  backgroundColor: AppColors.primary200,
+                  foregroundColor: AppColors.white,
+                  icon: const Icon(Icons.person_add_alt_1_rounded),
+                  label: Text('holdings.add.new_person_cta'.tr()),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 250.ms);
+        },
+      ),
     );
   }
 }

@@ -75,7 +75,8 @@ class UsageTypeNotesSync {
     }
   }
 
-  static List<String> _addIfAbsent(final List<String> notes, final String note) =>
+  static List<String> _addIfAbsent(
+          final List<String> notes, final String note) =>
       notes.contains(note) ? notes : <String>[...notes, note];
 
   static List<String> _remove(final List<String> notes, final String note) =>

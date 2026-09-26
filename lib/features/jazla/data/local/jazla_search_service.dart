@@ -43,7 +43,8 @@ class JazlaSearchService {
     if (query.isEmpty) return const <ParcelSearchResult>[];
 
     final List<ScoredParcel> scored = switch (detectSearchType(query)) {
-      SearchType.holdingNumber => _searcher.searchByHoldingNumber(parcels, query),
+      SearchType.holdingNumber =>
+        _searcher.searchByHoldingNumber(parcels, query),
       SearchType.parcelId => _searcher.searchByParcelId(parcels, query),
       SearchType.holderName => _searcher.searchByHolderName(parcels, query),
     };

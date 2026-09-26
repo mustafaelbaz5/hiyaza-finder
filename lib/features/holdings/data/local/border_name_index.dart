@@ -1,4 +1,3 @@
-
 import 'arabic_normalizer.dart';
 import '../model/parcel.dart';
 
@@ -24,8 +23,7 @@ class BorderNameIndex {
       final String normalized = ArabicNormalizer.normalize(name);
       if (normalized.isEmpty) return;
 
-      final Map<String, List<Parcel>> byHolding =
-          byNameThenHolding.putIfAbsent(
+      final Map<String, List<Parcel>> byHolding = byNameThenHolding.putIfAbsent(
         normalized,
         () => <String, List<Parcel>>{},
       );
@@ -59,12 +57,14 @@ class BorderNameIndex {
 
   /// An empty index — the safe default before a city has been loaded, so
   /// callers never need to null-check the index itself.
-  factory BorderNameIndex.empty() => BorderNameIndex._(const <String, Parcel>{});
+  factory BorderNameIndex.empty() =>
+      BorderNameIndex._(const <String, Parcel>{});
 
   /// Resolves an already-normalized name lookup key to the holding it
   /// refers to. Callers pass the raw border text through
   /// [ParcelQueryService.findByBorderText], which owns the "is this even a
   /// person's name" filtering (blank/طريق/مصرف/etc.) before consulting this
   /// index — this class only knows about names, not border-specific rules.
-  Parcel? lookup(final String normalizedName) => _byNormalizedName[normalizedName];
+  Parcel? lookup(final String normalizedName) =>
+      _byNormalizedName[normalizedName];
 }

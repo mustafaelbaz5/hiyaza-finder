@@ -66,7 +66,8 @@ class JazlaParcelResultTile extends StatelessWidget {
               children: [
                 Text(
                   '$holder | $basin | ${result.parcel.holdingId}',
-                  style: AppTextStyles.font14SemiBold.copyWith(color: colors.textPrimary),
+                  style: AppTextStyles.font14SemiBold
+                      .copyWith(color: colors.textPrimary),
                   textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -74,7 +75,8 @@ class JazlaParcelResultTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   area,
-                  style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+                  style: AppTextStyles.font12Regular
+                      .copyWith(color: colors.textSecondary),
                   textAlign: TextAlign.right,
                 ),
               ],
@@ -84,7 +86,6 @@ class JazlaParcelResultTile extends StatelessWidget {
       ),
     );
   }
-
 
   String _areaText(final Parcel parcel) {
     final String? feddan = _formatter.formatNumber(parcel.feddan);

@@ -28,4 +28,3 @@ extension DetailScreenTabMatch on DetailScreenTab {
         DetailScreenTab.reviewed => 'holdings.detail.tab_reviewed'.tr(),
       };
 }
-

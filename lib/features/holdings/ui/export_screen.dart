@@ -37,7 +37,8 @@ class _ExportScreenState extends State<ExportScreen> {
 
   int get _scopedCount => _repository.parcels
       .where((final Parcel p) => _scope == ExportScope.all || p.isFieldAdded)
-      .where((final Parcel p) => _basinFilter == null || p.basinName == _basinFilter)
+      .where((final Parcel p) =>
+          _basinFilter == null || p.basinName == _basinFilter)
       .length;
 
   Future<void> _pickBasin() async {
@@ -70,8 +71,9 @@ class _ExportScreenState extends State<ExportScreen> {
       }
 
       final String fileName = ExportService.buildExportFileName(
-        associationName:
-            _repository.defaultAssociationName ?? _repository.activeCityName ?? 'hiyaza',
+        associationName: _repository.defaultAssociationName ??
+            _repository.activeCityName ??
+            'hiyaza',
         basinName: _basinFilter,
         scope: _scope,
       );
@@ -115,7 +117,8 @@ class _ExportScreenState extends State<ExportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
               child: Row(
                 children: [
                   const AppBackButton(),
@@ -131,7 +134,8 @@ class _ExportScreenState extends State<ExportScreen> {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: rw(16)).copyWith(bottom: rh(24)),
+                padding: EdgeInsets.symmetric(horizontal: rw(16))
+                    .copyWith(bottom: rh(24)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -145,7 +149,8 @@ class _ExportScreenState extends State<ExportScreen> {
                       ),
                       value: ExportScope.all,
                       groupValue: _scope,
-                      onChanged: (final ExportScope v) => setState(() => _scope = v),
+                      onChanged: (final ExportScope v) =>
+                          setState(() => _scope = v),
                     ),
                     _RadioTile<ExportScope>(
                       label: 'holdings.export.scope_added_only'.tr(
@@ -158,7 +163,8 @@ class _ExportScreenState extends State<ExportScreen> {
                       ),
                       value: ExportScope.addedOnly,
                       groupValue: _scope,
-                      onChanged: (final ExportScope v) => setState(() => _scope = v),
+                      onChanged: (final ExportScope v) =>
+                          setState(() => _scope = v),
                     ),
                     verticalSpacing(20),
                     _SectionLabel('holdings.export.basin_title'.tr()),
@@ -167,12 +173,14 @@ class _ExportScreenState extends State<ExportScreen> {
                       label: 'holdings.export.all_basins'.tr(),
                       value: true,
                       groupValue: _basinFilter == null,
-                      onChanged: (final bool _) => setState(() => _basinFilter = null),
+                      onChanged: (final bool _) =>
+                          setState(() => _basinFilter = null),
                     ),
                     InkWell(
                       onTap: _pickBasin,
                       child: _RadioTile<bool>(
-                        label: _basinFilter ?? 'holdings.export.pick_basin_title'.tr(),
+                        label: _basinFilter ??
+                            'holdings.export.pick_basin_title'.tr(),
                         value: false,
                         groupValue: _basinFilter == null,
                         onChanged: (final bool _) => _pickBasin(),
@@ -185,7 +193,8 @@ class _ExportScreenState extends State<ExportScreen> {
                     _ContentsLine('holdings.export.contents_basin_sheets'.tr()),
                     verticalSpacing(20),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: colors.surfaceVariant,
                         borderRadius: BorderRadius.circular(12),
@@ -261,14 +270,17 @@ class _RadioTile<T> extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              isSelected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
               color: isSelected ? AppColors.primary200 : colors.iconSecondary,
             ),
             horizontalSpacing(10),
             Expanded(
               child: Text(
                 label,
-                style: AppTextStyles.font14Regular.copyWith(color: colors.textPrimary),
+                style: AppTextStyles.font14Regular
+                    .copyWith(color: colors.textPrimary),
                 textAlign: TextAlign.right,
               ),
             ),
@@ -291,11 +303,13 @@ class _ContentsLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline_rounded, size: 16, color: colors.success),
+          Icon(Icons.check_circle_outline_rounded,
+              size: 16, color: colors.success),
           horizontalSpacing(8),
           Text(
             label,
-            style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+            style: AppTextStyles.font12Regular
+                .copyWith(color: colors.textSecondary),
             textAlign: TextAlign.right,
           ),
         ],

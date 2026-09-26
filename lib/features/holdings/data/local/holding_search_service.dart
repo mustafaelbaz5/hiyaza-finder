@@ -142,7 +142,8 @@ class HoldingSearchService {
       }
     }
 
-    return _groupAndRank(scored, parcelCountsByHolding, completedCountsByHolding);
+    return _groupAndRank(
+        scored, parcelCountsByHolding, completedCountsByHolding);
   }
 
   /// EXACT MATCH only, leading-zero-insensitive — see [_normalizeHoldingNumber].
@@ -241,7 +242,8 @@ class HoldingSearchService {
             holderName: entry.parcel.holderName,
             parcelCount: parcelCountsByHolding[entry.parcel.groupKey] ?? 1,
             score: entry.score,
-            completedCount: completedCountsByHolding[entry.parcel.groupKey] ?? 0,
+            completedCount:
+                completedCountsByHolding[entry.parcel.groupKey] ?? 0,
             isFieldAdded: entry.parcel.isFieldAdded,
           ),
         )

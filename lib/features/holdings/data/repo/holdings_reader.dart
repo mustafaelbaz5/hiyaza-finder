@@ -13,6 +13,11 @@ import '../model/parcel.dart';
 abstract class HoldingsReader {
   List<Parcel> get parcels;
 
+  /// Immutable in-memory snapshots emitted after a city load or any local
+  /// parcel mutation. Consumers derive only the state they render, rather
+  /// than asking a screen to manually refresh the repository.
+  Stream<List<Parcel>> get snapshots;
+
   List<SearchResult> search(final String query, {final String? basin});
 
   /// Every distinct holding, city-wide, unfiltered by basin — Home's flat

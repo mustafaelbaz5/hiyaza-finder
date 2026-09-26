@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'border_name_index.dart';
 import 'parcel_edit_overlay.dart';
 import '../model/parcel.dart';
@@ -43,8 +45,11 @@ class ParcelDatasetState {
   BorderNameIndex _borderIndex = BorderNameIndex.empty();
   Map<String, Parcel> _originalById = <String, Parcel>{};
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
+  final StreamController<List<Parcel>> _snapshots =
+      StreamController<List<Parcel>>.broadcast();
 
   List<Parcel> get parcels => _parcels;
+  Stream<List<Parcel>> get snapshots => _snapshots.stream;
   List<Basin> get basins => _basins;
   BorderNameIndex get borderIndex => _borderIndex;
 
@@ -77,7 +82,8 @@ class ParcelDatasetState {
     _activeAssociationType = associationType;
     _activeAssociationSubtype = associationSubtype;
     _basins = basins;
-    final Map<String, String> idOverrides = await _idOverridesStore.load(cityId);
+    final Map<String, String> idOverrides =
+        await _idOverridesStore.load(cityId);
     final List<Parcel> overriddenParcels = parcels.map((final Parcel parcel) {
       final String? newId = idOverrides[parcel.id];
       return newId == null ? parcel : parcel.copyWith(id: newId);
@@ -94,6 +100,7 @@ class ParcelDatasetState {
     };
     _parcels = overriddenParcels.map(applyEdit).toList();
     rebuildBorderIndex();
+    _publish();
     return _parcels;
   }
 
@@ -111,7 +118,8 @@ class ParcelDatasetState {
   /// map) onto [original] — used when the payload comes from somewhere
   /// other than this dataset's own stored edit for that parcel, e.g. a
   /// Realtime `holding_edits` INSERT event.
-  Parcel applyPayload(final Parcel original, final Map<String, dynamic> payload) =>
+  Parcel applyPayload(
+          final Parcel original, final Map<String, dynamic> payload) =>
       _editOverlay.apply(original, payload);
 
   Map<String, dynamic> editSnapshot(final Parcel p) => _editOverlay.snapshot(p);
@@ -156,13 +164,15 @@ class ParcelDatasetState {
     if (original != null) _originalById[newId] = original.copyWith(id: newId);
     final Map<String, dynamic>? edit = _edits.remove(oldId);
     if (edit != null) _edits[newId] = edit;
+    _publish();
   }
 
   Future<void> persistIdOverride(
     final String cityId,
     final String oldId,
     final String newId,
-  ) => _idOverridesStore.save(cityId, oldId, newId);
+  ) =>
+      _idOverridesStore.save(cityId, oldId, newId);
 
   int indexOf(final String id) =>
       _parcels.indexWhere((final Parcel p) => p.id == id);
@@ -189,14 +199,17 @@ class ParcelDatasetState {
 
   void replaceAt(final int index, final Parcel parcel) {
     _parcels[index] = parcel;
+    _publish();
   }
 
   void replaceAll(final List<Parcel> parcels) {
     _parcels = parcels;
+    _publish();
   }
 
   void append(final Parcel parcel) {
     _parcels = <Parcel>[..._parcels, parcel];
+    _publish();
   }
 
   /// Inserts [parcel], or replaces an existing entry [indexOfForRemoteChange]
@@ -216,7 +229,15 @@ class ParcelDatasetState {
     } else {
       _parcels = <Parcel>[..._parcels, parcel];
     }
+    _publish();
     return idx >= 0 ? idx : _parcels.length - 1;
   }
 
+  void _publish() {
+    if (!_snapshots.isClosed) {
+      _snapshots.add(List<Parcel>.unmodifiable(_parcels));
+    }
+  }
+
+  Future<void> dispose() => _snapshots.close();
 }

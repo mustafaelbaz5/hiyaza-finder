@@ -102,7 +102,8 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
       );
 
   void _remove(final String note) {
-    setState(() => _notes = _notes.where((final String n) => n != note).toList());
+    setState(
+        () => _notes = _notes.where((final String n) => n != note).toList());
   }
 
   void _close() => Navigator.pop(context, _notes);

@@ -23,14 +23,14 @@ class CopyValidation {
   static bool canMarkCompleted(final Parcel parcel) {
     final bool baseFieldsFilled =
         Parcel.isHoldingIdExplicitlyEntered(parcel.holdingId) &&
-        Parcel.isValueFilled(parcel.holderName) &&
-        Parcel.isValueFilled(parcel.basinName) &&
-        Parcel.isAreaFilled(
-          feddan: parcel.feddan,
-          qirat: parcel.qirat,
-          sahm: parcel.sahm,
-        ) &&
-        Parcel.isNationalIdValid(parcel.nationalId);
+            Parcel.isValueFilled(parcel.holderName) &&
+            Parcel.isValueFilled(parcel.basinName) &&
+            Parcel.isAreaFilled(
+              feddan: parcel.feddan,
+              qirat: parcel.qirat,
+              sahm: parcel.sahm,
+            ) &&
+            Parcel.isNationalIdValid(parcel.nationalId);
     if (!baseFieldsFilled) return false;
 
     final bool agricultural =

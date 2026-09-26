@@ -74,7 +74,9 @@ class ParcelQueryService {
           .putIfAbsent(p.groupKey, () => <Parcel>[])
           .add(p);
       final String? code = p.basinCode?.trim();
-      if (code != null && code.isNotEmpty) codeByBasin.putIfAbsent(name, () => code);
+      if (code != null && code.isNotEmpty) {
+        codeByBasin.putIfAbsent(name, () => code);
+      }
     }
 
     final List<BasinProgress> summaries = <BasinProgress>[
@@ -135,7 +137,8 @@ class ParcelQueryService {
     ).toList()
       ..sort(
         (final SearchResult a, final SearchResult b) =>
-            holdingNumberValue(a.holdingId).compareTo(holdingNumberValue(b.holdingId)),
+            holdingNumberValue(a.holdingId)
+                .compareTo(holdingNumberValue(b.holdingId)),
       );
     return results;
   }

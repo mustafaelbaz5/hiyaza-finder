@@ -35,5 +35,6 @@ class NetworkInfoImpl implements NetworkInfo {
   }
 
   @override
-  Stream<InternetConnectionStatus> get onStatusChange => connectionChecker.onStatusChange;
+  Stream<InternetConnectionStatus> get onStatusChange =>
+      connectionChecker.onStatusChange;
 }

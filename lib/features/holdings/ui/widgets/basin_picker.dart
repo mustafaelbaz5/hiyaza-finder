@@ -42,7 +42,9 @@ Future<BasinPickResult?> pickBasin(
     clearLabel: '—',
   );
   if (result == null) return null;
-  if (result.isClear) return const BasinPickResult(basinName: null, basinCode: null);
+  if (result.isClear) {
+    return const BasinPickResult(basinName: null, basinCode: null);
+  }
 
   final String basinName = result.value!;
   return BasinPickResult(

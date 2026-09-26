@@ -30,8 +30,8 @@ class JazlaListState extends Equatable {
       JazlaListState(
         status: status ?? this.status,
         jazlas: jazlas ?? this.jazlas,
-      errorMessage: errorMessage,
-      sort: sort ?? this.sort,
+        errorMessage: errorMessage,
+        sort: sort ?? this.sort,
       );
 
   @override

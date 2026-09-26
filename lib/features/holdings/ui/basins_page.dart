@@ -43,7 +43,8 @@ class _BasinsPageState extends State<BasinsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
               child: Row(
                 children: [
                   const AppBackButton(),

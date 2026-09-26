@@ -1,5 +1,3 @@
-
-
 import '../model/parcel.dart';
 
 /// Builds the `added_holdings` insert shape (snake_case columns) from a

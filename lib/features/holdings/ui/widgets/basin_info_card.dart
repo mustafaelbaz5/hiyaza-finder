@@ -75,7 +75,8 @@ class _InfoRow extends StatelessWidget {
         const Spacer(),
         Text(
           label,
-          style: AppTextStyles.font14Regular.copyWith(color: colors.textSecondary),
+          style:
+              AppTextStyles.font14Regular.copyWith(color: colors.textSecondary),
           textAlign: TextAlign.right,
         ),
       ],

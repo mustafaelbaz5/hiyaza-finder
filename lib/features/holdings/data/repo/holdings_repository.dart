@@ -70,6 +70,9 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   @override
   List<Parcel> get parcels => _dataset.parcels;
 
+  @override
+  Stream<List<Parcel>> get snapshots => _dataset.snapshots;
+
   /// The currently loaded city's id — `null` until a city is loaded.
   /// Exposed for city-scoped maintenance screens (e.g. per-city نوع الزرع
   /// management) that need it but aren't part of the parcel-write flow.

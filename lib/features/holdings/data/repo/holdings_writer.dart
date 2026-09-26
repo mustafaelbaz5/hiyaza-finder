@@ -1,4 +1,3 @@
-
 import '../model/bulk_edit_outcome.dart';
 import '../model/bulk_editable_field.dart';
 import '../model/parcel.dart';

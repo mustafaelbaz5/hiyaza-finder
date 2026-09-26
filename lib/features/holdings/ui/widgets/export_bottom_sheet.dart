@@ -35,7 +35,8 @@ Future<void> showExportBottomSheet(
 }
 
 class _ExportBottomSheet extends StatefulWidget {
-  const _ExportBottomSheet({required this.basinName, required this.basinParcels});
+  const _ExportBottomSheet(
+      {required this.basinName, required this.basinParcels});
 
   final String basinName;
   final List<Parcel> basinParcels;
@@ -66,8 +67,9 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
 
       final HoldingsRepository repository = getIt<HoldingsRepository>();
       final String fileName = ExportService.buildExportFileName(
-        associationName:
-            repository.defaultAssociationName ?? repository.activeCityName ?? 'hiyaza',
+        associationName: repository.defaultAssociationName ??
+            repository.activeCityName ??
+            'hiyaza',
         basinName: widget.basinName,
         scope: _scope,
       );
@@ -124,7 +126,8 @@ class _ExportBottomSheetState extends State<_ExportBottomSheet> {
               'holdings.export.basin_export_title'.tr(
                 namedArgs: {'basin': widget.basinName},
               ),
-              style: AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
+              style:
+                  AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
               textAlign: TextAlign.center,
             ),
             verticalSpacing(16),
@@ -185,14 +188,17 @@ class _ScopeTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              isSelected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
               color: isSelected ? AppColors.primary200 : colors.iconSecondary,
             ),
             horizontalSpacing(10),
             Expanded(
               child: Text(
                 label,
-                style: AppTextStyles.font14Regular.copyWith(color: colors.textPrimary),
+                style: AppTextStyles.font14Regular
+                    .copyWith(color: colors.textPrimary),
                 textAlign: TextAlign.right,
               ),
             ),

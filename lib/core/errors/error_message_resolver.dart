@@ -35,7 +35,10 @@ String resolveWriteErrorMessage(
 }) {
   if (error is NetworkException) return 'errors.no_internet'.tr();
   if (error is TimeoutException) {
-    return (timeoutOutcomeUncertain ? 'errors.timeout_uncertain' : 'errors.timeout').tr();
+    return (timeoutOutcomeUncertain
+            ? 'errors.timeout_uncertain'
+            : 'errors.timeout')
+        .tr();
   }
   if (error is ConflictException) return 'errors.conflict'.tr();
   if (error is ValidationException) return 'errors.validation'.tr();

@@ -16,6 +16,7 @@ import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.da
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_search_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/basin_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/basins_page.dart';
@@ -44,10 +45,18 @@ class AppRouter {
         );
       case Routes.home:
         return _buildRoute(
-          BlocProvider<HomeCubit>(
-            create: (final _) =>
-                HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepo>())
-                  ..init(),
+          MultiBlocProvider(
+            providers: <BlocProvider<dynamic>>[
+              BlocProvider<HomeCubit>(
+                create: (final _) =>
+                    HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepo>())
+                      ..init(),
+              ),
+              BlocProvider<ParcelSearchCubit>(
+                create: (final _) =>
+                    ParcelSearchCubit(getIt<HoldingsRepository>()),
+              ),
+            ],
             child: const HomeScreen(),
           ),
           settings,

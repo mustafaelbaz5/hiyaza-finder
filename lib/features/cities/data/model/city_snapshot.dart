@@ -1,4 +1,3 @@
-
 import '../../../holdings/data/model/parcel.dart';
 
 import 'association_type.dart';

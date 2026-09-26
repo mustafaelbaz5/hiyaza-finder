@@ -53,9 +53,11 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
         ),
       );
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
     } catch (e) {
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.toString()));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.toString()));
     }
   }
 
@@ -70,7 +72,8 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
     try {
       await _repo.reorderParcels(jazlaId, newOrderIds, cityId);
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
     }
   }
 
@@ -106,7 +109,8 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       );
     } on AppException catch (e) {
       await load();
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
     }
   }
 
@@ -133,7 +137,8 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       await _repo.updateBasin(jazlaId, cityId, basinName);
     } on AppException catch (e) {
       await load();
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
     }
   }
 
@@ -145,7 +150,8 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       await _repo.removeParcel(jazlaId, parcelId, cityId);
       await load();
     } on AppException catch (e) {
-      emit(state.copyWith(status: JazlaDetailStatus.error, errorMessage: e.message));
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
     }
   }
 }

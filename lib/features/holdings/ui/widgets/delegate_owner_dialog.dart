@@ -59,7 +59,8 @@ class _DelegateOwnerDialogState extends State<_DelegateOwnerDialog> {
 
     return Dialog(
       insetPadding: EdgeInsets.symmetric(horizontal: rw(32)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
       backgroundColor: colors.surface,
       child: Padding(
         padding: EdgeInsets.all(rw(24)),

@@ -31,11 +31,26 @@ Future<void> showJazlaActionsSheet(
             if (jazla.basinName != null) Text(jazla.basinName!),
             JazlaAreaSummary(jazla: jazla, parcels: parcels),
             verticalSpacing(8),
-            _Action(title: 'jazla.actions.edit_area'.tr(), icon: Icons.straighten_rounded, onTap: onEditArea),
-            _Action(title: 'jazla.actions.edit_basin'.tr(), icon: Icons.location_on_outlined, onTap: onEditBasin),
-            _ActionWithWidget(title: 'jazla.actions.export_excel'.tr(), icon: Icons.table_chart_outlined, child: exportExcelAction),
-            _ActionWithWidget(title: 'jazla.actions.share_pdf'.tr(), icon: Icons.picture_as_pdf_outlined, child: sharePdfAction),
-            _Action(title: 'jazla.actions.bulk_apply'.tr(), icon: Icons.bolt_rounded, onTap: onBulkApply),
+            _Action(
+                title: 'jazla.actions.edit_area'.tr(),
+                icon: Icons.straighten_rounded,
+                onTap: onEditArea),
+            _Action(
+                title: 'jazla.actions.edit_basin'.tr(),
+                icon: Icons.location_on_outlined,
+                onTap: onEditBasin),
+            _ActionWithWidget(
+                title: 'jazla.actions.export_excel'.tr(),
+                icon: Icons.table_chart_outlined,
+                child: exportExcelAction),
+            _ActionWithWidget(
+                title: 'jazla.actions.share_pdf'.tr(),
+                icon: Icons.picture_as_pdf_outlined,
+                child: sharePdfAction),
+            _Action(
+                title: 'jazla.actions.bulk_apply'.tr(),
+                icon: Icons.bolt_rounded,
+                onTap: onBulkApply),
           ],
         ),
       ),
@@ -61,7 +76,8 @@ class _Action extends StatelessWidget {
 }
 
 class _ActionWithWidget extends StatelessWidget {
-  const _ActionWithWidget({required this.title, required this.icon, required this.child});
+  const _ActionWithWidget(
+      {required this.title, required this.icon, required this.child});
   final String title;
   final IconData icon;
   final Widget child;
