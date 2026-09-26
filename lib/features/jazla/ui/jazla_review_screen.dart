@@ -2,9 +2,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/di/dependency_injection.dart';
-import '../../holdings/data/model/parcel.dart';
-import '../../holdings/data/repo/holdings_repository.dart';
-import '../../holdings/ui/widgets/parcel_detail_card.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../parcel_details/ui/widgets/parcel_detail_card.dart';
 
 class JazlaReviewScreen extends StatefulWidget {
   const JazlaReviewScreen({
@@ -29,7 +29,7 @@ class _JazlaReviewScreenState extends State<JazlaReviewScreen> {
   Parcel get _parcel => _parcels[_index];
 
   Future<void> _save(final Parcel updated) async {
-    await getIt<HoldingsRepository>().updateParcel(updated);
+    await getIt<ParcelCatalogRepository>().updateParcel(updated);
     if (mounted) setState(() => _parcels[_index] = updated);
   }
 
@@ -40,7 +40,7 @@ class _JazlaReviewScreenState extends State<JazlaReviewScreen> {
   }
 
   Future<void> _reopen() async {
-    final Parcel? updated = await getIt<HoldingsRepository>()
+    final Parcel? updated = await getIt<ParcelCatalogRepository>()
         .setParcelCompleted(_parcel.id, completed: false);
     if (updated != null && mounted) setState(() => _parcels[_index] = updated);
   }
@@ -65,13 +65,14 @@ class _JazlaReviewScreenState extends State<JazlaReviewScreen> {
               onFieldChanged: (final Parcel value) => _save(value),
               onCompleted: (final Parcel value) =>
                   setState(() => _parcels[_index] = value),
-              availableBasins: getIt<HoldingsRepository>().availableBasins,
-              parcelsForHolding: getIt<HoldingsRepository>().parcelsForHolding,
+              availableBasins: getIt<ParcelCatalogRepository>().availableBasins,
+              parcelsForHolding:
+                  getIt<ParcelCatalogRepository>().parcelsForHolding,
               setParcelCompleted:
-                  getIt<HoldingsRepository>().setParcelCompleted,
+                  getIt<ParcelCatalogRepository>().setParcelCompleted,
               onReopen: () => _reopen(),
               onRegenerate: (final String id) async {
-                final Parcel? updated = await getIt<HoldingsRepository>()
+                final Parcel? updated = await getIt<ParcelCatalogRepository>()
                     .regenerateLocalParcelId(id);
                 if (updated != null && mounted) {
                   setState(() => _parcels[_index] = updated);

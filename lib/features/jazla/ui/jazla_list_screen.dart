@@ -9,7 +9,7 @@ import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../holdings/data/repo/holdings_repository.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_list_cubit.dart';
@@ -25,7 +25,7 @@ class JazlaListScreen extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final String cityId = getIt<HoldingsRepository>().activeCityId ?? '';
+    final String cityId = getIt<ParcelCatalogRepository>().activeCityId ?? '';
     return BlocProvider<JazlaListCubit>(
       create: (final _) => JazlaListCubit(getIt<JazlaRepo>(), cityId)..load(),
       child: const _JazlaListView(),
@@ -38,7 +38,8 @@ class _JazlaListView extends StatelessWidget {
 
   Future<void> _createJazla(
       final BuildContext context, final JazlaListCubit cubit) async {
-    final List<String> basins = getIt<HoldingsRepository>().availableBasins;
+    final List<String> basins =
+        getIt<ParcelCatalogRepository>().availableBasins;
     if (basins.isEmpty) {
       await AppDialogs.showWarning(context,
           message: 'jazla.basin_required'.tr());

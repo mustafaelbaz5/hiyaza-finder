@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xlsx;
 
-import '../../../holdings/data/local/clipboard_formatter.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_details/data/local/clipboard_formatter.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// Builds a Jazla's .xlsx export — separate from `holdings/export_service.dart`
 /// (different columns/scope model). التسلسل reflects the Jazla's own order,

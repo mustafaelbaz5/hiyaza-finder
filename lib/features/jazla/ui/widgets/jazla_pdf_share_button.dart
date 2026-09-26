@@ -7,7 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../data/local/jazla_pdf_export_service.dart';
 import '../../data/model/jazla.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 class JazlaPdfShareButton extends StatefulWidget {
   const JazlaPdfShareButton({

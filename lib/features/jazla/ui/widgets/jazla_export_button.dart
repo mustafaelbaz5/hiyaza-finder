@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../holdings/data/local/export_file_saver.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_repository.dart';
+import '../../../parcel_export/data/local/export_file_saver.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../data/local/jazla_export_service.dart';
 
 class JazlaExportButton extends StatefulWidget {
@@ -42,7 +42,8 @@ class _JazlaExportButtonState extends State<JazlaExportButton> {
         if (mounted) context.showErrorSnackBar('jazla.export.empty'.tr());
         return;
       }
-      final String cityName = getIt<HoldingsRepository>().activeCityName ?? '';
+      final String cityName =
+          getIt<ParcelCatalogRepository>().activeCityName ?? '';
       final String fileName =
           JazlaExportService.buildFileName(cityName, widget.jazlaName);
       await saveExportFile(bytes: bytes, fileName: fileName);

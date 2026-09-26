@@ -3,7 +3,7 @@ import '../model/jazla.dart';
 /// Write/read contract for Jazlas — deliberately never accepts or returns a
 /// `Parcel`. "الجزلة لا تحتوي بيانات — هي تحتوي IDs فقط" is enforced by this
 /// interface's type signature, not just convention: resolving `parcelIds` to
-/// actual [Parcel] objects is the caller's (cubit's) job via `HoldingsReader`.
+/// actual [Parcel] objects is the caller's (cubit's) job via `ParcelCatalogReader`.
 abstract class JazlaRepo {
   Future<List<Jazla>> getAll(final String cityId);
 

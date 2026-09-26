@@ -12,11 +12,11 @@ import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
-import '../../holdings/data/model/parcel.dart';
-import '../../holdings/data/repo/holdings_reader.dart';
-import '../../holdings/data/repo/holdings_repository.dart';
-import '../../holdings/ui/add_record_screen.dart';
-import '../../holdings/ui/widgets/basin_picker.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/repo/holdings_reader.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../parcel_add/data/model/add_record_args.dart';
+import '../../parcel_add/ui/widgets/basin_picker.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
@@ -49,13 +49,13 @@ class JazlaDetailScreen extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
-    final String cityId = getIt<HoldingsRepository>().activeCityId ?? '';
+    final String cityId = getIt<ParcelCatalogRepository>().activeCityId ?? '';
     return MultiBlocProvider(
       providers: [
         BlocProvider<JazlaDetailCubit>(
           create: (final _) => JazlaDetailCubit(
             getIt<JazlaRepo>(),
-            getIt<HoldingsReader>(),
+            getIt<ParcelCatalogReader>(),
             jazlaId,
             cityId,
           )..load(),
@@ -63,7 +63,7 @@ class JazlaDetailScreen extends StatelessWidget {
         BlocProvider<JazlaAddParcelCubit>(
           create: (final _) => JazlaAddParcelCubit(
             getIt<JazlaRepo>(),
-            getIt<HoldingsReader>(),
+            getIt<ParcelCatalogReader>(),
             getIt<JazlaSearchService>(),
             jazlaId,
             cityId,

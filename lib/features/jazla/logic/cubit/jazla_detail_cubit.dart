@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exceptions.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_reader.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/holdings_reader.dart';
 import '../../data/model/jazla.dart';
 import '../../data/repo/jazla_repo.dart';
 import 'jazla_detail_state.dart';
@@ -12,12 +12,12 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       : super(JazlaDetailState.initial());
 
   final JazlaRepo _repo;
-  final HoldingsReader _holdingsReader;
+  final ParcelCatalogReader _holdingsReader;
   final String jazlaId;
   final String cityId;
 
   /// Resolves `jazla.parcelIds` (this Jazla's only real data) to live
-  /// [Parcel] objects via [HoldingsReader] — never cached inside the Jazla
+  /// [Parcel] objects via [ParcelCatalogReader] — never cached inside the Jazla
   /// itself, always re-derived so the detail screen reflects the parcels'
   /// real, current field values.
   List<Parcel> _resolveParcels(final Jazla jazla) {

@@ -9,16 +9,16 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../crop_type/ui/widgets/crop_type_picker.dart';
-import '../../../holdings/data/model/bulk_edit_outcome.dart';
-import '../../../holdings/data/model/bulk_editable_field.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_writer.dart';
-import '../../../holdings/ui/file_status_screen.dart'
+import '../../../parcel_review/data/model/bulk_edit_outcome.dart';
+import '../../../parcel_review/data/model/bulk_editable_field.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+import '../../../parcel_review/ui/file_status_screen.dart'
     show bulkEditableFieldLabel;
-import '../../../holdings/ui/widgets/picker_row.dart';
+import '../../../parcel_review/ui/widgets/picker_row.dart';
 
 /// تطبيق جماعي on one Jazla's own parcels — reuses the exact same
-/// `HoldingsWriter.bulkApplyField`/`BulkEditService` this app already uses
+/// `ParcelCatalogWriter.bulkApplyField`/`BulkEditService` this app already uses
 /// for City Tools' bulk edit (no new bulk-write logic), scoped via
 /// `parcelIds` to just this Jazla instead of a basin/city-wide scope. Only
 /// fields meaningful across arbitrary parcels are offered — نوع الاستخدام
@@ -151,7 +151,7 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
       final Set<String> parcelIds =
           widget.parcels.map((final Parcel p) => p.id).toSet();
       final BulkEditOutcome outcome =
-          await getIt<HoldingsWriter>().bulkApplyField(
+          await getIt<ParcelCatalogWriter>().bulkApplyField(
         field: _field,
         value: _value,
         parcelIds: parcelIds,

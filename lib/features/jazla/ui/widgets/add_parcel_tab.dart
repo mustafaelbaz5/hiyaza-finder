@@ -5,7 +5,7 @@ import 'package:hiyaza_finder/core/themes/app_colors.dart';
 import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
 import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
 import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/jazla/data/local/jazla_search_service.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_add_parcel_cubit.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_add_parcel_state.dart';

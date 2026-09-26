@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../../../holdings/data/local/area_calculator.dart';
-import '../../../holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import '../model/jazla.dart';
 
 class JazlaPdfExportService {

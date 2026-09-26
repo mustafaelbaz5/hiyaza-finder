@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../holdings/data/local/area_calculator.dart';
-import '../../../holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../data/model/jazla.dart';
 
 class JazlaAreaSummary extends StatelessWidget {

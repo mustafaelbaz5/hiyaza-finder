@@ -1,11 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../holdings/data/local/clipboard_formatter.dart';
+import '../../../parcel_details/data/local/clipboard_formatter.dart';
 import '../../data/local/jazla_search_service.dart';
 import 'jazla_locked_badge.dart';
 

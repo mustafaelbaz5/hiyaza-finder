@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../data/model/jazla.dart';
 
 enum JazlaDetailStatus { loading, loaded, error, notFound }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../data/model/jazla.dart';
 import 'jazla_area_summary.dart';
 

@@ -5,8 +5,8 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/themes/custom_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../holdings/data/local/clipboard_formatter.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_details/data/local/clipboard_formatter.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// One row inside [JazlaDetailScreen]'s "القطع الموجودة" tab — sequence
 /// number, حائز, حوض, المساحة (full unit names), نوع المحصول. Tapping opens

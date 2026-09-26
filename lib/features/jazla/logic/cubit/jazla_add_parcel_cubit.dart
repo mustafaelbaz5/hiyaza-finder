@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exceptions.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_reader.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/holdings_reader.dart';
 import '../../data/local/jazla_search_service.dart';
 import '../../data/model/jazla.dart';
 import '../../data/repo/jazla_repo.dart';
@@ -18,7 +18,7 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
   ) : super(const JazlaAddParcelState());
 
   final JazlaRepo _repo;
-  final HoldingsReader _holdingsReader;
+  final ParcelCatalogReader _holdingsReader;
   final JazlaSearchService _searchService;
   final String jazlaId;
   final String cityId;

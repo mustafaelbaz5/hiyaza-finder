@@ -1,5 +1,5 @@
-import '../../../holdings/data/local/holding_search_service.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/local/holding_search_service.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// A parcel-level search hit — unlike `SearchResult` (holding-grouped), each
 /// [ParcelSearchResult] is one specific [Parcel], carrying whether it's

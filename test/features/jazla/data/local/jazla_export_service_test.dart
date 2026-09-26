@@ -1,6 +1,6 @@
 import 'package:excel/excel.dart' as xlsx;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/jazla/data/local/jazla_export_service.dart';
 
 void main() {

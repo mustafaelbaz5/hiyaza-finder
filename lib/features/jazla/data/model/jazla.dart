@@ -1,10 +1,10 @@
 import 'package:equatable/equatable.dart';
 
-import '../../../holdings/data/local/area_calculator.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
 
 /// A local, non-data-owning grouping of parcel IDs (الجزلة) — an organizer,
 /// not a second source of truth. Holds `parcelIds` only; the actual [Parcel]
-/// data always lives in and is read/written through `HoldingsRepository`.
+/// data always lives in and is read/written through `ParcelCatalogRepository`.
 /// Scoped per city — never shared across [cityId]s.
 class Jazla extends Equatable {
   const Jazla({

@@ -6,18 +6,18 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
-import '../../../holdings/data/local/clipboard_formatter.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_repository.dart';
-import '../../../holdings/data/repo/holdings_writer.dart';
-import '../../../holdings/ui/widgets/field_row.dart';
-import '../../../holdings/ui/widgets/toggle_field_row.dart';
+import '../../../parcel_details/data/local/clipboard_formatter.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
+import 'package:hiyaza_finder/core/widgets/ui/fields/toggle_field_row.dart';
 import '../../data/repo/jazla_repo.dart';
 
 /// Opens on "+" for a free search result — shows key fields read-only, plus
 /// EDITABLE وراثة/مفوض toggles held as a purely in-memory draft. "إلغاء"
 /// discards the draft entirely; "إضافة للجزلة" commits it via
-/// `HoldingsWriter.updateParcel` THEN adds the id to the Jazla. No new
+/// `ParcelCatalogWriter.updateParcel` THEN adds the id to the Jazla. No new
 /// persistence layer — the draft never touches `JazlaStore`.
 Future<bool?> showJazlaQuickViewSheet(
   final BuildContext context, {
@@ -59,9 +59,9 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
     setState(() => _isSaving = true);
     try {
       if (_draft != widget.original) {
-        await getIt<HoldingsWriter>().updateParcel(_draft);
+        await getIt<ParcelCatalogWriter>().updateParcel(_draft);
       }
-      final String cityId = getIt<HoldingsRepository>().activeCityId ?? '';
+      final String cityId = getIt<ParcelCatalogRepository>().activeCityId ?? '';
       await getIt<JazlaRepo>().addParcel(widget.jazlaId, _draft.id, cityId);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
