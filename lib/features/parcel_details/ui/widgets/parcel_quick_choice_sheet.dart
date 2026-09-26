@@ -18,6 +18,7 @@ Future<String?> showParcelQuickChoiceSheet(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: context.customColors.background,
       builder: (final BuildContext sheetContext) => _ParcelQuickChoiceSheet(
         title: title,
         selected: selected,
