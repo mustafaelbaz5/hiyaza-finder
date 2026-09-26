@@ -54,7 +54,8 @@ void main() {
       feddan: 2,
     );
 
-    test('true when holderName/basinName/cropType are filled and '
+    test(
+        'true when holderName/basinName/cropType are filled and '
         'nationalId is valid', () {
       expect(complete.hasRequiredFieldsFilled, isTrue);
     });

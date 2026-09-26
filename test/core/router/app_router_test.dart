@@ -4,7 +4,6 @@ import 'package:hiyaza_finder/core/router/app_router.dart';
 import 'package:hiyaza_finder/core/router/routes.dart';
 import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 
-
 void main() {
   // Regression test: `context.pushNamed<CitySnapshot>(Routes.cityPicker)`
   // makes the Navigator internally cast whatever `onGenerateRoute` returns

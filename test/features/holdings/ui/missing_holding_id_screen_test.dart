@@ -41,7 +41,8 @@ void main() {
     await getIt.reset();
   });
 
-  testWidgets('shows the empty state when every parcel already has a '
+  testWidgets(
+      'shows the empty state when every parcel already has a '
       'holding number', (final tester) async {
     await _registerRepository(const <Parcel>[
       Parcel(id: 'p1', holdingId: '101', holderName: 'أحمد'),

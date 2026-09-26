@@ -18,7 +18,8 @@ class _FakeNetworkInfo implements NetworkInfo {
   }
 
   @override
-  Stream<InternetConnectionStatus> get onStatusChange => _statusController.stream;
+  Stream<InternetConnectionStatus> get onStatusChange =>
+      _statusController.stream;
 
   void emitStatusChange(final InternetConnectionStatus status) =>
       _statusController.add(status);
@@ -65,7 +66,8 @@ void main() {
     expect(await next, ConnectionQuality.offline);
   });
 
-  test('classifies as weak when connected but the check exceeds the '
+  test(
+      'classifies as weak when connected but the check exceeds the '
       'weak threshold', () async {
     networkInfo = _FakeNetworkInfo()
       ..connected = true
@@ -82,8 +84,7 @@ void main() {
     expect(await next, ConnectionQuality.weak);
   });
 
-  test('does not emit again when the classification stays the same',
-      () async {
+  test('does not emit again when the classification stays the same', () async {
     networkInfo = _FakeNetworkInfo()..connected = true;
     service = ConnectionQualityService(
       networkInfo,
@@ -103,8 +104,7 @@ void main() {
     await sub.cancel();
   });
 
-  test('reacts to onStatusChange going offline before the next poll',
-      () async {
+  test('reacts to onStatusChange going offline before the next poll', () async {
     networkInfo = _FakeNetworkInfo()..connected = true;
     service = ConnectionQualityService(
       networkInfo,

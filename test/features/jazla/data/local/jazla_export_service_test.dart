@@ -7,7 +7,8 @@ void main() {
   const JazlaExportService service = JazlaExportService();
 
   test('export returns null for an empty parcel list', () {
-    expect(service.export(jazlaName: 'جزلة', orderedParcels: const <Parcel>[]), isNull);
+    expect(service.export(jazlaName: 'جزلة', orderedParcels: const <Parcel>[]),
+        isNull);
   });
 
   test('columns are in the exact spec order', () {
@@ -25,11 +26,24 @@ void main() {
 
   test('rows carry 1-based التسلسل matching orderedParcels order', () {
     const List<Parcel> parcels = <Parcel>[
-      Parcel(id: 'a', holdingId: '1', holderName: 'أ', feddan: 1, qirat: 2, sahm: 3),
-      Parcel(id: 'b', holdingId: '2', holderName: 'ب', feddan: 4, qirat: 5, sahm: 6),
+      Parcel(
+          id: 'a',
+          holdingId: '1',
+          holderName: 'أ',
+          feddan: 1,
+          qirat: 2,
+          sahm: 3),
+      Parcel(
+          id: 'b',
+          holdingId: '2',
+          holderName: 'ب',
+          feddan: 4,
+          qirat: 5,
+          sahm: 6),
     ];
 
-    final bytes = service.export(jazlaName: 'جزلة الري', orderedParcels: parcels);
+    final bytes =
+        service.export(jazlaName: 'جزلة الري', orderedParcels: parcels);
     expect(bytes, isNotNull);
 
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes!);
@@ -64,7 +78,8 @@ void main() {
   });
 
   test('buildFileName sanitizes spaces and dashes', () {
-    final String result = JazlaExportService.buildFileName('city-1 name', 'my jazla');
+    final String result =
+        JazlaExportService.buildFileName('city-1 name', 'my jazla');
     expect(result, contains('city_1_name_my_jazla_'));
   });
 }

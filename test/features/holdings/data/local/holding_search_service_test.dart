@@ -229,7 +229,8 @@ void main() {
     });
   });
 
-  group('isFieldAdded tiebreak (REFACTOR_ROADMAP.md Phase 7 — newly added '
+  group(
+      'isFieldAdded tiebreak (REFACTOR_ROADMAP.md Phase 7 — newly added '
       'parcels sort first)', () {
     test('field-added result ranks first when scores are tied', () {
       final tied = <Parcel>[
@@ -254,7 +255,8 @@ void main() {
       expect(results[0].holdingId, '701');
     });
 
-    test('a higher-scoring imported result still ranks above a '
+    test(
+        'a higher-scoring imported result still ranks above a '
         'lower-scoring field-added one', () {
       final mixed = <Parcel>[
         const Parcel(

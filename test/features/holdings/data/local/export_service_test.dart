@@ -32,22 +32,26 @@ void main() {
   });
 
   test('all scope produces a sheet per basin plus the "all data" sheet', () {
-    final bytes = service.exportToExcel(parcels: parcels, scope: ExportScope.all);
+    final bytes =
+        service.exportToExcel(parcels: parcels, scope: ExportScope.all);
     expect(bytes, isNotNull);
 
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes!);
-    expect(workbook.tables.keys, containsAll(<String>['كل البيانات', 'الباشا', 'البحيره']));
+    expect(workbook.tables.keys,
+        containsAll(<String>['كل البيانات', 'الباشا', 'البحيره']));
   });
 
   test('the "all data" sheet has one header row plus one row per parcel', () {
-    final bytes = service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
+    final bytes =
+        service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes);
     final xlsx.Sheet allSheet = workbook.tables['كل البيانات']!;
     expect(allSheet.maxRows, 1 + parcels.length); // header + 2 rows
   });
 
   test('a basin sheet only contains that basin\'s parcels', () {
-    final bytes = service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
+    final bytes =
+        service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes);
     final xlsx.Sheet bashaSheet = workbook.tables['الباشا']!;
     expect(bashaSheet.maxRows, 2); // header + the one الباشا parcel
@@ -61,7 +65,8 @@ void main() {
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes);
     final xlsx.Sheet allSheet = workbook.tables['كل البيانات']!;
     expect(allSheet.maxRows, 2); // header + only the field-added parcel
-    expect(workbook.tables.containsKey('الباشا'), isFalse); // that parcel isn't field-added
+    expect(workbook.tables.containsKey('الباشا'),
+        isFalse); // that parcel isn't field-added
   });
 
   test('addedOnly scope with no field-added parcels returns null', () {
@@ -72,24 +77,30 @@ void main() {
     expect(bytes, isNull);
   });
 
-  test('basinFilter narrows both the "all data" sheet and which basin sheets exist', () {
+  test(
+      'basinFilter narrows both the "all data" sheet and which basin sheets exist',
+      () {
     final bytes = service.exportToExcel(
       parcels: parcels,
       scope: ExportScope.all,
       basinFilter: 'الباشا',
     )!;
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes);
-    expect(workbook.tables.keys, containsAll(<String>['كل البيانات', 'الباشا']));
+    expect(
+        workbook.tables.keys, containsAll(<String>['كل البيانات', 'الباشا']));
     expect(workbook.tables.containsKey('البحيره'), isFalse);
-    expect(workbook.tables['كل البيانات']!.maxRows, 2); // header + الباشا's one parcel
+    expect(workbook.tables['كل البيانات']!.maxRows,
+        2); // header + الباشا's one parcel
   });
 
   test('the header row matches ExportService.columns', () {
-    final bytes = service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
+    final bytes =
+        service.exportToExcel(parcels: parcels, scope: ExportScope.all)!;
     final xlsx.Excel workbook = xlsx.Excel.decodeBytes(bytes);
     final xlsx.Sheet allSheet = workbook.tables['كل البيانات']!;
     final List<String> headerRow = allSheet.rows.first
-        .map((final xlsx.Data? cell) => (cell?.value as xlsx.TextCellValue?)?.value.toString() ?? '')
+        .map((final xlsx.Data? cell) =>
+            (cell?.value as xlsx.TextCellValue?)?.value.toString() ?? '')
         .toList();
     expect(headerRow, ExportService.columns);
   });

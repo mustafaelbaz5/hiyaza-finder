@@ -103,22 +103,28 @@ void main() {
       reviewedBy: 'user-1',
     );
 
-    test('reviewed/isFieldAdded resolve via ?? when omitted (plain bool params)', () {
+    test(
+        'reviewed/isFieldAdded resolve via ?? when omitted (plain bool params)',
+        () {
       final Parcel copy = base.copyWith();
       expect(copy.reviewed, base.reviewed);
       expect(copy.isFieldAdded, base.isFieldAdded);
     });
 
-    test('the _unset sentinel lets reviewedAt/reviewedBy be explicitly cleared to null', () {
+    test(
+        'the _unset sentinel lets reviewedAt/reviewedBy be explicitly cleared to null',
+        () {
       final Parcel withDate = base.copyWith(reviewedAt: DateTime(2026, 1, 1));
       expect(withDate.reviewedAt, DateTime(2026, 1, 1));
 
-      final Parcel cleared = withDate.copyWith(reviewedAt: null, reviewedBy: null);
+      final Parcel cleared =
+          withDate.copyWith(reviewedAt: null, reviewedBy: null);
       expect(cleared.reviewedAt, isNull);
       expect(cleared.reviewedBy, isNull);
     });
 
-    test('omitting reviewedAt/reviewedBy from copyWith leaves them unchanged', () {
+    test('omitting reviewedAt/reviewedBy from copyWith leaves them unchanged',
+        () {
       final Parcel withDate = base.copyWith(reviewedAt: DateTime(2026, 1, 1));
       final Parcel untouched = withDate.copyWith(holdingId: '202');
       expect(untouched.reviewedAt, DateTime(2026, 1, 1));
@@ -138,7 +144,9 @@ void main() {
   group('copyWith for completedAt/completedBy', () {
     const Parcel base = Parcel(holdingId: '101', id: 'p-1');
 
-    test('the _unset sentinel lets completedAt/completedBy be explicitly cleared to null', () {
+    test(
+        'the _unset sentinel lets completedAt/completedBy be explicitly cleared to null',
+        () {
       final Parcel withDate = base.copyWith(
         completedAt: DateTime(2026, 1, 1),
         completedBy: 'user-1',
@@ -152,7 +160,8 @@ void main() {
       expect(cleared.completedBy, isNull);
     });
 
-    test('omitting completedAt/completedBy from copyWith leaves them unchanged', () {
+    test('omitting completedAt/completedBy from copyWith leaves them unchanged',
+        () {
       final Parcel withDate = base.copyWith(completedAt: DateTime(2026, 1, 1));
       final Parcel untouched = withDate.copyWith(holdingId: '202');
       expect(untouched.completedAt, DateTime(2026, 1, 1));

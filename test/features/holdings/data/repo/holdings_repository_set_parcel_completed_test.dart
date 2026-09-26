@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 
@@ -26,6 +29,9 @@ void main() {
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
     repository = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
+      completionStore: ParcelCompletionStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
   });
 
@@ -36,28 +42,36 @@ void main() {
     expect(result, isNull);
   });
 
-  test('marks a holdings-origin (isFieldAdded: false) parcel completed locally', () async {
+  test('marks a holdings-origin (isFieldAdded: false) parcel completed locally',
+      () async {
     const Parcel parcel = Parcel(id: 'p-1', holdingId: '101');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-    final Parcel? updated = await repository.setParcelCompleted('p-1', completed: true);
+    final Parcel? updated =
+        await repository.setParcelCompleted('p-1', completed: true);
 
     expect(updated, isNotNull);
     expect(updated!.completedAt, isNotNull);
     expect(repository.parcels.single.completedAt, isNotNull);
   });
 
-  test('marks an added_holdings-origin (isFieldAdded: true) parcel completed locally', () async {
-    const Parcel parcel = Parcel(id: 'p-2', holdingId: '102', isFieldAdded: true);
+  test(
+      'marks an added_holdings-origin (isFieldAdded: true) parcel completed locally',
+      () async {
+    const Parcel parcel =
+        Parcel(id: 'p-2', holdingId: '102', isFieldAdded: true);
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 
-    final Parcel? updated = await repository.setParcelCompleted('p-2', completed: true);
+    final Parcel? updated =
+        await repository.setParcelCompleted('p-2', completed: true);
 
     expect(updated, isNotNull);
     expect(updated!.completedAt, isNotNull);
   });
 
-  test('finish then un-finish results in a final local state that is not completed', () async {
+  test(
+      'finish then un-finish results in a final local state that is not completed',
+      () async {
     const Parcel parcel = Parcel(id: 'p-3', holdingId: '103');
     await repository.loadParcelsForCity('city-1', const <Parcel>[parcel]);
 

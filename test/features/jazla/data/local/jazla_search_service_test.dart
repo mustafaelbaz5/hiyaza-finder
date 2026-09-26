@@ -5,11 +5,14 @@ import 'package:hiyaza_finder/features/jazla/data/local/jazla_search_service.dar
 void main() {
   const JazlaSearchService service = JazlaSearchService();
 
-  const Parcel free = Parcel(id: 'p1', holdingId: '10', holderName: 'محمد أحمد');
-  const Parcel locked = Parcel(id: 'p2', holdingId: '11', holderName: 'محمد علي');
+  const Parcel free =
+      Parcel(id: 'p1', holdingId: '10', holderName: 'محمد أحمد');
+  const Parcel locked =
+      Parcel(id: 'p2', holdingId: '11', holderName: 'محمد علي');
 
   test('returns empty results for a blank query', () {
-    final results = service.search(<Parcel>[free, locked], '   ', <String, String>{});
+    final results =
+        service.search(<Parcel>[free, locked], '   ', <String, String>{});
     expect(results, isEmpty);
   });
 
@@ -48,7 +51,8 @@ void main() {
   });
 
   test('routes an all-digit query through exact holding-number matching', () {
-    final results = service.search(<Parcel>[free, locked], '10', <String, String>{});
+    final results =
+        service.search(<Parcel>[free, locked], '10', <String, String>{});
     expect(results, hasLength(1));
     expect(results.single.parcel.id, 'p1');
   });

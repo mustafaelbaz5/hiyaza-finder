@@ -27,7 +27,8 @@ class _FileAssetLoader extends AssetLoader {
   }
 }
 
-Widget wrapLocalized(final Widget child, {final Locale locale = const Locale('ar')}) {
+Widget wrapLocalized(final Widget child,
+    {final Locale locale = const Locale('ar')}) {
   return EasyLocalization(
     supportedLocales: const <Locale>[Locale('ar'), Locale('en')],
     path: 'assets/lang',
@@ -48,7 +49,8 @@ Widget wrapLocalized(final Widget child, {final Locale locale = const Locale('ar
   );
 }
 
-Future<void> pumpLocalized(final WidgetTester tester, final Widget child) async {
+Future<void> pumpLocalized(
+    final WidgetTester tester, final Widget child) async {
   await tester.pumpWidget(wrapLocalized(child));
   await tester.pumpAndSettle();
 }

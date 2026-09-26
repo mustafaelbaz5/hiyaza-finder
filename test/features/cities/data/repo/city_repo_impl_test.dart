@@ -12,7 +12,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class _FakePathProviderPlatform extends PathProviderPlatform with MockPlatformInterfaceMixin {
+class _FakePathProviderPlatform extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
   _FakePathProviderPlatform(this.tempDirPath);
 
   final String tempDirPath;
@@ -77,7 +78,9 @@ void main() {
     expect(cities.single.cityId, 'city-1');
   });
 
-  test('deleteCachedCity clears active_city_id when it matches the deleted city', () async {
+  test(
+      'deleteCachedCity clears active_city_id when it matches the deleted city',
+      () async {
     await keyValueStore.setString('active_city_id', 'city-1');
     await const CitySnapshotCache().save(
       CitySnapshot(
@@ -95,7 +98,8 @@ void main() {
     expect(await repository.loadActiveCachedSnapshot(), isNull);
   });
 
-  test('deleteCachedCity leaves active_city_id untouched for a different city', () async {
+  test('deleteCachedCity leaves active_city_id untouched for a different city',
+      () async {
     await keyValueStore.setString('active_city_id', 'city-1');
     await const CitySnapshotCache().save(
       CitySnapshot(

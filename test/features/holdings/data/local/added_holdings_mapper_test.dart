@@ -43,7 +43,8 @@ void main() {
     expect(record['is_delegate'], isTrue);
   });
 
-  test('a blank holdingId (brand-new person) maps to a null holding_id_number', () {
+  test('a blank holdingId (brand-new person) maps to a null holding_id_number',
+      () {
     const Parcel p = Parcel(holdingId: '', holderName: 'محمد');
     final Map<String, dynamic> record = parcelToAddedHoldingsRecord(p);
     expect(record['holding_id_number'], isNull);
@@ -64,7 +65,8 @@ void main() {
     expect(record['holding_id_number'], '-1');
   });
 
-  test('null feddan/qirat/sahm default to 0, matching the not-null DB columns', () {
+  test('null feddan/qirat/sahm default to 0, matching the not-null DB columns',
+      () {
     const Parcel p = Parcel(holdingId: '', holderName: 'محمد');
     final Map<String, dynamic> record = parcelToAddedHoldingsRecord(p);
     expect(record['feddan'], 0);

@@ -71,9 +71,12 @@ void main() {
     );
 
     expect(result.changedCount, 2);
-    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType, 'ذرة');
-    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType, 'ذرة');
-    expect(result.parcels.firstWhere((final Parcel p) => p.id == '2').cropType, isNull);
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType,
+        'ذرة');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType,
+        'ذرة');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '2').cropType,
+        isNull);
   });
 
   test('basin and parcelIds combine with AND when both are given', () {
@@ -86,8 +89,10 @@ void main() {
     );
 
     expect(result.changedCount, 1);
-    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType, 'أرز');
-    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType, isNull);
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '1').cropType,
+        'أرز');
+    expect(result.parcels.firstWhere((final Parcel p) => p.id == '3').cropType,
+        isNull);
   });
 
   test('a value can clear a nullable field', () {

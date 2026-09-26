@@ -8,7 +8,8 @@ void main() {
     });
 
     test('maps أ إ آ to ا', () {
-      expect(ArabicNormalizer.normalize('أحمد إبراهيم آدم'), 'احمد ابراهيم ادم');
+      expect(
+          ArabicNormalizer.normalize('أحمد إبراهيم آدم'), 'احمد ابراهيم ادم');
     });
 
     test('strips diacritics', () {

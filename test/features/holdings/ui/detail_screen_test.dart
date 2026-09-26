@@ -104,7 +104,8 @@ void main() {
     // p1 must still be the card shown at the same position — no jump/reflow
     // despite now being the reviewed one, and the paged index must not have
     // moved to p2.
-    final Finder firstCardFinderAfter = find.byKey(const ValueKey<String>('p1'));
+    final Finder firstCardFinderAfter =
+        find.byKey(const ValueKey<String>('p1'));
     expect(firstCardFinderAfter, findsOneWidget);
     expect(find.byKey(const ValueKey<String>('p2')), findsNothing);
     final double firstYAfter = tester.getTopLeft(firstCardFinderAfter).dy;

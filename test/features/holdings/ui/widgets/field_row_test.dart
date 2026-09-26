@@ -20,7 +20,8 @@ void main() {
     expect(find.text('محمد علي'), findsOneWidget);
   });
 
-  testWidgets('shows the default placeholder for a null value', (final tester) async {
+  testWidgets('shows the default placeholder for a null value',
+      (final tester) async {
     await pumpLocalized(
       tester,
       const FieldRow(label: 'اسم الحائز', value: null),
@@ -29,7 +30,8 @@ void main() {
     expect(find.text('-'), findsOneWidget);
   });
 
-  testWidgets('shows the default placeholder for a blank value', (final tester) async {
+  testWidgets('shows the default placeholder for a blank value',
+      (final tester) async {
     await pumpLocalized(
       tester,
       const FieldRow(label: 'اسم الحائز', value: '   '),
@@ -47,7 +49,8 @@ void main() {
     expect(find.text('-1'), findsOneWidget);
   });
 
-  testWidgets('shows the modified badge only when isModified is true', (final tester) async {
+  testWidgets('shows the modified badge only when isModified is true',
+      (final tester) async {
     await pumpLocalized(
       tester,
       const FieldRow(label: 'اسم الحائز', value: 'محمد', isModified: true),
@@ -56,7 +59,8 @@ void main() {
     expect(find.text('تم التعديل'), findsOneWidget);
   });
 
-  testWidgets('does not show the modified badge by default', (final tester) async {
+  testWidgets('does not show the modified badge by default',
+      (final tester) async {
     await pumpLocalized(
       tester,
       const FieldRow(label: 'اسم الحائز', value: 'محمد'),
@@ -65,7 +69,8 @@ void main() {
     expect(find.text('تم التعديل'), findsNothing);
   });
 
-  testWidgets('shows an edit icon only when onEdit is provided', (final tester) async {
+  testWidgets('shows an edit icon only when onEdit is provided',
+      (final tester) async {
     await pumpLocalized(
       tester,
       FieldRow(label: 'اسم الحائز', value: 'محمد', onEdit: () {}),
@@ -74,7 +79,8 @@ void main() {
     expect(find.byIcon(Icons.edit_rounded), findsOneWidget);
   });
 
-  testWidgets('does not show an edit icon when onEdit is null', (final tester) async {
+  testWidgets('does not show an edit icon when onEdit is null',
+      (final tester) async {
     await pumpLocalized(
       tester,
       const FieldRow(label: 'اسم الحائز', value: 'محمد'),

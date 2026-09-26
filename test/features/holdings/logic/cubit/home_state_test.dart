@@ -52,7 +52,8 @@ void main() {
         parcels: parcels,
         modifiedIds: const <String>{'p1'},
       );
-      final HomeState updated = initial.copyWith(modifiedIds: const <String>{'p2', 'p3'});
+      final HomeState updated =
+          initial.copyWith(modifiedIds: const <String>{'p2', 'p3'});
       expect(updated.modifiedCount, 2);
     });
 

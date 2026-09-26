@@ -35,8 +35,7 @@ void main() {
     expect(await tracker.getEditedIds('city-1'), <String>{'a', 'b', 'c'});
   });
 
-  test('markEditedBatch merges with ids already marked individually',
-      () async {
+  test('markEditedBatch merges with ids already marked individually', () async {
     await tracker.markEdited('a', 'city-1');
     await tracker.markEditedBatch(<String>['b', 'c'], 'city-1');
 

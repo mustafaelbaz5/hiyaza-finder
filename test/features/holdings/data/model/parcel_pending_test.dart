@@ -56,8 +56,7 @@ void main() {
       expect(p.isHoldingIdMissingOrZero, isTrue);
     });
 
-    test('false for a real holding number, including one containing a 0',
-        () {
+    test('false for a real holding number, including one containing a 0', () {
       expect(
         const Parcel(id: '1', holdingId: '101').isHoldingIdMissingOrZero,
         isFalse,
@@ -91,11 +90,13 @@ void main() {
     });
   });
 
-  group('isCurrentlyInAddedHoldings (REFACTOR_ROADMAP.md Phase 25 follow-up)', () {
+  group('isCurrentlyInAddedHoldings (REFACTOR_ROADMAP.md Phase 25 follow-up)',
+      () {
     test(
         'false for a genuine import — isFieldAdded false short-circuits '
         'regardless of sourceAddedHoldingId', () {
-      const Parcel imported = Parcel(id: 'h1', holdingId: '101', isFieldAdded: false);
+      const Parcel imported =
+          Parcel(id: 'h1', holdingId: '101', isFieldAdded: false);
       expect(imported.isCurrentlyInAddedHoldings, isFalse);
     });
 

@@ -56,7 +56,8 @@ void main() {
     expect(find.text('أدخل رقم الحيازة الصحيح'), findsNothing);
   });
 
-  testWidgets('a missing area (feddan/qirat/sahm all null) shows the '
+  testWidgets(
+      'a missing area (feddan/qirat/sahm all null) shows the '
       'area-required message', (final tester) async {
     await pumpLocalized(
       tester,
@@ -67,7 +68,8 @@ void main() {
     expect(find.text('أدخل المساحة (فدان/قيراط/سهم)'), findsOneWidget);
   });
 
-  testWidgets('a complete parcel shows no gap messages at all', (final tester) async {
+  testWidgets('a complete parcel shows no gap messages at all',
+      (final tester) async {
     await pumpLocalized(tester, const _GapMessagesProbe(complete));
     expect(find.byType(Text), findsNothing);
   });

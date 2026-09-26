@@ -44,7 +44,8 @@ class _FakeCropTypeRepo implements CropTypeRepo {
   }
 
   @override
-  Future<void> removeCropType(final String cityId, final String cropType) async {
+  Future<void> removeCropType(
+      final String cityId, final String cropType) async {
     if (shouldFailWrites) throw Exception('write rejected');
     cropTypes = cropTypes.where((final String c) => c != cropType).toList();
   }
@@ -89,8 +90,7 @@ void main() {
     expect(find.text('حدث خطأ غير متوقع.'), findsOneWidget);
   });
 
-  testWidgets(
-      'a delete that succeeds actually removes the item from the list',
+  testWidgets('a delete that succeeds actually removes the item from the list',
       (final tester) async {
     final _FakeCropTypeRepo repository = _FakeCropTypeRepo()
       ..cropTypes = <String>['قمح', 'ارز'];

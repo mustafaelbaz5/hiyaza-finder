@@ -154,6 +154,20 @@ void main() {
   });
 
   group('parcel list mutation', () {
+    test('emits an immutable snapshot after a parcel mutation', () async {
+      final Future<List<Parcel>> nextSnapshot = state.snapshots.first;
+
+      await state.adopt(
+        'city-1',
+        const <Parcel>[Parcel(id: '1', holdingId: '101')],
+      );
+
+      final List<Parcel> snapshot = await nextSnapshot;
+      expect(snapshot.single.id, '1');
+      expect(() => snapshot.add(const Parcel(id: '2', holdingId: '102')),
+          throwsUnsupportedError);
+    });
+
     test('indexOf finds a parcel by id', () async {
       const List<Parcel> parcels = <Parcel>[
         Parcel(id: '1', holdingId: '101'),

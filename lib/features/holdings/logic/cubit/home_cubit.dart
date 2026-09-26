@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
@@ -9,13 +11,29 @@ import '../../../cities/data/repo/city_repo.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository, this._cityRepository) : super(HomeState.initial());
+  HomeCubit(this._repository, this._cityRepository)
+      : super(HomeState.initial());
 
   final HoldingsRepository _repository;
   final CityRepo _cityRepository;
 
   /// Metadata for the active city — `null` until one has been loaded.
   CitySnapshot? _activeCitySnapshot;
+  late final StreamSubscription<List<Parcel>> _snapshotSubscription =
+      _repository.snapshots.listen(_onSnapshot);
+
+  void _onSnapshot(final List<Parcel> parcels) {
+    if (isClosed || state.status != HomeStatus.loaded) return;
+    emit(
+      state.copyWith(
+        parcels: parcels,
+        results: state.query.trim().isEmpty
+            ? const <SearchResult>[]
+            : _repository.search(state.query),
+        modifiedIds: _modifiedIds(parcels),
+      ),
+    );
+  }
 
   Future<void> init() async {
     emit(state.copyWith(status: HomeStatus.loading));
@@ -98,8 +116,9 @@ class HomeCubit extends Cubit<HomeState> {
     emit(
       state.copyWith(
         parcels: parcels,
-        results:
-            state.query.trim().isEmpty ? state.results : _repository.search(state.query),
+        results: state.query.trim().isEmpty
+            ? state.results
+            : _repository.search(state.query),
         modifiedIds: _modifiedIds(parcels),
       ),
     );
@@ -109,8 +128,15 @@ class HomeCubit extends Cubit<HomeState> {
   /// search bar always searches globally regardless of which basin cards
   /// are showing below it.
   void search(final String query) {
-    final List<SearchResult> results =
-        query.trim().isEmpty ? const <SearchResult>[] : _repository.search(query);
+    final List<SearchResult> results = query.trim().isEmpty
+        ? const <SearchResult>[]
+        : _repository.search(query);
     emit(state.copyWith(query: query, results: results));
+  }
+
+  @override
+  Future<void> close() async {
+    await _snapshotSubscription.cancel();
+    return super.close();
   }
 }

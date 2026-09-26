@@ -27,7 +27,8 @@ class _ScriptedConnectionChecker implements InternetConnectionChecker {
 }
 
 void main() {
-  test('isConnected returns true immediately when the first probe succeeds '
+  test(
+      'isConnected returns true immediately when the first probe succeeds '
       '— no retry needed', () async {
     final _ScriptedConnectionChecker checker =
         _ScriptedConnectionChecker(<bool>[true]);
@@ -49,7 +50,8 @@ void main() {
     expect(checker.callCount, 2);
   });
 
-  test('isConnected returns false only after both the initial probe and the '
+  test(
+      'isConnected returns false only after both the initial probe and the '
       'retry fail', () async {
     final _ScriptedConnectionChecker checker =
         _ScriptedConnectionChecker(<bool>[false, false]);
