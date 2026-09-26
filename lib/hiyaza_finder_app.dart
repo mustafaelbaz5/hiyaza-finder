@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:easy_localization/easy_localization.dart';
@@ -76,8 +77,22 @@ class HiyazaFinderApp extends StatelessWidget {
 
 /// Kept outside the desktop frame so a window resize changes only the frame,
 /// not ScreenUtil, dependency providers, or MaterialApp itself.
-class _AppBootstrap extends StatelessWidget {
+class _AppBootstrap extends StatefulWidget {
   const _AppBootstrap();
+
+  @override
+  State<_AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<_AppBootstrap> {
+  late final AppControlCubit _appControlCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _appControlCubit = getIt<AppControlCubit>();
+    unawaited(_appControlCubit.initialize());
+  }
 
   @override
   Widget build(final BuildContext context) {
@@ -89,7 +104,7 @@ class _AppBootstrap extends StatelessWidget {
         return BlocProvider<AppSettingsCubit>(
           create: (final _) => AppSettingsCubit(),
           child: BlocProvider.value(
-            value: getIt<AppControlCubit>()..initialize(),
+            value: _appControlCubit,
             child: const _AppMaterial(),
           ),
         );
