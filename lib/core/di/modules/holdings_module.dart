@@ -12,6 +12,7 @@ import '../../../features/holdings/data/local/parcel_id_overrides_store.dart';
 import '../../../features/holdings/data/repo/holdings_reader.dart';
 import '../../../features/holdings/data/repo/holdings_repository.dart';
 import '../../../features/holdings/data/repo/holdings_writer.dart';
+import '../../../features/holdings/logic/cubit/parcel_editor_cubit.dart';
 import '../../storage/key_value_store.dart';
 
 /// The holdings feature's data layer: the local services `HoldingsRepository`
@@ -59,4 +60,7 @@ void registerHoldingsModule(final GetIt getIt) {
       .registerLazySingleton<HoldingsReader>(() => getIt<HoldingsRepository>());
   getIt
       .registerLazySingleton<HoldingsWriter>(() => getIt<HoldingsRepository>());
+  getIt.registerFactory<ParcelEditorCubit>(
+    () => ParcelEditorCubit(getIt<HoldingsWriter>()),
+  );
 }
