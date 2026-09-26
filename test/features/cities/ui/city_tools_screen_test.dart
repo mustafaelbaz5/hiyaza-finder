@@ -9,8 +9,8 @@ import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/ui/city_tools_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/helper_tools_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
@@ -70,8 +70,8 @@ void main() {
   setUp(() async {
     await getIt.reset();
     getIt.registerLazySingleton<CityRepo>(_FakeCityRepo.new);
-    getIt.registerLazySingleton<HoldingsRepository>(
-      () => HoldingsRepository(
+    getIt.registerLazySingleton<ParcelCatalogRepository>(
+      () => ParcelCatalogRepository(
         editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
       ),
     );

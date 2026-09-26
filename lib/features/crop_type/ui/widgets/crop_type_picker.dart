@@ -1,11 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../../holdings/data/model/parcel.dart';
-import '../../../holdings/data/repo/holdings_repository.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../../parcel_details/ui/widgets/parcel_quick_choice_sheet.dart';
 
 import '../../data/repo/crop_type_repo.dart';
 
@@ -36,34 +37,31 @@ Future<ChoiceDialogResult<String>?> pickCropType(
   final List<String> resolvedOptions =
       options ?? await resolveCropTypeOptions();
   if (!context.mounted) return null;
-  final ChoiceDialogResult<String>? result = await showChoiceDialog<String>(
+  final String? value = await showParcelQuickChoiceSheet(
     context,
     title: 'holdings.fields.crop_type'.tr(),
-    options: [
-      for (final String option in resolvedOptions)
-        ChoiceOption<String>(value: option, label: option),
-    ],
     selected: selected,
-    clearLabel: '—',
+    options: resolvedOptions
+        .where((final String option) => option != cropTypeOtherOption)
+        .toList(growable: false),
+    onAddOption: () async {
+      final String? custom = await showTextInputDialog(
+        context,
+        title: 'holdings.crop_type.specify_title'.tr(),
+        initialValue: '',
+      );
+      final String? trimmed = custom?.trim();
+      return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    },
   );
-  if (result == null || result.isClear) return result;
-  if (result.value != cropTypeOtherOption) return result;
-  if (!context.mounted) return result;
-
-  final String? custom = await showTextInputDialog(
-    context,
-    title: 'holdings.crop_type.specify_title'.tr(),
-    initialValue: '',
-  );
-  final String? trimmed = custom?.trim();
-  if (trimmed == null || trimmed.isEmpty) return result; // keep "اخرى"
-  return ChoiceDialogResult<String>.value(trimmed);
+  if (value == null) return null;
+  return ChoiceDialogResult<String>.value(value);
 }
 
 /// Resolves the active city's list without exposing persistence details to
 /// parcel widgets. It also keeps the static defaults usable offline.
 Future<List<String>> resolveCropTypeOptions() async {
-  final String? cityId = getIt<HoldingsRepository>().activeCityId;
+  final String? cityId = getIt<ParcelCatalogRepository>().activeCityId;
   if (cityId == null) return Parcel.cropTypeOptions;
   try {
     final List<String> cityCropTypes =

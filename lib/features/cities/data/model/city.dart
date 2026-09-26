@@ -28,7 +28,7 @@ class City {
 
   /// The city's جمعية system — read directly from `cities.association_type`.
   /// `null` means the dashboard hasn't set it yet for this city; the UI
-  /// must degrade gracefully (see `HoldingsRepository.hideCreditType`),
+  /// must degrade gracefully (see `ParcelCatalogRepository.hideCreditType`),
   /// not guess.
   final AssociationType? associationType;
 

@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/errors/error_handler.dart';
-import '../../../holdings/data/local/parcel_mapper.dart';
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/local/parcel_mapper.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import '../model/association_type.dart';
 import '../model/basin.dart';
 import '../model/city.dart';

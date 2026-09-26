@@ -7,13 +7,13 @@ import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_picker_cubit.dart';
 import 'package:hiyaza_finder/features/cities/logic/cubit/city_state.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/local_edit_tracker.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/local_edit_tracker.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_completion_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
@@ -88,12 +88,12 @@ class _FakeCityRepo implements CityRepo {
 
 void main() {
   late _FakeCityRepo cityRepository;
-  late HoldingsRepository holdingsRepository;
+  late ParcelCatalogRepository holdingsRepository;
 
   setUp(() {
     cityRepository = _FakeCityRepo();
     final _InMemoryKeyValueStore store = _InMemoryKeyValueStore();
-    holdingsRepository = HoldingsRepository(
+    holdingsRepository = ParcelCatalogRepository(
       editsStore: ParcelEditsStore(store: store),
       addedParcelsStore: LocalAddedParcelsStore(store: store),
       editTracker: LocalEditTracker(store: store),
@@ -123,7 +123,7 @@ void main() {
   });
 
   test(
-      'downloadAndActivate returns the snapshot and populates HoldingsRepository',
+      'downloadAndActivate returns the snapshot and populates ParcelCatalogRepository',
       () async {
     final CityPickerCubit cubit =
         CityPickerCubit(cityRepository, holdingsRepository);

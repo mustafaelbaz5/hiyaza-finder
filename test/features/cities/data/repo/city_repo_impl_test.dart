@@ -7,7 +7,7 @@ import 'package:hiyaza_finder/features/cities/data/model/cached_city_meta.dart';
 import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
 import 'package:hiyaza_finder/features/cities/data/remote/city_remote_ds.dart';
 import 'package:hiyaza_finder/features/cities/data/repo/city_repo_impl.dart';
-import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 import '../../../../core/storage/key_value_store.dart';
 

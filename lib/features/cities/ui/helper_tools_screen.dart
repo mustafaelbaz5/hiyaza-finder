@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../holdings/ui/file_status_screen.dart';
+import '../../parcel_review/ui/file_status_screen.dart';
 
 /// The single helper-tools workspace keeps bulk editing and supporting tools together.
 class HelperToolsScreen extends StatelessWidget {

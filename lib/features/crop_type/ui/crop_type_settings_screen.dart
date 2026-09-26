@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import '../../holdings/data/repo/holdings_repository.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/themes/app_colors.dart';
@@ -25,7 +25,7 @@ class CropTypeSettingsScreen extends StatefulWidget {
 
 class _CropTypeSettingsScreenState extends State<CropTypeSettingsScreen> {
   final CropTypeRepo _repository = getIt<CropTypeRepo>();
-  final String? _cityId = getIt<HoldingsRepository>().activeCityId;
+  final String? _cityId = getIt<ParcelCatalogRepository>().activeCityId;
 
   bool _isLoading = true;
   bool _hasError = false;

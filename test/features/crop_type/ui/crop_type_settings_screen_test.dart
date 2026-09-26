@@ -4,8 +4,8 @@ import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/crop_type/data/repo/crop_type_repo.dart';
 import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
@@ -54,11 +54,12 @@ class _FakeCropTypeRepo implements CropTypeRepo {
 Future<void> _register(final _FakeCropTypeRepo repository) async {
   await getIt.reset();
   getIt.registerLazySingleton<CropTypeRepo>(() => repository);
-  final HoldingsRepository holdingsRepository = HoldingsRepository(
+  final ParcelCatalogRepository holdingsRepository = ParcelCatalogRepository(
     editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
   );
   await holdingsRepository.loadParcelsForCity('city-1', const []);
-  getIt.registerLazySingleton<HoldingsRepository>(() => holdingsRepository);
+  getIt
+      .registerLazySingleton<ParcelCatalogRepository>(() => holdingsRepository);
 }
 
 void main() {

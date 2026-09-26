@@ -18,7 +18,7 @@ import 'widgets/city_tile.dart';
 
 /// Lists published cities and downloads the picked one, then pops with
 /// `true` so the caller (`HomeScreen`'s empty state) knows to adopt
-/// whatever `HoldingsRepository` now holds — mirrors how the file-status
+/// whatever `ParcelCatalogRepository` now holds — mirrors how the file-status
 /// screen's caller re-syncs after returning.
 ///
 /// Search is purely client-side over whatever `CityPickerCubit` already

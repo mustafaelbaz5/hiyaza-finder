@@ -15,7 +15,7 @@ enum ConnectionQuality { offline, weak, strong }
 /// weak/strong classification) and reacts immediately to
 /// [NetworkInfo.onStatusChange] for fast offline/back-online detection
 /// in between polls — the two-source approach mirrors why
-/// `HoldingsRepository._isOnline` already treats a proactive check as more
+/// `ParcelCatalogRepository._isOnline` already treats a proactive check as more
 /// trustworthy than waiting for a write to fail.
 class ConnectionQualityService {
   ConnectionQualityService(

@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../holdings/data/repo/holdings_repository.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 import '../../../../core/errors/exceptions.dart';
 
@@ -9,15 +9,15 @@ import '../../data/repo/city_repo.dart';
 import 'city_state.dart';
 
 /// Lists downloadable (`published`) cities and hands a picked city's
-/// downloaded dataset to [HoldingsRepository] so the rest of the app (which
-/// only knows about `HoldingsRepository`/`Parcel`, not Supabase) can use it
+/// downloaded dataset to [ParcelCatalogRepository] so the rest of the app (which
+/// only knows about `ParcelCatalogRepository`/`Parcel`, not Supabase) can use it
 /// immediately without a restart.
 class CityPickerCubit extends Cubit<CityPickerState> {
   CityPickerCubit(this._cityRepository, this._holdingsRepository)
       : super(CityPickerState.initial());
 
   final CityRepo _cityRepository;
-  final HoldingsRepository _holdingsRepository;
+  final ParcelCatalogRepository _holdingsRepository;
   bool _initialized = false;
   Future<void>? _initialization;
 

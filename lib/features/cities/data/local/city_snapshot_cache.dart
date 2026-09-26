@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../model/association_type.dart';

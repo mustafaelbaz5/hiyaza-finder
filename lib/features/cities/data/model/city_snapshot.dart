@@ -1,4 +1,4 @@
-import '../../../holdings/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 import 'association_type.dart';
 import 'basin.dart';

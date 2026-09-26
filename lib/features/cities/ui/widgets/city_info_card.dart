@@ -6,7 +6,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import '../../../holdings/data/repo/holdings_repository.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../data/model/association_type.dart';
 
 /// The active city's identity block at the top of `CityToolsScreen`
@@ -19,7 +19,7 @@ class CityInfoCard extends StatelessWidget {
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final HoldingsRepository repository = getIt<HoldingsRepository>();
+    final ParcelCatalogRepository repository = getIt<ParcelCatalogRepository>();
 
     final String? cityName = repository.activeCityName;
     final String? associationName = repository.defaultAssociationName;

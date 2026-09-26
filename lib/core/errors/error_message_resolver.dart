@@ -21,12 +21,12 @@ import 'exceptions.dart';
 /// `errors.timeout` string — only for write actions where a `.timeout()`
 /// firing does NOT mean the request definitely failed, because the RPC/write
 /// may have already committed server-side by the time the client gave up
-/// waiting (e.g. `HoldingsRepository.setParcelCompleted`'s
+/// waiting (e.g. `ParcelCatalogRepository.setParcelCompleted`'s
 /// `mark_parcel_completed` RPC). Most write actions (an edit, a delete) are
 /// NOT idempotent-safe to reconcile this way and should keep the plain,
 /// unambiguous "try again" wording — this only applies where the caller is
 /// also following up with an actual reconciliation read (see
-/// `HoldingsRepository.refreshParcel`), not just wherever a timeout might
+/// `ParcelCatalogRepository.refreshParcel`), not just wherever a timeout might
 /// theoretically be retried.
 String resolveWriteErrorMessage(
   final Object error, {
