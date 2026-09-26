@@ -20,6 +20,6 @@ void main() {
   testWidgets('shows a back button', (final tester) async {
     await pumpLocalizedScreen(tester, const AboutScreen());
 
-    expect(find.byIcon(Icons.arrow_back_ios_new_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_ios_rounded), findsOneWidget);
   });
 }

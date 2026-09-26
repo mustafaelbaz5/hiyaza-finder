@@ -22,7 +22,7 @@ void main() {
     getIt.registerLazySingleton<HoldingsRepository>(HoldingsRepository.new);
   });
 
-  Future<List<String?>> _pumpAndCapturePushedRoutes(
+  Future<List<String?>> pumpAndCapturePushedRoutes(
     final WidgetTester tester, {
     required final VoidCallback onChangeCity,
   }) async {
@@ -49,7 +49,7 @@ void main() {
   testWidgets('tapping the basins icon navigates to Routes.basins',
       (final tester) async {
     final List<String?> pushedRoutes =
-        await _pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
+        await pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
 
     await tester.tap(find.byIcon(Icons.holiday_village_rounded));
     await tester.pumpAndSettle();
@@ -60,7 +60,7 @@ void main() {
   testWidgets('tapping the city tools icon navigates to Routes.cityTools',
       (final tester) async {
     final List<String?> pushedRoutes =
-        await _pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
+        await pumpAndCapturePushedRoutes(tester, onChangeCity: () {});
 
     await tester.tap(find.byIcon(Icons.build_outlined));
     await tester.pumpAndSettle();

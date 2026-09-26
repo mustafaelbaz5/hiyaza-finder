@@ -1,4 +1,8 @@
-# HiyazaFinder — App Plan v2: Server-Backed, Refactored, Multi-City
+# HiyazaFinder — App Plan v2: Historical Server-Backed Proposal
+
+> **Historical reference only.** It conflicts with the Local-First product
+> architecture. [ARCHITECTURE_RULES.md](ARCHITECTURE_RULES.md) and
+> [PERFORMANCE_REFACTOR_PLAN.md](PERFORMANCE_REFACTOR_PLAN.md) are canonical.
 
 > Supersedes the offline-only architecture in `FLUTTER_APP_PLAN.md` (kept as v1 historical
 > reference — its screens, search algorithm, and copy-all format still apply and are **reused**,

@@ -38,8 +38,7 @@ class _JazlaAreaDialog extends StatefulWidget {
 }
 
 class _JazlaAreaDialogState extends State<_JazlaAreaDialog> {
-  late bool _useSquareMeters =
-      widget.initial.squareMeters != null ||
+  late bool _useSquareMeters = widget.initial.squareMeters != null ||
       (widget.initial.feddan == null &&
           widget.initial.qirat == null &&
           widget.initial.sahm == null);
@@ -79,7 +78,8 @@ class _JazlaAreaDialogState extends State<_JazlaAreaDialog> {
     final double? feddan = _parse(_feddan.text);
     final double? qirat = _parse(_qirat.text);
     final double? sahm = _parse(_sahm.text);
-    final List<double> values = [feddan, qirat, sahm].whereType<double>().toList();
+    final List<double> values =
+        [feddan, qirat, sahm].whereType<double>().toList();
     if (values.any((final double value) => value < 0)) {
       setState(() => _error = 'jazla.area.invalid'.tr());
       return;
@@ -108,7 +108,8 @@ class _JazlaAreaDialogState extends State<_JazlaAreaDialog> {
     final colors = context.customColors;
     return Dialog(
       insetPadding: EdgeInsets.symmetric(horizontal: rw(28)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(rr(16))),
       backgroundColor: colors.surface,
       child: Padding(
         padding: EdgeInsets.all(rw(24)),
@@ -119,19 +120,23 @@ class _JazlaAreaDialogState extends State<_JazlaAreaDialog> {
             Text(
               'jazla.area.dialog_title'.tr(),
               textAlign: TextAlign.center,
-              style: AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
+              style:
+                  AppTextStyles.font18Bold.copyWith(color: colors.textPrimary),
             ),
             verticalSpacing(8),
             Text(
               'jazla.area.dialog_hint'.tr(),
               textAlign: TextAlign.center,
-              style: AppTextStyles.font12Regular.copyWith(color: colors.textSecondary),
+              style: AppTextStyles.font12Regular
+                  .copyWith(color: colors.textSecondary),
             ),
             verticalSpacing(16),
             SegmentedButton<bool>(
               segments: [
-                ButtonSegment(value: true, label: Text('jazla.area.square_meters'.tr())),
-                ButtonSegment(value: false, label: Text('jazla.area.feddan_group'.tr())),
+                ButtonSegment(
+                    value: true, label: Text('jazla.area.square_meters'.tr())),
+                ButtonSegment(
+                    value: false, label: Text('jazla.area.feddan_group'.tr())),
               ],
               selected: <bool>{_useSquareMeters},
               onSelectionChanged: (final Set<bool> value) => setState(() {
@@ -146,34 +151,40 @@ class _JazlaAreaDialogState extends State<_JazlaAreaDialog> {
                 controller: _squareMeters,
                 isRTL: true,
                 autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
               ),
             if (!_useSquareMeters) ...[
-            CustomTextForm(
-              hintText: 'jazla.area.feddan'.tr(),
-              controller: _feddan,
-              isRTL: true,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            verticalSpacing(10),
-            CustomTextForm(
-              hintText: 'jazla.area.qirat'.tr(),
-              controller: _qirat,
-              isRTL: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
+              CustomTextForm(
+                hintText: 'jazla.area.feddan'.tr(),
+                controller: _feddan,
+                isRTL: true,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
+              verticalSpacing(10),
+              CustomTextForm(
+                hintText: 'jazla.area.qirat'.tr(),
+                controller: _qirat,
+                isRTL: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
+              verticalSpacing(10),
+              CustomTextForm(
+                hintText: 'jazla.area.sahm'.tr(),
+                controller: _sahm,
+                isRTL: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
             ],
-            verticalSpacing(10),
-            CustomTextForm(
-              hintText: 'jazla.area.sahm'.tr(),
-              controller: _sahm,
-              isRTL: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
             if (_error != null) ...[
               verticalSpacing(8),
-              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: AppColors.red200)),
+              Text(_error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.red200)),
             ],
             verticalSpacing(18),
             Row(

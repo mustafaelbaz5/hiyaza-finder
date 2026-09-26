@@ -3,6 +3,7 @@ import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/arabic_normalizer.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_dataset_state.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 
 class _InMemoryKeyValueStore implements KeyValueStore {
@@ -26,7 +27,10 @@ void main() {
 
   setUp(() {
     store = _InMemoryKeyValueStore();
-    state = ParcelDatasetState(editsStore: ParcelEditsStore(store: store));
+    state = ParcelDatasetState(
+      editsStore: ParcelEditsStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
+    );
   });
 
   group('adopt', () {
@@ -48,15 +52,19 @@ void main() {
     });
 
     test('reapplies previously-persisted edits on load', () async {
-      const Parcel original = Parcel(id: '1', holdingId: '101', holderName: 'محمد');
+      const Parcel original =
+          Parcel(id: '1', holdingId: '101', holderName: 'محمد');
       // First adopt + edit + persist.
       await state.adopt('city-1', const <Parcel>[original]);
-      state.setEdit('1', original.copyWith(holderName: 'محمد المعدّل').toEditableJson());
+      state.setEdit(
+          '1', original.copyWith(holderName: 'محمد المعدّل').toEditableJson());
       await state.persistEdits();
 
       // Fresh state instance simulating a new app session loading the same city.
-      final ParcelDatasetState reloaded =
-          ParcelDatasetState(editsStore: ParcelEditsStore(store: store));
+      final ParcelDatasetState reloaded = ParcelDatasetState(
+        editsStore: ParcelEditsStore(store: store),
+        idOverridesStore: ParcelIdOverridesStore(store: store),
+      );
       await reloaded.adopt('city-1', const <Parcel>[original]);
 
       expect(reloaded.parcels.single.holderName, 'محمد المعدّل');
@@ -114,7 +122,8 @@ void main() {
   });
 
   group('original-value tracking', () {
-    test('originalParcel returns the value from adopt before any edit', () async {
+    test('originalParcel returns the value from adopt before any edit',
+        () async {
       const Parcel p = Parcel(id: '1', holdingId: '101', holderName: 'محمد');
       await state.adopt('city-1', const <Parcel>[p]);
 
@@ -173,6 +182,5 @@ void main() {
       expect(state.parcels, hasLength(1));
       expect(state.parcels.single.id, 'new');
     });
-
   });
 }

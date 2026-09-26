@@ -1,4 +1,7 @@
-# CLAUDE.md — HiyazaFinder Refactor
+# CLAUDE.md — HiyazaFinder Refactor (Historical Reference)
+
+> **Historical reference.** `ARCHITECTURE_RULES.md` is the canonical rules
+> document and `PERFORMANCE_REFACTOR_PLAN.md` is the canonical execution plan.
 ## Supabase Removal + New Feature Pattern
 
 > **اقرأ الملف ده بالكامل قبل أي سطر كود.**

@@ -106,7 +106,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => JazlaReviewScreen(
+        builder: (final _) => JazlaReviewScreen(
           jazlaName: context.read<JazlaDetailCubit>().state.jazla?.name ?? '',
           parcels: parcels,
           initialIndex: index < 0 ? 0 : index,
@@ -147,7 +147,9 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
           onPressed: () async {
             await context.read<JazlaDetailCubit>().removeParcel(parcel.id);
             if (mounted) {
-              context.read<JazlaAddParcelCubit>().search(_searchController.text);
+              context
+                  .read<JazlaAddParcelCubit>()
+                  .search(_searchController.text);
             }
           },
         ),
@@ -248,7 +250,8 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                             ScreenHeader(title: state.jazla!.name),
                             if (state.jazla!.basinName != null)
                               Padding(
-                                padding: EdgeInsetsDirectional.only(start: rw(16)),
+                                padding:
+                                    EdgeInsetsDirectional.only(start: rw(16)),
                                 child: Text(
                                   state.jazla!.basinName!,
                                   style: TextStyle(color: colors.textSecondary),

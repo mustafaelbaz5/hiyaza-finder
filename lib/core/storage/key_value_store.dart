@@ -13,21 +13,29 @@ abstract class KeyValueStore {
 class SharedPreferencesKeyValueStore implements KeyValueStore {
   const SharedPreferencesKeyValueStore();
 
+  /// The preferences plugin already owns the platform-backed cache. Keeping
+  /// the Future here prevents every small local-store operation from asking
+  /// the plugin for a new instance while preserving lazy startup.
+  static Future<SharedPreferences>? _cachedPreferences;
+
+  static Future<SharedPreferences> _preferences() =>
+      _cachedPreferences ??= SharedPreferences.getInstance();
+
   @override
   Future<String?> getString(final String key) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await _preferences();
     return prefs.getString(key);
   }
 
   @override
   Future<void> setString(final String key, final String value) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await _preferences();
     await prefs.setString(key, value);
   }
 
   @override
   Future<void> remove(final String key) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final SharedPreferences prefs = await _preferences();
     await prefs.remove(key);
   }
 }

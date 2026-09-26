@@ -1,4 +1,7 @@
-# CLAUDE.md — HiyazaFinder App
+# CLAUDE.md — HiyazaFinder App (Historical Reference)
+
+> **Historical reference only when it conflicts with Local-First rules.**
+> Read `ARCHITECTURE_RULES.md` and `PERFORMANCE_REFACTOR_PLAN.md` first.
 
 ## Complete Refactor + New Features Plan
 

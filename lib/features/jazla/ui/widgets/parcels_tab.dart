@@ -35,8 +35,7 @@ class ParcelsTab extends StatelessWidget {
     return ReorderableListView.builder(
       padding: EdgeInsets.fromLTRB(rw(16), 0, rw(16), rh(24)),
       itemCount: parcels.length,
-      onReorder: (final int oldIndex, int newIndex) {
-        if (newIndex > oldIndex) newIndex -= 1;
+      onReorderItem: (final int oldIndex, final int newIndex) {
         final List<String> ids = parcels.map((final Parcel p) => p.id).toList();
         final String moved = ids.removeAt(oldIndex);
         ids.insert(newIndex, moved);
