@@ -44,8 +44,13 @@ class AppRouter {
         return _buildRoute(const AboutScreen(), settings);
       case Routes.cityPicker:
         return _buildRoute<CitySnapshot>(
-          BlocProvider<CityPickerCubit>(
-            create: (final _) => getIt<CityPickerCubit>(),
+          // CityPickerCubit is registered as a LazySingleton because it
+          // owns the in-memory city catalog across picker screen visits.
+          // Using `create` here would make BlocProvider close that singleton
+          // when this route is popped, so the next visit would receive a
+          // closed Cubit and downloads would return immediately.
+          BlocProvider<CityPickerCubit>.value(
+            value: getIt<CityPickerCubit>(),
             child: const CityPickerScreen(),
           ),
           settings,
