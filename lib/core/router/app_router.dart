@@ -14,7 +14,9 @@ import 'package:hiyaza_finder/features/cities/ui/helper_tools_screen.dart';
 import 'package:hiyaza_finder/features/cities/ui/manage_cities_screen.dart';
 import 'package:hiyaza_finder/features/crop_type/ui/crop_type_settings_screen.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/holdings_reader.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/parcel_catalog_session.dart';
+import 'package:hiyaza_finder/features/holdings/data/repo/parcel_detail_actions.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_search_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_editor_cubit.dart';
@@ -49,13 +51,14 @@ class AppRouter {
           MultiBlocProvider(
             providers: <BlocProvider<dynamic>>[
               BlocProvider<HomeCubit>(
-                create: (final _) =>
-                    HomeCubit(getIt<HoldingsRepository>(), getIt<CityRepo>())
-                      ..init(),
+                create: (final _) => HomeCubit(
+                  getIt<ParcelCatalogSession>(),
+                  getIt<HoldingsReader>(),
+                  getIt<CityRepo>(),
+                )..init(),
               ),
               BlocProvider<ParcelSearchCubit>(
-                create: (final _) =>
-                    ParcelSearchCubit(getIt<HoldingsRepository>()),
+                create: (final _) => ParcelSearchCubit(getIt<HoldingsReader>()),
               ),
             ],
             child: const HomeScreen(),
@@ -73,7 +76,11 @@ class AppRouter {
         return _buildRoute(
           BlocProvider<ParcelEditorCubit>(
             create: (final _) => getIt<ParcelEditorCubit>(),
-            child: DetailScreen(parcels: parcels),
+            child: DetailScreen(
+              parcels: parcels,
+              reader: getIt<HoldingsReader>(),
+              actions: getIt<ParcelDetailActions>(),
+            ),
           ),
           settings,
         );

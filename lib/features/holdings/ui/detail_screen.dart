@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -11,7 +12,8 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../data/model/parcel.dart';
-import '../data/repo/holdings_repository.dart';
+import '../data/repo/holdings_reader.dart';
+import '../data/repo/parcel_detail_actions.dart';
 import '../logic/cubit/parcel_editor_cubit.dart';
 import '../logic/cubit/parcel_editor_state.dart';
 import 'add_record_screen.dart';
@@ -23,9 +25,16 @@ import 'widgets/parcel_status_filter.dart';
 /// are all stacked in one scrollable view, each with its own compass and
 /// fields (per the chosen UX — no per-parcel sub-routing).
 class DetailScreen extends StatefulWidget {
-  const DetailScreen({super.key, required this.parcels});
+  const DetailScreen({
+    super.key,
+    required this.parcels,
+    required this.reader,
+    required this.actions,
+  });
 
   final List<Parcel> parcels;
+  final HoldingsReader reader;
+  final ParcelDetailActions actions;
 
   @override
   State<DetailScreen> createState() => _DetailScreenState();
@@ -33,8 +42,8 @@ class DetailScreen extends StatefulWidget {
 
 class _DetailScreenState extends State<DetailScreen>
     with SingleTickerProviderStateMixin {
-  final HoldingsRepository _repository = getIt<HoldingsRepository>();
   late List<Parcel> _parcels;
+  late final StreamSubscription<List<Parcel>> _snapshotSubscription;
 
   /// The identifying [Parcel.groupKey] shared by every parcel on this
   /// screen — captured once at [initState] so [_refreshFromRepository] and
@@ -109,6 +118,9 @@ class _DetailScreenState extends State<DetailScreen>
           });
     _parcels = _sortedByBasin(widget.parcels);
     _groupKey = _parcels.isEmpty ? null : _parcels.first.groupKey;
+    _snapshotSubscription = widget.reader.snapshots.listen(
+      (final List<Parcel> _) => _refreshFromRepository(),
+    );
   }
 
   /// القطع مرتبة بـ اسم الحوض أبجدياً (APP_CLAUDE.md § Screen 3) — a holding
@@ -126,6 +138,7 @@ class _DetailScreenState extends State<DetailScreen>
 
   @override
   void dispose() {
+    _snapshotSubscription.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -141,7 +154,7 @@ class _DetailScreenState extends State<DetailScreen>
   void _refreshFromRepository() {
     final String? groupKey = _groupKey;
     if (groupKey == null || !mounted) return;
-    List<Parcel> result = _repository.parcelsForHolding(groupKey);
+    List<Parcel> result = widget.reader.parcelsForHolding(groupKey);
     if (result.isEmpty && _parcels.isNotEmpty) {
       debugPrint(
         '[DetailScreen] _refreshFromRepository: groupKey=$groupKey '
@@ -150,12 +163,12 @@ class _DetailScreenState extends State<DetailScreen>
         'currently-known parcel id instead of showing empty.',
       );
       for (final Parcel p in _parcels) {
-        final Parcel? fresh = _repository.parcels
+        final Parcel? fresh = widget.reader.parcels
             .cast<Parcel?>()
             .firstWhere((final Parcel? c) => c?.id == p.id, orElse: () => null);
         if (fresh == null) continue;
         final List<Parcel> retry =
-            _repository.parcelsForHolding(fresh.groupKey);
+            widget.reader.parcelsForHolding(fresh.groupKey);
         debugPrint(
           '[DetailScreen] tried parcel id=${p.id}, current groupKey='
           '${fresh.groupKey} (was ${p.groupKey}) → ${retry.length} results',
@@ -179,7 +192,7 @@ class _DetailScreenState extends State<DetailScreen>
       _busyMessage = 'holdings.detail.deleting_in_progress'.tr();
     });
     try {
-      final bool deleted = await _repository.deleteLocalParcel(parcel.id);
+      final bool deleted = await widget.actions.deleteLocalParcel(parcel.id);
       if (!mounted) return;
       if (!deleted) {
         context.showErrorSnackBar('holdings.detail.delete_failed'.tr());
@@ -219,7 +232,7 @@ class _DetailScreenState extends State<DetailScreen>
     });
     try {
       final Parcel? updated =
-          await _repository.setParcelCompleted(parcel.id, completed: false);
+          await widget.actions.setParcelCompleted(parcel.id, completed: false);
       if (!mounted) return;
       final int idx =
           _parcels.indexWhere((final Parcel p) => p.id == parcel.id);
@@ -354,7 +367,6 @@ class _DetailScreenState extends State<DetailScreen>
     // person already showing 2 parcels in search — easy to misread as "the
     // new parcel became a separate person" when it was actually this
     // screen simply never having displayed it in the first place.
-    _refreshFromRepository();
     context.showSuccessSnackBar('holdings.add.saved'.tr());
   }
 
@@ -362,16 +374,19 @@ class _DetailScreenState extends State<DetailScreen>
     return ParcelDetailCard(
       key: ValueKey<String>(parcel.id),
       parcel: parcel,
-      originalParcel: _repository.originalParcel(parcel.id),
+      originalParcel: widget.reader.originalParcel(parcel.id),
       // "New / unsynced" no longer applies once every write is
       // confirmed-or-failed synchronously — there is no more window where a
       // record is visible but not yet on the server.
       isNew: false,
-      hideCreditType: _repository.hideCreditType,
-      associationType: _repository.activeAssociationType,
+      hideCreditType: widget.reader.hideCreditType,
+      associationType: widget.reader.activeAssociationType,
       onFieldChanged: _updateField,
       onCompleted: _onParcelCompleted,
-      resolveBorderMatch: _repository.findByBorderText,
+      resolveBorderMatch: widget.reader.findByBorderText,
+      availableBasins: widget.reader.availableBasins,
+      parcelsForHolding: widget.reader.parcelsForHolding,
+      setParcelCompleted: widget.actions.setParcelCompleted,
       onDelete:
           parcel.sourceAddedHoldingId != null && parcel.completedAt == null
               ? () => _deleteParcel(parcel)
@@ -383,14 +398,13 @@ class _DetailScreenState extends State<DetailScreen>
           _setReviewBusy(parcel.id, isBusy),
       onRegenerate: (final String parcelId) async {
         final Parcel? updated =
-            await _repository.regenerateLocalParcelId(parcelId);
+            await widget.actions.regenerateLocalParcelId(parcelId);
         if (!mounted) return;
         if (updated == null) {
           context
               .showErrorSnackBar('holdings.detail.regenerate_id_failed'.tr());
           return;
         }
-        _refreshFromRepository();
         context.showSuccessSnackBar('holdings.detail.regenerate_id_done'.tr());
       },
     );

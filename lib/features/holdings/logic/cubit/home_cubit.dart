@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
-import '../../data/repo/holdings_repository.dart';
+import '../../data/repo/holdings_reader.dart';
+import '../../data/repo/parcel_catalog_session.dart';
 
 import '../../../cities/data/model/city_snapshot.dart';
 import '../../../cities/data/repo/city_repo.dart';
@@ -11,16 +12,17 @@ import '../../../cities/data/repo/city_repo.dart';
 import 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
-  HomeCubit(this._repository, this._cityRepository)
+  HomeCubit(this._session, this._reader, this._cityRepository)
       : super(HomeState.initial());
 
-  final HoldingsRepository _repository;
+  final ParcelCatalogSession _session;
+  final HoldingsReader _reader;
   final CityRepo _cityRepository;
 
   /// Metadata for the active city — `null` until one has been loaded.
   CitySnapshot? _activeCitySnapshot;
   late final StreamSubscription<List<Parcel>> _snapshotSubscription =
-      _repository.snapshots.listen(_onSnapshot);
+      _reader.snapshots.listen(_onSnapshot);
 
   void _onSnapshot(final List<Parcel> parcels) {
     if (isClosed || state.status != HomeStatus.loaded) return;
@@ -29,7 +31,7 @@ class HomeCubit extends Cubit<HomeState> {
         parcels: parcels,
         results: state.query.trim().isEmpty
             ? const <SearchResult>[]
-            : _repository.search(state.query),
+            : _reader.search(state.query),
         modifiedIds: _modifiedIds(parcels),
       ),
     );
@@ -41,7 +43,7 @@ class HomeCubit extends Cubit<HomeState> {
     final CitySnapshot? cached = await _tryLoadCachedCity();
     if (cached != null) {
       _activeCitySnapshot = cached;
-      emit(_loadedState(_repository.parcels));
+      emit(_loadedState(_reader.parcels));
       return;
     }
 
@@ -53,7 +55,7 @@ class HomeCubit extends Cubit<HomeState> {
       final CitySnapshot? snapshot =
           await _cityRepository.loadActiveCachedSnapshot();
       if (snapshot == null) return null;
-      await _repository.loadParcelsForCity(
+      await _session.loadParcelsForCity(
         snapshot.cityId,
         snapshot.parcels,
         cityName: snapshot.cityName,
@@ -77,7 +79,7 @@ class HomeCubit extends Cubit<HomeState> {
   /// downloads straight into the repository via `loadParcelsForCity`.
   void loadFromDownloadedCity(final CitySnapshot snapshot) {
     _activeCitySnapshot = snapshot;
-    emit(_loadedState(_repository.parcels));
+    emit(_loadedState(_reader.parcels));
   }
 
   /// Re-reads the active city's dataset from the repository — a local-only
@@ -103,7 +105,7 @@ class HomeCubit extends Cubit<HomeState> {
   /// `HomeState.modifiedCount`.
   Set<String> _modifiedIds(final List<Parcel> parcels) => <String>{
         for (final Parcel p in parcels)
-          if (_repository.isParcelEdited(p.id)) p.id,
+          if (_reader.isParcelEdited(p.id)) p.id,
       };
 
   /// Re-derives state from the repository's current data — used after
@@ -112,13 +114,13 @@ class HomeCubit extends Cubit<HomeState> {
   /// Detail screens' writes), since that mutates the same underlying list
   /// in place without going through this cubit.
   void refreshData() {
-    final List<Parcel> parcels = _repository.parcels;
+    final List<Parcel> parcels = _reader.parcels;
     emit(
       state.copyWith(
         parcels: parcels,
         results: state.query.trim().isEmpty
             ? state.results
-            : _repository.search(state.query),
+            : _reader.search(state.query),
         modifiedIds: _modifiedIds(parcels),
       ),
     );
@@ -128,9 +130,8 @@ class HomeCubit extends Cubit<HomeState> {
   /// search bar always searches globally regardless of which basin cards
   /// are showing below it.
   void search(final String query) {
-    final List<SearchResult> results = query.trim().isEmpty
-        ? const <SearchResult>[]
-        : _repository.search(query);
+    final List<SearchResult> results =
+        query.trim().isEmpty ? const <SearchResult>[] : _reader.search(query);
     emit(state.copyWith(query: query, results: results));
   }
 

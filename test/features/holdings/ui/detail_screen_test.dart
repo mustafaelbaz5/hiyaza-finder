@@ -79,7 +79,13 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      wrapLocalizedScreen(const DetailScreen(parcels: parcels)),
+      wrapLocalizedScreen(
+        DetailScreen(
+          parcels: parcels,
+          reader: repository,
+          actions: repository,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 

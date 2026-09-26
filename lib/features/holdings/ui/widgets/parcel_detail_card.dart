@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hiyaza_finder/core/widgets/custom_text_button.dart';
 
-import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
@@ -22,7 +21,6 @@ import '../../data/local/field_change_tracker.dart';
 import '../../data/local/parcel_notes_sync.dart';
 import '../../data/model/parcel.dart';
 import '../../data/model/usage_type.dart';
-import '../../data/repo/holdings_repository.dart';
 import 'area_summary_card.dart';
 import 'basin_picker.dart';
 import 'border_compass.dart';
@@ -51,6 +49,9 @@ class ParcelDetailCard extends StatelessWidget {
     this.isReopening = false,
     this.onReviewBusyChanged,
     this.onRegenerate,
+    this.availableBasins = const <String>[],
+    this.parcelsForHolding,
+    this.setParcelCompleted,
   });
 
   final Parcel parcel;
@@ -90,6 +91,9 @@ class ParcelDetailCard extends StatelessWidget {
   /// the same window, not a replacement for the chip's own feedback.
   final void Function(bool isBusy)? onReviewBusyChanged;
   final Future<void> Function(String parcelId)? onRegenerate;
+  final List<String> availableBasins;
+  final List<Parcel> Function(String holdingId)? parcelsForHolding;
+  final SetParcelCompleted? setParcelCompleted;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
@@ -401,7 +405,7 @@ class ParcelDetailCard extends StatelessWidget {
   }
 
   Future<void> _editBasin(final BuildContext context) async {
-    final List<String> basins = getIt<HoldingsRepository>().availableBasins;
+    final List<String> basins = availableBasins;
     if (basins.isEmpty) {
       await _editText(
         context,
@@ -431,8 +435,13 @@ class ParcelDetailCard extends StatelessWidget {
       return;
     }
 
-    final List<Parcel> holdingParcels =
-        getIt<HoldingsRepository>().parcelsForHolding(match.groupKey);
+    final List<Parcel>? holdingParcels = parcelsForHolding?.call(
+      match.groupKey,
+    );
+    if (holdingParcels == null) {
+      context.showSnackBar('holdings.detail.border_no_data'.tr());
+      return;
+    }
     await context.pushNamed(
       Routes.holdingDetail,
       arguments: holdingParcels,
@@ -473,8 +482,9 @@ class ParcelDetailCard extends StatelessWidget {
     }
 
     try {
-      final Parcel? updated = await getIt<HoldingsRepository>()
-          .setParcelCompleted(parcel.id, completed: true);
+      final SetParcelCompleted? complete = setParcelCompleted;
+      if (complete == null) throw StateError('Missing parcel review action');
+      final Parcel? updated = await complete(parcel.id, completed: true);
       if (!context.mounted) return;
       final Parcel confirmed =
           updated ?? parcel.copyWith(completedAt: DateTime.now());
@@ -535,6 +545,11 @@ class ParcelDetailCard extends StatelessWidget {
     );
   }
 }
+
+typedef SetParcelCompleted = Future<Parcel?> Function(
+  String parcelId, {
+  required bool completed,
+});
 
 class _ReviewIdChip extends StatefulWidget {
   const _ReviewIdChip({

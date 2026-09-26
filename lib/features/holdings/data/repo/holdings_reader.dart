@@ -1,6 +1,7 @@
 import '../local/holding_search_service.dart';
 import '../model/basin_progress.dart';
 import '../model/parcel.dart';
+import '../../../cities/data/model/association_type.dart';
 
 /// Read-side contract for holdings data, kept separate from
 /// [HoldingsWriter] (interface segregation) — a widget that only searches
@@ -17,6 +18,16 @@ abstract class HoldingsReader {
   /// parcel mutation. Consumers derive only the state they render, rather
   /// than asking a screen to manually refresh the repository.
   Stream<List<Parcel>> get snapshots;
+
+  /// Whether a parcel has a locally persisted edit overlay.  Consumers use
+  /// this only for derived presentation state; they never inspect stores.
+  bool isParcelEdited(final String parcelId);
+
+  Parcel? originalParcel(final String parcelId);
+
+  bool get hideCreditType;
+
+  AssociationType? get activeAssociationType;
 
   List<SearchResult> search(final String query, {final String? basin});
 

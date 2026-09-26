@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/local_edit_tracker.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/local_added_parcels_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_completion_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
+import 'package:hiyaza_finder/features/holdings/data/local/parcel_id_overrides_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/bulk_edit_outcome.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/bulk_editable_field.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
@@ -35,6 +38,9 @@ void main() {
     repository = HoldingsRepository(
       editsStore: ParcelEditsStore(store: store),
       editTracker: LocalEditTracker(store: store),
+      addedParcelsStore: LocalAddedParcelsStore(store: store),
+      completionStore: ParcelCompletionStore(store: store),
+      idOverridesStore: ParcelIdOverridesStore(store: store),
     );
     await repository.loadParcelsForCity('city-1', seed);
   });

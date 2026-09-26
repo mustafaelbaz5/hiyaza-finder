@@ -65,6 +65,10 @@ class _JazlaReviewScreenState extends State<JazlaReviewScreen> {
               onFieldChanged: (final Parcel value) => _save(value),
               onCompleted: (final Parcel value) =>
                   setState(() => _parcels[_index] = value),
+              availableBasins: getIt<HoldingsRepository>().availableBasins,
+              parcelsForHolding: getIt<HoldingsRepository>().parcelsForHolding,
+              setParcelCompleted:
+                  getIt<HoldingsRepository>().setParcelCompleted,
               onReopen: () => _reopen(),
               onRegenerate: (final String id) async {
                 final Parcel? updated = await getIt<HoldingsRepository>()

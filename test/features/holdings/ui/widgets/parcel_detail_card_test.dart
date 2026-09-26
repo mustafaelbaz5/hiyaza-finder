@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
-import 'package:hiyaza_finder/core/storage/key_value_store.dart';
 import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
-import 'package:hiyaza_finder/features/holdings/data/local/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/holdings/ui/widgets/parcel_detail_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -62,21 +58,6 @@ Widget _wrap(final Widget child) {
 Future<void> _pump(final WidgetTester tester, final Widget child) async {
   await tester.pumpWidget(_wrap(child));
   await tester.pumpAndSettle();
-}
-
-class _InMemoryKeyValueStore implements KeyValueStore {
-  final Map<String, String> _store = <String, String>{};
-
-  @override
-  Future<String?> getString(final String key) async => _store[key];
-
-  @override
-  Future<void> remove(final String key) async => _store.remove(key);
-
-  @override
-  Future<void> setString(final String key, final String value) async {
-    _store[key] = value;
-  }
 }
 
 void main() {
@@ -215,28 +196,6 @@ void main() {
   });
 
   group('Copy ID / review', () {
-    setUp(() async {
-      await getIt.reset();
-      final HoldingsRepository repository = HoldingsRepository(
-        editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
-      );
-      await repository.loadParcelsForCity('city-1', const <Parcel>[
-        Parcel(
-          id: 'p-review',
-          holdingId: '202',
-          holderName: 'محمد علي',
-          basinName: 'البشيط',
-          nationalId: '12345678901234',
-          cropType: 'قمح',
-        ),
-      ]);
-      getIt.registerLazySingleton<HoldingsRepository>(() => repository);
-    });
-
-    tearDown(() async {
-      await getIt.reset();
-    });
-
     testWidgets(
       'tapping Copy ID fires onCompleted with the confirmed parcel, not onFieldChanged',
       (final tester) async {
@@ -259,6 +218,7 @@ void main() {
             parcel: reviewParcel,
             onFieldChanged: (final _) => fieldChangedCalled = true,
             onCompleted: (final updated) => completedResult = updated,
+            setParcelCompleted: _completeForTest,
           ),
         );
 
@@ -269,7 +229,8 @@ void main() {
         expect(idChip, findsOneWidget);
 
         await tester.tap(idChip);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
 
         expect(
           completedResult,
@@ -310,6 +271,7 @@ void main() {
           ParcelDetailCard(
             parcel: reviewParcel,
             onFieldChanged: (final updated) => fieldChangedResult = updated,
+            setParcelCompleted: _completeForTest,
           ),
         );
 
@@ -318,7 +280,8 @@ void main() {
           matching: find.byType(InkWell),
         );
         await tester.tap(idChip);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
 
         expect(fieldChangedResult, isNotNull);
         expect(fieldChangedResult!.completedAt, isNotNull);
@@ -349,6 +312,7 @@ void main() {
             parcel: reviewParcel,
             onFieldChanged: (final _) {},
             onReviewBusyChanged: busyEvents.add,
+            setParcelCompleted: _completeForTest,
           ),
         );
 
@@ -357,7 +321,8 @@ void main() {
           matching: find.byType(InkWell),
         );
         await tester.tap(idChip);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
 
         expect(busyEvents, <bool>[true, false]);
       },
@@ -469,3 +434,13 @@ void main() {
     );
   });
 }
+
+Future<Parcel?> _completeForTest(
+  final String parcelId, {
+  required final bool completed,
+}) async =>
+    Parcel(
+      id: parcelId,
+      holdingId: '202',
+      completedAt: completed ? DateTime(2026, 1, 1) : null,
+    );

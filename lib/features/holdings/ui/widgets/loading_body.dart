@@ -11,7 +11,6 @@ import '../../../../core/utils/spacing.dart';
 import '../../data/local/holding_search_service.dart';
 import '../../data/model/parcel.dart';
 import '../../data/repo/holdings_repository.dart';
-import '../../logic/cubit/home_cubit.dart';
 import '../../logic/cubit/parcel_search_cubit.dart';
 import '../../logic/cubit/parcel_search_state.dart';
 import '../add_record_screen.dart';
@@ -36,12 +35,7 @@ class LoadingBody extends StatelessWidget {
 /// [HomeEmptyState] otherwise). There is no flat, unfiltered city-wide list
 /// here at all (basin grouping/progress lives on its own [BasinsPage]).
 class LoadedBody extends StatefulWidget {
-  const LoadedBody({
-    super.key,
-    required this.cubit,
-  });
-
-  final HomeCubit cubit;
+  const LoadedBody({super.key});
 
   @override
   State<LoadedBody> createState() => LoadedBodyState();
@@ -57,15 +51,10 @@ class LoadedBodyState extends State<LoadedBody> {
       Routes.holdingDetail,
       arguments: repository.parcelsForHolding(result.groupKey),
     );
-    // Detail Screen mutates parcels directly on the repository (Copy ID's
-    // completedAt write included) without going through this cubit, so the
-    // search results held in state — and the "تم المراجعة" badge derived
-    // from them — go stale unless re-derived on return.
-    if (context.mounted) widget.cubit.refreshData();
   }
 
   Future<void> _openAddPerson(final BuildContext context) async {
-    final Parcel? added = await context.pushNamed<Parcel?>(
+    await context.pushNamed<Parcel?>(
       Routes.addRecord,
       arguments: const AddRecordArgs(
         initialParcel: Parcel(
@@ -78,9 +67,9 @@ class LoadedBodyState extends State<LoadedBody> {
         ),
       ),
     );
-    if (added != null && context.mounted) {
-      widget.cubit.refreshData();
-    }
+    // A successful add publishes an immutable repository snapshot. The
+    // search Cubit is already subscribed, so no screen-wide manual refresh
+    // is needed on return.
   }
 
   @override

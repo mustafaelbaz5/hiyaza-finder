@@ -15,12 +15,19 @@ import '../model/bulk_editable_field.dart';
 import '../model/parcel.dart';
 import 'holdings_reader.dart';
 import 'holdings_writer.dart';
+import 'parcel_catalog_session.dart';
+import 'parcel_detail_actions.dart';
 import 'package:uuid/uuid.dart';
 import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';
 import '../../../jazla/data/repo/jazla_repo.dart';
 
-class HoldingsRepository implements HoldingsReader, HoldingsWriter {
+class HoldingsRepository
+    implements
+        HoldingsReader,
+        HoldingsWriter,
+        ParcelCatalogSession,
+        ParcelDetailActions {
   /// Added to every locally-created parcel that belongs to a person who does
   /// not yet have a holding registered in the system. Keeping this rule at
   /// the repository boundary covers both the first parcel and later sibling
@@ -85,6 +92,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// dataset. [associationType]/[associationSubtype] come straight from the
   /// `CitySnapshot` (itself read from `cities.association_type`/
   /// `association_subtype`) — never re-derived from [parcels].
+  @override
   Future<List<Parcel>> loadParcelsForCity(
     final String cityId,
     final List<Parcel> parcels, {
@@ -170,6 +178,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
 
   /// The active city's جمعية system, read from `cities.association_type` —
   /// `null` until a city is loaded or if the dashboard hasn't set it yet.
+  @override
   AssociationType? get activeAssociationType => _dataset.activeAssociationType;
 
   /// The active city's free-text association_subtype (e.g. ملك/أوقاف or one
@@ -182,6 +191,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// yet) shows the field rather than risk hiding one that might matter —
   /// same "never hide on an unknown" philosophy the old detection-miss
   /// fallback used.
+  @override
   bool get hideCreditType =>
       _dataset.activeAssociationType == AssociationType.agriculturalReform;
 
@@ -301,6 +311,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// touching local state if [id] isn't in the active dataset or isn't a
   /// field-added record — part of the authoritative `holdings` import,
   /// which this app never deletes.
+  @override
   Future<bool> deleteLocalParcel(final String id) async {
     final int idx = _dataset.indexOf(id);
     if (idx < 0) return false;
@@ -399,6 +410,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   }
 
   /// Marks [parcelId] completed/reopened and persists the local review state.
+  @override
   Future<Parcel?> setParcelCompleted(
     final String parcelId, {
     required final bool completed,
@@ -453,6 +465,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
     await _dataset.persistEdits();
   }
 
+  @override
   bool isParcelEdited(final String id) => _dataset.isParcelEdited(id);
 
   /// The pre-edit value of the parcel [id] — either the originally
@@ -461,6 +474,7 @@ class HoldingsRepository implements HoldingsReader, HoldingsWriter {
   /// drive per-field "معدلة" indicators by comparing each field against
   /// its own original value, rather than only knowing *that* something on
   /// the parcel changed (see `isParcelEdited`).
+  @override
   Parcel? originalParcel(final String id) => _dataset.originalParcel(id);
 
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole

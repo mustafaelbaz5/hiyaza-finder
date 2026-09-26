@@ -120,9 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             state: state,
                             onPickFile: () => _openCityPicker(cubit),
                           ),
-                        HomeStatus.loaded => LoadedBody(
-                            cubit: cubit,
-                          ),
+                        HomeStatus.loaded => const LoadedBody(),
                       },
                     ),
                   ),

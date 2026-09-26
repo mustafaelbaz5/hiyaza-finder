@@ -12,6 +12,8 @@ import '../../../features/holdings/data/local/parcel_id_overrides_store.dart';
 import '../../../features/holdings/data/repo/holdings_reader.dart';
 import '../../../features/holdings/data/repo/holdings_repository.dart';
 import '../../../features/holdings/data/repo/holdings_writer.dart';
+import '../../../features/holdings/data/repo/parcel_catalog_session.dart';
+import '../../../features/holdings/data/repo/parcel_detail_actions.dart';
 import '../../../features/holdings/logic/cubit/parcel_editor_cubit.dart';
 import '../../storage/key_value_store.dart';
 
@@ -60,6 +62,12 @@ void registerHoldingsModule(final GetIt getIt) {
       .registerLazySingleton<HoldingsReader>(() => getIt<HoldingsRepository>());
   getIt
       .registerLazySingleton<HoldingsWriter>(() => getIt<HoldingsRepository>());
+  getIt.registerLazySingleton<ParcelCatalogSession>(
+    () => getIt<HoldingsRepository>(),
+  );
+  getIt.registerLazySingleton<ParcelDetailActions>(
+    () => getIt<HoldingsRepository>(),
+  );
   getIt.registerFactory<ParcelEditorCubit>(
     () => ParcelEditorCubit(getIt<HoldingsWriter>()),
   );

@@ -58,7 +58,7 @@ class RecommendationList extends StatelessWidget {
         return RecommendationTile(
           result: result,
           onTap: () => onSelect(result),
-          animationDelay: Duration(milliseconds: i * 40),
+          animationDelay: Duration(milliseconds: i.clamp(0, 8) * 40),
         );
       },
     );
