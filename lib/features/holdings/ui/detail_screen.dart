@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
@@ -11,6 +12,8 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
 import '../data/model/parcel.dart';
 import '../data/repo/holdings_repository.dart';
+import '../logic/cubit/parcel_editor_cubit.dart';
+import '../logic/cubit/parcel_editor_state.dart';
 import 'add_record_screen.dart';
 import 'widgets/detail_screen_header.dart';
 import 'widgets/parcel_detail_card.dart';
@@ -274,7 +277,11 @@ class _DetailScreenState extends State<DetailScreen>
       );
       final Parcel toSave = updated;
 
-      await _repository.updateParcel(toSave);
+      final ParcelEditorCubit editor = context.read<ParcelEditorCubit>();
+      await editor.save(toSave);
+      if (editor.state.status == ParcelEditorStatus.failure) {
+        throw editor.state.error!;
+      }
       if (idx >= 0) {
         setState(() => _parcels[idx] = toSave);
       }

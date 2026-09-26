@@ -46,12 +46,13 @@ class HiyazaFinderApp extends StatelessWidget {
 
   @override
   Widget build(final BuildContext context) {
+    const Widget app = _AppBootstrap();
     return LayoutBuilder(
       builder: (final BuildContext context, final BoxConstraints constraints) {
         final bool useFrame =
             _isDesktop && constraints.maxWidth > _frameBreakpoint;
 
-        if (!useFrame) return _buildApp();
+        if (!useFrame) return app;
 
         // Centre a phone-width column on desktop and clamp the MediaQuery
         // width so ScreenUtil scales to the frame, not the whole window.
@@ -61,9 +62,9 @@ class HiyazaFinderApp extends StatelessWidget {
             child: SizedBox(
               width: _desktopFrameWidth,
               height: constraints.maxHeight,
-              child: _ClampWidth(
+              child: const _ClampWidth(
                 width: _desktopFrameWidth,
-                child: _buildApp(),
+                child: app,
               ),
             ),
           ),
@@ -71,8 +72,15 @@ class HiyazaFinderApp extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildApp() {
+/// Kept outside the desktop frame so a window resize changes only the frame,
+/// not ScreenUtil, dependency providers, or MaterialApp itself.
+class _AppBootstrap extends StatelessWidget {
+  const _AppBootstrap();
+
+  @override
+  Widget build(final BuildContext context) {
     return ScreenUtilInit(
       designSize: const Size(375, 812),
       minTextAdapt: true,
@@ -82,45 +90,54 @@ class HiyazaFinderApp extends StatelessWidget {
           create: (final _) => AppSettingsCubit(),
           child: BlocProvider.value(
             value: getIt<AppControlCubit>()..initialize(),
-            child: BlocBuilder<AppSettingsCubit, AppSettingsState>(
-              builder: (final BuildContext context,
-                  final AppSettingsState settings) {
-                return BlocBuilder<AppControlCubit, AppControl>(
-                  builder:
-                      (final BuildContext context, final AppControl control) {
-                    return MaterialApp(
-                      navigatorKey: navigatorKey,
-                      scaffoldMessengerKey: scaffoldMessengerKey,
-                      localizationsDelegates: context.localizationDelegates,
-                      supportedLocales: context.supportedLocales,
-                      locale: settings.locale, // driven by cubit
-                      debugShowCheckedModeBanner: false,
-                      scrollBehavior: const _AppScrollBehavior(),
-                      initialRoute: Routes.home,
-                      builder:
-                          (final BuildContext context, final Widget? child) =>
-                              control.isBlocked
-                                  ? AppBlockedScreen(control: control)
-                                  : (child ?? const SizedBox.shrink()),
-                      onGenerateRoute: AppRouter.generateRoute,
-                      title: AppConfig.appName,
-                      // font family injected into both themes
-                      theme: getLightTheme().copyWith(
-                        textTheme: getLightTheme().textTheme.apply(
-                              fontFamily: settings.fontFamily,
-                            ),
-                      ),
-                      darkTheme: getDarkTheme().copyWith(
-                        textTheme: getDarkTheme().textTheme.apply(
-                              fontFamily: settings.fontFamily,
-                            ),
-                      ),
-                      themeMode: settings.themeMode,
-                    );
-                  },
-                );
-              },
+            child: const _AppMaterial(),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AppMaterial extends StatelessWidget {
+  const _AppMaterial();
+
+  @override
+  Widget build(final BuildContext context) {
+    return BlocBuilder<AppSettingsCubit, AppSettingsState>(
+      buildWhen:
+          (final AppSettingsState previous, final AppSettingsState current) =>
+              previous.locale != current.locale ||
+              previous.fontFamily != current.fontFamily ||
+              previous.themeMode != current.themeMode,
+      builder: (final BuildContext context, final AppSettingsState settings) {
+        final ThemeData lightBase = getLightTheme();
+        final ThemeData darkBase = getDarkTheme();
+        return BlocBuilder<AppControlCubit, AppControl>(
+          builder: (final BuildContext context, final AppControl control) =>
+              MaterialApp(
+            navigatorKey: HiyazaFinderApp.navigatorKey,
+            scaffoldMessengerKey: HiyazaFinderApp.scaffoldMessengerKey,
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: settings.locale,
+            debugShowCheckedModeBanner: false,
+            scrollBehavior: const _AppScrollBehavior(),
+            initialRoute: Routes.home,
+            builder: (final BuildContext context, final Widget? child) =>
+                control.isBlocked
+                    ? AppBlockedScreen(control: control)
+                    : (child ?? const SizedBox.shrink()),
+            onGenerateRoute: AppRouter.generateRoute,
+            title: AppConfig.appName,
+            theme: lightBase.copyWith(
+              textTheme:
+                  lightBase.textTheme.apply(fontFamily: settings.fontFamily),
             ),
+            darkTheme: darkBase.copyWith(
+              textTheme:
+                  darkBase.textTheme.apply(fontFamily: settings.fontFamily),
+            ),
+            themeMode: settings.themeMode,
           ),
         );
       },

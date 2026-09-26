@@ -17,6 +17,7 @@ import 'package:hiyaza_finder/features/holdings/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/holdings/data/repo/holdings_repository.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/home_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_search_cubit.dart';
+import 'package:hiyaza_finder/features/holdings/logic/cubit/parcel_editor_cubit.dart';
 import 'package:hiyaza_finder/features/holdings/ui/add_record_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/basin_screen.dart';
 import 'package:hiyaza_finder/features/holdings/ui/basins_page.dart';
@@ -69,7 +70,13 @@ class AppRouter {
       case Routes.holdingDetail:
         final List<Parcel> parcels =
             (settings.arguments as List<Parcel>?) ?? const <Parcel>[];
-        return _buildRoute(DetailScreen(parcels: parcels), settings);
+        return _buildRoute(
+          BlocProvider<ParcelEditorCubit>(
+            create: (final _) => getIt<ParcelEditorCubit>(),
+            child: DetailScreen(parcels: parcels),
+          ),
+          settings,
+        );
       case Routes.addRecord:
         final AddRecordArgs args = (settings.arguments as AddRecordArgs?) ??
             const AddRecordArgs(initialParcel: Parcel(holdingId: ''));
