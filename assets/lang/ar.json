@@ -601,7 +601,7 @@
       "add": "إضافة",
       "view_edit": "عرض وتعديل",
       "add_failed": "تعذر إضافة القطعة إلى الجزلة",
-      "add_parcel_for_person": "قطعة لشخص",
+      "add_parcel_for_person": "إضافة قطعة لنفس الشخص",
       "locked_badge": "في {jazlaName}"
     },
     "quick_view": {

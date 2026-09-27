@@ -601,7 +601,7 @@
       "add": "Add",
       "view_edit": "View and edit",
       "add_failed": "Couldn't add the parcel to the Jazla",
-      "add_parcel_for_person": "Parcel for person",
+      "add_parcel_for_person": "Add parcel for same person",
       "locked_badge": "In {jazlaName}"
     },
     "quick_view": {

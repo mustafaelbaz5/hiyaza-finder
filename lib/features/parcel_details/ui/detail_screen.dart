@@ -3,6 +3,13 @@ import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/parcel_add/data/local/existing_person_parcel_template.dart';
+import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_detail_actions.dart';
+import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_state.dart';
 
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/router/routes.dart';
@@ -11,12 +18,6 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/loaders/blocking_loading_overlay.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_detail_actions.dart';
-import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_cubit.dart';
-import 'package:hiyaza_finder/features/parcel_editor/logic/cubit/parcel_editor_state.dart';
-import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
 import 'widgets/detail_screen_header.dart';
 import 'widgets/parcel_detail_card.dart';
 import 'widgets/parcel_status_filter.dart';
@@ -325,30 +326,7 @@ class _DetailScreenState extends State<DetailScreen>
   /// actively chosen by the user, even for a parcel added under an existing
   /// person whose other parcels already have one) do not.
   Future<void> _addParcelForPerson(final Parcel source) async {
-    final Parcel template = source.copyWith(
-      landNumber: '0',
-      feddan: null,
-      qirat: null,
-      sahm: null,
-      totalSqm: null,
-      basinName: null,
-      cropType: null,
-      growthStages: null,
-      // نوع الاستخدام resets to الافتراضي زراعة rather than inheriting
-      // [source]'s value — a new parcel is a fresh survey, and if the
-      // source person's other parcel had been set to مباني/بور the
-      // required نوع الزرع field would otherwise silently disappear from
-      // this form with no way to bring it back (usage type isn't editable
-      // in the add flow at all).
-      usageType: Parcel.defaultUsageType,
-      completedAt: null,
-      completedBy: null,
-      // عدد القطع في الحيازة grows by one for the new parcel being added.
-      holdingsCount: (source.holdingsCount ?? 1) + 1,
-      // الملاحظات = [] by default (§2.2) — not inherited from the source
-      // parcel's own notes.
-      notes: const <String>[],
-    );
+    final Parcel template = existingPersonParcelTemplate(source);
     final Parcel? added = await context.pushNamed<Parcel?>(
       Routes.addRecord,
       arguments: AddRecordArgs(

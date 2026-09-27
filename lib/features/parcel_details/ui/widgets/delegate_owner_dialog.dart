@@ -13,25 +13,34 @@ import '../../../../core/widgets/custom_text_form_.dart';
 Future<String?> showDelegateOwnerDialog(
   final BuildContext context, {
   required final String holderName,
+  final String? initialOwnerName,
 }) {
   return showDialog<String>(
     context: context,
-    builder: (final BuildContext context) =>
-        _DelegateOwnerDialog(holderName: holderName),
+    builder: (final BuildContext context) => _DelegateOwnerDialog(
+      holderName: holderName,
+      initialOwnerName: initialOwnerName,
+    ),
   );
 }
 
 class _DelegateOwnerDialog extends StatefulWidget {
-  const _DelegateOwnerDialog({required this.holderName});
+  const _DelegateOwnerDialog({
+    required this.holderName,
+    this.initialOwnerName,
+  });
 
   final String holderName;
+  final String? initialOwnerName;
 
   @override
   State<_DelegateOwnerDialog> createState() => _DelegateOwnerDialogState();
 }
 
 class _DelegateOwnerDialogState extends State<_DelegateOwnerDialog> {
-  final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialOwnerName ?? '',
+  );
   String? _errorText;
 
   @override

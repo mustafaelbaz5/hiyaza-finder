@@ -17,14 +17,13 @@ class JazlaExportService {
   final ClipboardFormatter _formatter;
 
   static const List<String> columns = <String>[
-    'التسلسل',
-    'كود القطعة',
+    'id',
+    'رقم الحيازة',
     'اسم الحائز',
     'اسم المالك',
-    'رقم الحيازة',
-    'المساحة الزراعية',
-    'المساحة بالمتر المربع',
-    'الحوض',
+    'المساحة',
+    'نوع الاستخدام',
+    'نوع المحصول',
     'الملاحظات',
   ];
 
@@ -63,7 +62,7 @@ class JazlaExportService {
 
     sheet.merge(
       xlsx.CellIndex.indexByString('A1'),
-      xlsx.CellIndex.indexByString('I1'),
+      xlsx.CellIndex.indexByString('H1'),
       customValue: xlsx.TextCellValue('تقرير جزلة: ${jazla.name}'),
     );
     sheet.cell(xlsx.CellIndex.indexByString('A1')).cellStyle = _titleStyle;
@@ -128,7 +127,7 @@ class JazlaExportService {
 
     for (int index = 0; index < parcels.length; index++) {
       final Parcel parcel = parcels[index];
-      final List<xlsx.CellValue> values = _rowFor(index + 1, parcel);
+      final List<xlsx.CellValue> values = _rowFor(parcel);
       final xlsx.CellStyle style =
           index.isEven ? _rowStyle : _alternateRowStyle;
       final int row = headerRow + index + 1;
@@ -142,16 +141,15 @@ class JazlaExportService {
     }
   }
 
-  List<xlsx.CellValue> _rowFor(final int index, final Parcel parcel) {
+  List<xlsx.CellValue> _rowFor(final Parcel parcel) {
     return <xlsx.CellValue>[
-      xlsx.IntCellValue(index),
       _textCell(parcel.id),
+      _textCell(parcel.holdingId),
       _textCell(_formatter.displayHolderName(parcel)),
       _textCell(_formatter.displayOwnerName(parcel)),
-      _textCell(parcel.holdingId),
       _textCell(_agriculturalArea(parcel)),
-      _textCell(_parcelSquareMeters(parcel)),
-      _textCell(parcel.basinName),
+      _textCell(parcel.usageType),
+      _textCell(parcel.cropType),
       _textCell(parcel.notes.isEmpty ? null : parcel.notes.join('، ')),
     ];
   }
@@ -169,15 +167,6 @@ class JazlaExportService {
     return '$feddan فدان، $qirat قيراط، $sahm سهم';
   }
 
-  String _parcelSquareMeters(final Parcel parcel) {
-    final double? value = AreaCalculator.totalSqm(
-      feddan: parcel.feddan,
-      qirat: parcel.qirat,
-      sahm: parcel.sahm,
-    );
-    return value == null ? '—' : _formatArea(value);
-  }
-
   double _addedArea(final List<Parcel> parcels) => parcels.fold<double>(
         0,
         (final double total, final Parcel parcel) =>
@@ -191,7 +180,7 @@ class JazlaExportService {
       );
 
   void _setColumnWidths(final xlsx.Sheet sheet) {
-    const List<double> widths = <double>[10, 36, 30, 30, 16, 30, 22, 24, 44];
+    const List<double> widths = <double>[36, 16, 30, 30, 30, 18, 20, 44];
     for (int index = 0; index < widths.length; index++) {
       sheet.setColumnWidth(index, widths[index]);
     }

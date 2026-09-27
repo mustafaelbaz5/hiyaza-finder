@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
 import 'package:hiyaza_finder/core/widgets/ui/fields/toggle_field_row.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/delegate_notes_policy.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/local_holding_note_policy.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
@@ -285,12 +286,10 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     final String delegateNote = 'holdings.delegate.auto_note'
         .tr(namedArgs: {'holder': _parcel.holderName ?? ''});
     setState(
-      () => _parcel = _parcel.copyWith(
-        isDelegate: true,
+      () => _parcel = DelegateNotesPolicy.enable(
+        _parcel,
         ownerName: newOwnerName,
-        notes: _parcel.notes.contains(delegateNote)
-            ? _parcel.notes
-            : <String>[..._parcel.notes, delegateNote],
+        delegateNote: delegateNote,
       ),
     );
   }
@@ -299,13 +298,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   /// field falls back to when never set) and strips the auto-added
   /// "مفوض عنه ..." note — APP_UPDATES_CLAUDE.md § 3's Definition of Done.
   void _disableDelegate() {
-    _parcel = _parcel.copyWith(
-      isDelegate: false,
-      ownerName: _parcel.holderName,
-      notes: _parcel.notes
-          .where((final String n) => !n.startsWith('مفوض عنه'))
-          .toList(),
-    );
+    _parcel = DelegateNotesPolicy.disable(_parcel);
   }
 
   Future<void> _editArea(final BuildContext context) async {

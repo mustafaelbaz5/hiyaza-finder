@@ -13,6 +13,7 @@ import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../parcel_add/data/local/existing_person_parcel_template.dart';
 import '../../parcel_add/data/model/add_record_args.dart';
 import '../../parcel_add/ui/widgets/basin_picker.dart';
 import '../../parcel_catalog/data/model/parcel.dart';
@@ -226,6 +227,18 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     await _addParcelDirect(created);
   }
 
+  Future<void> _addParcelForExistingPerson(final Parcel source) async {
+    final Parcel? created = await context.pushNamed<Parcel>(
+      Routes.addRecord,
+      arguments: AddRecordArgs(
+        initialParcel: existingPersonParcelTemplate(source),
+        parentHoldingId: source.id,
+      ),
+    );
+    if (created == null || !mounted) return;
+    await _addParcelDirect(created);
+  }
+
   Future<void> _editThenAdd(final Parcel parcel) async {
     final ParcelEditorCubit editor = context.read<ParcelEditorCubit>();
     final Parcel? updated = await showJazlaQuickViewSheet(
@@ -358,6 +371,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         onAddTap: _addParcelDirect,
                         onEditTap: _editThenAdd,
                         onAddNewPerson: _addNewPerson,
+                        onAddForPerson: _addParcelForExistingPerson,
                       ),
                     ],
                   ),

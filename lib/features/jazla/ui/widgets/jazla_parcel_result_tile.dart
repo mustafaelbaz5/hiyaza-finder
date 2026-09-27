@@ -9,36 +9,37 @@ import '../../../parcel_details/data/local/clipboard_formatter.dart';
 import '../../data/local/jazla_search_service.dart';
 import 'jazla_locked_badge.dart';
 
-/// One search result row in [JazlaAddParcelSheet] — a "+" to add a free
-/// parcel (opens Quick View), or a [JazlaLockedBadge] for one already in
-/// another Jazla.
+/// A compact, parcel-level search result. The person action is intentionally
+/// available even when this specific parcel is already claimed by another
+/// Jazla: it creates a distinct new parcel and never changes the locked one.
 class JazlaParcelResultTile extends StatelessWidget {
   const JazlaParcelResultTile({
     super.key,
     required this.result,
     required this.onAddTap,
     required this.onEditTap,
+    required this.onAddForPerson,
   });
 
   final ParcelSearchResult result;
   final VoidCallback onAddTap;
   final VoidCallback onEditTap;
+  final VoidCallback onAddForPerson;
 
   static const ClipboardFormatter _formatter = ClipboardFormatter();
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String holder = result.parcel.holderName?.trim().isNotEmpty == true
-        ? result.parcel.holderName!.trim()
+    final Parcel parcel = result.parcel;
+    final String holder = parcel.holderName?.trim().isNotEmpty == true
+        ? parcel.holderName!.trim()
         : '—';
-    final String basin = result.parcel.basinName?.trim().isNotEmpty == true
-        ? result.parcel.basinName!.trim()
+    final String basin = parcel.basinName?.trim().isNotEmpty == true
+        ? parcel.basinName!.trim()
         : '—';
-    final String holdingId = result.parcel.holdingId.trim().isNotEmpty
-        ? result.parcel.holdingId.trim()
-        : '—';
-    final String area = _areaText(result.parcel);
+    final String holdingId =
+        parcel.holdingId.trim().isNotEmpty ? parcel.holdingId.trim() : '—';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -93,42 +94,43 @@ class JazlaParcelResultTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          LayoutBuilder(
-            builder:
-                (final BuildContext context, final BoxConstraints constraints) {
-              final bool isNarrow = constraints.maxWidth < 330;
-              final Widget holding = _ResultMetric(
-                icon: Icons.tag_rounded,
-                label: 'holdings.fields.holding_id'.tr(),
-                value: holdingId,
-              );
-              final Widget areaMetric = _ResultMetric(
-                icon: Icons.straighten_rounded,
-                label: 'holdings.fields.area'.tr(),
-                value: area,
-              );
-              if (isNarrow) {
-                return Column(
-                  children: [
-                    holding,
-                    const SizedBox(height: 6),
-                    areaMetric,
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  Expanded(child: holding),
-                  const SizedBox(width: 6),
-                  Expanded(flex: 2, child: areaMetric),
-                ],
-              );
-            },
+          Row(
+            children: [
+              Expanded(
+                child: _ResultMetric(
+                  icon: Icons.tag_rounded,
+                  label: 'holdings.fields.holding_id'.tr(),
+                  value: holdingId,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                flex: 2,
+                child: _ResultMetric(
+                  icon: Icons.straighten_rounded,
+                  label: 'holdings.fields.area'.tr(),
+                  value: _areaText(parcel),
+                ),
+              ),
+            ],
           ),
-          if (!result.isLocked) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Tooltip(
+                message: 'jazla.add_sheet.add_parcel_for_person'.tr(),
+                child: Semantics(
+                  button: true,
+                  label: 'jazla.add_sheet.add_parcel_for_person'.tr(),
+                  child: IconButton(
+                    onPressed: onAddForPerson,
+                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                    color: AppColors.primary200,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
+              if (!result.isLocked) ...[
                 Expanded(
                   child: TextButton.icon(
                     onPressed: onEditTap,
@@ -152,9 +154,17 @@ class JazlaParcelResultTile extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ] else
+                Expanded(
+                  child: Text(
+                    'jazla.add_sheet.add_parcel_for_person'.tr(),
+                    style: AppTextStyles.font12Regular
+                        .copyWith(color: colors.textSecondary),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

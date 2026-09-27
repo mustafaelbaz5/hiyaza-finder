@@ -41,6 +41,19 @@ class _FakeParcelCatalogReader extends Fake implements ParcelCatalogReader {
   List<Parcel> get parcels => values;
 }
 
+class _FailingAddJazlaRepo extends _FakeJazlaRepo {
+  _FailingAddJazlaRepo(super.jazlas);
+
+  @override
+  Future<void> addParcel(
+    final String jazlaId,
+    final String parcelId,
+    final String cityId,
+  ) async {
+    throw StateError('write failed');
+  }
+}
+
 class _DelayedDeleteJazlaRepo extends _FakeJazlaRepo {
   _DelayedDeleteJazlaRepo(super.jazlas);
 
@@ -93,6 +106,22 @@ void main() {
     expect(cubit.state.isParcelPending(second.id), isFalse);
   });
 
+  test('failed add restores the visible Jazla state without a new reference',
+      () async {
+    await cubit.close();
+    cubit = JazlaDetailCubit(
+      _FailingAddJazlaRepo(<Jazla>[jazla]),
+      reader,
+      jazlaId,
+      cityId,
+    );
+    await cubit.load();
+
+    expect(await cubit.addParcel(second), isFalse);
+    expect(cubit.state.jazla?.parcelIds, <String>['p1']);
+    expect(cubit.state.parcels, <Parcel>[first]);
+    expect(cubit.state.pendingParcelIds, isEmpty);
+  });
   test('removing a parcel immediately updates its visible Jazla state',
       () async {
     await cubit.load();

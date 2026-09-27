@@ -6,6 +6,7 @@ import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/credit_type_notes_sync.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/delegate_notes_policy.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
 import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
@@ -95,12 +96,10 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
     final String delegateNote = 'holdings.delegate.auto_note'
         .tr(namedArgs: {'holder': widget.parcel.holderName ?? ''});
     widget.onFieldChanged(
-      widget.parcel.copyWith(
-        isDelegate: true,
+      DelegateNotesPolicy.enable(
+        widget.parcel,
         ownerName: newOwnerName,
-        notes: widget.parcel.notes.contains(delegateNote)
-            ? widget.parcel.notes
-            : <String>[...widget.parcel.notes, delegateNote],
+        delegateNote: delegateNote,
       ),
     );
   }
@@ -109,13 +108,7 @@ class SeeMoreSectionState extends State<SeeMoreSection> {
   /// auto-added "مفوض عنه ..." note.
   void _disableDelegate() {
     widget.onFieldChanged(
-      widget.parcel.copyWith(
-        isDelegate: false,
-        ownerName: widget.parcel.holderName,
-        notes: widget.parcel.notes
-            .where((final String n) => !n.startsWith('مفوض عنه'))
-            .toList(),
-      ),
+      DelegateNotesPolicy.disable(widget.parcel),
     );
   }
 

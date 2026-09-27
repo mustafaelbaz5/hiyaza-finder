@@ -25,14 +25,13 @@ void main() {
 
   test('report includes metadata and operational table headers', () {
     expect(JazlaExportService.columns, <String>[
-      'التسلسل',
-      'كود القطعة',
+      'id',
+      'رقم الحيازة',
       'اسم الحائز',
       'اسم المالك',
-      'رقم الحيازة',
-      'المساحة الزراعية',
-      'المساحة بالمتر المربع',
-      'الحوض',
+      'المساحة',
+      'نوع الاستخدام',
+      'نوع المحصول',
       'الملاحظات',
     ]);
 
@@ -54,10 +53,13 @@ void main() {
     expect(sheet.rows[1][0]?.value.toString(), 'الحوض');
     expect(sheet.rows[1][1]?.value.toString(), 'حوض النيل');
     final List<xlsx.Data?> header = sheet.rows.firstWhere(
-      (final List<xlsx.Data?> row) => row.first?.value.toString() == 'التسلسل',
+      (final List<xlsx.Data?> row) => row.first?.value.toString() == 'id',
     );
-    expect(header[0]?.value.toString(), 'التسلسل');
-    expect(header[1]?.value.toString(), 'كود القطعة');
+    expect(header, hasLength(8));
+    expect(header[0]?.value.toString(), 'id');
+    expect(header[1]?.value.toString(), 'رقم الحيازة');
+    expect(header[4]?.value.toString(), 'المساحة');
+    expect(header[7]?.value.toString(), 'الملاحظات');
   });
 
   test('table retains Jazla parcel order and joins notes', () {
@@ -66,6 +68,11 @@ void main() {
         id: 'first',
         holdingId: '1',
         holderName: 'الأول',
+        ownerName: 'مالك الأول',
+        feddan: 1,
+        qirat: 2,
+        sahm: 3,
+        cropType: 'قمح',
         notes: <String>['ملاحظة أ', 'ملاحظة ب'],
       ),
       Parcel(id: 'second', holdingId: '2', holderName: 'الثاني'),
@@ -75,15 +82,19 @@ void main() {
     final xlsx.Sheet sheet = workbook['جزلة الري'];
 
     final int headerIndex = sheet.rows.indexWhere(
-      (final List<xlsx.Data?> row) => row.first?.value.toString() == 'التسلسل',
+      (final List<xlsx.Data?> row) => row.first?.value.toString() == 'id',
     );
     final List<xlsx.Data?> firstDataRow = sheet.rows[headerIndex + 1];
     final List<xlsx.Data?> secondDataRow = sheet.rows[headerIndex + 2];
-    expect(firstDataRow[0]?.value.toString(), '1');
-    expect(secondDataRow[0]?.value.toString(), '2');
-    expect(firstDataRow[1]?.value.toString(), 'first');
-    expect(secondDataRow[1]?.value.toString(), 'second');
-    expect(firstDataRow[8]?.value.toString(), 'ملاحظة أ، ملاحظة ب');
+    expect(firstDataRow[0]?.value.toString(), 'first');
+    expect(secondDataRow[0]?.value.toString(), 'second');
+    expect(firstDataRow[1]?.value.toString(), '1');
+    expect(firstDataRow[2]?.value.toString(), 'الأول');
+    expect(firstDataRow[3]?.value.toString(), 'مالك الأول');
+    expect(firstDataRow[4]?.value.toString(), '1 فدان، 2 قيراط، 3 سهم');
+    expect(firstDataRow[5]?.value.toString(), Parcel.defaultUsageType);
+    expect(firstDataRow[6]?.value.toString(), 'قمح');
+    expect(firstDataRow[7]?.value.toString(), 'ملاحظة أ، ملاحظة ب');
   });
 
   test('buildFileName follows {city}_{jazla}_{dd}_{mm}_{yyyy}.xlsx', () {

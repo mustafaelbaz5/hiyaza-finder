@@ -6,14 +6,17 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
+import '../../../../core/widgets/ui/fields/field_row.dart';
+import '../../../../core/widgets/ui/fields/toggle_field_row.dart';
+import '../../../crop_type/ui/widgets/crop_type_picker.dart';
+import '../../../parcel_catalog/data/local/area_calculator.dart';
 import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../../parcel_catalog/data/model/usage_type.dart';
-import '../../../parcel_catalog/data/local/area_calculator.dart';
+import '../../../parcel_details/ui/widgets/delegate_owner_dialog.dart';
 import '../../../parcel_details/ui/widgets/field_edit_dialogs.dart';
 import '../../../parcel_details/ui/widgets/parcel_quick_choice_sheet.dart';
+import '../../../parcel_editor/data/local/delegate_notes_policy.dart';
 import '../../../parcel_editor/data/local/usage_type_notes_sync.dart';
-import '../../../crop_type/ui/widgets/crop_type_picker.dart';
-import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
 
 /// Opens from a free search result. The sheet owns only a temporary draft;
 /// persistence and Jazla membership are injected by its caller.
@@ -103,6 +106,48 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
     final result = await pickCropType(context, selected: _draft.cropType);
     if (result == null || result.isClear || !mounted) return;
     setState(() => _draft = _draft.copyWith(cropType: result.value));
+  }
+
+  Future<void> _enableDelegate() async {
+    final String? ownerName = await showDelegateOwnerDialog(
+      context,
+      holderName: _draft.holderName ?? '',
+      initialOwnerName: _draft.ownerName,
+    );
+    if (ownerName == null || !mounted) return;
+    final String note = 'holdings.delegate.auto_note'.tr(
+      namedArgs: {'holder': _draft.holderName ?? ''},
+    );
+    setState(() {
+      _draft = DelegateNotesPolicy.enable(
+        _draft,
+        ownerName: ownerName,
+        delegateNote: note,
+      );
+    });
+  }
+
+  void _disableDelegate() {
+    _draft = DelegateNotesPolicy.disable(_draft);
+  }
+
+  Future<void> _editOwner() async {
+    final String? ownerName = await showDelegateOwnerDialog(
+      context,
+      holderName: _draft.holderName ?? '',
+      initialOwnerName: _draft.ownerName,
+    );
+    if (ownerName == null || !mounted) return;
+    final String note = 'holdings.delegate.auto_note'.tr(
+      namedArgs: {'holder': _draft.holderName ?? ''},
+    );
+    setState(() {
+      _draft = DelegateNotesPolicy.enable(
+        _draft,
+        ownerName: ownerName,
+        delegateNote: note,
+      );
+    });
   }
 
   String _areaText() {
@@ -202,6 +247,39 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                         label: 'holdings.fields.crop_type'.tr(),
                         value: _draft.cropType ?? '—',
                         onTap: _editCrop,
+                        showEditAction: false,
+                      ),
+                    ],
+                    verticalSpacing(12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ToggleFieldRow(
+                            label: 'jazla.quick_view.inheritance'.tr(),
+                            value: _draft.isInheritance,
+                            onChanged: (final bool value) => setState(() {
+                              _draft = _draft.copyWith(isInheritance: value);
+                            }),
+                          ),
+                        ),
+                        horizontalSpacing(8),
+                        Expanded(
+                          child: ToggleFieldRow(
+                            label: 'jazla.quick_view.delegate'.tr(),
+                            value: _draft.isDelegate,
+                            onChanged: (final bool value) => value
+                                ? _enableDelegate()
+                                : setState(_disableDelegate),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_draft.isDelegate) ...[
+                      verticalSpacing(8),
+                      FieldRow(
+                        label: 'holdings.fields.owner_name'.tr(),
+                        value: _draft.ownerName ?? '—',
+                        onTap: _editOwner,
                         showEditAction: false,
                       ),
                     ],

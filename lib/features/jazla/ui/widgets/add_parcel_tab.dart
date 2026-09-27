@@ -20,6 +20,7 @@ class AddParcelTab extends StatelessWidget {
     required this.onAddTap,
     required this.onEditTap,
     required this.onAddNewPerson,
+    required this.onAddForPerson,
   });
 
   final TextEditingController searchController;
@@ -27,6 +28,7 @@ class AddParcelTab extends StatelessWidget {
   final ValueChanged<Parcel> onAddTap;
   final ValueChanged<Parcel> onEditTap;
   final VoidCallback onAddNewPerson;
+  final ValueChanged<Parcel> onAddForPerson;
 
   @override
   Widget build(final BuildContext context) {
@@ -89,6 +91,7 @@ class AddParcelTab extends StatelessWidget {
                     result: result,
                     onAddTap: () => onAddTap(result.parcel),
                     onEditTap: () => onEditTap(result.parcel),
+                    onAddForPerson: () => onAddForPerson(result.parcel),
                   );
                 },
               );
