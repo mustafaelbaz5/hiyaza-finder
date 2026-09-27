@@ -16,8 +16,8 @@ class AppConfig {
     'APP_NAME',
     defaultValue: 'HiyazaFinder',
   );
-  static const String appVersion = '1.1.8';
-  static const String buildNumber = '17';
+  static const String appVersion = '1.1.9';
+  static const String buildNumber = '18';
 
   // Developer Info
   static const String developerName = 'Mustafa Elbaz';
