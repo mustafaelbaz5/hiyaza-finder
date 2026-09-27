@@ -16,12 +16,16 @@ class AddParcelTab extends StatelessWidget {
   const AddParcelTab({
     super.key,
     required this.searchController,
+    required this.searchFocusNode,
     required this.onAddTap,
+    required this.onEditTap,
     required this.onAddNewPerson,
   });
 
   final TextEditingController searchController;
+  final FocusNode searchFocusNode;
   final ValueChanged<Parcel> onAddTap;
+  final ValueChanged<Parcel> onEditTap;
   final VoidCallback onAddNewPerson;
 
   @override
@@ -35,6 +39,7 @@ class AddParcelTab extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: rw(16)),
           child: JazlaSearchBar(
             controller: searchController,
+            focusNode: searchFocusNode,
             onChanged: (final String q) =>
                 context.read<JazlaAddParcelCubit>().search(q),
           ),
@@ -83,6 +88,7 @@ class AddParcelTab extends StatelessWidget {
                   return JazlaParcelResultTile(
                     result: result,
                     onAddTap: () => onAddTap(result.parcel),
+                    onEditTap: () => onEditTap(result.parcel),
                   );
                 },
               );

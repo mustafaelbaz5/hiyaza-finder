@@ -10,6 +10,7 @@ class JazlaDetailState extends Equatable {
     required this.status,
     this.jazla,
     this.parcels = const <Parcel>[],
+    this.pendingParcelIds = const <String>{},
     this.errorMessage,
   });
 
@@ -19,21 +20,33 @@ class JazlaDetailState extends Equatable {
   final JazlaDetailStatus status;
   final Jazla? jazla;
   final List<Parcel> parcels;
+  final Set<String> pendingParcelIds;
   final String? errorMessage;
+
+  bool isParcelPending(final String parcelId) =>
+      pendingParcelIds.contains(parcelId);
 
   JazlaDetailState copyWith({
     final JazlaDetailStatus? status,
     final Jazla? jazla,
     final List<Parcel>? parcels,
+    final Set<String>? pendingParcelIds,
     final String? errorMessage,
   }) =>
       JazlaDetailState(
         status: status ?? this.status,
         jazla: jazla ?? this.jazla,
         parcels: parcels ?? this.parcels,
+        pendingParcelIds: pendingParcelIds ?? this.pendingParcelIds,
         errorMessage: errorMessage,
       );
 
   @override
-  List<Object?> get props => <Object?>[status, jazla, parcels, errorMessage];
+  List<Object?> get props => <Object?>[
+        status,
+        jazla,
+        parcels,
+        pendingParcelIds,
+        errorMessage,
+      ];
 }

@@ -34,6 +34,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
     emit(state.copyWith(status: JazlaDetailStatus.loading));
     try {
       final List<Jazla> all = await _repo.getAll(cityId);
+      if (isClosed) return;
       Jazla? jazla;
       for (final Jazla j in all) {
         if (j.id == jazlaId) {
@@ -50,6 +51,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
           status: JazlaDetailStatus.loaded,
           jazla: jazla,
           parcels: _resolveParcels(jazla),
+          pendingParcelIds: const <String>{},
         ),
       );
     } on AppException catch (e) {
@@ -72,9 +74,67 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
     try {
       await _repo.reorderParcels(jazlaId, newOrderIds, cityId);
     } on AppException catch (e) {
+      if (isClosed) return;
       emit(state.copyWith(
           status: JazlaDetailStatus.error, errorMessage: e.message));
     }
+  }
+
+  /// The detail Cubit is the only owner of a Jazla's visible parcel list.
+  /// Updating it optimistically keeps the counter, list, and area summary in
+  /// sync while the local write is persisted; a failed write restores the
+  /// exact previous snapshot.
+  Future<bool> addParcel(final Parcel parcel) async {
+    final Jazla? current = state.jazla;
+    if (current == null || current.parcelIds.contains(parcel.id)) return false;
+
+    final JazlaDetailState previous = state;
+    final Jazla updated = current.copyWith(
+      parcelIds: <String>[...current.parcelIds, parcel.id],
+    );
+    emit(
+      state.copyWith(
+        status: JazlaDetailStatus.loaded,
+        jazla: updated,
+        parcels: <Parcel>[...state.parcels, parcel],
+        pendingParcelIds: <String>{...state.pendingParcelIds, parcel.id},
+        errorMessage: null,
+      ),
+    );
+    try {
+      await _repo.addParcel(jazlaId, parcel.id, cityId);
+      if (isClosed) return true;
+      emit(
+        state.copyWith(
+          pendingParcelIds: <String>{...state.pendingParcelIds}
+            ..remove(parcel.id),
+        ),
+      );
+      return true;
+    } on AppException catch (error) {
+      if (isClosed) return false;
+      emit(previous.copyWith(
+        status: JazlaDetailStatus.loaded,
+        errorMessage: error.message,
+      ));
+      return false;
+    } catch (error) {
+      if (isClosed) return false;
+      emit(previous.copyWith(
+        status: JazlaDetailStatus.loaded,
+        errorMessage: error.toString(),
+      ));
+      return false;
+    }
+  }
+
+  /// Re-resolves only the parcels already belonging to this Jazla. It is
+  /// used after editing/reviewing a parcel, without reloading Jazla storage.
+  void refreshVisibleParcels() {
+    if (isClosed) return;
+    final Jazla? current = state.jazla;
+    if (current == null) return;
+    emit(state.copyWith(parcels: _resolveParcels(current)));
   }
 
   Future<void> updateArea({
@@ -109,6 +169,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       );
     } on AppException catch (e) {
       await load();
+      if (isClosed) return;
       emit(state.copyWith(
           status: JazlaDetailStatus.error, errorMessage: e.message));
     }
@@ -137,21 +198,86 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       await _repo.updateBasin(jazlaId, cityId, basinName);
     } on AppException catch (e) {
       await load();
+      if (isClosed) return;
       emit(state.copyWith(
           status: JazlaDetailStatus.error, errorMessage: e.message));
+    }
+  }
+
+  Future<void> renameJazla(final String name) async {
+    final Jazla? current = state.jazla;
+    if (current == null || name.trim().isEmpty) return;
+    final Jazla updated = current.copyWith(name: name.trim());
+    emit(state.copyWith(jazla: updated));
+    try {
+      await _repo.rename(jazlaId, name.trim(), cityId);
+    } on AppException catch (e) {
+      await load();
+      if (isClosed) return;
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
+    }
+  }
+
+  Future<void> deleteJazla() async {
+    try {
+      await _repo.delete(jazlaId, cityId);
+      if (isClosed) return;
+      emit(state.copyWith(status: JazlaDetailStatus.notFound));
+    } on AppException catch (e) {
+      if (isClosed) return;
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.message));
+    } catch (e) {
+      if (isClosed) return;
+      emit(state.copyWith(
+          status: JazlaDetailStatus.error, errorMessage: e.toString()));
     }
   }
 
   /// Removes a parcel from this Jazla only — the parcel itself is never
   /// touched, deleted, or otherwise mutated (`JazlaRepo` never sees a
   /// `Parcel`, only its id).
-  Future<void> removeParcel(final String parcelId) async {
+  Future<bool> removeParcel(final String parcelId) async {
+    final Jazla? current = state.jazla;
+    if (current == null || !current.parcelIds.contains(parcelId)) return false;
+    final JazlaDetailState previous = state;
+    final Jazla updated = current.copyWith(
+      parcelIds: current.parcelIds.where((final id) => id != parcelId).toList(),
+    );
+    emit(
+      state.copyWith(
+        status: JazlaDetailStatus.loaded,
+        jazla: updated,
+        parcels: state.parcels.where((final p) => p.id != parcelId).toList(),
+        pendingParcelIds: <String>{...state.pendingParcelIds, parcelId},
+        errorMessage: null,
+      ),
+    );
     try {
       await _repo.removeParcel(jazlaId, parcelId, cityId);
-      await load();
-    } on AppException catch (e) {
-      emit(state.copyWith(
-          status: JazlaDetailStatus.error, errorMessage: e.message));
+      if (isClosed) return true;
+      emit(
+        state.copyWith(
+          pendingParcelIds: <String>{...state.pendingParcelIds}
+            ..remove(parcelId),
+        ),
+      );
+      return true;
+    } on AppException catch (error) {
+      if (isClosed) return false;
+      emit(previous.copyWith(
+        status: JazlaDetailStatus.loaded,
+        errorMessage: error.message,
+      ));
+      return false;
+    } catch (error) {
+      if (isClosed) return false;
+      emit(previous.copyWith(
+        status: JazlaDetailStatus.loaded,
+        errorMessage: error.toString(),
+      ));
+      return false;
     }
   }
 }

@@ -520,17 +520,36 @@
     "empty_list": "لا توجد جزل بعد",
     "basin_required": "اختر الحوض أولاً لتحديد موقع الجزلة",
     "basin": "الحوض",
+  "create": {
+    "name_section": "بيانات الجزلة",
+    "name_required": "اكتب اسم الجزلة أولاً",
+    "location_section": "الموقع",
+    "basin_hint": "اختر الحوض",
+    "basin_required": "اختر الحوض قبل الحفظ",
+    "search_basin": "ابحث عن الحوض",
+    "no_matching_basins": "لا توجد أحواض مطابقة",
+    "enable_target_area": "تحديد مساحة مستهدفة"
+  },
     "actions": {
       "title": "إجراءات الجزلة",
       "edit_area": "تعديل المساحة المستهدفة",
       "edit_basin": "تعديل الحوض",
       "export_excel": "تصدير Excel",
       "share_pdf": "مشاركة PDF",
-      "bulk_apply": "تطبيق جماعي"
+    "bulk_apply": "تطبيق جماعي",
+    "manage_section": "إدارة الجزلة",
+    "operations_section": "العمليات",
+    "danger_section": "منطقة حساسة",
+    "export_excel_hint": "ملف منظم للتعديل والطباعة",
+    "share_pdf_hint": "تقرير مختصر مناسب للمشاركة",
+    "bulk_apply_hint": "تطبيق تعديل واحد على جميع القطع",
+    "no_parcels_hint": "أضف قطعة أولاً لتفعيل هذا الإجراء",
+    "delete_hint": "لا يتم حذف بيانات القطع"
     },
     "review": {
       "previous": "السابق",
-      "next": "التالي"
+      "next": "التالي",
+      "of": "من"
     },
     "sort": {
       "title": "ترتيب الجزل",
@@ -579,6 +598,9 @@
       "added": "تمت إضافة القطعة إلى الجزلة",
       "undo": "تراجع",
       "area_missing": "المساحة غير محددة",
+      "add": "إضافة",
+      "view_edit": "عرض وتعديل",
+      "add_failed": "تعذر إضافة القطعة إلى الجزلة",
       "add_parcel_for_person": "قطعة لشخص",
       "locked_badge": "في {jazlaName}"
     },

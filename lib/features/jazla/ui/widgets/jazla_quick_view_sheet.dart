@@ -1,36 +1,34 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/custom_text_button.dart';
-import '../../../parcel_details/data/local/clipboard_formatter.dart';
 import '../../../parcel_catalog/data/model/parcel.dart';
-import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_catalog/data/local/area_calculator.dart';
+import '../../../parcel_details/ui/widgets/field_edit_dialogs.dart';
+import '../../../parcel_details/ui/widgets/parcel_quick_choice_sheet.dart';
+import '../../../parcel_editor/data/local/usage_type_notes_sync.dart';
+import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
-import 'package:hiyaza_finder/core/widgets/ui/fields/toggle_field_row.dart';
-import '../../data/repo/jazla_repo.dart';
 
-/// Opens on "+" for a free search result — shows key fields read-only, plus
-/// EDITABLE وراثة/مفوض toggles held as a purely in-memory draft. "إلغاء"
-/// discards the draft entirely; "إضافة للجزلة" commits it via
-/// `ParcelCatalogWriter.updateParcel` THEN adds the id to the Jazla. No new
-/// persistence layer — the draft never touches `JazlaStore`.
-Future<bool?> showJazlaQuickViewSheet(
+/// Opens from a free search result. The sheet owns only a temporary draft;
+/// persistence and Jazla membership are injected by its caller.
+Future<Parcel?> showJazlaQuickViewSheet(
   final BuildContext context, {
   required final Parcel parcel,
-  required final String jazlaId,
+  required final Future<Parcel?> Function(Parcel draft) onSave,
 }) {
-  return showModalBottomSheet<bool>(
+  return showModalBottomSheet<Parcel>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (final BuildContext context) => JazlaQuickViewSheet(
       original: parcel,
-      jazlaId: jazlaId,
+      onSave: onSave,
     ),
   );
 }
@@ -39,11 +37,11 @@ class JazlaQuickViewSheet extends StatefulWidget {
   const JazlaQuickViewSheet({
     super.key,
     required this.original,
-    required this.jazlaId,
+    required this.onSave,
   });
 
   final Parcel original;
-  final String jazlaId;
+  final Future<Parcel?> Function(Parcel draft) onSave;
 
   @override
   State<JazlaQuickViewSheet> createState() => _JazlaQuickViewSheetState();
@@ -53,28 +51,72 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
   late Parcel _draft = widget.original;
   bool _isSaving = false;
 
-  static const ClipboardFormatter _formatter = ClipboardFormatter();
-
   Future<void> _confirm() async {
     setState(() => _isSaving = true);
     try {
-      if (_draft != widget.original) {
-        await getIt<ParcelCatalogWriter>().updateParcel(_draft);
-      }
-      final String cityId = getIt<ParcelCatalogRepository>().activeCityId ?? '';
-      await getIt<JazlaRepo>().addParcel(widget.jazlaId, _draft.id, cityId);
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
+      final Parcel? saved = await widget.onSave(_draft);
+      if (mounted && saved != null) Navigator.pop(context, saved);
+    } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        context.showErrorSnackBar(e.toString());
+        context.showErrorSnackBar(error.toString());
       }
     }
+  }
+
+  Future<void> _editArea() async {
+    final AreaEditResult? result = await showAreaFieldEditDialog(
+      context,
+      feddan: _draft.feddan,
+      qirat: _draft.qirat,
+      sahm: _draft.sahm,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _draft = _draft.copyWith(
+        feddan: result.feddan,
+        qirat: result.qirat,
+        sahm: result.sahm,
+        totalSqm: AreaCalculator.totalSqm(
+          feddan: result.feddan,
+          qirat: result.qirat,
+          sahm: result.sahm,
+        ),
+      );
+    });
+  }
+
+  Future<void> _editUsage() async {
+    final String? selected = await showParcelQuickChoiceSheet(
+      context,
+      title: 'holdings.fields.usage_type'.tr(),
+      selected: _draft.usageType,
+      options: Parcel.usageTypeOptions,
+    );
+    if (selected == null || selected == _draft.usageType || !mounted) return;
+    setState(() {
+      _draft = UsageTypeNotesSync.applyUsageTypeChange(_draft, selected);
+    });
+  }
+
+  Future<void> _editCrop() async {
+    final result = await pickCropType(context, selected: _draft.cropType);
+    if (result == null || result.isClear || !mounted) return;
+    setState(() => _draft = _draft.copyWith(cropType: result.value));
+  }
+
+  String _areaText() {
+    final String feddan = _draft.feddan?.toStringAsFixed(0) ?? '0';
+    final String qirat = _draft.qirat?.toStringAsFixed(0) ?? '0';
+    final String sahm = _draft.sahm?.toStringAsFixed(0) ?? '0';
+    return '$feddan فدان، $qirat قيراط، $sahm سهم';
   }
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
+    final bool isAgricultural =
+        UsageType.fromLabel(_draft.usageType) == UsageType.agricultural;
 
     return SafeArea(
       child: Container(
@@ -95,19 +137,33 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
           children: [
             Row(
               children: [
+                const Icon(Icons.tune_rounded, color: AppColors.primary200),
+                horizontalSpacing(8),
                 Expanded(
-                  child: Text(
-                    widget.original.holderName?.trim().isNotEmpty == true
-                        ? widget.original.holderName!.trim()
-                        : 'jazla.quick_view.title'.tr(),
-                    style: AppTextStyles.font18Bold
-                        .copyWith(color: colors.textPrimary),
-                    textAlign: TextAlign.right,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'jazla.quick_view.title'.tr(),
+                        style: AppTextStyles.font18Bold
+                            .copyWith(color: colors.textPrimary),
+                      ),
+                      Text(
+                        widget.original.holderName?.trim().isNotEmpty == true
+                            ? widget.original.holderName!.trim()
+                            : '—',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.font12Regular
+                            .copyWith(color: colors.textSecondary),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                   icon: Icon(Icons.close_rounded, color: colors.iconSecondary),
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
                 ),
               ],
             ),
@@ -118,46 +174,37 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     FieldRow(
-                        label: 'رقم الحيازة', value: widget.original.holdingId),
-                    verticalSpacing(8),
-                    FieldRow(
-                      label: 'اسم الحائز',
-                      value: widget.original.holderName ?? '-',
+                      label: 'holdings.fields.holding_id'.tr(),
+                      value: _draft.holdingId,
                     ),
                     verticalSpacing(8),
                     FieldRow(
-                      label: 'اسم المالك',
-                      value: widget.original.ownerName ?? '-',
+                      label: 'holdings.fields.basin_name'.tr(),
+                      value: _draft.basinName ?? '—',
+                    ),
+                    verticalSpacing(12),
+                    FieldRow(
+                      label: 'holdings.fields.area'.tr(),
+                      value: _areaText(),
+                      onTap: _editArea,
+                      showEditAction: false,
                     ),
                     verticalSpacing(8),
                     FieldRow(
-                      label: 'اسم الحوض',
-                      value: widget.original.basinName ?? '-',
+                      label: 'holdings.fields.usage_type'.tr(),
+                      value: _draft.usageType,
+                      onTap: _editUsage,
+                      showEditAction: false,
                     ),
-                    verticalSpacing(8),
-                    FieldRow(
-                      label: 'المساحة',
-                      // Same formatter the main Detail Screen uses — plain
-                      // `.toString()` rendering, always Western digits.
-                      value:
-                          '${_formatter.formatNumber(widget.original.feddan) ?? '0'}ف '
-                          '${_formatter.formatNumber(widget.original.qirat) ?? '0'}ق '
-                          '${_formatter.formatNumber(widget.original.sahm) ?? '0'}س',
-                    ),
-                    verticalSpacing(16),
-                    ToggleFieldRow(
-                      label: 'jazla.quick_view.inheritance'.tr(),
-                      value: _draft.isInheritance,
-                      onChanged: (final bool v) => setState(
-                          () => _draft = _draft.copyWith(isInheritance: v)),
-                    ),
-                    verticalSpacing(8),
-                    ToggleFieldRow(
-                      label: 'jazla.quick_view.delegate'.tr(),
-                      value: _draft.isDelegate,
-                      onChanged: (final bool v) => setState(
-                          () => _draft = _draft.copyWith(isDelegate: v)),
-                    ),
+                    if (isAgricultural) ...[
+                      verticalSpacing(8),
+                      FieldRow(
+                        label: 'holdings.fields.crop_type'.tr(),
+                        value: _draft.cropType ?? '—',
+                        onTap: _editCrop,
+                        showEditAction: false,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -168,8 +215,7 @@ class _JazlaQuickViewSheetState extends State<JazlaQuickViewSheet> {
                 Expanded(
                   child: CustomTextButton.outlined(
                     text: 'jazla.quick_view.cancel'.tr(),
-                    onPressed:
-                        _isSaving ? null : () => Navigator.pop(context, false),
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
                   ),
                 ),
                 horizontalSpacing(8),

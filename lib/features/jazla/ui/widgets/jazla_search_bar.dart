@@ -9,10 +9,12 @@ class JazlaSearchBar extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onChanged,
+    this.focusNode,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final FocusNode? focusNode;
 
   @override
   Widget build(final BuildContext context) {
@@ -20,6 +22,7 @@ class JazlaSearchBar extends StatelessWidget {
     return CustomTextForm(
       hintText: 'jazla.add_sheet.search_hint'.tr(),
       controller: controller,
+      focusNode: focusNode,
       isRTL: true,
       borderColor: colors.border,
       backgroundColor: colors.background,

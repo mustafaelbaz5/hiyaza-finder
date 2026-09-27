@@ -1,7 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../core/errors/exceptions.dart';
-import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../../parcel_catalog/data/repo/holdings_reader.dart';
 import '../../data/local/jazla_search_service.dart';
 import '../../data/model/jazla.dart';
@@ -13,73 +13,88 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
     this._repo,
     this._holdingsReader,
     this._searchService,
-    this.jazlaId,
     this.cityId,
   ) : super(const JazlaAddParcelState());
 
   final JazlaRepo _repo;
   final ParcelCatalogReader _holdingsReader;
   final JazlaSearchService _searchService;
-  final String jazlaId;
   final String cityId;
+  Timer? _debounce;
+  Map<String, String> _jazlaNameByParcelId = <String, String>{};
+  bool _ownershipLoaded = false;
 
-  Future<Map<String, String>> _jazlaNameByParcelId() async {
+  Future<void> initializeOwnership() async {
+    if (_ownershipLoaded) return;
+    await refreshOwnership();
+  }
+
+  Future<void> refreshOwnership() async {
     final List<Jazla> all = await _repo.getAll(cityId);
-    return <String, String>{
+    _jazlaNameByParcelId = <String, String>{
       for (final Jazla j in all)
         for (final String id in j.parcelIds) id: j.name,
     };
+    _ownershipLoaded = true;
   }
 
-  Future<void> search(final String query) async {
+  /// The ownership map is loaded once for the search session. Filtering the
+  /// in-memory city catalog is then debounced, so typing never performs a
+  /// Jazla-store read per keystroke.
+  void search(final String query) {
+    _debounce?.cancel();
+    if (query.trim().isEmpty) {
+      emit(state.copyWith(
+        status: JazlaAddParcelStatus.idle,
+        query: query,
+        results: const <ParcelSearchResult>[],
+      ));
+      return;
+    }
     emit(state.copyWith(status: JazlaAddParcelStatus.searching, query: query));
+    _debounce = Timer(const Duration(milliseconds: 180), () {
+      _searchNow(query);
+    });
+  }
+
+  Future<void> _searchNow(final String query) async {
+    if (query.trim().isEmpty) return;
     try {
-      final Map<String, String> jazlaNameByParcelId =
-          await _jazlaNameByParcelId();
+      await initializeOwnership();
       final List<ParcelSearchResult> results = _searchService.search(
         _holdingsReader.parcels,
         query,
-        jazlaNameByParcelId,
+        _jazlaNameByParcelId,
       );
-      emit(state.copyWith(status: JazlaAddParcelStatus.idle, results: results));
+      if (state.query == query) {
+        emit(state.copyWith(
+          status: JazlaAddParcelStatus.idle,
+          results: results,
+        ));
+      }
     } catch (e) {
       emit(state.copyWith(
           status: JazlaAddParcelStatus.error, errorMessage: e.toString()));
     }
   }
 
-  /// Adds a free parcel to this Jazla. Rejects before any repo call if the
-  /// current in-memory results already show it locked — `JazlaRepo.addParcel`
-  /// is still the authority (it throws `CacheException` if used), this is
-  /// just a fast client-side guard against the obvious case.
-  Future<void> addFreeParcel(final String parcelId) async {
-    final ParcelSearchResult? match = state.results
-        .where((final ParcelSearchResult r) => r.parcel.id == parcelId)
-        .firstOrNull;
-    if (match != null && match.isLocked) return;
-
-    emit(state.copyWith(status: JazlaAddParcelStatus.adding));
-    try {
-      await _repo.addParcel(jazlaId, parcelId, cityId);
-      emit(
-        state.copyWith(
-          status: JazlaAddParcelStatus.idle,
-          lastAddedParcelId: parcelId,
-        ),
-      );
-      await search(state.query);
-    } on AppException catch (e) {
-      emit(state.copyWith(
-          status: JazlaAddParcelStatus.error, errorMessage: e.message));
-    }
+  void markParcelAdded(final String parcelId, final String jazlaName) {
+    _jazlaNameByParcelId = <String, String>{
+      ..._jazlaNameByParcelId,
+      parcelId: jazlaName,
+    };
+    _searchNow(state.query);
   }
 
-  /// Called when the reused add-person/add-parcel-for-existing-person flow
-  /// returns a newly created [Parcel] — auto-adds it to this Jazla.
-  Future<void> onExternalParcelCreated(final Parcel parcel) =>
-      addFreeParcel(parcel.id);
-}
+  void markParcelRemoved(final String parcelId) {
+    _jazlaNameByParcelId = <String, String>{..._jazlaNameByParcelId}
+      ..remove(parcelId);
+    _searchNow(state.query);
+  }
 
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
+  @override
+  Future<void> close() {
+    _debounce?.cancel();
+    return super.close();
+  }
 }

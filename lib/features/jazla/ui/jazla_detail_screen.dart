@@ -1,7 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
 import 'package:hiyaza_finder/features/jazla/ui/widgets/add_parcel_tab.dart';
+import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_detail_app_bar.dart';
 import 'package:hiyaza_finder/features/jazla/ui/widgets/parcels_tab.dart';
 
 import '../../../core/di/dependency_injection.dart';
@@ -10,26 +12,27 @@ import '../../../core/themes/app_colors.dart';
 import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
-import '../../../core/widgets/screen_header.dart';
 import '../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../parcel_add/data/model/add_record_args.dart';
+import '../../parcel_add/ui/widgets/basin_picker.dart';
 import '../../parcel_catalog/data/model/parcel.dart';
 import '../../parcel_catalog/data/repo/holdings_reader.dart';
 import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import '../../parcel_add/data/model/add_record_args.dart';
-import '../../parcel_add/ui/widgets/basin_picker.dart';
+import '../../parcel_editor/logic/cubit/parcel_editor_cubit.dart';
+import '../../parcel_editor/logic/cubit/parcel_editor_state.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
 import '../logic/cubit/jazla_add_parcel_cubit.dart';
 import '../logic/cubit/jazla_detail_cubit.dart';
 import '../logic/cubit/jazla_detail_state.dart';
+import 'jazla_review_screen.dart';
+import 'widgets/jazla_actions_sheet.dart';
+import 'widgets/jazla_area_dialog.dart';
 import 'widgets/jazla_bulk_apply_sheet.dart';
 import 'widgets/jazla_export_button.dart';
-import 'widgets/jazla_area_summary.dart';
-import 'widgets/jazla_area_dialog.dart';
 import 'widgets/jazla_pdf_share_button.dart';
-import 'widgets/jazla_actions_sheet.dart';
-import 'jazla_review_screen.dart';
+import 'widgets/jazla_quick_view_sheet.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
 /// instance (so both "القطع الموجودة" and "إضافة قطعة" always see the same,
@@ -65,9 +68,11 @@ class JazlaDetailScreen extends StatelessWidget {
             getIt<JazlaRepo>(),
             getIt<ParcelCatalogReader>(),
             getIt<JazlaSearchService>(),
-            jazlaId,
             cityId,
-          ),
+          )..initializeOwnership(),
+        ),
+        BlocProvider<ParcelEditorCubit>(
+          create: (final _) => getIt<ParcelEditorCubit>(),
         ),
       ],
       child: const _JazlaDetailView(),
@@ -87,23 +92,29 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
   late final TabController _tabController =
       TabController(length: 2, vsync: this);
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
-  void _goToParcelsTab() => _tabController.animateTo(0);
+  void _restoreSearchFocus() {
+    WidgetsBinding.instance.addPostFrameCallback((final _) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
+  }
 
-  void _openParcelDetail(
+  Future<void> _openParcelDetail(
     final BuildContext context,
     final List<Parcel> parcels,
     final Parcel parcel,
-  ) {
+  ) async {
     final int index = parcels.indexWhere((final Parcel p) => p.id == parcel.id);
-    Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute<void>(
         builder: (final _) => JazlaReviewScreen(
@@ -113,6 +124,9 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
         ),
       ),
     );
+    if (context.mounted) {
+      context.read<JazlaDetailCubit>().refreshVisibleParcels();
+    }
   }
 
   Future<void> _confirmRemove(
@@ -126,35 +140,43 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
       message: 'jazla.detail.remove_confirm_message'.tr(),
       confirmText: 'jazla.detail.remove'.tr(),
       onConfirm: () {
-        Navigator.pop(context);
-        cubit.removeParcel(parcel.id);
+        _removeParcel(context, cubit, parcel.id);
       },
     );
   }
 
+  Future<void> _removeParcel(
+    final BuildContext context,
+    final JazlaDetailCubit cubit,
+    final String parcelId,
+  ) async {
+    final bool removed = await cubit.removeParcel(parcelId);
+    if (!context.mounted) return;
+    if (removed) {
+      context.read<JazlaAddParcelCubit>().markParcelRemoved(parcelId);
+    } else {
+      context.showErrorSnackBar(
+        context.read<JazlaDetailCubit>().state.errorMessage ??
+            'jazla.detail.remove_confirm_message'.tr(),
+      );
+    }
+  }
+
   Future<void> _addParcelDirect(final Parcel parcel) async {
-    final JazlaAddParcelCubit addCubit = context.read<JazlaAddParcelCubit>();
-    await addCubit.addFreeParcel(parcel.id);
-    if (!mounted || addCubit.state.lastAddedParcelId != parcel.id) return;
-    await context.read<JazlaDetailCubit>().load();
+    final JazlaDetailCubit detailCubit = context.read<JazlaDetailCubit>();
+    final Future<bool> persisted = detailCubit.addParcel(parcel);
+    final bool added = await persisted;
     if (!mounted) return;
-    _goToParcelsTab();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('jazla.add_sheet.added'.tr()),
-        action: SnackBarAction(
-          label: 'jazla.add_sheet.undo'.tr(),
-          onPressed: () async {
-            await context.read<JazlaDetailCubit>().removeParcel(parcel.id);
-            if (mounted) {
-              context
-                  .read<JazlaAddParcelCubit>()
-                  .search(_searchController.text);
-            }
-          },
-        ),
-      ),
-    );
+    if (!added) {
+      context.showErrorSnackBar(
+        detailCubit.state.errorMessage ?? 'jazla.add_sheet.add_failed'.tr(),
+      );
+      return;
+    }
+    context
+        .read<JazlaAddParcelCubit>()
+        .markParcelAdded(parcel.id, detailCubit.state.jazla?.name ?? '');
+    _restoreSearchFocus();
   }
 
   Future<void> _editTargetArea(final JazlaDetailCubit cubit) async {
@@ -187,8 +209,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     await cubit.updateBasin(result.basinName);
   }
 
-  Future<void> _addNewPerson(final String jazlaId) async {
-    final JazlaAddParcelCubit addCubit = context.read<JazlaAddParcelCubit>();
+  Future<void> _addNewPerson() async {
     final Parcel? created = await context.pushNamed<Parcel>(
       Routes.addRecord,
       arguments: const AddRecordArgs(
@@ -196,17 +217,57 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
       ),
     );
     if (created == null || !mounted) return;
-    await addCubit.onExternalParcelCreated(created);
-    if (mounted) {
-      context.read<JazlaDetailCubit>().load();
-      _goToParcelsTab();
-    }
+    await _addParcelDirect(created);
+  }
+
+  Future<void> _editThenAdd(final Parcel parcel) async {
+    final ParcelEditorCubit editor = context.read<ParcelEditorCubit>();
+    final Parcel? updated = await showJazlaQuickViewSheet(
+      context,
+      parcel: parcel,
+      onSave: (final Parcel draft) async {
+        await editor.save(draft);
+        final ParcelEditorState editState = editor.state;
+        if (editState.status == ParcelEditorStatus.failure) {
+          throw editState.error ?? StateError('Unable to save parcel');
+        }
+        return editState.parcel;
+      },
+    );
+    if (updated != null && mounted) await _addParcelDirect(updated);
   }
 
   Future<void> _openBulkApply(
       final String jazlaId, final List<Parcel> parcels) async {
     await showJazlaBulkApplySheet(context, jazlaId: jazlaId, parcels: parcels);
     if (mounted) context.read<JazlaDetailCubit>().load();
+  }
+
+  Future<void> _renameJazla(final JazlaDetailCubit cubit) async {
+    final Jazla? jazla = cubit.state.jazla;
+    if (jazla == null) return;
+    final String? name = await showTextInputDialog(
+      context,
+      title: 'jazla.rename'.tr(),
+      initialValue: jazla.name,
+    );
+    if (name == null || name.trim().isEmpty || !mounted) return;
+    await cubit.renameJazla(name);
+  }
+
+  Future<void> _deleteJazla(final JazlaDetailCubit cubit) async {
+    await AppDialogs.showConfirm(
+      context,
+      title: 'jazla.delete_confirm_title'.tr(),
+      message: 'jazla.delete_confirm_message'.tr(),
+      confirmText: 'jazla.delete'.tr(),
+      onConfirm: () async {
+        await cubit.deleteJazla();
+        if (mounted && cubit.state.status == JazlaDetailStatus.notFound) {
+          Navigator.pop(context);
+        }
+      },
+    );
   }
 
   @override
@@ -216,77 +277,48 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     return Scaffold(
       backgroundColor: colors.background,
       resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: BlocBuilder<JazlaDetailCubit, JazlaDetailState>(
-          builder: (final BuildContext context, final JazlaDetailState state) {
-            if (state.status == JazlaDetailStatus.loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state.status == JazlaDetailStatus.notFound ||
-                state.jazla == null) {
-              return Column(
-                children: [
-                  ScreenHeader(title: 'jazla.title'.tr()),
-                  const Expanded(child: Center(child: Text('—'))),
-                ],
-              );
-            }
+      body: BlocBuilder<JazlaDetailCubit, JazlaDetailState>(
+        builder: (final BuildContext context, final JazlaDetailState state) {
+          if (state.status == JazlaDetailStatus.loading) {
+            return const SafeArea(
+                child: Center(child: CircularProgressIndicator()));
+          }
+          if (state.status == JazlaDetailStatus.notFound ||
+              state.jazla == null) {
+            return SafeArea(
+              child: Center(child: Text('jazla.empty_list'.tr())),
+            );
+          }
 
-            final String jazlaId = state.jazla!.id;
-            final List<Parcel> parcels = state.parcels;
-            final JazlaDetailCubit cubit = context.read<JazlaDetailCubit>();
+          final String jazlaId = state.jazla!.id;
+          final List<Parcel> parcels = state.parcels;
+          final JazlaDetailCubit cubit = context.read<JazlaDetailCubit>();
 
-            return Column(
+          return SafeArea(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: rw(4)),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ScreenHeader(title: state.jazla!.name),
-                            if (state.jazla!.basinName != null)
-                              Padding(
-                                padding:
-                                    EdgeInsetsDirectional.only(start: rw(16)),
-                                child: Text(
-                                  state.jazla!.basinName!,
-                                  style: TextStyle(color: colors.textSecondary),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.more_vert_rounded),
-                        tooltip: 'jazla.actions.title'.tr(),
-                        onPressed: () => showJazlaActionsSheet(
-                          context,
-                          jazla: state.jazla!,
-                          parcels: parcels,
-                          onEditArea: () => _editTargetArea(cubit),
-                          onEditBasin: () => _editBasin(cubit),
-                          exportExcelAction: JazlaExportButton(
-                            jazlaName: state.jazla!.name,
-                            parcels: parcels,
-                          ),
-                          sharePdfAction: JazlaPdfShareButton(
-                            jazla: state.jazla!,
-                            parcels: parcels,
-                          ),
-                          onBulkApply: parcels.isEmpty
-                              ? () {}
-                              : () => _openBulkApply(jazlaId, parcels),
-                        ),
-                      ),
-                      horizontalSpacing(8),
-                    ],
+                JazlaDetailAppBar(
+                  jazla: state.jazla!,
+                  onActionsPressed: () => showJazlaActionsSheet(
+                    context,
+                    jazla: state.jazla!,
+                    parcels: parcels,
+                    onRename: () => _renameJazla(cubit),
+                    onEditArea: () => _editTargetArea(cubit),
+                    onEditBasin: () => _editBasin(cubit),
+                    exportExcelAction: JazlaExportButton(
+                      jazla: state.jazla!,
+                      parcels: parcels,
+                    ),
+                    sharePdfAction: JazlaPdfShareButton(
+                      jazla: state.jazla!,
+                      parcels: parcels,
+                    ),
+                    onBulkApply: () => _openBulkApply(jazlaId, parcels),
+                    onDelete: () => _deleteJazla(cubit),
                   ),
                 ),
-                JazlaAreaSummary(jazla: state.jazla!, parcels: parcels),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: rw(16)),
                   child: TabBar(
@@ -311,21 +343,23 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                         onReorder: cubit.reorder,
                         onTapParcel: (final Parcel p) =>
                             _openParcelDetail(context, parcels, p),
-                        onLongPressParcel: (final Parcel p) =>
+                        onRemoveParcel: (final Parcel p) =>
                             _confirmRemove(context, cubit, p),
                       ),
                       AddParcelTab(
                         searchController: _searchController,
+                        searchFocusNode: _searchFocusNode,
                         onAddTap: _addParcelDirect,
-                        onAddNewPerson: () => _addNewPerson(jazlaId),
+                        onEditTap: _editThenAdd,
+                        onAddNewPerson: _addNewPerson,
                       ),
                     ],
                   ),
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

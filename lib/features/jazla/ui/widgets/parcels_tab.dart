@@ -11,13 +11,13 @@ class ParcelsTab extends StatelessWidget {
     required this.parcels,
     required this.onReorder,
     required this.onTapParcel,
-    required this.onLongPressParcel,
+    required this.onRemoveParcel,
   });
 
   final List<Parcel> parcels;
   final void Function(List<String> newOrderIds) onReorder;
   final void Function(Parcel parcel) onTapParcel;
-  final void Function(Parcel parcel) onLongPressParcel;
+  final void Function(Parcel parcel) onRemoveParcel;
 
   @override
   Widget build(final BuildContext context) {
@@ -50,7 +50,7 @@ class ParcelsTab extends StatelessWidget {
             index: i + 1,
             parcel: parcel,
             onTap: () => onTapParcel(parcel),
-            onLongPress: () => onLongPressParcel(parcel),
+            onRemove: () => onRemoveParcel(parcel),
           ),
         );
       },

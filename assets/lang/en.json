@@ -520,17 +520,36 @@
     "empty_list": "No Jazlas yet",
     "basin_required": "Select a basin first to define the Jazla location",
     "basin": "Basin",
+  "create": {
+    "name_section": "Jazla details",
+    "name_required": "Enter a Jazla name first",
+    "location_section": "Location",
+    "basin_hint": "Select basin",
+    "basin_required": "Select a basin before saving",
+    "search_basin": "Search basins",
+    "no_matching_basins": "No matching basins",
+    "enable_target_area": "Set a target area"
+  },
     "actions": {
       "title": "Jazla actions",
       "edit_area": "Edit target area",
       "edit_basin": "Edit basin",
       "export_excel": "Export Excel",
       "share_pdf": "Share PDF",
-      "bulk_apply": "Bulk apply"
+    "bulk_apply": "Bulk apply",
+    "manage_section": "Manage Jazla",
+    "operations_section": "Operations",
+    "danger_section": "Danger zone",
+    "export_excel_hint": "A structured file for editing and printing",
+    "share_pdf_hint": "A compact report for sharing",
+    "bulk_apply_hint": "Apply one change to all parcels",
+    "no_parcels_hint": "Add a parcel first to enable this action",
+    "delete_hint": "Parcel data is not deleted"
     },
     "review": {
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "of": "of"
     },
     "sort": {
       "title": "Sort Jazlas",
@@ -579,6 +598,9 @@
       "added": "Parcel added to Jazla",
       "undo": "Undo",
       "area_missing": "Area not specified",
+      "add": "Add",
+      "view_edit": "View and edit",
+      "add_failed": "Couldn't add the parcel to the Jazla",
       "add_parcel_for_person": "Parcel for person",
       "locked_badge": "In {jazlaName}"
     },
