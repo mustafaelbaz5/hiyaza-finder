@@ -13,15 +13,18 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
     this._repo,
     this._holdingsReader,
     this._searchService,
+    this.jazlaId,
     this.cityId,
   ) : super(const JazlaAddParcelState());
 
   final JazlaRepo _repo;
   final ParcelCatalogReader _holdingsReader;
   final JazlaSearchService _searchService;
+  final String jazlaId;
   final String cityId;
   Timer? _debounce;
   Map<String, String> _jazlaNameByParcelId = <String, String>{};
+  String? _preferredBasinName;
   bool _ownershipLoaded = false;
 
   Future<void> initializeOwnership() async {
@@ -31,11 +34,31 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
 
   Future<void> refreshOwnership() async {
     final List<Jazla> all = await _repo.getAll(cityId);
+    if (isClosed) return;
     _jazlaNameByParcelId = <String, String>{
       for (final Jazla j in all)
         for (final String id in j.parcelIds) id: j.name,
     };
+    _preferredBasinName = _basinForCurrentJazla(all);
     _ownershipLoaded = true;
+  }
+
+  /// Keeps the search ranking aligned when the user changes this Jazla's
+  /// basin from its action sheet. The active query is re-ranked in memory;
+  /// no extra catalog or network read is needed.
+  void setPreferredBasin(final String? basinName) {
+    final String? normalized = basinName?.trim();
+    final String? next = normalized?.isEmpty ?? true ? null : normalized;
+    if (_preferredBasinName == next) return;
+    _preferredBasinName = next;
+    if (state.query.trim().isNotEmpty) _searchNow(state.query);
+  }
+
+  String? _basinForCurrentJazla(final List<Jazla> jazlas) {
+    for (final Jazla jazla in jazlas) {
+      if (jazla.id == jazlaId) return jazla.basinName?.trim();
+    }
+    return null;
   }
 
   /// The ownership map is loaded once for the search session. Filtering the
@@ -61,24 +84,28 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
     if (query.trim().isEmpty) return;
     try {
       await initializeOwnership();
+      if (isClosed) return;
       final List<ParcelSearchResult> results = _searchService.search(
         _holdingsReader.parcels,
         query,
         _jazlaNameByParcelId,
+        preferredBasinName: _preferredBasinName,
       );
-      if (state.query == query) {
+      if (!isClosed && state.query == query) {
         emit(state.copyWith(
           status: JazlaAddParcelStatus.idle,
           results: results,
         ));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(state.copyWith(
           status: JazlaAddParcelStatus.error, errorMessage: e.toString()));
     }
   }
 
   void markParcelAdded(final String parcelId, final String jazlaName) {
+    if (isClosed) return;
     _jazlaNameByParcelId = <String, String>{
       ..._jazlaNameByParcelId,
       parcelId: jazlaName,
@@ -87,6 +114,7 @@ class JazlaAddParcelCubit extends Cubit<JazlaAddParcelState> {
   }
 
   void markParcelRemoved(final String parcelId) {
+    if (isClosed) return;
     _jazlaNameByParcelId = <String, String>{..._jazlaNameByParcelId}
       ..remove(parcelId);
     _searchNow(state.query);

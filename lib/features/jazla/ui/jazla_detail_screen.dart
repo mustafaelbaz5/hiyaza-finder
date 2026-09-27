@@ -68,6 +68,7 @@ class JazlaDetailScreen extends StatelessWidget {
             getIt<JazlaRepo>(),
             getIt<ParcelCatalogReader>(),
             getIt<JazlaSearchService>(),
+            jazlaId,
             cityId,
           )..initializeOwnership(),
         ),
@@ -207,6 +208,11 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     );
     if (!mounted || result == null || result.basinName == null) return;
     await cubit.updateBasin(result.basinName);
+    if (mounted) {
+      context
+          .read<JazlaAddParcelCubit>()
+          .setPreferredBasin(cubit.state.jazla?.basinName);
+    }
   }
 
   Future<void> _addNewPerson() async {

@@ -37,8 +37,9 @@ class JazlaSearchService {
   List<ParcelSearchResult> search(
     final List<Parcel> parcels,
     final String rawQuery,
-    final Map<String, String> jazlaNameByParcelId,
-  ) {
+    final Map<String, String> jazlaNameByParcelId, {
+    final String? preferredBasinName,
+  }) {
     final String query = rawQuery.trim();
     if (query.isEmpty) return const <ParcelSearchResult>[];
 
@@ -60,9 +61,20 @@ class JazlaSearchService {
     }).toList()
       ..sort((final ParcelSearchResult a, final ParcelSearchResult b) {
         if (a.isLocked != b.isLocked) return a.isLocked ? 1 : -1;
+        final bool aMatchesBasin = _matchesBasin(a.parcel, preferredBasinName);
+        final bool bMatchesBasin = _matchesBasin(b.parcel, preferredBasinName);
+        if (aMatchesBasin != bMatchesBasin) {
+          return aMatchesBasin ? -1 : 1;
+        }
         return b.score.compareTo(a.score);
       });
 
     return results.take(_maxResults).toList();
+  }
+
+  bool _matchesBasin(final Parcel parcel, final String? preferredBasinName) {
+    final String preferred = preferredBasinName?.trim() ?? '';
+    if (preferred.isEmpty) return false;
+    return parcel.basinName?.trim() == preferred;
   }
 }

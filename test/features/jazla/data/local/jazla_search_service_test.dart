@@ -50,6 +50,31 @@ void main() {
     expect(results.last.isLocked, isTrue);
   });
 
+  test('prioritizes free results from the Jazla basin', () {
+    const Parcel anotherBasin = Parcel(
+      id: 'other-basin',
+      holdingId: '12',
+      holderName: 'محمد حسن',
+      basinName: 'حوض النخيل',
+    );
+    const Parcel jazlaBasin = Parcel(
+      id: 'jazla-basin',
+      holdingId: '13',
+      holderName: 'محمد محمود',
+      basinName: 'حوض طلعت',
+    );
+
+    final List<ParcelSearchResult> results = service.search(
+      <Parcel>[anotherBasin, jazlaBasin],
+      'محمد',
+      <String, String>{},
+      preferredBasinName: 'حوض طلعت',
+    );
+
+    expect(results.map((final ParcelSearchResult result) => result.parcel.id),
+        <String>['jazla-basin', 'other-basin']);
+  });
+
   test('routes an all-digit query through exact holding-number matching', () {
     final results =
         service.search(<Parcel>[free, locked], '10', <String, String>{});
