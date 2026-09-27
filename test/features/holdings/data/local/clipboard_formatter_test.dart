@@ -68,12 +68,12 @@ void main() {
       );
 
       expect(text.startsWith('id: uuid-123'), isTrue);
-      expect(text, contains(' | رقم الحيازة: 101، عدد القطع: 1'));
+      expect(text, contains(' |\n رقم الحيازة: 101، عدد القطع: 1'));
       expect(text, contains('اسم الجمعية: جمعية الدير'));
       expect(text, contains('اسم الحوض: الشيكارة، كود الحوض: B1'));
       expect(text, contains('المساحة: 1 فدان، 2 قيراط، 3 سهم'));
       expect(text, contains('نوع المحصول: قمح'));
-      expect(text, isNot(contains('\n')));
+      expect(text, contains('\n'));
       expect(text, isNot(contains(';')));
     });
 
