@@ -214,8 +214,8 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       if (isClosed) return;
       emit(state.copyWith(jazla: current.copyWith(parcelDefaults: defaults)));
     } on AppException catch (e) {
-      if (isClosed) return;
-      emit(state.copyWith(errorMessage: e.message));
+      if (!isClosed) emit(state.copyWith(errorMessage: e.message));
+      rethrow;
     }
   }
 
