@@ -9,13 +9,13 @@ class AboutConstants {
   AboutConstants._();
 
   // ── Store URLs ──────────────────────────────────────────────
-  // TODO: Replace with your actual store URLs before release
+
   static const String androidStoreUrl =
       'https://play.google.com/store/apps/details?id=com.example.app';
   static const String iosStoreUrl = 'https://apps.apple.com/app/id000000000';
 
   // ── Legal URLs ──────────────────────────────────────────────
-  // TODO: Replace with your actual policy URLs
+
   static const String privacyPolicyUrl = 'https://example.com/privacy';
   static const String termsOfServiceUrl = 'https://example.com/terms';
 
