@@ -1,18 +1,18 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
+import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
+import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_state.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_state.dart';
-import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
 import 'home_empty_state.dart';
 import 'recommendation_list.dart';
 

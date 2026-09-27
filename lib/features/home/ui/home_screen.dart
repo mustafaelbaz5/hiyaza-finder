@@ -72,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.fromLTRB(rw(16), rh(4), rw(16), rh(12)),
                     child: HomeMainCard(
                       onChangeCity: () => _openCityPicker(cubit),
+                      onOpenJazla: () => context.pushNamed(Routes.jazlaList),
                       cityName: state.cityName,
                       associationType: state.associationType,
                       parcelCount: state.parcels.length,
