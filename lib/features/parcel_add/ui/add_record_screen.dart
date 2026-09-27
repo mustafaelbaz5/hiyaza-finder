@@ -519,6 +519,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                   onEdit: () => _editCropType(context),
                                 ),
                               ],
+                              verticalSpacing(8),
                               FieldRow(
                                 label: 'holdings.fields.usage_type'.tr(),
                                 value: _parcel.usageType,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/widgets/custom_text_form_.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../cities/data/model/association_type.dart';
@@ -43,7 +44,6 @@ class _NotesManagementSheet extends StatefulWidget {
 class _NotesManagementSheetState extends State<_NotesManagementSheet> {
   late List<String> _notes;
   late final TextEditingController _controller;
-  late final TextEditingController _focusController;
 
   List<String> get _suggestions {
     final List<String> values = <String>[
@@ -59,13 +59,11 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
     super.initState();
     _notes = List<String>.of(widget.initialNotes);
     _controller = TextEditingController();
-    _focusController = TextEditingController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _focusController.dispose();
     super.dispose();
   }
 
@@ -160,6 +158,20 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
               ],
             ),
             verticalSpacing(8),
+            CustomTextForm(
+              hintText: 'holdings.notes_field.free_text_hint'.tr(),
+              controller: _controller,
+              isRTL: true,
+              textInputAction: TextInputAction.done,
+              prefixIcon:
+                  Icon(Icons.edit_note_rounded, color: colors.iconSecondary),
+              suffixIcon: IconButton(
+                tooltip: 'holdings.notes_field.add_button'.tr(),
+                onPressed: _addTypedNote,
+                icon: const Icon(Icons.add_rounded),
+              ),
+            ),
+            verticalSpacing(14),
             Text(
               'holdings.fields.notes'.tr(),
               style: AppTextStyles.font12Medium.copyWith(
@@ -216,30 +228,6 @@ class _NotesManagementSheetState extends State<_NotesManagementSheet> {
                           selected: _notes.contains(note),
                           onSelected: (final _) => _toggleSuggestion(note),
                         ),
-                    ],
-                  ),
-                  verticalSpacing(14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _controller,
-                          textDirection: Directionality.of(context),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (final _) => _addTypedNote(),
-                          decoration: InputDecoration(
-                            labelText:
-                                'holdings.notes_field.free_text_hint'.tr(),
-                            prefixIcon: const Icon(Icons.edit_note_rounded),
-                          ),
-                        ),
-                      ),
-                      horizontalSpacing(8),
-                      IconButton.filled(
-                        tooltip: 'holdings.notes_field.add_button'.tr(),
-                        onPressed: _addTypedNote,
-                        icon: const Icon(Icons.add_rounded),
-                      ),
                     ],
                   ),
                 ],
