@@ -2,11 +2,15 @@ import 'package:equatable/equatable.dart';
 
 import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
 
+import 'jazla_parcel_defaults.dart';
+
 /// A local, non-data-owning grouping of parcel IDs (الجزلة) — an organizer,
 /// not a second source of truth. Holds `parcelIds` only; the actual [Parcel]
 /// data always lives in and is read/written through `ParcelCatalogRepository`.
 /// Scoped per city — never shared across [cityId]s.
 class Jazla extends Equatable {
+  static const Object _unset = Object();
+
   const Jazla({
     required this.id,
     required this.cityId,
@@ -17,6 +21,7 @@ class Jazla extends Equatable {
     this.targetQirat,
     this.targetSahm,
     this.targetAreaSqmOverride,
+    this.parcelDefaults,
     required this.createdAt,
     final DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? createdAt;
@@ -25,13 +30,12 @@ class Jazla extends Equatable {
   final String cityId;
   final String name;
   final String? basinName;
-
-  /// Insertion/display order — reordering rewrites this list wholesale.
   final List<String> parcelIds;
   final double? targetFeddan;
   final double? targetQirat;
   final double? targetSahm;
   final double? targetAreaSqmOverride;
+  final JazlaParcelDefaults? parcelDefaults;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -53,6 +57,7 @@ class Jazla extends Equatable {
     final double? targetQirat,
     final double? targetSahm,
     final double? targetAreaSqmOverride,
+    final Object? parcelDefaults = _unset,
     final DateTime? updatedAt,
   }) =>
       Jazla(
@@ -66,6 +71,9 @@ class Jazla extends Equatable {
         targetSahm: targetSahm ?? this.targetSahm,
         targetAreaSqmOverride:
             targetAreaSqmOverride ?? this.targetAreaSqmOverride,
+        parcelDefaults: identical(parcelDefaults, _unset)
+            ? this.parcelDefaults
+            : parcelDefaults as JazlaParcelDefaults?,
         createdAt: createdAt,
         updatedAt: updatedAt ?? DateTime.now(),
       );
@@ -80,6 +88,7 @@ class Jazla extends Equatable {
         'targetQirat': targetQirat,
         'targetSahm': targetSahm,
         'targetAreaSqm': targetAreaSqmOverride,
+        'parcelDefaults': parcelDefaults?.toJson(),
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -94,6 +103,11 @@ class Jazla extends Equatable {
         targetQirat: (json['targetQirat'] as num?)?.toDouble(),
         targetSahm: (json['targetSahm'] as num?)?.toDouble(),
         targetAreaSqmOverride: (json['targetAreaSqm'] as num?)?.toDouble(),
+        parcelDefaults: json['parcelDefaults'] is Map
+            ? JazlaParcelDefaults.fromJson(
+                (json['parcelDefaults'] as Map).cast<String, dynamic>(),
+              )
+            : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: json['updatedAt'] == null
             ? DateTime.parse(json['createdAt'] as String)
@@ -111,6 +125,7 @@ class Jazla extends Equatable {
         targetQirat,
         targetSahm,
         targetAreaSqmOverride,
+        parcelDefaults,
         createdAt,
         updatedAt,
       ];

@@ -123,7 +123,7 @@ class ClipboardFormatter {
         field('الملاحظات', notesJoined),
     ];
 
-    return lines.join(' |\n ');
+    return lines.join(' | ');
   }
 
   /// `null`/empty values are formatted with [emptyPlaceholder] so the

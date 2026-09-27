@@ -20,7 +20,6 @@ Future<void> showJazlaActionsSheet(
   required final VoidCallback onBulkApply,
   required final VoidCallback onDelete,
   required final Widget exportExcelAction,
-  required final Widget sharePdfAction,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -36,7 +35,6 @@ Future<void> showJazlaActionsSheet(
       onBulkApply: onBulkApply,
       onDelete: onDelete,
       exportExcelAction: exportExcelAction,
-      sharePdfAction: sharePdfAction,
     ),
   );
 }
@@ -51,7 +49,6 @@ class _JazlaActionsSheet extends StatelessWidget {
     required this.onBulkApply,
     required this.onDelete,
     required this.exportExcelAction,
-    required this.sharePdfAction,
   });
 
   final Jazla jazla;
@@ -62,7 +59,6 @@ class _JazlaActionsSheet extends StatelessWidget {
   final VoidCallback onBulkApply;
   final VoidCallback onDelete;
   final Widget exportExcelAction;
-  final Widget sharePdfAction;
 
   void _closeThen(final BuildContext context, final VoidCallback action) {
     Navigator.pop(context);
@@ -135,12 +131,6 @@ class _JazlaActionsSheet extends StatelessWidget {
                           subtitle: 'jazla.actions.export_excel_hint'.tr(),
                           icon: Icons.table_chart_outlined,
                           trailing: exportExcelAction,
-                        ),
-                        _ActionTile(
-                          title: 'jazla.actions.share_pdf'.tr(),
-                          subtitle: 'jazla.actions.share_pdf_hint'.tr(),
-                          icon: Icons.picture_as_pdf_outlined,
-                          trailing: sharePdfAction,
                         ),
                         _ActionTile(
                           title: 'jazla.actions.bulk_apply'.tr(),

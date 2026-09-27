@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:hiyaza_finder/features/jazla/data/model/jazla.dart';
+import 'package:hiyaza_finder/features/jazla/data/model/jazla_parcel_defaults.dart';
 import 'package:hiyaza_finder/features/jazla/data/repo/jazla_repo.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_detail_cubit.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_detail_state.dart';
@@ -16,6 +17,13 @@ class _FakeJazlaRepo extends Fake implements JazlaRepo {
 
   @override
   Future<List<Jazla>> getAll(final String cityId) async => jazlas;
+
+  @override
+  Future<void> updateParcelDefaults(
+    final String jazlaId,
+    final String cityId,
+    final JazlaParcelDefaults defaults,
+  ) async {}
 
   @override
   Future<void> addParcel(
@@ -43,6 +51,13 @@ class _FakeParcelCatalogReader extends Fake implements ParcelCatalogReader {
 
 class _FailingAddJazlaRepo extends _FakeJazlaRepo {
   _FailingAddJazlaRepo(super.jazlas);
+
+  @override
+  Future<void> updateParcelDefaults(
+    final String jazlaId,
+    final String cityId,
+    final JazlaParcelDefaults defaults,
+  ) async {}
 
   @override
   Future<void> addParcel(

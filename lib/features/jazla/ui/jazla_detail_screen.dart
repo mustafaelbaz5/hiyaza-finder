@@ -18,9 +18,11 @@ import '../../parcel_add/data/model/add_record_args.dart';
 import '../../parcel_add/ui/widgets/basin_picker.dart';
 import '../../parcel_catalog/data/model/parcel.dart';
 import '../../parcel_catalog/data/repo/holdings_reader.dart';
+import '../../parcel_catalog/data/repo/holdings_writer.dart';
 import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../parcel_editor/logic/cubit/parcel_editor_cubit.dart';
 import '../../parcel_editor/logic/cubit/parcel_editor_state.dart';
+import '../data/local/jazla_parcel_defaults_policy.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
@@ -32,7 +34,6 @@ import 'widgets/jazla_actions_sheet.dart';
 import 'widgets/jazla_area_dialog.dart';
 import 'widgets/jazla_bulk_apply_sheet.dart';
 import 'widgets/jazla_export_button.dart';
-import 'widgets/jazla_pdf_share_button.dart';
 import 'widgets/jazla_quick_view_sheet.dart';
 
 /// One Jazla's home screen — two tabs sharing the same `JazlaDetailCubit`
@@ -62,6 +63,7 @@ class JazlaDetailScreen extends StatelessWidget {
             getIt<ParcelCatalogReader>(),
             jazlaId,
             cityId,
+            getIt<ParcelCatalogWriter>(),
           )..load(),
         ),
         BlocProvider<JazlaAddParcelCubit>(
@@ -217,21 +219,29 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
   }
 
   Future<void> _addNewPerson() async {
+    final Jazla? jazla = context.read<JazlaDetailCubit>().state.jazla;
+    final Parcel initial = JazlaParcelDefaultsPolicy.apply(
+      const Parcel(holdingId: '', landNumber: '0', holdingsCount: 1),
+      jazla?.parcelDefaults,
+    );
     final Parcel? created = await context.pushNamed<Parcel>(
       Routes.addRecord,
-      arguments: const AddRecordArgs(
-        initialParcel: Parcel(holdingId: '', landNumber: '0', holdingsCount: 1),
-      ),
+      arguments: AddRecordArgs(initialParcel: initial),
     );
     if (created == null || !mounted) return;
     await _addParcelDirect(created);
   }
 
   Future<void> _addParcelForExistingPerson(final Parcel source) async {
+    final Jazla? jazla = context.read<JazlaDetailCubit>().state.jazla;
+    final Parcel initial = JazlaParcelDefaultsPolicy.apply(
+      existingPersonParcelTemplate(source),
+      jazla?.parcelDefaults,
+    );
     final Parcel? created = await context.pushNamed<Parcel>(
       Routes.addRecord,
       arguments: AddRecordArgs(
-        initialParcel: existingPersonParcelTemplate(source),
+        initialParcel: initial,
         parentHoldingId: source.id,
       ),
     );
@@ -258,8 +268,26 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
 
   Future<void> _openBulkApply(
       final String jazlaId, final List<Parcel> parcels) async {
-    await showJazlaBulkApplySheet(context, jazlaId: jazlaId, parcels: parcels);
-    if (mounted) context.read<JazlaDetailCubit>().load();
+    await showJazlaBulkApplySheet(
+      context,
+      jazlaId: jazlaId,
+      parcels: parcels,
+      onApply: ({
+        required final field,
+        required final value,
+        required final parcelIds,
+        required final onProgress,
+      }) =>
+          context.read<JazlaDetailCubit>().applyBulkField(
+                field: field,
+                value: value,
+                parcelIds: parcelIds,
+                onProgress: onProgress,
+              ),
+      onDefaultChanged: (final field, final value) =>
+          context.read<JazlaDetailCubit>().updateParcelDefault(field, value),
+    );
+    if (mounted) context.read<JazlaDetailCubit>().refreshVisibleParcels();
   }
 
   Future<void> _renameJazla(final JazlaDetailCubit cubit) async {
@@ -327,10 +355,6 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                     onEditArea: () => _editTargetArea(cubit),
                     onEditBasin: () => _editBasin(cubit),
                     exportExcelAction: JazlaExportButton(
-                      jazla: state.jazla!,
-                      parcels: parcels,
-                    ),
-                    sharePdfAction: JazlaPdfShareButton(
                       jazla: state.jazla!,
                       parcels: parcels,
                     ),

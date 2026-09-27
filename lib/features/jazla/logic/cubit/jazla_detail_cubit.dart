@@ -3,16 +3,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../../parcel_catalog/data/repo/holdings_reader.dart';
+import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+import '../../../parcel_review/data/model/bulk_edit_outcome.dart';
+import '../../../parcel_review/data/model/bulk_editable_field.dart';
+import '../../data/local/jazla_parcel_defaults_policy.dart';
 import '../../data/model/jazla.dart';
+import '../../data/model/jazla_parcel_defaults.dart';
 import '../../data/repo/jazla_repo.dart';
 import 'jazla_detail_state.dart';
 
 class JazlaDetailCubit extends Cubit<JazlaDetailState> {
-  JazlaDetailCubit(this._repo, this._holdingsReader, this.jazlaId, this.cityId)
+  JazlaDetailCubit(this._repo, this._holdingsReader, this.jazlaId, this.cityId,
+      [this._writer])
       : super(JazlaDetailState.initial());
 
   final JazlaRepo _repo;
   final ParcelCatalogReader _holdingsReader;
+  final ParcelCatalogWriter? _writer;
   final String jazlaId;
   final String cityId;
 
@@ -155,6 +162,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
       targetQirat: qirat,
       targetSahm: sahm,
       targetAreaSqmOverride: squareMeters,
+      parcelDefaults: current.parcelDefaults,
       createdAt: current.createdAt,
     );
     emit(state.copyWith(jazla: updated));
@@ -175,6 +183,42 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
     }
   }
 
+  Future<BulkEditOutcome> applyBulkField({
+    required final BulkEditableField field,
+    required final Object? value,
+    required final Set<String> parcelIds,
+    final void Function(double progress)? onProgress,
+  }) {
+    final ParcelCatalogWriter? writer = _writer;
+    if (writer == null) {
+      throw StateError('ParcelCatalogWriter is required for bulk Jazla edits.');
+    }
+    return writer.bulkApplyField(
+      field: field,
+      value: value,
+      parcelIds: parcelIds,
+      onProgress: onProgress,
+    );
+  }
+
+  Future<void> updateParcelDefault(
+    final BulkEditableField field,
+    final Object? value,
+  ) async {
+    final Jazla? current = state.jazla;
+    if (current == null) return;
+    final JazlaParcelDefaults defaults =
+        JazlaParcelDefaultsPolicy.update(current.parcelDefaults, field, value);
+    try {
+      await _repo.updateParcelDefaults(jazlaId, cityId, defaults);
+      if (isClosed) return;
+      emit(state.copyWith(jazla: current.copyWith(parcelDefaults: defaults)));
+    } on AppException catch (e) {
+      if (isClosed) return;
+      emit(state.copyWith(errorMessage: e.message));
+    }
+  }
+
   Future<void> updateBasin(final String? basinName) async {
     final Jazla? current = state.jazla;
     if (current == null) return;
@@ -190,6 +234,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
           targetQirat: current.targetQirat,
           targetSahm: current.targetSahm,
           targetAreaSqmOverride: current.targetAreaSqmOverride,
+          parcelDefaults: current.parcelDefaults,
           createdAt: current.createdAt,
         ),
       ),

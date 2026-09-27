@@ -1,4 +1,6 @@
 import '../model/bulk_editable_field.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 /// Result of a [BulkEditService.apply] call: the updated parcel list plus
@@ -51,12 +53,16 @@ class BulkEditService {
   ) =>
       switch (field) {
         BulkEditableField.cropType => p.copyWith(cropType: value as String?),
-        BulkEditableField.notes => p.copyWith(
-            notes: value == null ? const <String>[] : <String>[value as String],
+        BulkEditableField.notes => ParcelNotesSync.applyChangedNotes(
+            p,
+            value == null ? const <String>[] : <String>[value as String],
           ),
         BulkEditableField.creditType => p.copyWith(creditType: value as String),
         BulkEditableField.reformType => p.copyWith(reformType: value as String),
-        BulkEditableField.usageType => p.copyWith(usageType: value as String),
+        BulkEditableField.usageType => UsageTypeNotesSync.applyUsageTypeChange(
+            p,
+            value as String,
+          ),
         BulkEditableField.isInheritance =>
           p.copyWith(isInheritance: value as bool),
         BulkEditableField.growthStages =>

@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../local/jazla_store.dart';
 import '../model/jazla.dart';
+import '../model/jazla_parcel_defaults.dart';
 import 'jazla_repo.dart';
 
 class JazlaRepoImpl implements JazlaRepo {
@@ -159,9 +160,22 @@ class JazlaRepoImpl implements JazlaRepo {
           targetQirat: targetQirat,
           targetSahm: targetSahm,
           targetAreaSqmOverride: targetAreaSqm,
+          parcelDefaults: j.parcelDefaults,
           createdAt: j.createdAt,
           updatedAt: DateTime.now(),
         ),
+      );
+
+  @override
+  Future<void> updateParcelDefaults(
+    final String jazlaId,
+    final String cityId,
+    final JazlaParcelDefaults defaults,
+  ) =>
+      _mutate(
+        cityId,
+        jazlaId,
+        (final Jazla j) => j.copyWith(parcelDefaults: defaults),
       );
 
   @override

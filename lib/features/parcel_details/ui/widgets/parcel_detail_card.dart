@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:hiyaza_finder/core/widgets/custom_text_button.dart';
+import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
+import 'package:hiyaza_finder/features/parcel_add/ui/widgets/basin_picker.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
 
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/router/routes.dart';
@@ -14,21 +20,13 @@ import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
 import '../../../crop_type/ui/widgets/crop_type_picker.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
 import '../../data/local/clipboard_formatter.dart';
 import '../../data/local/copy_validation.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
 import 'area_summary_card.dart';
-import 'package:hiyaza_finder/features/parcel_add/ui/widgets/basin_picker.dart';
 import 'border_compass.dart';
 import 'field_edit_dialogs.dart';
-import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
 import 'notes_field.dart';
 import 'parcel_detail_header.dart';
-
 import 'see_more_section.dart';
 
 class ParcelDetailCard extends StatelessWidget {
@@ -277,12 +275,10 @@ class ParcelDetailCard extends StatelessWidget {
           ),
           verticalSpacing(12),
           NotesField(
-            notes: parcel.notes,
+            parcel: parcel,
             isModified: _isModified((final p) => p.notes),
             associationType: associationType,
-            onChanged: (final List<String> notes) {
-              onFieldChanged(ParcelNotesSync.applyChangedNotes(parcel, notes));
-            },
+            onParcelChanged: onFieldChanged,
           ),
         ],
       ),

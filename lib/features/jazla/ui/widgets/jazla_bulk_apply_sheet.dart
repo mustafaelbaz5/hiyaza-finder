@@ -1,7 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/errors/error_message_resolver.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
@@ -12,7 +11,7 @@ import '../../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../../parcel_review/data/model/bulk_edit_outcome.dart';
 import '../../../parcel_review/data/model/bulk_editable_field.dart';
 import '../../../parcel_catalog/data/model/parcel.dart';
-import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+
 import '../../../parcel_review/ui/file_status_screen.dart'
     show bulkEditableFieldLabel;
 import '../../../parcel_review/ui/widgets/picker_row.dart';
@@ -32,20 +31,44 @@ Future<void> showJazlaBulkApplySheet(
   final BuildContext context, {
   required final String jazlaId,
   required final List<Parcel> parcels,
+  required final Future<BulkEditOutcome> Function({
+    required BulkEditableField field,
+    required Object? value,
+    required Set<String> parcelIds,
+    required void Function(double progress) onProgress,
+  }) onApply,
+  required final Future<void> Function(BulkEditableField field, Object? value)
+      onDefaultChanged,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (final BuildContext context) =>
-        JazlaBulkApplySheet(parcels: parcels),
+    builder: (final BuildContext context) => JazlaBulkApplySheet(
+      parcels: parcels,
+      onApply: onApply,
+      onDefaultChanged: onDefaultChanged,
+    ),
   );
 }
 
 class JazlaBulkApplySheet extends StatefulWidget {
-  const JazlaBulkApplySheet({super.key, required this.parcels});
+  const JazlaBulkApplySheet({
+    super.key,
+    required this.parcels,
+    required this.onApply,
+    required this.onDefaultChanged,
+  });
 
   final List<Parcel> parcels;
+  final Future<BulkEditOutcome> Function({
+    required BulkEditableField field,
+    required Object? value,
+    required Set<String> parcelIds,
+    required void Function(double progress) onProgress,
+  }) onApply;
+  final Future<void> Function(BulkEditableField field, Object? value)
+      onDefaultChanged;
 
   @override
   State<JazlaBulkApplySheet> createState() => _JazlaBulkApplySheetState();
@@ -150,8 +173,7 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
     try {
       final Set<String> parcelIds =
           widget.parcels.map((final Parcel p) => p.id).toSet();
-      final BulkEditOutcome outcome =
-          await getIt<ParcelCatalogWriter>().bulkApplyField(
+      final BulkEditOutcome outcome = await widget.onApply(
         field: _field,
         value: _value,
         parcelIds: parcelIds,
@@ -162,6 +184,8 @@ class _JazlaBulkApplySheetState extends State<JazlaBulkApplySheet> {
       if (!mounted) return;
       setState(() => _isApplying = false);
       if (outcome.failed == 0) {
+        await widget.onDefaultChanged(_field, _value);
+        if (!mounted) return;
         context.showSuccessSnackBar(
           'jazla.bulk_apply.applied_message'.tr(
             namedArgs: {'count': outcome.succeeded.toString()},

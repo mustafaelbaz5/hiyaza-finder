@@ -1,9 +1,8 @@
 import '../model/jazla.dart';
+import '../model/jazla_parcel_defaults.dart';
 
 /// Write/read contract for Jazlas — deliberately never accepts or returns a
-/// `Parcel`. "الجزلة لا تحتوي بيانات — هي تحتوي IDs فقط" is enforced by this
-/// interface's type signature, not just convention: resolving `parcelIds` to
-/// actual [Parcel] objects is the caller's (cubit's) job via `ParcelCatalogReader`.
+/// `Parcel`. Jazla stores IDs; parcel data remains owned by parcel_catalog.
 abstract class JazlaRepo {
   Future<List<Jazla>> getAll(final String cityId);
 
@@ -25,6 +24,12 @@ abstract class JazlaRepo {
     final double? targetSahm,
     final double? targetAreaSqm,
   });
+
+  Future<void> updateParcelDefaults(
+    final String jazlaId,
+    final String cityId,
+    final JazlaParcelDefaults defaults,
+  );
 
   Future<void> updateBasin(
     final String jazlaId,

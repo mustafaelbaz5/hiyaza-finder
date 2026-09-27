@@ -1,22 +1,23 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
 import 'package:hiyaza_finder/core/widgets/ui/fields/toggle_field_row.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/delegate_notes_policy.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/local_holding_note_policy.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import 'package:hiyaza_finder/features/parcel_add/ui/widgets/basin_picker.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import 'package:hiyaza_finder/features/parcel_details/ui/widgets/delegate_owner_dialog.dart';
 import 'package:hiyaza_finder/features/parcel_details/ui/widgets/field_edit_dialogs.dart';
 import 'package:hiyaza_finder/features/parcel_details/ui/widgets/notes_field.dart';
+import 'package:hiyaza_finder/features/parcel_details/ui/widgets/parcel_quick_choice_sheet.dart';
 import 'package:hiyaza_finder/features/parcel_details/ui/widgets/required_field_gaps.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/delegate_notes_policy.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/local_holding_note_policy.dart';
+import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
 
 import '../../../core/errors/error_message_resolver.dart';
 import '../../../core/themes/app_text_styles.dart';
@@ -273,6 +274,20 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     );
   }
 
+  Future<void> _editUsageType(final BuildContext context) async {
+    final String? selected = await showParcelQuickChoiceSheet(
+      context,
+      title: 'holdings.fields.usage_type'.tr(),
+      options: Parcel.usageTypeOptions,
+      selected: _parcel.usageType,
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _parcel = UsageTypeNotesSync.applyUsageTypeChange(
+          _parcel,
+          selected,
+        ));
+  }
+
   /// مفوض asks for the new اسم المالك up front (must differ from اسم الحائز)
   /// and, on confirm, sets `owner_name` and appends "مفوض عنه {holder}" to
   /// ملاحظات automatically. Cancelling the dialog leaves the toggle off.
@@ -504,6 +519,13 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                                   onEdit: () => _editCropType(context),
                                 ),
                               ],
+                              FieldRow(
+                                label: 'holdings.fields.usage_type'.tr(),
+                                value: _parcel.usageType,
+                                isModified:
+                                    _isModified((final p) => p.usageType),
+                                onEdit: () => _editUsageType(context),
+                              ),
                               verticalSpacing(8),
                               Row(
                                 children: [
@@ -555,22 +577,12 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                               ],
                               verticalSpacing(8),
                               NotesField(
-                                notes: _parcel.notes,
+                                parcel: _parcel,
                                 isModified: _isModified((final p) => p.notes),
                                 associationType: widget
                                     .resolvedRepository.activeAssociationType,
-                                // Diffs against the current list so removed
-                                // quick-select notes revert their field to
-                                // its default in the same update — mirrors
-                                // `ParcelDetailCard`'s identical pattern.
-                                onChanged: (final List<String> notes) =>
-                                    setState(
-                                  () => _parcel =
-                                      ParcelNotesSync.applyChangedNotes(
-                                    _parcel,
-                                    notes,
-                                  ),
-                                ),
+                                onParcelChanged: (final Parcel updated) =>
+                                    setState(() => _parcel = updated),
                               ),
                             ],
                           ),

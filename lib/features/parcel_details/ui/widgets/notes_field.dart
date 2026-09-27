@@ -5,77 +5,43 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/cities/ui/widgets/notes_management_sheet.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_editor/data/local/parcel_notes_sync.dart';
+import '../../../cities/ui/widgets/notes_management_sheet.dart';
 
-/// Collapsed ملاحظات row shown on the Detail Screen card (UI/UX Updates
-/// prompt "Change 9", Part A) — first note (truncated), a "(+N)" count for
-/// the rest, and a chevron; tapping anywhere on the row opens
-/// [showNotesManagementSheet] (Part B) for the full add/remove UI. Replaces
-/// the old always-expanded chip list, which took up card space
-/// proportional to how many notes a parcel had.
 class NotesField extends StatelessWidget {
   const NotesField({
     super.key,
-    required this.notes,
-    required this.onChanged,
-    this.onNoteAdded,
+    required this.parcel,
+    required this.onParcelChanged,
     this.isModified = false,
     this.associationType,
   });
 
-  final List<String> notes;
-
-  /// Fired with the full new list whenever notes are added or removed via
-  /// the management sheet — the caller is expected to diff this against
-  /// its own current list to detect removals and revert any field that a
-  /// quick-select note (نوع الاستخدام/نوع الائتمان/نوع الإصلاح) had driven,
-  /// mirroring what [onNoteAdded] does for additions (see
-  /// `ParcelDetailCard`'s wiring for the diff pattern).
-  final ValueChanged<List<String>> onChanged;
-
-  /// Called with just the newly-added note (in addition to [onChanged]
-  /// firing with the full list) — lets a caller run APP_UPDATES_CLAUDE.md
-  /// § 4.3's bidirectional نوع الاستخدام↔notes logic, or the Credit/Reform
-  /// Type Logic prompt's reform-note↔نوع الإصلاح logic, without needing to
-  /// diff two lists to find what changed.
-  final ValueChanged<String>? onNoteAdded;
-
-  /// Same meaning as `FieldRow.isModified` — highlights the row when the
-  /// note list differs from the parcel's original value.
+  final Parcel parcel;
+  final ValueChanged<Parcel> onParcelChanged;
   final bool isModified;
-
-  /// Adds the reform city's 3 quick-select reform notes to the picker when
-  /// this is `AssociationType.agriculturalReform` — `null`/credit shows the
-  /// built-in list only (Credit/Reform Type Logic prompt).
   final AssociationType? associationType;
 
   Future<void> _open(final BuildContext context) async {
     final List<String>? updated = await showNotesManagementSheet(
       context,
-      notes: notes,
+      notes: parcel.notes,
       associationType: associationType,
-      onNoteAdded: onNoteAdded,
+      onDraftChanged: (final List<String> notes) {
+        onParcelChanged(ParcelNotesSync.applyChangedNotes(parcel, notes));
+      },
     );
-    if (updated != null) onChanged(updated);
+    if (updated != null) {
+      onParcelChanged(ParcelNotesSync.applyChangedNotes(parcel, updated));
+    }
   }
-
-  /// The "+" icon skips the management sheet entirely and jumps straight
-  /// to [showAddNoteDialog] (UI/UX redesign) — the fastest path to adding a
-  /// note; tapping anywhere else on the row still opens the full sheet via
-  /// [_open].
-  Future<void> _addDirect(final BuildContext context) => addNoteFlow(
-        context,
-        notes: notes,
-        onChanged: onChanged,
-        onNoteAdded: onNoteAdded,
-        associationType: associationType,
-      );
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final String firstNote = notes.isEmpty ? '' : notes.first;
-    final int remaining = notes.length - 1;
+    final String firstNote = parcel.notes.isEmpty ? '' : parcel.notes.first;
+    final int remaining = parcel.notes.length - 1;
 
     return InkWell(
       onTap: () => _open(context),
@@ -94,29 +60,12 @@ class NotesField extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Nested inside the outer row's InkWell — tapping this icon
-            // wins the tap (Flutter's gesture arena resolves to the
-            // innermost InkWell), so it opens the direct add-dialog flow
-            // instead of the outer row's full management sheet.
-            InkWell(
-              onTap: () => _addDirect(context),
-              borderRadius: BorderRadius.circular(16),
-              child: const Padding(
-                padding: EdgeInsets.all(2),
-                child: Icon(
-                  Icons.add_circle_outline_rounded,
-                  size: 20,
-                  color: AppColors.primary200,
-                ),
-              ),
-            ),
-            const SizedBox(width: 2),
             Icon(
-              Icons.keyboard_arrow_down_rounded,
+              Icons.notes_rounded,
               size: 20,
               color: colors.iconSecondary,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +80,7 @@ class NotesField extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    notes.isEmpty
+                    parcel.notes.isEmpty
                         ? '-'
                         : remaining > 0
                             ? 'holdings.notes_field.collapsed_with_count'.tr(
@@ -150,6 +99,11 @@ class NotesField extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: colors.iconSecondary,
             ),
           ],
         ),
