@@ -9,15 +9,16 @@ import '../../../parcel_export/data/local/export_file_saver.dart';
 import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../data/local/jazla_export_service.dart';
+import '../../data/model/jazla.dart';
 
 class JazlaExportButton extends StatefulWidget {
   const JazlaExportButton({
     super.key,
-    required this.jazlaName,
+    required this.jazla,
     required this.parcels,
   });
 
-  final String jazlaName;
+  final Jazla jazla;
   final List<Parcel> parcels;
 
   @override
@@ -35,7 +36,7 @@ class _JazlaExportButtonState extends State<JazlaExportButton> {
     setState(() => _isExporting = true);
     try {
       final Uint8List? bytes = getIt<JazlaExportService>().export(
-        jazlaName: widget.jazlaName,
+        jazla: widget.jazla,
         orderedParcels: widget.parcels,
       );
       if (bytes == null) {
@@ -45,7 +46,7 @@ class _JazlaExportButtonState extends State<JazlaExportButton> {
       final String cityName =
           getIt<ParcelCatalogRepository>().activeCityName ?? '';
       final String fileName =
-          JazlaExportService.buildFileName(cityName, widget.jazlaName);
+          JazlaExportService.buildFileName(cityName, widget.jazla.name);
       await saveExportFile(bytes: bytes, fileName: fileName);
       if (mounted) context.showSuccessSnackBar('jazla.export.success'.tr());
     } finally {
