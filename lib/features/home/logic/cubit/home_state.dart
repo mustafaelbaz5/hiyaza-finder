@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
 
@@ -12,6 +13,7 @@ class HomeState extends Equatable {
     this.modifiedIds = const <String>{},
     this.cityName,
     this.associationType,
+    this.activitySummary = const ParcelActivitySummary(),
   });
 
   factory HomeState.initial() => const HomeState(status: HomeStatus.loading);
@@ -29,11 +31,15 @@ class HomeState extends Equatable {
   final Set<String> modifiedIds;
   final String? cityName;
   final AssociationType? associationType;
+  final ParcelActivitySummary activitySummary;
 
   /// Raw parcel row count for the loaded dataset — a single حيازة can span
   /// several قطع, so this counts every parcel row, not distinct holdings
   /// (matches the "downloaded cities" screen's `CachedCityMeta.parcelsCount`).
   int get holdingCount => parcels.length;
+
+  int get activeParcelCount => activitySummary.activeParcelCount;
+  int get zeroAreaParcelCount => activitySummary.zeroAreaParcelCount;
 
   int get addedCount =>
       parcels.where((final Parcel p) => p.isFieldAdded).length;
@@ -53,6 +59,7 @@ class HomeState extends Equatable {
     final Set<String>? modifiedIds,
     final String? cityName,
     final AssociationType? associationType,
+    final ParcelActivitySummary? activitySummary,
   }) {
     return HomeState(
       status: status ?? this.status,
@@ -61,6 +68,7 @@ class HomeState extends Equatable {
       modifiedIds: modifiedIds ?? this.modifiedIds,
       cityName: cityName ?? this.cityName,
       associationType: associationType ?? this.associationType,
+      activitySummary: activitySummary ?? this.activitySummary,
     );
   }
 
@@ -72,5 +80,6 @@ class HomeState extends Equatable {
         modifiedIds,
         cityName,
         associationType,
+        activitySummary,
       ];
 }

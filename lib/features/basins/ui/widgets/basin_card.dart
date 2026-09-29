@@ -124,7 +124,7 @@ class BasinCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'holdings.basin.total_parcels'.tr(),
+                          'holdings.home.activity.active_of_total'.tr(),
                           style: AppTextStyles.font12Regular.copyWith(
                             color: colors.textHint,
                           ),
@@ -133,6 +133,20 @@ class BasinCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (basin.zeroAreaParcelCount > 0) ...[
+                  verticalSpacing(6),
+                  Text(
+                    'holdings.home.activity.zero_area_count'.tr(
+                      namedArgs: {
+                        'count': basin.zeroAreaParcelCount.toString(),
+                      },
+                    ),
+                    style: AppTextStyles.font12Regular.copyWith(
+                      color: colors.textHint,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ],
                 verticalSpacing(14),
                 BasinProgressBar(
                   progress: basin.progress,

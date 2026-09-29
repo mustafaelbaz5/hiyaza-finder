@@ -1,3 +1,5 @@
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_classifier.dart';
+
 import 'arabic_normalizer.dart';
 import 'holding_search_service.dart';
 import '../model/basin_progress.dart';
@@ -64,6 +66,8 @@ class ParcelQueryService {
   /// [basinHoldingCounts], so pending (not-yet-numbered) new people are
   /// never collapsed into one another.
   List<BasinProgress> basinSummaries(final List<Parcel> parcels) {
+    const ParcelActivityClassifier activityClassifier =
+        ParcelActivityClassifier();
     final Map<String, Map<String, List<Parcel>>> holdingsByBasin =
         <String, Map<String, List<Parcel>>>{};
     final Map<String, String> codeByBasin = <String, String>{};
@@ -93,6 +97,35 @@ class ParcelQueryService {
                 ),
               )
               .length,
+          totalParcelCount: basinEntry.value.values.fold<int>(
+            0,
+            (final int total, final List<Parcel> group) => total + group.length,
+          ),
+          activeParcelCount: basinEntry.value.values.fold<int>(
+            0,
+            (final int total, final List<Parcel> group) =>
+                total + group.where(activityClassifier.isActive).length,
+          ),
+          zeroAreaParcelCount: basinEntry.value.values.fold<int>(
+            0,
+            (final int total, final List<Parcel> group) =>
+                total + group.where(activityClassifier.isZeroArea).length,
+          ),
+          activeHoldingCount: basinEntry.value.values
+              .where(
+                (final List<Parcel> group) =>
+                    group.any(activityClassifier.isActive),
+              )
+              .length,
+          activeCompletedCount:
+              basinEntry.value.values.where((final List<Parcel> group) {
+            final Iterable<Parcel> activeParcels =
+                group.where(activityClassifier.isActive);
+            return activeParcels.isNotEmpty &&
+                activeParcels.every(
+                  (final Parcel parcel) => parcel.completedAt != null,
+                );
+          }).length,
         ),
     ];
     summaries.sort(

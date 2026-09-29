@@ -28,6 +28,7 @@ class HomeCubit extends Cubit<HomeState> {
       state.copyWith(
         parcels: parcels,
         modifiedIds: _modifiedIds(parcels),
+        activitySummary: _reader.activitySummary,
       ),
     );
   }
@@ -93,6 +94,7 @@ class HomeCubit extends Cubit<HomeState> {
       modifiedIds: _modifiedIds(parcels),
       cityName: _activeCitySnapshot?.cityName,
       associationType: _activeCitySnapshot?.associationType,
+      activitySummary: _reader.activitySummary,
     );
   }
 
@@ -114,6 +116,7 @@ class HomeCubit extends Cubit<HomeState> {
       state.copyWith(
         parcels: parcels,
         modifiedIds: _modifiedIds(parcels),
+        activitySummary: _reader.activitySummary,
       ),
     );
   }

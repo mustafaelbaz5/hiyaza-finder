@@ -1,8 +1,10 @@
 import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
 import 'package:hiyaza_finder/features/cities/data/model/basin.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
 
 import '../model/basin_progress.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import '../model/search_result.dart';
 
 /// Read-side contract for the active parcel catalog, kept separate from
@@ -15,6 +17,17 @@ import '../model/search_result.dart';
 /// retired once the city-download flow lands (see `APP_PLAN.md` Phase 5).
 abstract class ParcelCatalogReader {
   List<Parcel> get parcels;
+
+  String? get activeCityId;
+
+  ParcelActivitySummary get activitySummary;
+
+  ParcelActivitySummary activitySummaryForBasin(final String basinName);
+
+  List<Parcel> parcelsForVisibility(
+    final ParcelVisibilityFilter filter, {
+    final String? basinName,
+  });
 
   /// Immutable in-memory snapshots emitted after a city load or any local
   /// parcel mutation. Consumers derive only the state they render, rather
@@ -31,7 +44,11 @@ abstract class ParcelCatalogReader {
 
   AssociationType? get activeAssociationType;
 
-  List<SearchResult> search(final String query, {final String? basin});
+  List<SearchResult> search(
+    final String query, {
+    final String? basin,
+    final ParcelVisibilityFilter visibility = ParcelVisibilityFilter.all,
+  });
 
   /// Every distinct holding, city-wide, unfiltered by basin — Home's flat
   /// list (APP_CLAUDE.md § 9.1).

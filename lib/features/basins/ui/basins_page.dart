@@ -1,14 +1,15 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/basins/logic/cubit/basins_cubit.dart';
+import 'package:hiyaza_finder/features/basins/logic/cubit/basins_state.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/basin_progress.dart';
 
-import '../../../core/di/dependency_injection.dart';
 import '../../../core/router/routes.dart';
 import '../../../core/themes/app_text_styles.dart';
 import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/app_back_button.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/basin_progress.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import 'widgets/basin_card.dart';
 
 /// Every حوض in the active city with completion progress
@@ -24,18 +25,13 @@ class BasinsPage extends StatefulWidget {
 }
 
 class _BasinsPageState extends State<BasinsPage> {
-  final ParcelCatalogRepository _repository = getIt<ParcelCatalogRepository>();
-
   Future<void> _openBasin(final String basinName) async {
     await context.pushNamed(Routes.basin, arguments: basinName);
-    if (mounted) setState(() {});
   }
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final List<BasinProgress> basins = _repository.basinSummaries;
-
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
@@ -59,27 +55,33 @@ class _BasinsPageState extends State<BasinsPage> {
               ),
             ),
             Expanded(
-              child: basins.isEmpty
-                  ? Center(
-                      child: Text(
-                        'holdings.home.no_basins'.tr(),
-                        style: AppTextStyles.font14Regular
-                            .copyWith(color: colors.textHint),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.symmetric(horizontal: rw(16))
-                          .copyWith(bottom: rh(24)),
-                      itemCount: basins.length,
-                      itemBuilder: (final BuildContext context, final int i) {
-                        final BasinProgress basin = basins[i];
-                        return BasinCard(
-                          basin: basin,
-                          animationIndex: i,
-                          onTap: () => _openBasin(basin.basinName),
+              child: BlocBuilder<BasinsCubit, BasinsState>(
+                builder: (final BuildContext context, final BasinsState state) {
+                  final List<BasinProgress> basins = state.basins;
+                  return basins.isEmpty
+                      ? Center(
+                          child: Text(
+                            'holdings.home.no_basins'.tr(),
+                            style: AppTextStyles.font14Regular
+                                .copyWith(color: colors.textHint),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.symmetric(horizontal: rw(16))
+                              .copyWith(bottom: rh(24)),
+                          itemCount: basins.length,
+                          itemBuilder:
+                              (final BuildContext context, final int i) {
+                            final BasinProgress basin = basins[i];
+                            return BasinCard(
+                              basin: basin,
+                              animationIndex: i,
+                              onTap: () => _openBasin(basin.basinName),
+                            );
+                          },
                         );
-                      },
-                    ),
+                },
+              ),
             ),
           ],
         ),

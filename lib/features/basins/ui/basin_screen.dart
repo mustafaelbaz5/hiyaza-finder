@@ -1,295 +1,349 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import 'package:hiyaza_finder/features/parcel_add/data/model/add_record_args.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/search_result.dart';
+
+import '../../../core/router/routes.dart';
+import '../../../core/themes/app_colors.dart';
+import '../../../core/themes/app_text_styles.dart';
+import '../../../core/utils/extensions/context_ext.dart';
+import '../../../core/utils/spacing.dart';
+import '../../../core/widgets/app_back_button.dart';
+import '../../home/ui/widgets/recommendation_tile.dart';
+import '../../home/ui/widgets/top_bar_icon_button.dart';
+import '../../parcel_add/data/model/add_record_args.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/model/parcel_visibility_filter.dart';
+import '../../parcel_export/ui/export_bottom_sheet.dart';
+import '../../parcel_search/data/local/holding_search_service.dart';
+import '../data/model/basin_holding_filter.dart';
+import '../logic/cubit/basin_holdings_cubit.dart';
+import '../logic/cubit/basin_holdings_state.dart';
 import 'widgets/basin_info_card.dart';
-import 'package:hiyaza_finder/features/parcel_export/ui/export_bottom_sheet.dart';
-import 'package:hiyaza_finder/features/home/ui/widgets/recommendation_tile.dart';
 
-import '../../../../core/di/dependency_injection.dart';
-import '../../../../core/router/routes.dart';
-import '../../../../core/themes/app_colors.dart';
-import '../../../../core/themes/app_text_styles.dart';
-import '../../../../core/utils/extensions/context_ext.dart';
-import '../../../../core/utils/spacing.dart';
-import '../../../../core/widgets/app_back_button.dart';
-import '../../cities/data/model/basin.dart';
-import 'package:hiyaza_finder/features/home/ui/widgets/top_bar_icon_button.dart';
-
-/// Which completion state the basin screen's holdings are filtered to.
-enum BasinFilter { all, pending, completed }
-
-/// Every حيازة in one حوض, sorted by رقم الحيازة ascending — the basin-first
-/// home screen's drill-down target. Each card is one holding (not one
-/// قطعة); a holding with more than one parcel still shows as a single card
-/// with its parcel count, same as everywhere else search results group.
-class BasinScreen extends StatefulWidget {
+/// Operational basin view with independent visibility and review filters.
+class BasinScreen extends StatelessWidget {
   const BasinScreen({super.key, required this.basinName});
-
   final String basinName;
 
-  @override
-  State<BasinScreen> createState() => _BasinScreenState();
-}
-
-class _BasinScreenState extends State<BasinScreen> {
-  final ParcelCatalogRepository _repository = getIt<ParcelCatalogRepository>();
-  BasinFilter _filter = BasinFilter.all;
-
-  Map<String, List<Parcel>> _groupsByKey = <String, List<Parcel>>{};
-
-  List<Parcel> get _basinParcels => _repository.parcels
-      .where((final Parcel p) => p.basinName == widget.basinName)
-      .toList();
-
-  List<SearchResult> _groupResults(final List<Parcel> parcels) {
-    final Map<String, List<Parcel>> byGroup = <String, List<Parcel>>{};
-    for (final Parcel parcel in parcels) {
-      (byGroup[parcel.groupKey] ??= <Parcel>[]).add(parcel);
-    }
-    _groupsByKey = byGroup;
-
-    return byGroup.entries.map((final MapEntry<String, List<Parcel>> entry) {
-      final List<Parcel> group = entry.value;
-      final Parcel first = group.first;
-      final int completedCount =
-          group.where((final Parcel p) => p.completedAt != null).length;
-      return SearchResult(
-        holdingId: first.holdingId,
-        groupKey: entry.key,
-        holderName: first.holderName,
-        parcelCount: group.length,
-        score: 0,
-        completedCount: completedCount,
-        isFieldAdded: first.isFieldAdded,
+  Future<void> _openDetail(
+          final BuildContext context, final SearchResult result) =>
+      context.pushNamed(
+        Routes.holdingDetail,
+        arguments:
+            context.read<BasinHoldingsCubit>().parcelsFor(result.groupKey),
       );
-    }).toList();
-  }
 
-  Future<void> _openDetail(final SearchResult result) async {
-    final List<Parcel> parcels =
-        _groupsByKey[result.groupKey] ?? const <Parcel>[];
-    await context.pushNamed(Routes.holdingDetail, arguments: parcels);
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _addParcelForBasin() async {
-    final Parcel? added = await context.pushNamed<Parcel?>(
-      Routes.addRecord,
-      arguments: AddRecordArgs(
-        initialParcel: Parcel(
-          holdingId: '',
-          landNumber: '0',
-          basinName: widget.basinName,
-          holdingsCount: 1,
+  Future<void> _addParcel(final BuildContext context) =>
+      context.pushNamed<Parcel?>(
+        Routes.addRecord,
+        arguments: AddRecordArgs(
+          initialParcel: Parcel(
+              holdingId: '',
+              landNumber: '0',
+              basinName: basinName,
+              holdingsCount: 1),
         ),
-      ),
-    );
-    if (added != null && mounted) setState(() {});
-  }
+      );
 
   @override
   Widget build(final BuildContext context) {
     final colors = context.customColors;
-    final List<Parcel> basinParcels = _basinParcels;
-    final List<SearchResult> allResults = _groupResults(basinParcels)
-      ..sort(
-        (final SearchResult a, final SearchResult b) =>
-            _holdingNumberValue(a.holdingId)
-                .compareTo(_holdingNumberValue(b.holdingId)),
-      );
-
-    final List<SearchResult> filtered = switch (_filter) {
-      BasinFilter.all => allResults,
-      BasinFilter.pending => allResults
-          .where(
-            (final SearchResult r) => r.completedCount < r.parcelCount,
-          )
-          .toList(),
-      BasinFilter.completed => allResults
-          .where(
-            (final SearchResult r) =>
-                r.parcelCount > 0 && r.completedCount >= r.parcelCount,
-          )
-          .toList(),
-    };
-
-    final int completedHoldings = allResults
-        .where(
-          (final SearchResult r) =>
-              r.parcelCount > 0 && r.completedCount >= r.parcelCount,
-        )
-        .length;
-
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding:
-                  EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
-              child: Row(
-                children: [
+        child: BlocBuilder<BasinHoldingsCubit, BasinHoldingsState>(
+          builder:
+              (final BuildContext context, final BasinHoldingsState state) =>
+                  Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: rw(16), vertical: rh(12)),
+                child: Row(children: <Widget>[
                   const AppBackButton(),
                   horizontalSpacing(12),
                   Expanded(
-                    child: Text(
-                      widget.basinName,
-                      style: AppTextStyles.font20Bold.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                      child: Text(basinName,
+                          style: AppTextStyles.font20Bold
+                              .copyWith(color: colors.textPrimary),
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis)),
                   Text(
-                    '$completedHoldings/${allResults.length}',
-                    style: AppTextStyles.font16Bold.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
+                      '${state.completedHoldingCount}/${state.activeHoldingCount}',
+                      style: AppTextStyles.font16Bold
+                          .copyWith(color: colors.textSecondary)),
                   horizontalSpacing(4),
                   TopBarIconButton(
-                    icon: Icons.ios_share_rounded,
-                    tooltip: 'holdings.export.title'.tr(),
-                    onTap: () => showExportBottomSheet(
-                      context,
-                      basinName: widget.basinName,
-                      basinParcels: basinParcels,
-                    ),
+                      icon: Icons.ios_share_rounded,
+                      tooltip: 'holdings.export.title'.tr(),
+                      onTap: () => showExportBottomSheet(context,
+                          basinName: basinName,
+                          basinParcels: state.basinParcels)),
+                  horizontalSpacing(4),
+                  TopBarIconButton(
+                    icon: Icons.tune_rounded,
+                    tooltip: 'holdings.home.activity.filter_title'.tr(),
+                    onTap: () => _showBasinFilterSheet(context, state),
                   ),
-                ],
+                ]),
               ),
-            ),
-            BasinInfoCard(
-              basin: _repository.activeBasins.cast<Basin?>().firstWhere(
-                  (final Basin? b) => b?.basinName == widget.basinName,
-                  orElse: () => null),
-            ),
-            verticalSpacing(8),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: rw(16)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _FilterChip(
-                      label: 'holdings.basin_screen.filter_all'.tr(),
-                      isSelected: _filter == BasinFilter.all,
-                      onTap: () => setState(() => _filter = BasinFilter.all),
-                    ),
-                  ),
-                  horizontalSpacing(8),
-                  Expanded(
-                    child: _FilterChip(
-                      label: 'holdings.basin_screen.filter_pending'.tr(),
-                      isSelected: _filter == BasinFilter.pending,
-                      onTap: () =>
-                          setState(() => _filter = BasinFilter.pending),
-                    ),
-                  ),
-                  horizontalSpacing(8),
-                  Expanded(
-                    child: _FilterChip(
-                      label: 'holdings.basin_screen.filter_completed'.tr(),
-                      isSelected: _filter == BasinFilter.completed,
-                      onTap: () =>
-                          setState(() => _filter = BasinFilter.completed),
-                    ),
-                  ),
-                ],
+              BasinInfoCard(basin: state.basin),
+              Padding(
+                padding: EdgeInsets.fromLTRB(rw(16), rh(8), rw(16), 0),
+                child: _ActivitySummary(state: state),
               ),
-            ),
-            verticalSpacing(8),
-            Expanded(
-              child: Stack(
-                children: [
-                  filtered.isEmpty
-                      ? Center(
-                          child: Text(
-                            'holdings.basin_screen.empty'.tr(),
+              Padding(
+                padding: EdgeInsets.fromLTRB(rw(16), rh(8), rw(16), 0),
+                child: _FilterSummary(state: state),
+              ),
+              verticalSpacing(8),
+              Expanded(
+                  child: Stack(children: <Widget>[
+                state.visibleResults.isEmpty
+                    ? Center(
+                        child: Text('holdings.basin_screen.empty'.tr(),
                             style: AppTextStyles.font14Regular
-                                .copyWith(color: colors.textHint),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.symmetric(horizontal: rw(16))
-                              .copyWith(bottom: rh(80)),
-                          itemCount: filtered.length,
-                          itemBuilder:
-                              (final BuildContext context, final int i) {
-                            final SearchResult result = filtered[i];
-                            return RecommendationTile(
+                                .copyWith(color: colors.textHint)))
+                    : ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: rw(16))
+                            .copyWith(bottom: rh(80)),
+                        itemCount: state.visibleResults.length,
+                        itemBuilder:
+                            (final BuildContext context, final int index) {
+                          final SearchResult result =
+                              state.visibleResults[index];
+                          return RecommendationTile(
                               result: result,
-                              onTap: () => _openDetail(result),
-                              animationDelay: Duration(milliseconds: i * 20),
-                            );
-                          },
-                        ),
-                  PositionedDirectional(
+                              onTap: () => _openDetail(context, result),
+                              animationDelay: Duration(
+                                  milliseconds: index.clamp(0, 8) * 20));
+                        },
+                      ),
+                PositionedDirectional(
                     bottom: rh(16),
                     end: rw(16),
                     child: FloatingActionButton.extended(
-                      onPressed: _addParcelForBasin,
-                      backgroundColor: AppColors.primary200,
-                      foregroundColor: AppColors.white,
-                      icon: const Icon(Icons.add_location_alt_rounded),
-                      label: Text('holdings.add.new_parcel_title'.tr()),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Numeric holdings sort before non-numeric ones (pending placeholders
-  /// like "-"/"-1"/"" sort last, matching APP_CLAUDE.md's mockup order).
-  double _holdingNumberValue(final String holdingId) {
-    final double? parsed = double.tryParse(holdingId.trim());
-    return parsed ?? double.infinity;
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(final BuildContext context) {
-    final colors = context.customColors;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary200 : colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppTextStyles.font12Bold.copyWith(
-            color: isSelected ? AppColors.white : colors.textSecondary,
+                        onPressed: () => _addParcel(context),
+                        backgroundColor: AppColors.primary200,
+                        foregroundColor: AppColors.white,
+                        icon: const Icon(Icons.add_location_alt_rounded),
+                        label: Text('holdings.add.new_parcel_title'.tr()))),
+              ])),
+            ],
           ),
         ),
       ),
     );
   }
 }
+
+class _ActivitySummary extends StatelessWidget {
+  const _ActivitySummary({required this.state});
+  final BasinHoldingsState state;
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    final summary = state.activitySummary;
+    return Row(children: <Widget>[
+      Expanded(
+          child: _Metric(
+              '${summary.activeParcelCount}',
+              'holdings.home.activity.active_parcels'.tr(),
+              AppColors.primary200)),
+      Expanded(
+          child: _Metric(
+              '${summary.totalParcelCount}',
+              'holdings.home.activity.total_records'.tr(),
+              colors.textSecondary)),
+      Expanded(
+          child: _Metric('${summary.zeroAreaParcelCount}',
+              'holdings.home.activity.zero_area_short'.tr(), colors.textHint)),
+    ]);
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric(this.value, this.label, this.color);
+  final String value, label;
+  final Color color;
+  @override
+  Widget build(final BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        Text(value, style: AppTextStyles.font16Bold.copyWith(color: color)),
+        Text(label,
+            style: AppTextStyles.font12Regular.copyWith(color: color),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis)
+      ]);
+}
+
+class _FilterSummary extends StatelessWidget {
+  const _FilterSummary({required this.state});
+  final BasinHoldingsState state;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(children: <Widget>[
+        const Icon(Icons.filter_alt_outlined,
+            size: 17, color: AppColors.primary200),
+        horizontalSpacing(8),
+        Expanded(
+            child: Text(
+                '${_visibilityLabel(state.visibility)} · ${_reviewLabel(state.filter)}',
+                style: AppTextStyles.font12Bold
+                    .copyWith(color: colors.textSecondary),
+                textAlign: TextAlign.right)),
+      ]),
+    );
+  }
+}
+
+Future<void> _showBasinFilterSheet(
+    final BuildContext context, final BasinHoldingsState state) async {
+  final _BasinFilterSelection? selection =
+      await showModalBottomSheet<_BasinFilterSelection>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (final BuildContext context) => _BasinFilterSheet(initial: state),
+  );
+  if (selection == null || !context.mounted) return;
+  final BasinHoldingsCubit cubit = context.read<BasinHoldingsCubit>();
+  cubit.selectVisibility(selection.visibility);
+  cubit.selectFilter(selection.review);
+}
+
+class _BasinFilterSheet extends StatefulWidget {
+  const _BasinFilterSheet({required this.initial});
+  final BasinHoldingsState initial;
+  @override
+  State<_BasinFilterSheet> createState() => _BasinFilterSheetState();
+}
+
+class _BasinFilterSheetState extends State<_BasinFilterSheet> {
+  late ParcelVisibilityFilter visibility = widget.initial.visibility;
+  late BasinHoldingFilter review = widget.initial.filter;
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24))),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Center(
+                    child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                            color: colors.border,
+                            borderRadius: BorderRadius.circular(99)))),
+                verticalSpacing(18),
+                Text('holdings.home.activity.filter_title'.tr(),
+                    style: AppTextStyles.font18Bold
+                        .copyWith(color: colors.textPrimary),
+                    textAlign: TextAlign.right),
+                verticalSpacing(12),
+                Text('holdings.home.activity.filter_title'.tr(),
+                    style: AppTextStyles.font12Bold
+                        .copyWith(color: colors.textSecondary),
+                    textAlign: TextAlign.right),
+                for (final ParcelVisibilityFilter option
+                    in ParcelVisibilityFilter.values)
+                  _SheetChoice(
+                      label: _visibilityLabel(option),
+                      selected: visibility == option,
+                      onTap: () => setState(() => visibility = option)),
+                verticalSpacing(14),
+                Text('holdings.basin_screen.review_filter'.tr(),
+                    style: AppTextStyles.font12Bold
+                        .copyWith(color: colors.textSecondary),
+                    textAlign: TextAlign.right),
+                for (final BasinHoldingFilter option
+                    in BasinHoldingFilter.values)
+                  _SheetChoice(
+                      label: _reviewLabel(option),
+                      selected: review == option,
+                      onTap: () => setState(() => review = option)),
+                verticalSpacing(16),
+                FilledButton(
+                    onPressed: () => Navigator.pop(
+                        context, _BasinFilterSelection(visibility, review)),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary200,
+                        padding: const EdgeInsets.symmetric(vertical: 14)),
+                    child: Text('app_dialogs.confirm'.tr())),
+              ]),
+        ));
+  }
+}
+
+class _SheetChoice extends StatelessWidget {
+  const _SheetChoice(
+      {required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+            margin: const EdgeInsets.only(top: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.primary200.withValues(alpha: .12)
+                    : colors.surfaceVariant,
+                borderRadius: BorderRadius.circular(12)),
+            child: Row(children: <Widget>[
+              Expanded(
+                  child: Text(label,
+                      style: AppTextStyles.font14SemiBold
+                          .copyWith(color: colors.textPrimary),
+                      textAlign: TextAlign.right)),
+              if (selected)
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.primary200)
+            ])));
+  }
+}
+
+class _BasinFilterSelection {
+  const _BasinFilterSelection(this.visibility, this.review);
+  final ParcelVisibilityFilter visibility;
+  final BasinHoldingFilter review;
+}
+
+String _visibilityLabel(final ParcelVisibilityFilter value) => switch (value) {
+      ParcelVisibilityFilter.activeOnly =>
+        'holdings.home.activity.filter_active'.tr(),
+      ParcelVisibilityFilter.all => 'holdings.home.activity.filter_all'.tr(),
+      ParcelVisibilityFilter.zeroAreaOnly =>
+        'holdings.home.activity.filter_zero'.tr()
+    };
+String _reviewLabel(final BasinHoldingFilter value) => switch (value) {
+      BasinHoldingFilter.all => 'holdings.basin_screen.filter_all'.tr(),
+      BasinHoldingFilter.pending => 'holdings.basin_screen.filter_pending'.tr(),
+      BasinHoldingFilter.completed =>
+        'holdings.basin_screen.filter_completed'.tr()
+    };

@@ -93,6 +93,10 @@ class LoadedBodyState extends State<LoadedBody> {
                         onSelect: (final SearchResult result) async =>
                             _openDetail(context, result),
                         onAddNew: () => _openAddPerson(context),
+                        zeroAreaMatchCount: state.zeroAreaMatchCount,
+                        onShowZeroAreaMatches: context
+                            .read<ParcelSearchCubit>()
+                            .showZeroAreaMatches,
                       )
                     : const HomeEmptyState(),
               ),

@@ -323,13 +323,30 @@
       "summary_reviewed": "Reviewed",
       "basins_title": "Basins",
       "no_basins": "No basins in this city",
-      "overall_total": "Total: {completed} / {total}"
+      "overall_total": "Total: {completed} / {total}",
+      "activity": {
+        "active_parcels": "Active parcels",
+        "total_records": "Total records",
+        "zero_area_short": "Zero-area records",
+        "active_of_total": "Active / total",
+        "zero_area_count": "{count} zero-area record(s)",
+        "filter_title": "Show search results",
+        "filter_active": "Active parcels",
+        "filter_all": "All records",
+        "filter_zero": "Zero-area records",
+        "filter_active_hint": "Parcels with a recorded area",
+        "filter_all_hint": "Active parcels and zero-area records",
+        "filter_zero_hint": "Records without area, useful for holder details",
+        "zero_match_message": "{count} matching zero-area record(s) found",
+        "show_zero_matches": "Show zero-area records"
+      }
     },
     "basin_screen": {
       "filter_all": "All",
       "filter_pending": "Pending",
       "filter_completed": "Completed",
-      "empty": "No holdings match this filter"
+      "empty": "No holdings match this filter",
+      "review_filter": "Review status"
     },
     "search": {
       "hint": "Search by holder name or holding number …",

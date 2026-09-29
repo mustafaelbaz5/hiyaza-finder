@@ -94,8 +94,8 @@
       "search_hint": "ابحث باسم المدينة أو الجمعية …",
       "no_results": "لا توجد نتائج لـ \"{query}\"",
       "no_results_hint": "جرّب كلمة بحث مختلفة",
-      "results_count": "{count} مدينة"
-      ,"cached": "محملة على الجهاز"
+      "results_count": "{count} مدينة",
+      "cached": "محملة على الجهاز"
     },
     "stale_banner": {
       "message": "توجد بيانات أحدث على الخادم",
@@ -323,13 +323,30 @@
       "summary_reviewed": "تمت المراجعة",
       "basins_title": "الأحواض",
       "no_basins": "لا توجد أحواض في هذه المدينة",
-      "overall_total": "الإجمالي: {completed} / {total}"
+      "overall_total": "الإجمالي: {completed} / {total}",
+      "activity": {
+        "active_parcels": "قطع فعّالة",
+        "total_records": "إجمالي السجلات",
+        "zero_area_short": "سجلات صفرية",
+        "active_of_total": "فعّالة / إجمالي",
+        "zero_area_count": "{count} سجل صفري",
+        "filter_title": "عرض نتائج البحث",
+        "filter_active": "القطع الفعّالة",
+        "filter_all": "كل السجلات",
+        "filter_zero": "السجلات الصفرية",
+        "filter_active_hint": "قطع لها مساحة مسجلة",
+        "filter_all_hint": "القطع الفعّالة والسجلات الصفرية",
+        "filter_zero_hint": "سجلات بلا مساحة، مفيدة للرجوع لبيانات الحائز",
+        "zero_match_message": "يوجد {count} سجل صفري مطابق لهذا البحث",
+        "show_zero_matches": "عرض السجلات الصفرية"
+      }
     },
     "basin_screen": {
       "filter_all": "الكل",
       "filter_pending": "ناقصة",
       "filter_completed": "مكتملة",
-      "empty": "لا توجد حيازات في هذا الفلتر"
+      "empty": "لا توجد حيازات في هذا الفلتر",
+      "review_filter": "حالة المراجعة"
     },
     "search": {
       "hint": "ابحث باسم الحائز أو رقم الحيازة …",
@@ -520,31 +537,31 @@
     "empty_list": "لا توجد جزل بعد",
     "basin_required": "اختر الحوض أولاً لتحديد موقع الجزلة",
     "basin": "الحوض",
-  "create": {
-    "name_section": "بيانات الجزلة",
-    "name_required": "اكتب اسم الجزلة أولاً",
-    "location_section": "الموقع",
-    "basin_hint": "اختر الحوض",
-    "basin_required": "اختر الحوض قبل الحفظ",
-    "search_basin": "ابحث عن الحوض",
-    "no_matching_basins": "لا توجد أحواض مطابقة",
-    "enable_target_area": "تحديد مساحة مستهدفة"
-  },
+    "create": {
+      "name_section": "بيانات الجزلة",
+      "name_required": "اكتب اسم الجزلة أولاً",
+      "location_section": "الموقع",
+      "basin_hint": "اختر الحوض",
+      "basin_required": "اختر الحوض قبل الحفظ",
+      "search_basin": "ابحث عن الحوض",
+      "no_matching_basins": "لا توجد أحواض مطابقة",
+      "enable_target_area": "تحديد مساحة مستهدفة"
+    },
     "actions": {
       "title": "إجراءات الجزلة",
       "edit_area": "تعديل المساحة المستهدفة",
       "edit_basin": "تعديل الحوض",
       "export_excel": "تصدير Excel",
       "share_pdf": "مشاركة PDF",
-    "bulk_apply": "تطبيق جماعي",
-    "manage_section": "إدارة الجزلة",
-    "operations_section": "العمليات",
-    "danger_section": "منطقة حساسة",
-    "export_excel_hint": "ملف منظم للتعديل والطباعة",
-    "share_pdf_hint": "تقرير مختصر مناسب للمشاركة",
-    "bulk_apply_hint": "تطبيق تعديل واحد على جميع القطع",
-    "no_parcels_hint": "أضف قطعة أولاً لتفعيل هذا الإجراء",
-    "delete_hint": "لا يتم حذف بيانات القطع"
+      "bulk_apply": "تطبيق جماعي",
+      "manage_section": "إدارة الجزلة",
+      "operations_section": "العمليات",
+      "danger_section": "منطقة حساسة",
+      "export_excel_hint": "ملف منظم للتعديل والطباعة",
+      "share_pdf_hint": "تقرير مختصر مناسب للمشاركة",
+      "bulk_apply_hint": "تطبيق تعديل واحد على جميع القطع",
+      "no_parcels_hint": "أضف قطعة أولاً لتفعيل هذا الإجراء",
+      "delete_hint": "لا يتم حذف بيانات القطع"
     },
     "review": {
       "previous": "السابق",
@@ -631,5 +648,3 @@
     }
   }
 }
-
-

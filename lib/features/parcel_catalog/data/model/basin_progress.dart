@@ -1,33 +1,52 @@
 import 'package:equatable/equatable.dart';
 
-/// Completion progress for one اسم الحوض — how many of its holdings are
-/// fully field-worker-completed out of the total. Drives the basin-first
-/// home screen's progress cards (`BasinCard`/`BasinProgressBar`).
+/// Completion progress and activity counts for one basin.
 class BasinProgress extends Equatable {
   const BasinProgress({
     required this.basinName,
     required this.totalCount,
     required this.completedCount,
+    this.totalParcelCount = 0,
+    this.activeParcelCount = 0,
+    this.zeroAreaParcelCount = 0,
+    this.activeHoldingCount = 0,
+    this.activeCompletedCount = 0,
     this.basinCode,
   });
 
   final String basinName;
   final String? basinCode;
 
-  /// Distinct holdings in this basin (by `Parcel.groupKey`, not raw
-  /// `holdingId` — see `ParcelQueryService.basinHoldingCounts`'s doc for
-  /// why pending records need grouping by key, not the raw id).
+  /// All distinct holdings, retained for backwards-compatible summaries.
   final int totalCount;
-
-  /// Holdings whose every parcel is `Parcel.completedAt`-set.
   final int completedCount;
 
-  double get progress => totalCount == 0 ? 0 : completedCount / totalCount;
+  /// All rows versus the operational subset used for area work.
+  final int totalParcelCount;
+  final int activeParcelCount;
+  final int zeroAreaParcelCount;
 
-  bool get isFullyCompleted => totalCount > 0 && completedCount == totalCount;
-  bool get isNotStarted => completedCount == 0;
+  /// Completion is calculated from holdings with at least one active parcel.
+  final int activeHoldingCount;
+  final int activeCompletedCount;
+
+  double get progress =>
+      activeHoldingCount == 0 ? 0 : activeCompletedCount / activeHoldingCount;
+
+  bool get isFullyCompleted =>
+      activeHoldingCount > 0 && activeCompletedCount == activeHoldingCount;
+  bool get isNotStarted => activeCompletedCount == 0;
 
   @override
-  List<Object?> get props =>
-      <Object?>[basinName, basinCode, totalCount, completedCount];
+  List<Object?> get props => <Object?>[
+        basinName,
+        basinCode,
+        totalCount,
+        completedCount,
+        totalParcelCount,
+        activeParcelCount,
+        zeroAreaParcelCount,
+        activeHoldingCount,
+        activeCompletedCount,
+      ];
 }

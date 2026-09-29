@@ -11,12 +11,14 @@ void main() {
   HomeMainCard buildCard({
     final VoidCallback? onChangeCity,
     final VoidCallback? onOpenJazla,
+    final VoidCallback? onOpenSearchFilter,
   }) {
     return HomeMainCard(
       cityName: 'جمعية اختبار',
       parcelCount: 24,
       onChangeCity: onChangeCity ?? () {},
       onOpenJazla: onOpenJazla ?? () {},
+      onOpenSearchFilter: onOpenSearchFilter ?? () {},
     );
   }
 
@@ -25,10 +27,11 @@ void main() {
     await pumpLocalized(tester, buildCard());
 
     expect(find.text('جمعية اختبار'), findsOneWidget);
-    expect(find.text('24 حيازة محمّلة'), findsOneWidget);
+    expect(find.text('قطع فعّالة'), findsOneWidget);
+    expect(find.text('إجمالي السجلات'), findsOneWidget);
     expect(find.byIcon(Icons.layers_outlined), findsOneWidget);
     expect(find.byIcon(Icons.build_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.swap_horiz_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.change_circle_outlined), findsOneWidget);
   });
 
   testWidgets('quick actions invoke Jazla and city picker callbacks',
@@ -44,7 +47,7 @@ void main() {
     );
 
     await tester.tap(find.byIcon(Icons.layers_outlined));
-    await tester.tap(find.byIcon(Icons.swap_horiz_rounded));
+    await tester.tap(find.byIcon(Icons.change_circle_outlined));
 
     expect(jazlaTapped, isTrue);
     expect(cityPickerTapped, isTrue);

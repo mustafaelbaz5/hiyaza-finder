@@ -1,4 +1,6 @@
 import 'package:get_it/get_it.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_visibility_preferences.dart';
 
 import '../../../features/parcel_catalog/data/local/bulk_edit_service.dart';
 import '../../../features/parcel_catalog/data/local/local_added_parcels_store.dart';
@@ -8,7 +10,6 @@ import '../../../features/parcel_review/data/local/notes_list_service.dart';
 import '../../../features/parcel_catalog/data/local/parcel_edit_overlay.dart';
 import '../../../features/parcel_catalog/data/local/parcel_edits_store.dart';
 import '../../../features/parcel_catalog/data/local/parcel_query_service.dart';
-import '../../../features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
 import '../../../features/parcel_catalog/data/repo/holdings_reader.dart';
 import '../../../features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 import '../../../features/parcel_catalog/data/repo/holdings_writer.dart';
@@ -40,6 +41,9 @@ void registerParcelCatalogModule(final GetIt getIt) {
   );
   getIt.registerLazySingleton(
     () => ParcelIdOverridesStore(store: getIt<KeyValueStore>()),
+  );
+  getIt.registerLazySingleton(
+    () => ParcelVisibilityPreferences(store: getIt<KeyValueStore>()),
   );
   getIt.registerLazySingleton(
     () => NotesListService(getIt<KeyValueStore>()),

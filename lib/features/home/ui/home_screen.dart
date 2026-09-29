@@ -1,6 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hiyaza_finder/features/home/ui/widgets/loading_body.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
+import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
+import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_state.dart';
+import 'package:hiyaza_finder/features/parcel_search/ui/widgets/parcel_visibility_filter_button.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/themes/app_colors.dart';
@@ -8,16 +14,12 @@ import '../../../core/utils/extensions/context_ext.dart';
 import '../../../core/utils/spacing.dart';
 import '../../../core/widgets/custom_text_form_.dart';
 import '../../cities/data/model/city_snapshot.dart';
-import '../../parcel_catalog/data/repo/holdings_reader.dart';
 import '../logic/cubit/home_cubit.dart';
 import '../logic/cubit/home_state.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_state.dart';
 import 'widgets/app_identity_header.dart';
 import 'widgets/empty_body.dart';
 import 'widgets/error_body.dart';
 import 'widgets/home_main_card.dart';
-import 'widgets/loading_body.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.readerFactory});
@@ -73,9 +75,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: HomeMainCard(
                       onChangeCity: () => _openCityPicker(cubit),
                       onOpenJazla: () => context.pushNamed(Routes.jazlaList),
+                      onOpenSearchFilter: () async {
+                        final ParcelVisibilityFilter? visibility =
+                            await showParcelVisibilityFilterSheet(
+                          context,
+                          value: context
+                              .read<ParcelSearchCubit>()
+                              .state
+                              .visibility,
+                        );
+                        if (visibility != null && context.mounted) {
+                          await context
+                              .read<ParcelSearchCubit>()
+                              .selectVisibility(visibility);
+                        }
+                      },
                       cityName: state.cityName,
                       associationType: state.associationType,
-                      parcelCount: state.parcels.length,
+                      parcelCount: state.activitySummary.totalParcelCount,
+                      activeParcelCount: state.activeParcelCount,
+                      zeroAreaParcelCount: state.zeroAreaParcelCount,
                     ),
                   ),
                   Padding(

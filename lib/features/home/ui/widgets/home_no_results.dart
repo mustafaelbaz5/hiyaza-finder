@@ -13,10 +13,18 @@ import '../../../../core/widgets/custom_text_button.dart';
 /// query someone expected to find could just as easily be a person who
 /// genuinely isn't in the data yet.
 class HomeNoResults extends StatelessWidget {
-  const HomeNoResults({super.key, required this.query, this.onAddNew});
+  const HomeNoResults({
+    super.key,
+    required this.query,
+    this.onAddNew,
+    this.zeroAreaMatchCount = 0,
+    this.onShowZeroAreaMatches,
+  });
 
   final String query;
   final VoidCallback? onAddNew;
+  final int zeroAreaMatchCount;
+  final VoidCallback? onShowZeroAreaMatches;
 
   @override
   Widget build(final BuildContext context) {
@@ -49,6 +57,28 @@ class HomeNoResults extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
+            if (zeroAreaMatchCount > 0 && onShowZeroAreaMatches != null) ...[
+              verticalSpacing(16),
+              Text(
+                'holdings.home.activity.zero_match_message'.tr(
+                  namedArgs: {'count': zeroAreaMatchCount.toString()},
+                ),
+                style: AppTextStyles.font14Regular.copyWith(
+                  color: colors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              verticalSpacing(8),
+              CustomTextButton(
+                text: 'holdings.home.activity.show_zero_matches'.tr(),
+                onPressed: onShowZeroAreaMatches!,
+                isFullWidth: false,
+                prefixIcon: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.white,
+                ),
+              ),
+            ],
             if (onAddNew != null) ...[
               verticalSpacing(16),
               CustomTextButton(

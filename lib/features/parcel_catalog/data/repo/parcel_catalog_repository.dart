@@ -1,28 +1,29 @@
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
 import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_edit_outcome.dart';
 import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import 'package:uuid/uuid.dart';
 
+import '../../../cities/data/model/association_type.dart';
+import '../../../cities/data/model/basin.dart';
+import '../../../jazla/data/repo/jazla_repo.dart';
 import '../local/bulk_edit_service.dart';
 import '../local/holding_search_service.dart';
 import '../local/local_added_parcels_store.dart';
+import '../local/local_edit_tracker.dart';
 import '../local/local_holding_note_policy.dart';
 import '../local/parcel_completion_store.dart';
-import '../local/local_edit_tracker.dart';
 import '../local/parcel_dataset_state.dart';
 import '../local/parcel_edit_overlay.dart';
 import '../local/parcel_edits_store.dart';
-import '../local/parcel_query_service.dart';
 import '../local/parcel_id_overrides_store.dart';
+import '../local/parcel_query_service.dart';
 import '../model/basin_progress.dart';
-
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import 'holdings_reader.dart';
 import 'holdings_writer.dart';
 import 'parcel_catalog_session.dart';
 import 'parcel_detail_actions.dart';
-import 'package:uuid/uuid.dart';
-import '../../../cities/data/model/association_type.dart';
-import '../../../cities/data/model/basin.dart';
-import '../../../jazla/data/repo/jazla_repo.dart';
 
 class ParcelCatalogRepository
     implements
@@ -85,10 +86,25 @@ class ParcelCatalogRepository
   /// The currently loaded city's id — `null` until a city is loaded.
   /// Exposed for city-scoped maintenance screens (e.g. per-city نوع الزرع
   /// management) that need it but aren't part of the parcel-write flow.
+  @override
   String? get activeCityId => _dataset.activeCityId;
   String? get activeCityName => _dataset.activeCityName;
   String? get activeDirectorate => _dataset.activeDirectorate;
   String? get activeAdministration => _dataset.activeAdministration;
+
+  @override
+  ParcelActivitySummary get activitySummary => _dataset.activityIndex.summary;
+
+  @override
+  ParcelActivitySummary activitySummaryForBasin(final String basinName) =>
+      _dataset.activityIndex.summaryForBasin(basinName);
+
+  @override
+  List<Parcel> parcelsForVisibility(
+    final ParcelVisibilityFilter filter, {
+    final String? basinName,
+  }) =>
+      _dataset.activityIndex.parcelsFor(filter, basinName: basinName);
 
   /// Adopts a city-downloaded (or cache-loaded) parcel list as the active
   /// dataset. [associationType]/[associationSubtype] come straight from the
@@ -483,8 +499,16 @@ class ParcelCatalogRepository
   /// Searches within [basin] (اسم الحوض) if given, otherwise the whole
   /// dataset — narrowing the scope keeps matching fast on large cities.
   @override
-  List<SearchResult> search(final String query, {final String? basin}) =>
-      _queryService.search(_dataset.parcels, query, basin: basin);
+  List<SearchResult> search(
+    final String query, {
+    final String? basin,
+    final ParcelVisibilityFilter visibility = ParcelVisibilityFilter.all,
+  }) =>
+      _queryService.search(
+        _dataset.activityIndex.parcelsFor(visibility),
+        query,
+        basin: basin,
+      );
 
   @override
   List<SearchResult> get allHoldings =>

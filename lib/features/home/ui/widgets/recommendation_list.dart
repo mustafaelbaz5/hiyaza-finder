@@ -11,6 +11,8 @@ class RecommendationList extends StatelessWidget {
     required this.results,
     required this.onSelect,
     this.onAddNew,
+    this.zeroAreaMatchCount = 0,
+    this.onShowZeroAreaMatches,
   });
 
   final String query;
@@ -22,6 +24,8 @@ class RecommendationList extends StatelessWidget {
   /// loaded), kept nullable so a future "no active city" state can still
   /// hide the CTA without a call-site change.
   final VoidCallback? onAddNew;
+  final int zeroAreaMatchCount;
+  final VoidCallback? onShowZeroAreaMatches;
 
   static const ScrollPhysics _scrollPhysics = AlwaysScrollableScrollPhysics();
 
@@ -41,7 +45,12 @@ class RecommendationList extends StatelessWidget {
             children: [
               ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: HomeNoResults(query: query, onAddNew: onAddNew),
+                child: HomeNoResults(
+                  query: query,
+                  onAddNew: onAddNew,
+                  zeroAreaMatchCount: zeroAreaMatchCount,
+                  onShowZeroAreaMatches: onShowZeroAreaMatches,
+                ),
               ),
             ],
           );

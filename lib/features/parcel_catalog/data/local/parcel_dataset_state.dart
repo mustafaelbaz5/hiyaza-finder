@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_index.dart';
+
 import 'border_name_index.dart';
 import 'parcel_edit_overlay.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
@@ -42,6 +44,8 @@ class ParcelDatasetState {
 
   List<Parcel> _parcels = <Parcel>[];
   List<Basin> _basins = <Basin>[];
+  ParcelActivityIndex _activityIndex =
+      ParcelActivityIndex.build(const <Parcel>[]);
   BorderNameIndex _borderIndex = BorderNameIndex.empty();
   Map<String, Parcel> _originalById = <String, Parcel>{};
   Map<String, Map<String, dynamic>> _edits = <String, Map<String, dynamic>>{};
@@ -52,6 +56,7 @@ class ParcelDatasetState {
   Stream<List<Parcel>> get snapshots => _snapshots.stream;
   List<Basin> get basins => _basins;
   BorderNameIndex get borderIndex => _borderIndex;
+  ParcelActivityIndex get activityIndex => _activityIndex;
 
   String? get activeCityId => _activeCityId;
   String? get activeCityName => _activeCityName;
@@ -99,6 +104,7 @@ class ParcelDatasetState {
         (idOverrides[entry.key] ?? entry.key): entry.value,
     };
     _parcels = overriddenParcels.map(applyEdit).toList();
+    _rebuildActivityIndex();
     rebuildBorderIndex();
     _publish();
     return _parcels;
@@ -110,6 +116,10 @@ class ParcelDatasetState {
   /// scanning the dataset at lookup time.
   void rebuildBorderIndex() {
     _borderIndex = BorderNameIndex.build(_parcels);
+  }
+
+  void _rebuildActivityIndex() {
+    _activityIndex = ParcelActivityIndex.build(_parcels);
   }
 
   Parcel applyEdit(final Parcel p) => _editOverlay.apply(p, _edits[p.id]);
@@ -164,6 +174,7 @@ class ParcelDatasetState {
     if (original != null) _originalById[newId] = original.copyWith(id: newId);
     final Map<String, dynamic>? edit = _edits.remove(oldId);
     if (edit != null) _edits[newId] = edit;
+    _rebuildActivityIndex();
     _publish();
   }
 
@@ -199,16 +210,19 @@ class ParcelDatasetState {
 
   void replaceAt(final int index, final Parcel parcel) {
     _parcels[index] = parcel;
+    _rebuildActivityIndex();
     _publish();
   }
 
   void replaceAll(final List<Parcel> parcels) {
     _parcels = parcels;
+    _rebuildActivityIndex();
     _publish();
   }
 
   void append(final Parcel parcel) {
     _parcels = <Parcel>[..._parcels, parcel];
+    _rebuildActivityIndex();
     _publish();
   }
 
@@ -229,6 +243,7 @@ class ParcelDatasetState {
     } else {
       _parcels = <Parcel>[..._parcels, parcel];
     }
+    _rebuildActivityIndex();
     _publish();
     return idx >= 0 ? idx : _parcels.length - 1;
   }
