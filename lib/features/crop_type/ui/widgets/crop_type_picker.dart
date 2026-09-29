@@ -10,14 +10,7 @@ import '../../../parcel_details/ui/widgets/parcel_quick_choice_sheet.dart';
 
 import '../../data/repo/crop_type_repo.dart';
 
-/// The نوع الزرع option that unlocks the free-text follow-up.
-const String cropTypeOtherOption = 'اخرى';
-
-/// Shows the نوع الزرع choice dialog; if the user picks "اخرى", immediately
-/// follows up with an optional free-text dialog so they can specify the
-/// actual crop instead of leaving the value as the literal "اخرى". Shared
-/// by the per-parcel detail card and the bulk-edit (file status) screen so
-/// both offer the same "specify other" behavior.
+/// Shows the نوع الزرع choice dialog with a direct free-text add action. The legacy literal "اخرى" is hidden, so field workers record the real crop.
 ///
 /// When [options] isn't given explicitly, this fetches the active city's
 /// custom crop-type list (`CropTypeRepo`, managed from "أدوات المدينة" ->
@@ -28,7 +21,7 @@ const String cropTypeOtherOption = 'اخرى';
 ///
 /// Returns `null` if dismissed without any choice (no change), otherwise a
 /// [ChoiceDialogResult] — `isClear` for "—", or a value that's either one
-/// of the offered options or the custom text typed for "اخرى".
+/// of the offered options or a custom crop name.
 Future<ChoiceDialogResult<String>?> pickCropType(
   final BuildContext context, {
   required final String? selected,
@@ -42,7 +35,7 @@ Future<ChoiceDialogResult<String>?> pickCropType(
     title: 'holdings.fields.crop_type'.tr(),
     selected: selected,
     options: resolvedOptions
-        .where((final String option) => option != cropTypeOtherOption)
+        .where((final String option) => option.trim() != 'اخرى')
         .toList(growable: false),
     onAddOption: () async {
       final String? custom = await showTextInputDialog(

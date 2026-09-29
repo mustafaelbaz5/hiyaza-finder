@@ -447,7 +447,9 @@
       "mode_existing_person": "شخص موجود",
       "search_holding_id_hint": "أدخل رقم الحيازة",
       "search_no_match": "لا يوجد حيازة بهذا الرقم",
-      "confirm_person": "متابعة الإضافة لهذا الشخص"
+      "confirm_person": "متابعة الإضافة لهذا الشخص",
+      "select_holder": "اختر الحائز المطلوب",
+      "holder_parcel_count": "{count} قطعة"
     },
     "edit": {
       "title": "تعديل حيازة {id}",

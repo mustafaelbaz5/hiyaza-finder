@@ -337,7 +337,6 @@ class Parcel {
     'باذنجان',
     'بسله',
     'بصل',
-    'اخرى',
   ];
 
   static const List<String> growthStageOptions = <String>[
@@ -366,7 +365,7 @@ class Parcel {
 
   /// The ملاحظات option that unlocks the free-text follow-up
   /// (`REFACTOR_ROADMAP.md` Phase 12) — same "specify other" pattern
-  /// `cropTypeOtherOption` already established, for when none of the fixed
+  /// direct manual crop entry, for when none of the fixed
   /// options fit.
   static const String notesOtherOption = 'أخرى';
 

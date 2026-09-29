@@ -447,7 +447,9 @@
       "mode_existing_person": "Existing person",
       "search_holding_id_hint": "Enter the holding number",
       "search_no_match": "No holding found with this number",
-      "confirm_person": "Continue adding for this person"
+      "confirm_person": "Continue adding for this person",
+      "select_holder": "Select the holder",
+      "holder_parcel_count": "{count} parcels"
     },
     "edit": {
       "title": "Edit holding {id}",

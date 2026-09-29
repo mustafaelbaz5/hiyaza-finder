@@ -53,6 +53,8 @@ class AddRecordScreen extends StatefulWidget {
     required this.initialParcel,
     this.repository,
     this.parentHoldingId,
+    this.suggestedBasinName,
+    this.suggestedBasinCode,
   });
 
   final Parcel initialParcel;
@@ -61,12 +63,15 @@ class AddRecordScreen extends StatefulWidget {
   ParcelCatalogRepository get resolvedRepository =>
       repository ?? getIt<ParcelCatalogRepository>();
   final String? parentHoldingId;
+  final String? suggestedBasinName;
+  final String? suggestedBasinCode;
 
   @override
   State<AddRecordScreen> createState() => _AddRecordScreenState();
 }
 
 class _AddRecordScreenState extends State<AddRecordScreen> {
+  late Parcel _initialParcel;
   late Parcel _parcel;
   bool _isSaving = false;
 
@@ -83,12 +88,22 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   @override
   void initState() {
     super.initState();
-    _parcel = widget.parentHoldingId == null &&
-            (widget.initialParcel.nationalId?.trim().isEmpty ?? true)
-        ? widget.initialParcel.copyWith(
-            nationalId: LocalHoldingNotePolicy.unregisteredNationalId,
-          )
-        : widget.initialParcel;
+    Parcel seeded = widget.initialParcel;
+    if ((seeded.basinName?.trim().isEmpty ?? true) &&
+        (widget.suggestedBasinName?.trim().isNotEmpty ?? false)) {
+      seeded = seeded.copyWith(
+        basinName: widget.suggestedBasinName,
+        basinCode: widget.suggestedBasinCode,
+      );
+    }
+    if (widget.parentHoldingId == null &&
+        (seeded.nationalId?.trim().isEmpty ?? true)) {
+      seeded = seeded.copyWith(
+        nationalId: LocalHoldingNotePolicy.unregisteredNationalId,
+      );
+    }
+    _initialParcel = seeded;
+    _parcel = seeded;
   }
 
   bool get _showModeToggle =>
@@ -157,7 +172,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
   bool _isModified<T>(final T Function(Parcel p) current) =>
       FieldChangeTracker.isModified(
         current(_parcel),
-        current(widget.initialParcel),
+        current(_initialParcel),
       );
 
   /// Owner name defaults to holder name when left blank — most parcels
@@ -213,7 +228,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     }
   }
 
-  bool get _hasUnsavedChanges => !identical(_parcel, widget.initialParcel);
+  bool get _hasUnsavedChanges => _parcel != _initialParcel;
 
   Future<void> _confirmDiscardAndPop(final BuildContext context) async {
     if (!_hasUnsavedChanges) {

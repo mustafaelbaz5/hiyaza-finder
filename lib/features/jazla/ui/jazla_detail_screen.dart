@@ -226,7 +226,7 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
     );
     final Parcel? created = await context.pushNamed<Parcel>(
       Routes.addRecord,
-      arguments: AddRecordArgs(initialParcel: initial),
+      arguments: _addRecordArgs(initial, jazla),
     );
     if (created == null || !mounted) return;
     await _addParcelDirect(created);
@@ -243,10 +243,25 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
       arguments: AddRecordArgs(
         initialParcel: initial,
         parentHoldingId: source.id,
+        suggestedBasinName: jazla?.basinName,
+        suggestedBasinCode: _basinCodeFor(jazla?.basinName),
       ),
     );
     if (created == null || !mounted) return;
     await _addParcelDirect(created);
+  }
+
+  AddRecordArgs _addRecordArgs(final Parcel initial, final Jazla? jazla) =>
+      AddRecordArgs(
+        initialParcel: initial,
+        suggestedBasinName: jazla?.basinName,
+        suggestedBasinCode: _basinCodeFor(jazla?.basinName),
+      );
+
+  String? _basinCodeFor(final String? basinName) {
+    final String normalized = basinName?.trim() ?? '';
+    if (normalized.isEmpty) return null;
+    return getIt<ParcelCatalogRepository>().basinByName(normalized)?.basinCode;
   }
 
   Future<void> _editThenAdd(final Parcel parcel) async {

@@ -120,6 +120,8 @@ class AppRouter {
             initialParcel: args.initialParcel,
             repository: getIt<ParcelCatalogRepository>(),
             parentHoldingId: args.parentHoldingId,
+            suggestedBasinName: args.suggestedBasinName,
+            suggestedBasinCode: args.suggestedBasinCode,
           ),
           settings,
         );

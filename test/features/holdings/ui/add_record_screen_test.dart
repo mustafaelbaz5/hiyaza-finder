@@ -2,19 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiyaza_finder/core/di/dependency_injection.dart';
 import 'package:hiyaza_finder/core/storage/key_value_store.dart';
-
 import 'package:hiyaza_finder/features/parcel_add/ui/add_record_screen.dart';
+import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_edits_store.dart';
 
 import '../../../support/localized_widget_test_harness.dart';
 
-/// `add_record_screen.dart` was trimmed down to a fixed field list per the
-/// user's request (رقم الحيازة, اسم الحائز, اسم الحوض, رقم الأرض, المساحة,
-/// نوع الزرع, الملاحظات, الرقم القومي [new-person only], ورثة/مفوض toggles)
-/// — عدد القطع/نوع الائتمان/نوع الاستخدام/مراحل النمو are no longer shown.
-/// اسم المالك now only appears once مفوض is toggled on, rather than always.
 class _InMemoryKeyValueStore implements KeyValueStore {
   final Map<String, String> _store = <String, String>{};
 
@@ -30,12 +24,13 @@ class _InMemoryKeyValueStore implements KeyValueStore {
   }
 }
 
-Future<void> _registerRepository() async {
+Future<void> _registerRepository(
+    [final List<Parcel> parcels = const <Parcel>[]]) async {
   await getIt.reset();
   final ParcelCatalogRepository repository = ParcelCatalogRepository(
     editsStore: ParcelEditsStore(store: _InMemoryKeyValueStore()),
   );
-  await repository.loadParcelsForCity('city-1', const <Parcel>[]);
+  await repository.loadParcelsForCity('city-1', parcels);
   getIt.registerLazySingleton<ParcelCatalogRepository>(() => repository);
 }
 
@@ -63,9 +58,6 @@ void main() {
     final Finder delegateSwitch = find.byType(Switch).last;
     await tester.tap(delegateSwitch);
     await tester.pumpAndSettle();
-
-    // Enabling مفوض opens a dialog asking for the new owner name — it must
-    // differ from اسم الحائز.
     await tester.enterText(find.byType(TextField).last, 'احمد');
     await tester.tap(
       find.descendant(
@@ -84,19 +76,16 @@ void main() {
   });
 
   testWidgets(
-      'عدد القطع/نوع الائتمان/نوع الاستخدام/مراحل النمو are no '
-      'longer shown on the trimmed form', (final tester) async {
+      'عدد القطع/نوع الائتمان/مراحل النمو are no longer shown on the trimmed form',
+      (final tester) async {
     await _registerRepository();
 
     await pumpLocalizedScreen(
       tester,
-      const AddRecordScreen(
-        initialParcel: Parcel(holdingId: ''),
-      ),
+      const AddRecordScreen(initialParcel: Parcel(holdingId: '')),
     );
 
     expect(find.text('نوع الائتمان'), findsNothing);
-    expect(find.text('نوع الاستخدام'), findsNothing);
     expect(find.text('مراحل النمو'), findsNothing);
   });
 
@@ -107,9 +96,7 @@ void main() {
 
     await pumpLocalizedScreen(
       tester,
-      const AddRecordScreen(
-        initialParcel: Parcel(holdingId: ''),
-      ),
+      const AddRecordScreen(initialParcel: Parcel(holdingId: '')),
     );
     expect(find.text('الرقم القومي'), findsOneWidget);
 
@@ -122,5 +109,71 @@ void main() {
       ),
     );
     expect(find.text('الرقم القومي'), findsNothing);
+  });
+
+  testWidgets('uses the suggested Jazla basin as the editable initial value',
+      (final tester) async {
+    await _registerRepository();
+
+    await pumpLocalizedScreen(
+      tester,
+      const AddRecordScreen(
+        initialParcel: Parcel(holdingId: '', holderName: 'محمد'),
+        suggestedBasinName: 'حوض الجزلة',
+        suggestedBasinCode: 'B-7',
+      ),
+    );
+
+    expect(find.text('حوض الجزلة'), findsOneWidget);
+
+    await tester.tap(find.text('حوض الجزلة'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsWidgets);
+  });
+
+  testWidgets('requires selecting a holder when a holding has multiple people',
+      (final tester) async {
+    await _registerRepository(const <Parcel>[
+      Parcel(
+        id: 'one',
+        holdingId: '42',
+        holderName: 'أحمد علي',
+        nationalId: '11111111111111',
+      ),
+      Parcel(
+        id: 'two',
+        holdingId: '42',
+        holderName: 'محمود حسن',
+        nationalId: '22222222222222',
+      ),
+    ]);
+
+    await pumpLocalizedScreen(
+      tester,
+      const AddRecordScreen(initialParcel: Parcel(holdingId: '')),
+    );
+
+    await tester.tap(find.text('شخص موجود'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '42');
+    await tester.pumpAndSettle();
+
+    expect(find.text('اختر الحائز المطلوب'), findsOneWidget);
+    expect(find.text('أحمد علي'), findsOneWidget);
+    expect(find.text('محمود حسن'), findsOneWidget);
+
+    final FilledButton beforeSelection = tester.widget<FilledButton>(
+      find.byType(FilledButton),
+    );
+    expect(beforeSelection.onPressed, isNull);
+
+    await tester.tap(find.text('محمود حسن'));
+    await tester.pump();
+
+    final FilledButton afterSelection = tester.widget<FilledButton>(
+      find.byType(FilledButton),
+    );
+    expect(afterSelection.onPressed, isNotNull);
   });
 }
