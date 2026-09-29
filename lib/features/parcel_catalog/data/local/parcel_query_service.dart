@@ -1,10 +1,10 @@
 import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_classifier.dart';
-
-import 'arabic_normalizer.dart';
-import 'holding_search_service.dart';
-import '../model/basin_progress.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+
+import '../model/basin_progress.dart';
+import 'arabic_normalizer.dart';
 import 'border_name_index.dart';
+import 'holding_search_service.dart';
 
 /// Pure read-side queries over an in-memory parcel list: search, basin
 /// aggregation, and holding lookup. Extracted from `ParcelCatalogRepository` so

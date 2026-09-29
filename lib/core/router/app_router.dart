@@ -67,11 +67,10 @@ class AppRouter {
                 )..init(),
               ),
               BlocProvider<ParcelSearchCubit>(
-                create: (final _) =>
-                    ParcelSearchCubit(
-                      getIt<ParcelCatalogReader>(),
-                      preferences: getIt(),
-                    ),
+                create: (final _) => ParcelSearchCubit(
+                  getIt<ParcelCatalogReader>(),
+                  preferences: getIt(),
+                ),
               ),
             ],
             child:

@@ -1,14 +1,12 @@
 import 'dart:async';
 
 import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_index.dart';
-
-import 'border_name_index.dart';
-import 'parcel_edit_overlay.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
 
 import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';
-
+import 'border_name_index.dart';
+import 'parcel_edit_overlay.dart';
 import 'parcel_edits_store.dart';
 import 'parcel_id_overrides_store.dart';
 
