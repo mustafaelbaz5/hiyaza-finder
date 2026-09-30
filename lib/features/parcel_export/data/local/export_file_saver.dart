@@ -28,6 +28,7 @@ class ExportSaveResult {
 Future<ExportSaveResult> saveExportFile({
   required final Uint8List bytes,
   required final String fileName,
+  final List<String> allowedExtensions = const <String>["xlsx"],
 }) async {
   // `saveFile`'s `bytes` param writes the file directly on platforms that
   // support it (Android via SAF, iOS, desktop); where it isn't supported
@@ -37,7 +38,7 @@ Future<ExportSaveResult> saveExportFile({
     fileName: fileName,
     bytes: bytes,
     type: FileType.custom,
-    allowedExtensions: const <String>['xlsx'],
+    allowedExtensions: allowedExtensions,
   );
 
   if (pickedPath != null) {

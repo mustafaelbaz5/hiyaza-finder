@@ -565,7 +565,34 @@
       "no_parcels_hint": "أضف قطعة أولاً لتفعيل هذا الإجراء",
       "delete_hint": "لا يتم حذف بيانات القطع"
     },
-    "review": {
+    "transfer": {
+      "export_title": "تصدير الجزلة",
+      "export_hint": "نقل الجزلة إلى جهاز آخر",
+      "export_confirm": "حفظ ومشاركة الملف",
+      "export_success": "تم تصدير ملف الجزلة بنجاح",
+      "import_title": "استيراد جزلة",
+      "preview_title": "مراجعة ملف الجزلة",
+      "import_confirm": "استيراد الجزلة",
+      "replace": "استبدال الجزلة الحالية",
+      "conflict_message": "توجد جزلة بنفس المعرف. الاستيراد سيستبدلها بالكامل.",
+      "privacy_warning": "سيحتوي الملف على بيانات الجزلة والقطع. شاركه فقط مع جهاز موثوق.",
+      "jazla": "الجزلة",
+      "basin": "الحوض",
+      "city": "المدينة",
+      "association": "الجمعية",
+      "parcels": "عدد القطع",
+      "exported_at": "وقت التصدير",
+      "target_area": "المساحة المستهدفة",
+      "source_app": "إصدار التطبيق",
+      "error_context": "تعذر تحديد المدينة أو الجمعية الحالية.",
+      "error_city_mismatch": "الملف يخص مدينة مختلفة.",
+      "error_association_mismatch": "الملف يخص جمعية مختلفة.",
+      "error_export": "تعذر تصدير ملف الجزلة.",
+      "error_read": "الملف تالف أو غير مدعوم.",
+      "error_import": "تعذر حفظ الجزلة المستوردة.",
+      "missing_context": "لا توجد مدينة أو جمعية نشطة.",
+      "cancelled": "تم إلغاء اختيار الملف"
+    },    "review": {
       "previous": "السابق",
       "next": "التالي",
       "of": "من"

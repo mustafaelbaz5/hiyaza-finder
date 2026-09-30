@@ -20,6 +20,7 @@ Future<void> showJazlaActionsSheet(
   required final VoidCallback onBulkApply,
   required final VoidCallback onDelete,
   required final Widget exportExcelAction,
+  final Widget? exportTransferAction,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -35,6 +36,7 @@ Future<void> showJazlaActionsSheet(
       onBulkApply: onBulkApply,
       onDelete: onDelete,
       exportExcelAction: exportExcelAction,
+      exportTransferAction: exportTransferAction,
     ),
   );
 }
@@ -49,6 +51,7 @@ class _JazlaActionsSheet extends StatelessWidget {
     required this.onBulkApply,
     required this.onDelete,
     required this.exportExcelAction,
+    this.exportTransferAction,
   });
 
   final Jazla jazla;
@@ -59,6 +62,7 @@ class _JazlaActionsSheet extends StatelessWidget {
   final VoidCallback onBulkApply;
   final VoidCallback onDelete;
   final Widget exportExcelAction;
+  final Widget? exportTransferAction;
 
   void _closeThen(final BuildContext context, final VoidCallback action) {
     Navigator.pop(context);
@@ -132,6 +136,13 @@ class _JazlaActionsSheet extends StatelessWidget {
                           icon: Icons.table_chart_outlined,
                           trailing: exportExcelAction,
                         ),
+                        if (exportTransferAction != null)
+                          _ActionTile(
+                            title: 'jazla.transfer.export_title'.tr(),
+                            subtitle: 'jazla.transfer.export_hint'.tr(),
+                            icon: Icons.ios_share_rounded,
+                            trailing: exportTransferAction!,
+                          ),
                         _ActionTile(
                           title: 'jazla.actions.bulk_apply'.tr(),
                           subtitle: parcels.isEmpty

@@ -26,6 +26,9 @@ import '../data/local/jazla_parcel_defaults_policy.dart';
 import '../data/local/jazla_search_service.dart';
 import '../data/model/jazla.dart';
 import '../data/repo/jazla_repo.dart';
+import '../../jazla_transfer/data/repo/jazla_transfer_repository.dart';
+import '../../jazla_transfer/logic/cubit/jazla_export_cubit.dart';
+import '../../jazla_transfer/ui/widgets/jazla_transfer_export_button.dart';
 import '../logic/cubit/jazla_add_parcel_cubit.dart';
 import '../logic/cubit/jazla_detail_cubit.dart';
 import '../logic/cubit/jazla_detail_state.dart';
@@ -64,6 +67,7 @@ class JazlaDetailScreen extends StatelessWidget {
             jazlaId,
             cityId,
             getIt<ParcelCatalogWriter>(),
+            getIt<JazlaTransferRepository>(),
           )..load(),
         ),
         BlocProvider<JazlaAddParcelCubit>(
@@ -77,6 +81,15 @@ class JazlaDetailScreen extends StatelessWidget {
         ),
         BlocProvider<ParcelEditorCubit>(
           create: (final _) => getIt<ParcelEditorCubit>(),
+        ),
+        BlocProvider<ParcelEditorCubit>(
+          create: (final _) => getIt<ParcelEditorCubit>(),
+        ),
+        BlocProvider<JazlaExportCubit>(
+          create: (final _) => JazlaExportCubit(
+            getIt<JazlaTransferRepository>(),
+            getIt<ParcelCatalogRepository>(),
+          ),
         ),
       ],
       child: const _JazlaDetailView(),
@@ -370,6 +383,10 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                     onEditArea: () => _editTargetArea(cubit),
                     onEditBasin: () => _editBasin(cubit),
                     exportExcelAction: JazlaExportButton(
+                      jazla: state.jazla!,
+                      parcels: parcels,
+                    ),
+                    exportTransferAction: JazlaTransferExportButton(
                       jazla: state.jazla!,
                       parcels: parcels,
                     ),

@@ -6,6 +6,7 @@ import 'modules/core_module.dart';
 import 'modules/crop_type_module.dart';
 import 'modules/parcel_catalog_module.dart';
 import 'modules/jazla_module.dart';
+import 'modules/jazla_transfer_module.dart';
 import 'modules/app_control_module.dart';
 
 final GetIt getIt = GetIt.instance;
@@ -14,6 +15,7 @@ Future<void> setUpDependencies() async {
   await registerCoreModule(getIt);
   registerJazlaModule(getIt);
   registerParcelCatalogModule(getIt);
+  registerJazlaTransferModule(getIt);
   registerCitiesModule(getIt);
   registerCropTypeModule(getIt);
   registerAppControlModule(getIt);

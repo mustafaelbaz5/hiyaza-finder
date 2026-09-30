@@ -565,7 +565,34 @@
     "no_parcels_hint": "Add a parcel first to enable this action",
     "delete_hint": "Parcel data is not deleted"
     },
-    "review": {
+    "transfer": {
+      "export_title": "Export Jazla",
+      "export_hint": "Move this Jazla to another device",
+      "export_confirm": "Save and share file",
+      "export_success": "Jazla file exported successfully",
+      "import_title": "Import Jazla",
+      "preview_title": "Review Jazla file",
+      "import_confirm": "Import Jazla",
+      "replace": "Replace existing Jazla",
+      "conflict_message": "A Jazla with the same ID exists. Importing will replace it completely.",
+      "privacy_warning": "The file contains Jazla and parcel data. Share it only with a trusted device.",
+      "jazla": "Jazla",
+      "basin": "Basin",
+      "city": "City",
+      "association": "Association",
+      "parcels": "Parcels",
+      "exported_at": "Exported at",
+      "target_area": "Target area",
+      "source_app": "App version",
+      "error_context": "The current city or association could not be identified.",
+      "error_city_mismatch": "This file belongs to a different city.",
+      "error_association_mismatch": "This file belongs to a different association.",
+      "error_export": "Could not export the Jazla file.",
+      "error_read": "The file is corrupted or unsupported.",
+      "error_import": "Could not save the imported Jazla.",
+      "missing_context": "No active city or association is available.",
+      "cancelled": "File selection was cancelled"
+    },    "review": {
       "previous": "Previous",
       "next": "Next",
       "of": "of"

@@ -10,18 +10,21 @@ import '../../data/local/jazla_parcel_defaults_policy.dart';
 import '../../data/model/jazla.dart';
 import '../../data/model/jazla_parcel_defaults.dart';
 import '../../data/repo/jazla_repo.dart';
+import '../../../jazla_transfer/data/repo/jazla_transfer_repository.dart';
 import 'jazla_detail_state.dart';
 
 class JazlaDetailCubit extends Cubit<JazlaDetailState> {
   JazlaDetailCubit(this._repo, this._holdingsReader, this.jazlaId, this.cityId,
-      [this._writer])
+      [this._writer, this._transferRepo])
       : super(JazlaDetailState.initial());
 
   final JazlaRepo _repo;
   final ParcelCatalogReader _holdingsReader;
   final ParcelCatalogWriter? _writer;
+  final JazlaTransferRepository? _transferRepo;
   final String jazlaId;
   final String cityId;
+  List<Parcel> _fallbackParcels = const <Parcel>[];
 
   /// Resolves `jazla.parcelIds` (this Jazla's only real data) to live
   /// [Parcel] objects via [ParcelCatalogReader] — never cached inside the Jazla
@@ -29,8 +32,36 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
   /// real, current field values.
   List<Parcel> _resolveParcels(final Jazla jazla) {
     final Map<String, Parcel> byId = <String, Parcel>{
-      for (final Parcel p in _holdingsReader.parcels) p.id: p,
+      for (final Parcel parcel in <Parcel>[
+        ..._holdingsReader.parcels,
+        ..._fallbackParcels
+      ])
+        parcel.id: parcel,
     };
+    return jazla.parcelIds
+        .map((final String id) => byId[id])
+        .whereType<Parcel>()
+        .toList();
+  }
+
+  Future<List<Parcel>> _resolveParcelsWithFallback(final Jazla jazla) async {
+    final Map<String, Parcel> byId = <String, Parcel>{
+      for (final Parcel parcel in <Parcel>[
+        ..._holdingsReader.parcels,
+        ..._fallbackParcels
+      ])
+        parcel.id: parcel,
+    };
+    final List<String> missingIds = jazla.parcelIds
+        .where((final String id) => !byId.containsKey(id))
+        .toList();
+    _fallbackParcels = const <Parcel>[];
+    if (missingIds.isNotEmpty && _transferRepo != null) {
+      _fallbackParcels = await _transferRepo!.loadFallback(cityId, jazla.id);
+      for (final Parcel parcel in _fallbackParcels) {
+        byId.putIfAbsent(parcel.id, () => parcel);
+      }
+    }
     return jazla.parcelIds
         .map((final String id) => byId[id])
         .whereType<Parcel>()
@@ -57,7 +88,7 @@ class JazlaDetailCubit extends Cubit<JazlaDetailState> {
         state.copyWith(
           status: JazlaDetailStatus.loaded,
           jazla: jazla,
-          parcels: _resolveParcels(jazla),
+          parcels: await _resolveParcelsWithFallback(jazla),
           pendingParcelIds: const <String>{},
         ),
       );

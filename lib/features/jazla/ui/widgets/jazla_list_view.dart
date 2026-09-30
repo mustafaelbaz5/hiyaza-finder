@@ -10,6 +10,9 @@ import 'package:hiyaza_finder/core/widgets/ui/dialogs/app_dialogs.dart';
 import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
 import 'package:hiyaza_finder/features/jazla/data/local/jazla_preferences.dart';
 import 'package:hiyaza_finder/features/jazla/data/model/jazla.dart';
+import 'package:hiyaza_finder/features/jazla_transfer/logic/cubit/jazla_import_cubit.dart';
+import 'package:hiyaza_finder/features/jazla_transfer/logic/cubit/jazla_import_state.dart';
+import 'package:hiyaza_finder/features/jazla_transfer/ui/widgets/jazla_transfer_preview_sheet.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_list_cubit.dart';
 import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_list_state.dart';
 import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_card.dart';
@@ -19,6 +22,48 @@ import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_r
 
 class JazlaListView extends StatelessWidget {
   const JazlaListView({super.key});
+
+  Future<void> _importJazla(
+    final BuildContext context,
+    final JazlaListCubit listCubit,
+  ) async {
+    final JazlaImportCubit importCubit = context.read<JazlaImportCubit>();
+    await importCubit.pickAndValidate();
+    if (!context.mounted) return;
+    final JazlaImportState state = importCubit.state;
+    if (state.status == JazlaImportStatus.error) {
+      final String message = state.errorMessage ?? 'jazla.transfer.error_read';
+      if (message != 'jazla.transfer.cancelled') {
+        context.showErrorSnackBar(
+          message.startsWith('jazla.transfer.')
+              ? message.tr()
+              : 'jazla.transfer.error_read'.tr(),
+        );
+      }
+      return;
+    }
+    final bundle = state.bundle;
+    if (state.status != JazlaImportStatus.preview || bundle == null) return;
+    final bool? confirmed = await showJazlaTransferPreviewSheet(
+      context,
+      bundle: bundle,
+      hasConflict: state.hasConflict,
+    );
+    if (confirmed != true || !context.mounted) return;
+    final bool imported = await importCubit.confirmImport(
+      replace: state.hasConflict,
+    );
+    if (!context.mounted) return;
+    if (!imported) {
+      context.showErrorSnackBar('jazla.transfer.error_import'.tr());
+      return;
+    }
+    await listCubit.load();
+    if (!context.mounted) return;
+    context.showSuccessSnackBar('jazla.transfer.import_success'.tr());
+    await context.pushNamed(Routes.jazlaDetail, arguments: bundle.jazla.id);
+    if (context.mounted) listCubit.load();
+  }
 
   Future<void> _createJazla(
       final BuildContext context, final JazlaListCubit cubit) async {
@@ -125,6 +170,11 @@ class JazlaListView extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(child: ScreenHeader(title: 'jazla.title'.tr())),
+                    IconButton(
+                      tooltip: 'jazla.transfer.import_title'.tr(),
+                      icon: const Icon(Icons.file_upload_outlined),
+                      onPressed: () => _importJazla(context, cubit),
+                    ),
                     IconButton(
                       tooltip: 'jazla.sort.title'.tr(),
                       icon: const Icon(Icons.sort_rounded),
