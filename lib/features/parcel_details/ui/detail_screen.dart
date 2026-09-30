@@ -485,7 +485,8 @@ class _DetailScreenState extends State<DetailScreen>
                     bottom: rh(20),
                     end: rw(20),
                     child: FloatingActionButton.extended(
-                      onPressed: () => _addParcelForPerson(_parcels.first),
+                      onPressed: () =>
+                          _addParcelForPerson(visibleParcels[pagedIndex]),
                       icon: const Icon(Icons.add_location_alt_rounded),
                       label: Text('holdings.add.new_parcel_title'.tr()),
                     ),
