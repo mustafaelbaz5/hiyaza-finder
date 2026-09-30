@@ -20,8 +20,67 @@ import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_create_wizard.dart
 import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_sort_sheet.dart';
 import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
+enum _JazlaEntryAction { create, import }
+
 class JazlaListView extends StatelessWidget {
   const JazlaListView({super.key});
+
+  Future<void> _chooseEntryAction(
+    final BuildContext context,
+    final JazlaListCubit cubit,
+  ) async {
+    final _JazlaEntryAction? action =
+        await showModalBottomSheet<_JazlaEntryAction>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: context.customColors.surface,
+      builder: (final BuildContext sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.customColors.border,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'jazla.entry.title'.tr(),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              _EntryActionTile(
+                icon: Icons.add_circle_outline_rounded,
+                title: 'jazla.entry.create_title'.tr(),
+                subtitle: 'jazla.entry.create_hint'.tr(),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _JazlaEntryAction.create),
+              ),
+              const SizedBox(height: 10),
+              _EntryActionTile(
+                icon: Icons.file_upload_outlined,
+                title: 'jazla.entry.import_title'.tr(),
+                subtitle: 'jazla.entry.import_hint'.tr(),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _JazlaEntryAction.import),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!context.mounted || action == null) return;
+    if (action == _JazlaEntryAction.create) {
+      await _createJazla(context, cubit);
+    } else {
+      await _importJazla(context, cubit);
+    }
+  }
 
   Future<void> _importJazla(
     final BuildContext context,
@@ -171,11 +230,6 @@ class JazlaListView extends StatelessWidget {
                   children: [
                     Expanded(child: ScreenHeader(title: 'jazla.title'.tr())),
                     IconButton(
-                      tooltip: 'jazla.transfer.import_title'.tr(),
-                      icon: const Icon(Icons.file_upload_outlined),
-                      onPressed: () => _importJazla(context, cubit),
-                    ),
-                    IconButton(
                       tooltip: 'jazla.sort.title'.tr(),
                       icon: const Icon(Icons.sort_rounded),
                       onPressed: () => _pickSort(context, cubit),
@@ -235,12 +289,64 @@ class JazlaListView extends StatelessWidget {
               bottom: rh(20),
               end: rw(20),
               child: FloatingActionButton.extended(
-                onPressed: () => _createJazla(context, cubit),
+                onPressed: () => _chooseEntryAction(context, cubit),
                 icon: const Icon(Icons.add),
                 label: Text('jazla.new_jazla'.tr()),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryActionTile extends StatelessWidget {
+  const _EntryActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(final BuildContext context) {
+    final colors = context.customColors;
+    return Material(
+      color: colors.surfaceVariant,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: <Widget>[
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Text(title, textAlign: TextAlign.right),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(Icons.chevron_left_rounded, color: colors.textSecondary),
+            ],
+          ),
         ),
       ),
     );

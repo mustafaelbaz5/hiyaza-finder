@@ -281,7 +281,7 @@
     "delegate": {
       "dialog_title": "Delegate",
       "dialog_subtitle": "Enter the delegated owner's name — it must differ from the holder's name",
-      "name_required": "Owner name is required",
+        "name_required": "Owner name is required",
       "name_must_differ": "Owner name must differ from the holder's name",
       "auto_note": "Delegated on behalf of {holder}"
     },
@@ -436,7 +436,7 @@
       "saved": "Saved successfully",
       "saving_in_progress": "Saving new record…",
       "holder_required": "Holder name is required",
-      "basin_required": "Please select a basin",
+        "basin_required": "Please select a basin",
       "crop_type_required": "Please select a crop type",
       "area_required": "Enter the area (feddan/qirat/sahm)",
       "national_id_invalid": "National ID must be 14 digits",
@@ -537,17 +537,24 @@
     "delete_confirm_title": "Delete Jazla",
     "delete_confirm_message": "The Jazla will be deleted; its parcels stay as-is and can be added to another Jazla.",
     "empty_list": "No Jazlas yet",
-    "basin_required": "Select a basin first to define the Jazla location",
+      "basin_required": "Select a basin first to define the Jazla location",
     "basin": "Basin",
-  "create": {
+    "entry": {
+      "title": "Add Jazla",
+      "create_title": "Create a new Jazla",
+      "create_hint": "Start an empty Jazla and choose its basin and area",
+      "import_title": "Import a Jazla",
+      "import_hint": "Import a Jazla file from another device"
+    },
+    "create": {
     "name_section": "Jazla details",
-    "name_required": "Enter a Jazla name first",
-    "location_section": "Location",
-    "basin_hint": "Select basin",
-    "basin_required": "Select a basin before saving",
-    "search_basin": "Search basins",
-    "no_matching_basins": "No matching basins",
-    "enable_target_area": "Set a target area"
+      "name_required": "Enter a Jazla name first",
+      "location_section": "Location",
+      "basin_hint": "Select basin",
+      "basin_required": "Select a basin before saving",
+      "search_basin": "Search basins",
+      "no_matching_basins": "No matching basins",
+      "enable_target_area": "Set a target area"
   },
     "actions": {
       "title": "Jazla actions",
@@ -593,6 +600,9 @@
       "missing_context": "No active city or association is available.",
       "cancelled": "File selection was cancelled"
     },    "review": {
+      "save_only": "Save on device only",
+      "save_and_share": "Save and share",
+      "saved_share_failed": "File saved, but system sharing could not be opened",
       "previous": "Previous",
       "next": "Next",
       "of": "of"

@@ -20,6 +20,7 @@ class JazlaExportCubit extends Cubit<JazlaExportState> {
   Future<void> exportAndShare({
     required final Jazla jazla,
     required final List<Parcel> parcels,
+    final bool share = true,
   }) async {
     if (state.status == JazlaExportStatus.exporting) return;
     emit(state.copyWith(status: JazlaExportStatus.exporting));
@@ -51,13 +52,24 @@ class JazlaExportCubit extends Cubit<JazlaExportState> {
         fileName: fileName,
         allowedExtensions: const <String>['hiyaza-jazla'],
       );
-      await SharePlus.instance.share(
-        ShareParams(
-          files: <XFile>[XFile(saveResult.filePath)],
-          fileNameOverrides: <String>[fileName],
-        ),
-      );
-      emit(state.copyWith(status: JazlaExportStatus.success, bundle: bundle));
+      String? postSaveMessage;
+      if (share) {
+        try {
+          await SharePlus.instance.share(
+            ShareParams(
+              files: <XFile>[XFile(saveResult.filePath)],
+              fileNameOverrides: <String>[fileName],
+            ),
+          );
+        } catch (_) {
+          postSaveMessage = 'jazla.transfer.share_failed';
+        }
+      }
+      emit(state.copyWith(
+        status: JazlaExportStatus.success,
+        bundle: bundle,
+        errorMessage: postSaveMessage,
+      ));
     } catch (error) {
       if (!isClosed) {
         emit(state.copyWith(

@@ -9,6 +9,8 @@ import '../../../parcel_catalog/data/model/parcel.dart';
 import '../../logic/cubit/jazla_export_cubit.dart';
 import '../../logic/cubit/jazla_export_state.dart';
 
+enum _JazlaExportChoice { save, share }
+
 class JazlaTransferExportButton extends StatelessWidget {
   const JazlaTransferExportButton({
     super.key,
@@ -20,7 +22,8 @@ class JazlaTransferExportButton extends StatelessWidget {
   final List<Parcel> parcels;
 
   Future<void> _confirm(final BuildContext context) async {
-    final bool? confirmed = await showModalBottomSheet<bool>(
+    final _JazlaExportChoice? choice =
+        await showModalBottomSheet<_JazlaExportChoice>(
       context: context,
       useSafeArea: true,
       backgroundColor: context.customColors.surface,
@@ -42,19 +45,32 @@ class JazlaTransferExportButton extends StatelessWidget {
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pop(
+                sheetContext,
+                _JazlaExportChoice.save,
+              ),
+              icon: const Icon(Icons.save_alt_rounded),
+              label: Text('jazla.transfer.save_only'.tr()),
+            ),
+            const SizedBox(height: 10),
             FilledButton.icon(
-              onPressed: () => Navigator.pop(sheetContext, true),
+              onPressed: () => Navigator.pop(
+                sheetContext,
+                _JazlaExportChoice.share,
+              ),
               icon: const Icon(Icons.ios_share_rounded),
-              label: Text('jazla.transfer.export_confirm'.tr()),
+              label: Text('jazla.transfer.save_and_share'.tr()),
             ),
           ],
         ),
       ),
     );
-    if (confirmed == true && context.mounted) {
+    if (choice != null && context.mounted) {
       await context.read<JazlaExportCubit>().exportAndShare(
             jazla: jazla,
             parcels: parcels,
+            share: choice == _JazlaExportChoice.share,
           );
     }
   }
@@ -64,7 +80,11 @@ class JazlaTransferExportButton extends StatelessWidget {
     return BlocConsumer<JazlaExportCubit, JazlaExportState>(
       listener: (final BuildContext context, final JazlaExportState state) {
         if (state.status == JazlaExportStatus.success) {
-          context.showSuccessSnackBar('jazla.transfer.export_success'.tr());
+          context.showSuccessSnackBar(
+            state.errorMessage == 'jazla.transfer.share_failed'
+                ? 'jazla.transfer.saved_share_failed'.tr()
+                : 'jazla.transfer.export_success'.tr(),
+          );
         } else if (state.status == JazlaExportStatus.error) {
           context.showErrorSnackBar(_message(state.errorMessage));
         }

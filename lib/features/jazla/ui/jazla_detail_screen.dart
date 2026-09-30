@@ -386,9 +386,12 @@ class _JazlaDetailViewState extends State<_JazlaDetailView>
                       jazla: state.jazla!,
                       parcels: parcels,
                     ),
-                    exportTransferAction: JazlaTransferExportButton(
-                      jazla: state.jazla!,
-                      parcels: parcels,
+                    exportTransferAction: BlocProvider.value(
+                      value: context.read<JazlaExportCubit>(),
+                      child: JazlaTransferExportButton(
+                        jazla: state.jazla!,
+                        parcels: parcels,
+                      ),
                     ),
                     onBulkApply: () => _openBulkApply(jazlaId, parcels),
                     onDelete: () => _deleteJazla(cubit),
