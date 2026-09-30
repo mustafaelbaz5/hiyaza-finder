@@ -79,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final ParcelVisibilityFilter? visibility =
                             await showParcelVisibilityFilterSheet(
                           context,
+                          summary: state.activitySummary,
                           value: context
                               .read<ParcelSearchCubit>()
                               .state
@@ -92,9 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       cityName: state.cityName,
                       associationType: state.associationType,
-                      parcelCount: state.activitySummary.totalParcelCount,
-                      activeParcelCount: state.activeParcelCount,
-                      zeroAreaParcelCount: state.zeroAreaParcelCount,
                     ),
                   ),
                   Padding(
