@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// نوع الملكية (credit cities) / نوع الإصلاح (reform cities) is no longer a
 /// visible field or a Copy All line — it only ever surfaces through

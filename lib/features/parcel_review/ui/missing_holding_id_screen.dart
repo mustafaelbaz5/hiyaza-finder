@@ -1,10 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/arabic_normalizer.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import 'package:hiyaza_finder/features/parcel_review/ui/widgets/basin_filter_row.dart';
+import '../../parcel_search/data/local/arabic_normalizer.dart';
+import '../../parcel_search/data/local/holding_search_service.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import 'widgets/basin_filter_row.dart';
 
 import '../../home/ui/widgets/recommendation_tile.dart';
 

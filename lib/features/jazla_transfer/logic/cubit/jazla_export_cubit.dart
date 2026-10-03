@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/data/model/jazla_transfer_bundle.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/data/repo/jazla_transfer_repository.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/logic/cubit/jazla_export_state.dart';
+import '../../data/model/jazla_transfer_bundle.dart';
+import '../../data/repo/jazla_transfer_repository.dart';
+import 'jazla_export_state.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../cities/data/model/association_type.dart';

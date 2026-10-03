@@ -1,7 +1,7 @@
 import '../model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_editor/data/local/parcel_notes_sync.dart';
+import '../../../parcel_editor/data/local/usage_type_notes_sync.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// Result of a [BulkEditService.apply] call: the updated parcel list plus
 /// how many parcels were actually changed, for user feedback.

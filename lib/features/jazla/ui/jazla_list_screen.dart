@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_list_view.dart';
+import 'widgets/jazla_list_view.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';

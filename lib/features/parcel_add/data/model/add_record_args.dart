@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// Navigation arguments for the add-record flow.
 class AddRecordArgs {

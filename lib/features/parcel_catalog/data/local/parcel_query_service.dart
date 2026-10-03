@@ -1,5 +1,5 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_classifier.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'parcel_activity_classifier.dart';
+import '../model/parcel.dart';
 
 import '../model/basin_progress.dart';
 import 'arabic_normalizer.dart';

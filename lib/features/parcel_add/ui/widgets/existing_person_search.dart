@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/parcel_add/data/local/existing_person_candidates.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../data/local/existing_person_candidates.dart';
+import '../../../parcel_search/data/local/holding_search_service.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';

@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import 'credit_type_notes_sync.dart';
 import 'usage_type_notes_sync.dart';
 

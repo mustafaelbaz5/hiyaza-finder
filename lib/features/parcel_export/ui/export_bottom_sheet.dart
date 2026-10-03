@@ -10,10 +10,10 @@ import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/widgets/custom_text_button.dart';
-import 'package:hiyaza_finder/features/parcel_export/data/local/export_file_saver.dart';
-import 'package:hiyaza_finder/features/parcel_export/data/local/export_service.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../data/local/export_file_saver.dart';
+import '../data/local/export_service.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 /// Simple export sheet reached from [BasinScreen]'s export button
 /// (APP_CLAUDE.md § 9.3) — always scoped to the one basin it's opened

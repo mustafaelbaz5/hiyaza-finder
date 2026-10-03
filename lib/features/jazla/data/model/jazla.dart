@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/area_calculator.dart';
+import '../../../parcel_catalog/data/local/area_calculator.dart';
 
 import 'jazla_parcel_defaults.dart';
 

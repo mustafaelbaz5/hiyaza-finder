@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Converts one raw `parcels` table row (Postgrest's `Map<String, dynamic>`
 /// shape, snake_case columns) into the base [Parcel] before any local edits

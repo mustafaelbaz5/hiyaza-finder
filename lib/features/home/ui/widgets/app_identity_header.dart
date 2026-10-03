@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
+import '../../../../core/themes/app_colors.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/router/routes.dart';

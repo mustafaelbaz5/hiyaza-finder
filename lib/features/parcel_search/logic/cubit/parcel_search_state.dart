@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
+import '../../../parcel_catalog/data/model/parcel_visibility_filter.dart';
+import '../../data/local/holding_search_service.dart';
 
 class ParcelSearchState extends Equatable {
   const ParcelSearchState({

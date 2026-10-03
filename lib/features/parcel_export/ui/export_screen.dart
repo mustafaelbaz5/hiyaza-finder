@@ -2,10 +2,10 @@ import 'dart:typed_data';
 
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_export/data/local/export_file_saver.dart';
-import 'package:hiyaza_finder/features/parcel_export/data/local/export_service.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../data/local/export_file_saver.dart';
+import '../data/local/export_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/di/dependency_injection.dart';

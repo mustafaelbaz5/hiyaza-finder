@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 enum ParcelEditorStatus { idle, saving, saved, failure }
 

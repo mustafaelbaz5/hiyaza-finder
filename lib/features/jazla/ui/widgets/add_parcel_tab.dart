@@ -1,16 +1,16 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/core/themes/app_colors.dart';
-import 'package:hiyaza_finder/core/themes/app_text_styles.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/jazla/data/local/jazla_search_service.dart';
-import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_add_parcel_cubit.dart';
-import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_add_parcel_state.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_parcel_result_tile.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_search_bar.dart';
+import '../../../../core/themes/app_colors.dart';
+import '../../../../core/themes/app_text_styles.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../data/local/jazla_search_service.dart';
+import '../../logic/cubit/jazla_add_parcel_cubit.dart';
+import '../../logic/cubit/jazla_add_parcel_state.dart';
+import 'jazla_parcel_result_tile.dart';
+import 'jazla_search_bar.dart';
 
 class AddParcelTab extends StatelessWidget {
   const AddParcelTab({

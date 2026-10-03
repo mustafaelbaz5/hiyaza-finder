@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
+import '../../../parcel_search/data/local/holding_search_service.dart';
 import 'home_no_results.dart';
 import 'recommendation_tile.dart';
 

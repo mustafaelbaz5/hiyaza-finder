@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_visibility_preferences.dart';
+import '../../../features/parcel_catalog/data/local/parcel_id_overrides_store.dart';
+import '../../../features/parcel_catalog/data/local/parcel_visibility_preferences.dart';
 
 import '../../../features/parcel_catalog/data/local/bulk_edit_service.dart';
 import '../../../features/parcel_catalog/data/local/local_added_parcels_store.dart';

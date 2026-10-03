@@ -1,8 +1,8 @@
-import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/cities/data/model/basin.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../../cities/data/model/basin.dart';
+import '../model/parcel.dart';
+import '../model/parcel_activity_summary.dart';
+import '../model/parcel_visibility_filter.dart';
 
 import '../model/basin_progress.dart';
 import '../model/search_result.dart';

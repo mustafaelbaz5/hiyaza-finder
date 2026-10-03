@@ -5,17 +5,17 @@ import '../../../../core/utils/spacing.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
 import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
 import '../../../cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/credit_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/delegate_notes_policy.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/field_change_tracker.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_editor/data/local/credit_type_notes_sync.dart';
+import '../../../parcel_editor/data/local/delegate_notes_policy.dart';
+import '../../../parcel_editor/data/local/field_change_tracker.dart';
+import '../../../parcel_editor/data/local/usage_type_notes_sync.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
 import 'delegate_owner_dialog.dart';
-import 'package:hiyaza_finder/core/widgets/ui/fields/field_row.dart';
+import '../../../../core/widgets/ui/fields/field_row.dart';
 import 'ownership_toggle.dart';
 import 'parcel_quick_choice_sheet.dart';
-import 'package:hiyaza_finder/core/widgets/ui/fields/toggle_field_row.dart';
+import '../../../../core/widgets/ui/fields/toggle_field_row.dart';
 
 /// Keeps secondary administrative fields collapsed by default so the detail
 /// screen stays compact while every field remains available.

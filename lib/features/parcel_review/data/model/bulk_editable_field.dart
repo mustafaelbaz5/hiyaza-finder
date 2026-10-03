@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// A per-parcel "app-added" field that can be bulk-applied across many
 /// parcels at once (optionally scoped to one حوض) from the file-status

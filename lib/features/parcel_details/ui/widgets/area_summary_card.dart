@@ -7,7 +7,7 @@ import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
 import '../../data/local/clipboard_formatter.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 class AreaSummaryCard extends StatelessWidget {
   const AreaSummaryCard({

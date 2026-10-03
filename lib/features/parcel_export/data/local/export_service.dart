@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:excel/excel.dart' as xlsx;
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_details/data/local/clipboard_formatter.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_details/data/local/clipboard_formatter.dart';
 
 /// Which parcels an export includes.
 enum ExportScope { all, addedOnly }

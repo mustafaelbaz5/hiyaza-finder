@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Mutations available only from an opened parcel-detail flow.
 ///

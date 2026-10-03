@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// Applies notes that describe the local-only identity of a newly added
 /// person. These notes are mutually exclusive and are never applied to

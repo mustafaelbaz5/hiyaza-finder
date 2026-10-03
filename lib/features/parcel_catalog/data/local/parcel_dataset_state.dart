@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_activity_index.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import 'parcel_activity_index.dart';
+import '../model/parcel.dart';
 
 import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';

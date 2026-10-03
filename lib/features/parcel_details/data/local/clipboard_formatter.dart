@@ -1,6 +1,6 @@
 import '../../../cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
 
 /// Builds the "copy all" clipboard text for a parcel, and the shared
 /// اسم المالك default-value rule the detail card also displays inline.

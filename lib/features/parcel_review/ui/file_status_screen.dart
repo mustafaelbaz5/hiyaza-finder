@@ -1,9 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:hiyaza_finder/features/parcel_review/ui/widgets/notes_settings_sheet.dart';
-import 'package:hiyaza_finder/features/parcel_review/ui/widgets/picker_row.dart';
-import 'package:hiyaza_finder/features/parcel_review/ui/widgets/section_card.dart';
-import 'package:hiyaza_finder/features/parcel_review/ui/widgets/specify_other_picker.dart';
+import 'widgets/notes_settings_sheet.dart';
+import 'widgets/picker_row.dart';
+import 'widgets/section_card.dart';
+import 'widgets/specify_other_picker.dart';
 
 import '../../../core/di/dependency_injection.dart';
 import '../../../core/router/routes.dart';
@@ -19,8 +19,8 @@ import '../../crop_type/ui/widgets/crop_type_picker.dart';
 import '../../cities/ui/widgets/city_tool_tile.dart';
 import '../data/model/bulk_edit_outcome.dart';
 import '../data/model/bulk_editable_field.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../parcel_catalog/data/model/parcel.dart';
+import '../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 /// Localized display label for a [BulkEditableField] — kept here (UI layer)
 /// rather than as a `.label` getter on the enum itself, since

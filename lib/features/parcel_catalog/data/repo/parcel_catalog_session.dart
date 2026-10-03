@@ -1,6 +1,6 @@
 import '../../../cities/data/model/association_type.dart';
 import '../../../cities/data/model/basin.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 /// Write-side boundary for replacing the active city dataset.
 ///

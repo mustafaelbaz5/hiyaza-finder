@@ -1,5 +1,5 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
 
 /// Bidirectional نوع الاستخدام ↔ notes logic (APP_UPDATES_CLAUDE.md § 4.3).
 /// Kept as pure functions over [Parcel] rather than methods on the entity

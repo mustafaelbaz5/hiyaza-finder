@@ -1,5 +1,5 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
 
 /// Rules for copying a parcel's data. Copying is deliberately separate from
 /// completion: a worker must be able to copy an ID even while a record is

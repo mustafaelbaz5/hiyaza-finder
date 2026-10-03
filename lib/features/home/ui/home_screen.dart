@@ -1,12 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/home/ui/widgets/loading_body.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_cubit.dart';
-import 'package:hiyaza_finder/features/parcel_search/logic/cubit/parcel_search_state.dart';
-import 'package:hiyaza_finder/features/parcel_search/ui/widgets/parcel_visibility_filter_button.dart';
+import 'widgets/loading_body.dart';
+import '../../parcel_catalog/data/model/parcel_visibility_filter.dart';
+import '../../parcel_catalog/data/repo/holdings_reader.dart';
+import '../../parcel_search/logic/cubit/parcel_search_cubit.dart';
+import '../../parcel_search/logic/cubit/parcel_search_state.dart';
+import '../../parcel_search/ui/widgets/parcel_visibility_filter_button.dart';
 
 import '../../../core/router/routes.dart';
 import '../../../core/themes/app_colors.dart';

@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// One selectable person under a searched holding number. A holding number
 /// may legitimately contain more than one person, so identity is the person

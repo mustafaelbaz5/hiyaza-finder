@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/di/dependency_injection.dart';
 import '../../../../core/widgets/ui/dialogs/choice_dialog.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 /// The result of picking اسم الحوض — carries the matching كود الحوض
 /// alongside it, since a chosen basin always sets both together

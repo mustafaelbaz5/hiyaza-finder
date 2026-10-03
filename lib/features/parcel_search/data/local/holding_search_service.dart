@@ -1,5 +1,5 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/search_result.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/search_result.dart';
 
 export 'package:hiyaza_finder/features/parcel_catalog/data/model/search_result.dart'
     show SearchResult;

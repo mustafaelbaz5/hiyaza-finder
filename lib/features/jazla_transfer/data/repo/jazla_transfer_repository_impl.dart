@@ -3,12 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:hiyaza_finder/core/config/app_config.dart';
-import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/jazla/data/local/jazla_store.dart';
-import 'package:hiyaza_finder/features/jazla/data/model/jazla.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_completion_store.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../../core/config/app_config.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../../jazla/data/local/jazla_store.dart';
+import '../../../jazla/data/model/jazla.dart';
+import '../../../parcel_catalog/data/local/parcel_completion_store.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 import '../local/imported_jazla_parcel_store.dart';
 import '../local/jazla_transfer_codec.dart';

@@ -1,8 +1,8 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
-import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_edit_outcome.dart';
-import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import '../model/parcel.dart';
+import '../model/parcel_activity_summary.dart';
+import '../model/parcel_visibility_filter.dart';
+import '../../../parcel_review/data/model/bulk_edit_outcome.dart';
+import '../../../parcel_review/data/model/bulk_editable_field.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../cities/data/model/association_type.dart';

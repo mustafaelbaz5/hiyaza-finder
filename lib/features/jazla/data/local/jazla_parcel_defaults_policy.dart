@@ -1,8 +1,8 @@
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/usage_type.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/parcel_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_review/data/model/bulk_editable_field.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/usage_type.dart';
+import '../../../parcel_editor/data/local/parcel_notes_sync.dart';
+import '../../../parcel_editor/data/local/usage_type_notes_sync.dart';
+import '../../../parcel_review/data/model/bulk_editable_field.dart';
 
 import '../model/jazla_parcel_defaults.dart';
 

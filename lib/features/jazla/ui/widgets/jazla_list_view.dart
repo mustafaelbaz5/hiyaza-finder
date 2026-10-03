@@ -1,24 +1,24 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/core/di/dependency_injection.dart';
-import 'package:hiyaza_finder/core/router/routes.dart';
-import 'package:hiyaza_finder/core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/core/utils/spacing.dart';
-import 'package:hiyaza_finder/core/widgets/screen_header.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/app_dialogs.dart';
-import 'package:hiyaza_finder/core/widgets/ui/dialogs/text_input_dialog.dart';
-import 'package:hiyaza_finder/features/jazla/data/local/jazla_preferences.dart';
-import 'package:hiyaza_finder/features/jazla/data/model/jazla.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/logic/cubit/jazla_import_cubit.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/logic/cubit/jazla_import_state.dart';
-import 'package:hiyaza_finder/features/jazla_transfer/ui/widgets/jazla_transfer_preview_sheet.dart';
-import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_list_cubit.dart';
-import 'package:hiyaza_finder/features/jazla/logic/cubit/jazla_list_state.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_card.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_create_wizard.dart';
-import 'package:hiyaza_finder/features/jazla/ui/widgets/jazla_sort_sheet.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_repository.dart';
+import '../../../../core/di/dependency_injection.dart';
+import '../../../../core/router/routes.dart';
+import '../../../../core/utils/extensions/context_ext.dart';
+import '../../../../core/utils/spacing.dart';
+import '../../../../core/widgets/screen_header.dart';
+import '../../../../core/widgets/ui/dialogs/app_dialogs.dart';
+import '../../../../core/widgets/ui/dialogs/text_input_dialog.dart';
+import '../../data/local/jazla_preferences.dart';
+import '../../data/model/jazla.dart';
+import '../../../jazla_transfer/logic/cubit/jazla_import_cubit.dart';
+import '../../../jazla_transfer/logic/cubit/jazla_import_state.dart';
+import '../../../jazla_transfer/ui/widgets/jazla_transfer_preview_sheet.dart';
+import '../../logic/cubit/jazla_list_cubit.dart';
+import '../../logic/cubit/jazla_list_state.dart';
+import 'jazla_card.dart';
+import 'jazla_create_wizard.dart';
+import 'jazla_sort_sheet.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_repository.dart';
 
 enum _JazlaEntryAction { create, import }
 

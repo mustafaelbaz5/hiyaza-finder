@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hiyaza_finder/features/cities/data/model/city_snapshot.dart';
-import 'package:hiyaza_finder/features/cities/data/repo/city_repo.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/parcel_catalog_session.dart';
+import '../../../cities/data/model/city_snapshot.dart';
+import '../../../cities/data/repo/city_repo.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/repo/holdings_reader.dart';
+import '../../../parcel_catalog/data/repo/parcel_catalog_session.dart';
 
 import 'home_state.dart';
 

@@ -1,5 +1,5 @@
 import 'arabic_normalizer.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../model/parcel.dart';
 
 class BorderNameIndex {
   BorderNameIndex._(this._byNormalizedName);

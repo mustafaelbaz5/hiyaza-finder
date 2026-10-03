@@ -5,8 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
-import 'package:hiyaza_finder/features/parcel_search/data/local/holding_search_service.dart';
-import 'package:hiyaza_finder/features/home/ui/widgets/status_badge.dart';
+import '../../../parcel_search/data/local/holding_search_service.dart';
+import 'status_badge.dart';
 
 class RecommendationTile extends StatelessWidget {
   const RecommendationTile({

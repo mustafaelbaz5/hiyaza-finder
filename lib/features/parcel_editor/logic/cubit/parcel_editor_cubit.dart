@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:hiyaza_finder/features/parcel_editor/data/local/usage_type_notes_sync.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_writer.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../data/local/usage_type_notes_sync.dart';
+import '../../../parcel_catalog/data/repo/holdings_writer.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 import 'parcel_editor_state.dart';
 
 /// Coordinates one parcel edit. UI supplies an intent; this Cubit applies

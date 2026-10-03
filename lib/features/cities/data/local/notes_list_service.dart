@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../../../../core/storage/key_value_store.dart';
 import '../../../cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
 
 /// Persists the user's custom additions to the ملاحظات quick-pick list
 /// (APP_UPDATES_CLAUDE.md § 5.2) — layered on top of [Parcel.notesOptions]'s

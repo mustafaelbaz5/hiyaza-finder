@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_activity_summary.dart';
+import '../../../cities/data/model/association_type.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel_activity_summary.dart';
 
 enum HomeStatus { loading, noFile, loaded, error }
 

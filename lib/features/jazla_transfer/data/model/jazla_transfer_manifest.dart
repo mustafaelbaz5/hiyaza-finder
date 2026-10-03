@@ -1,4 +1,4 @@
-import 'package:hiyaza_finder/features/cities/data/model/association_type.dart';
+import '../../../cities/data/model/association_type.dart';
 
 class JazlaTransferAssociation {
   const JazlaTransferAssociation({

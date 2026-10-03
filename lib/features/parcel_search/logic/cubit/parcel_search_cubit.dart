@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:hiyaza_finder/features/parcel_catalog/data/local/parcel_visibility_preferences.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/parcel_visibility_filter.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/search_result.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/repo/holdings_reader.dart';
+import '../../../parcel_catalog/data/local/parcel_visibility_preferences.dart';
+import '../../../parcel_catalog/data/model/parcel.dart';
+import '../../../parcel_catalog/data/model/parcel_visibility_filter.dart';
+import '../../../parcel_catalog/data/model/search_result.dart';
+import '../../../parcel_catalog/data/repo/holdings_reader.dart';
 import 'parcel_search_state.dart';
 
 /// Owns Home's transient query, its activity filter, and results.

@@ -7,7 +7,7 @@ import '../../../../core/themes/app_colors.dart';
 import '../../../../core/themes/app_text_styles.dart';
 import '../../../../core/utils/extensions/context_ext.dart';
 import '../../../../core/utils/spacing.dart';
-import 'package:hiyaza_finder/features/parcel_catalog/data/model/basin_progress.dart';
+import '../../../parcel_catalog/data/model/basin_progress.dart';
 import 'basin_progress_bar.dart';
 
 /// One row on the basin-first home screen — اسم الحوض, X/Y completion, and
