@@ -29,7 +29,9 @@ void main() {
       'رقم الحيازة',
       'اسم الحائز',
       'اسم المالك',
-      'المساحة',
+      'فدان',
+      'قيراط',
+      'سهم',
       'نوع الاستخدام',
       'نوع المحصول',
       'الملاحظات',
@@ -55,11 +57,13 @@ void main() {
     final List<xlsx.Data?> header = sheet.rows.firstWhere(
       (final List<xlsx.Data?> row) => row.first?.value.toString() == 'id',
     );
-    expect(header, hasLength(8));
+    expect(header, hasLength(10));
     expect(header[0]?.value.toString(), 'id');
     expect(header[1]?.value.toString(), 'رقم الحيازة');
-    expect(header[4]?.value.toString(), 'المساحة');
-    expect(header[7]?.value.toString(), 'الملاحظات');
+    expect(header[4]?.value.toString(), 'فدان');
+    expect(header[5]?.value.toString(), 'قيراط');
+    expect(header[6]?.value.toString(), 'سهم');
+    expect(header[9]?.value.toString(), 'الملاحظات');
   });
 
   test('table retains Jazla parcel order and joins notes', () {
@@ -91,10 +95,17 @@ void main() {
     expect(firstDataRow[1]?.value.toString(), '1');
     expect(firstDataRow[2]?.value.toString(), 'الأول');
     expect(firstDataRow[3]?.value.toString(), 'مالك الأول');
-    expect(firstDataRow[4]?.value.toString(), '1 فدان، 2 قيراط، 3 سهم');
-    expect(firstDataRow[5]?.value.toString(), Parcel.defaultUsageType);
-    expect(firstDataRow[6]?.value.toString(), 'قمح');
-    expect(firstDataRow[7]?.value.toString(), 'ملاحظة أ، ملاحظة ب');
+    expect(firstDataRow[4]?.value.toString(), '1');
+    expect(firstDataRow[5]?.value.toString(), '2');
+    expect(firstDataRow[6]?.value.toString(), '3');
+    expect(firstDataRow[7]?.value.toString(), Parcel.defaultUsageType);
+    expect(firstDataRow[8]?.value.toString(), 'قمح');
+    expect(firstDataRow[9]?.value.toString(), 'ملاحظة أ، ملاحظة ب');
+
+    final List<xlsx.Data?> secondRow = sheet.rows[headerIndex + 2];
+    expect(secondRow[4]?.value.toString(), '—');
+    expect(secondRow[5]?.value.toString(), '—');
+    expect(secondRow[6]?.value.toString(), '—');
   });
 
   test('buildFileName follows {city}_{jazla}_{dd}_{mm}_{yyyy}.xlsx', () {

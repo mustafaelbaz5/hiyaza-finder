@@ -21,7 +21,9 @@ class JazlaExportService {
     'رقم الحيازة',
     'اسم الحائز',
     'اسم المالك',
-    'المساحة',
+    'فدان',
+    'قيراط',
+    'سهم',
     'نوع الاستخدام',
     'نوع المحصول',
     'الملاحظات',
@@ -62,7 +64,7 @@ class JazlaExportService {
 
     sheet.merge(
       xlsx.CellIndex.indexByString('A1'),
-      xlsx.CellIndex.indexByString('H1'),
+      xlsx.CellIndex.indexByString('J1'),
       customValue: xlsx.TextCellValue('تقرير جزلة: ${jazla.name}'),
     );
     sheet.cell(xlsx.CellIndex.indexByString('A1')).cellStyle = _titleStyle;
@@ -147,7 +149,9 @@ class JazlaExportService {
       _textCell(parcel.holdingId),
       _textCell(_formatter.displayHolderName(parcel)),
       _textCell(_formatter.displayOwnerName(parcel)),
-      _textCell(_agriculturalArea(parcel)),
+      _numberCell(parcel.feddan),
+      _numberCell(parcel.qirat),
+      _numberCell(parcel.sahm),
       _textCell(parcel.usageType),
       _textCell(parcel.cropType),
       _textCell(parcel.notes.isEmpty ? null : parcel.notes.join('، ')),
@@ -159,13 +163,8 @@ class JazlaExportService {
     return xlsx.TextCellValue(text.isEmpty ? '—' : text);
   }
 
-  String _agriculturalArea(final Parcel parcel) {
-    final String feddan = _number(parcel.feddan);
-    final String qirat = _number(parcel.qirat);
-    final String sahm = _number(parcel.sahm);
-    if (feddan == '—' && qirat == '—' && sahm == '—') return '—';
-    return '$feddan فدان، $qirat قيراط، $sahm سهم';
-  }
+  xlsx.CellValue _numberCell(final double? value) =>
+      value == null ? xlsx.TextCellValue('—') : xlsx.DoubleCellValue(value);
 
   double _addedArea(final List<Parcel> parcels) => parcels.fold<double>(
         0,
@@ -180,7 +179,18 @@ class JazlaExportService {
       );
 
   void _setColumnWidths(final xlsx.Sheet sheet) {
-    const List<double> widths = <double>[36, 16, 30, 30, 30, 18, 20, 44];
+    const List<double> widths = <double>[
+      36,
+      16,
+      30,
+      30,
+      12,
+      12,
+      12,
+      18,
+      20,
+      44
+    ];
     for (int index = 0; index < widths.length; index++) {
       sheet.setColumnWidth(index, widths[index]);
     }
@@ -191,12 +201,6 @@ class JazlaExportService {
     if (clean.isEmpty) return 'جزلة';
     return clean.length <= 31 ? clean : clean.substring(0, 31);
   }
-
-  static String _number(final double? value) => value == null
-      ? '—'
-      : value == value.roundToDouble()
-          ? '${value.toInt()}'
-          : value.toString();
 
   static String _formatArea(final double value) =>
       '${value.toStringAsFixed(2)} م²';
